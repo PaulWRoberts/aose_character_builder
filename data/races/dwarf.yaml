@@ -1,0 +1,28 @@
+id: dwarf
+name: Dwarf
+ability_requirements:
+  CON: 9
+infravision: 60
+base_movement: 60
+languages:
+  - common
+  - dwarvish
+  - gnomish
+  - goblin
+  - kobold
+  - orcish
+allowed_classes:
+  - cleric
+  - fighter
+  - thief
+class_level_caps:
+  cleric: 8
+  fighter: 9
+  thief: 8
+features:
+  - id: detect_stonework
+    name: Detect Stonework
+    text: "Within 10', a dwarf detects on 1-2 on 1d6: sloping passages, new construction, sliding walls, stonework traps."
+  - id: save_bonus_magic
+    name: Magical Resilience
+    text: "Dwarves gain a bonus to saving throws vs. magic (scales with Constitution)."

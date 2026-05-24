@@ -1,0 +1,39 @@
+id: fighter
+name: Fighter
+prime_requisites: [STR]
+max_level: 14
+hit_die: 1d8
+weapons_allowed: all
+armor_allowed: all
+shields_allowed: true
+progression:
+  1:
+    xp_required: 0
+    thac0: 19
+    hit_dice: 1d8
+    saves: { death: 12, wands: 13, paralysis: 14, breath: 15, spells: 16 }
+  2:
+    xp_required: 2000
+    thac0: 19
+    hit_dice: 2d8
+    saves: { death: 12, wands: 13, paralysis: 14, breath: 15, spells: 16 }
+  3:
+    xp_required: 4000
+    thac0: 19
+    hit_dice: 3d8
+    saves: { death: 12, wands: 13, paralysis: 14, breath: 15, spells: 16 }
+  4:
+    xp_required: 8000
+    thac0: 17
+    hit_dice: 4d8
+    saves: { death: 10, wands: 11, paralysis: 12, breath: 13, spells: 14 }
+  5:
+    xp_required: 16000
+    thac0: 17
+    hit_dice: 5d8
+    saves: { death: 10, wands: 11, paralysis: 12, breath: 13, spells: 14 }
+features:
+  - id: combat_focus
+    name: Combat Focus
+    text: "Fighters have unrestricted use of weapons, armor, and shields."
+    gained_at_level: 1
