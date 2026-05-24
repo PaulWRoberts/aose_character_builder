@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Characters - AOSE Character Builder{% endblock %}
+{% block content %}
+<section class="panel">
+    <h1>Characters</h1>
+    {% if characters %}
+    <ul class="character-list">
+        {% for c in characters %}
+        <li>
+            <a href="/character/{{ c.id }}">{{ c.name }}</a>
+            <span class="muted">({{ c.race_id }})</span>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="muted">No characters yet.</p>
+    {% endif %}
+</section>
+{% endblock %}

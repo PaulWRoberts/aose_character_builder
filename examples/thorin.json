@@ -1,0 +1,40 @@
+{
+  "name": "Thorin",
+  "abilities": {
+    "STR": 16,
+    "INT": 10,
+    "WIS": 11,
+    "DEX": 12,
+    "CON": 14,
+    "CHA": 9
+  },
+  "race_id": "dwarf",
+  "classes": [
+    {
+      "class_id": "fighter",
+      "level": 1,
+      "hp_rolls": [7],
+      "chosen_spells": []
+    }
+  ],
+  "alignment": "law",
+  "xp": 0,
+  "inventory": [],
+  "equipped": {},
+  "secondary_skill": null,
+  "chosen_proficiencies": [],
+  "ruleset": {
+    "ascending_ac": false,
+    "secondary_skills": false,
+    "weapon_proficiency": false,
+    "multiclassing": false,
+    "reroll_1s_2s_hp_l1": false,
+    "max_hp_at_l1": false,
+    "separate_race_class": true,
+    "demihuman_level_limits": true,
+    "demihuman_class_restrictions": true,
+    "variable_weapon_damage": false,
+    "ability_roll_method": "3d6_in_order",
+    "encumbrance": "basic"
+  }
+}

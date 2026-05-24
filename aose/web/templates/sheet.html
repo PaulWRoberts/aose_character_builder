@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% block title %}{{ sheet.name }} - Character Sheet{% endblock %}
+{% block content %}
+<article class="sheet">
+    <header class="sheet-header">
+        <h1>{{ sheet.name }}</h1>
+        <p class="subtitle">{{ sheet.race_name }} &middot; {{ sheet.class_summary }} &middot; {{ sheet.alignment }}</p>
+    </header>
+
+    <div class="sheet-grid">
+        <div class="sheet-column">
+
+            <section class="section">
+                <h2>Abilities</h2>
+                <table class="abilities">
+                    <thead>
+                        <tr><th>Ability</th><th>Score</th><th>Mod</th></tr>
+                    </thead>
+                    <tbody>
+                    {% for ab in sheet.abilities %}
+                        <tr>
+                            <td>{{ ab.ability }}</td>
+                            <td class="num">{{ ab.score }}</td>
+                            <td class="num">{{ "%+d"|format(ab.modifier) }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </section>
+
+            <section class="section">
+                <h2>Combat</h2>
+                <div class="stat-row"><span>Max HP</span><span class="stat-big">{{ sheet.max_hp }}</span></div>
+                <div class="stat-row">
+                    <span>Armor Class</span>
+                    <span class="stat-big">
+                    {% if sheet.use_ascending %}{{ sheet.ac_ascending }}{% else %}{{ sheet.ac_descending }}{% endif %}
+                    </span>
+                </div>
+                <div class="stat-row muted small">
+                    <span>(other notation)</span>
+                    <span>
+                    {% if sheet.use_ascending %}desc {{ sheet.ac_descending }}{% else %}asc {{ sheet.ac_ascending }}{% endif %}
+                    </span>
+                </div>
+                <div class="stat-row">
+                {% if sheet.use_ascending %}
+                    <span>Attack Bonus</span><span class="stat-big">{{ "%+d"|format(sheet.attack_bonus) }}</span>
+                {% else %}
+                    <span>THAC0</span><span class="stat-big">{{ sheet.thac0 }}</span>
+                {% endif %}
+                </div>
+            </section>
+
+            <section class="section">
+                <h2>Saving Throws</h2>
+                <table>
+                    <tbody>
+                    {% for s in sheet.saves %}
+                        <tr><td>{{ s.label }}</td><td class="num">{{ s.target }}</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </section>
+
+            <section class="section">
+                <h2>Movement</h2>
+                <div class="stat-row"><span>Exploration</span><span>{{ sheet.movement_base }}' / turn</span></div>
+                <div class="stat-row"><span>Encounter</span><span>{{ sheet.movement_encounter }}' / round</span></div>
+            </section>
+
+            <section class="section">
+                <h2>Experience</h2>
+                <div class="stat-row"><span>XP</span><span>{{ sheet.xp }}</span></div>
+                {% if sheet.xp_to_next is not none %}
+                <div class="stat-row"><span>To level {{ sheet.next_level }}</span><span>{{ sheet.xp_to_next }}</span></div>
+                {% else %}
+                <div class="stat-row muted"><span>Max level reached</span><span></span></div>
+                {% endif %}
+            </section>
+
+        </div>
+        <div class="sheet-column">
+
+            <section class="section">
+                <h2>Race Features</h2>
+                {% if sheet.race_features %}
+                    {% for f in sheet.race_features %}
+                    <div class="feature">
+                        <div class="feature-name">{{ f.name }}</div>
+                        <div class="feature-text">{{ f.text }}</div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="muted">None</p>
+                {% endif %}
+            </section>
+
+            <section class="section">
+                <h2>Class Features</h2>
+                {% if sheet.class_features %}
+                    {% for f in sheet.class_features %}
+                    <div class="feature">
+                        <div class="feature-name">{{ f.name }}</div>
+                        <div class="feature-text">{{ f.text }}</div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="muted">None</p>
+                {% endif %}
+            </section>
+
+            <section class="section">
+                <h2>Languages</h2>
+                <p>{{ sheet.languages | join(", ") if sheet.languages else "—" }}</p>
+            </section>
+
+            <section class="section">
+                <h2>Equipment</h2>
+                {% if sheet.equipped %}
+                <h3>Equipped</h3>
+                <ul>
+                    {% for e in sheet.equipped %}
+                    <li><strong>{{ e.slot }}:</strong> {{ e.item_name }}</li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+                {% if sheet.inventory %}
+                <h3>Carried</h3>
+                <ul>
+                    {% for item in sheet.inventory %}
+                    <li>{{ item }}</li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+                {% if not sheet.equipped and not sheet.inventory %}
+                <p class="muted">No equipment.</p>
+                {% endif %}
+            </section>
+
+        </div>
+    </div>
+
+    <footer class="sheet-footer">
+        <h2>Ruleset</h2>
+        <p>Encumbrance: <em>{{ sheet.encumbrance_mode }}</em></p>
+        {% if sheet.enabled_optional_rules %}
+        <p>Optional rules in effect: {{ sheet.enabled_optional_rules | join(", ") }}</p>
+        {% else %}
+        <p class="muted">No optional rules enabled.</p>
+        {% endif %}
+    </footer>
+</article>
+{% endblock %}
