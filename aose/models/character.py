@@ -24,6 +24,7 @@ class CharacterSpec(BaseModel):
     classes: list[ClassEntry] = Field(min_length=1)
     alignment: Literal["law", "neutral", "chaos"]
     xp: int = 0
+    gold: int = 0
     inventory: list[str] = Field(default_factory=list)
     # slot -> item_id (e.g., {"armor": "chain_mail", "shield": "shield"})
     equipped: dict[str, str] = Field(default_factory=dict)

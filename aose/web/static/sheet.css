@@ -616,6 +616,90 @@ button {
     font-size: 12px;
 }
 
+/* ── Equipment / shop UI ──────────────────────────────────── */
+
+.equipment-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin: 12px 0;
+    padding: 10px 14px;
+    background: #ede4cf;
+    border: 1px solid #c8b89a;
+}
+
+.gold-display {
+    font-size: 16px;
+}
+
+.gold-display strong {
+    font-size: 20px;
+    color: #4a3728;
+}
+
+.inventory-table,
+.shop-table {
+    width: 100%;
+    margin-bottom: 12px;
+    font-size: 13px;
+}
+
+.inventory-table th,
+.shop-table th {
+    background: #ede4cf;
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    padding: 4px 6px;
+    text-align: left;
+}
+
+.inventory-table td,
+.shop-table td {
+    padding: 4px 6px;
+    border-bottom: 1px dashed #e0d6b8;
+}
+
+.shop-table tr.out-of-reach td {
+    color: #999;
+}
+
+.shop-table tr.out-of-reach button {
+    cursor: not-allowed;
+}
+
+.remove-form {
+    display: inline-flex;
+    gap: 4px;
+}
+
+.remove-form button {
+    padding: 2px 8px;
+    font-size: 11px;
+}
+
+.shop-category {
+    margin: 16px 0 4px 0;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #4a3728;
+    border-bottom: 1px solid #c8b89a;
+    padding-bottom: 2px;
+}
+
+/* ── Print/no-print pair ─────────────────────────────────── */
+
+.print-only {
+    display: none;
+}
+
+@media print {
+    .print-only {
+        display: block;
+    }
+}
+
 .subhead {
     margin: 24px 0 6px 0;
     font-size: 14px;

@@ -1,0 +1,38 @@
+# Armour and shields.  ac_descending values follow the standard B/X table.
+
+- id: leather_armor
+  item_type: armor
+  name: Leather Armour
+  category: armor
+  cost_gp: 20
+  weight_cn: 200
+  ac_descending: 7
+  movement_impact: leather
+
+- id: chain_mail
+  item_type: armor
+  name: Chain Mail
+  category: armor
+  cost_gp: 40
+  weight_cn: 400
+  ac_descending: 5
+  movement_impact: metal
+
+- id: plate_mail
+  item_type: armor
+  name: Plate Mail
+  category: armor
+  cost_gp: 60
+  weight_cn: 500
+  ac_descending: 3
+  movement_impact: metal
+
+- id: shield
+  item_type: armor
+  name: Shield
+  category: armor
+  cost_gp: 10
+  weight_cn: 100
+  ac_descending: 0   # shields apply a -1 to AC; treated additively at the sheet layer
+  movement_impact: none
+  is_shield: true

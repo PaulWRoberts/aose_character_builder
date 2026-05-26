@@ -1,0 +1,135 @@
+# Adventuring gear -- the items every party scavenges over.
+# weight_cn is in coins (10 cn = 1 lb in standard B/X encumbrance).
+
+- id: backpack
+  item_type: gear
+  name: Backpack
+  category: adventuring_gear
+  cost_gp: 5
+  weight_cn: 20
+
+- id: bedroll
+  item_type: gear
+  name: Bedroll
+  category: adventuring_gear
+  cost_gp: 1
+  weight_cn: 30
+
+- id: candle
+  item_type: gear
+  name: Candle
+  category: adventuring_gear
+  cost_gp: 1
+  weight_cn: 0
+
+- id: crowbar
+  item_type: gear
+  name: Crowbar
+  category: adventuring_gear
+  cost_gp: 10
+  weight_cn: 50
+
+- id: flask_of_oil
+  item_type: gear
+  name: Oil, Flask
+  category: adventuring_gear
+  cost_gp: 2
+  weight_cn: 10
+
+- id: holy_water_vial
+  item_type: gear
+  name: Holy Water, Vial
+  category: adventuring_gear
+  cost_gp: 25
+  weight_cn: 10
+
+- id: iron_rations
+  item_type: gear
+  name: Rations, Iron (7 days)
+  category: adventuring_gear
+  cost_gp: 15
+  weight_cn: 70
+
+- id: standard_rations
+  item_type: gear
+  name: Rations, Standard (7 days)
+  category: adventuring_gear
+  cost_gp: 5
+  weight_cn: 140
+
+- id: lantern
+  item_type: gear
+  name: Lantern
+  category: adventuring_gear
+  cost_gp: 10
+  weight_cn: 30
+
+- id: mirror_small
+  item_type: gear
+  name: Mirror, Small Steel
+  category: adventuring_gear
+  cost_gp: 5
+  weight_cn: 5
+
+- id: rope_50ft
+  item_type: gear
+  name: Rope, 50'
+  category: adventuring_gear
+  cost_gp: 1
+  weight_cn: 50
+
+- id: sack_small
+  item_type: gear
+  name: Sack, Small
+  category: adventuring_gear
+  cost_gp: 1
+  weight_cn: 2
+
+- id: sack_large
+  item_type: gear
+  name: Sack, Large
+  category: adventuring_gear
+  cost_gp: 2
+  weight_cn: 5
+
+- id: stakes_and_mallet
+  item_type: gear
+  name: Wooden Stakes (3) & Mallet
+  category: adventuring_gear
+  cost_gp: 3
+  weight_cn: 10
+
+- id: thieves_tools
+  item_type: gear
+  name: Thieves' Tools
+  category: adventuring_gear
+  cost_gp: 25
+  weight_cn: 10
+
+- id: tinder_box
+  item_type: gear
+  name: Tinder Box (flint & steel)
+  category: adventuring_gear
+  cost_gp: 3
+  weight_cn: 10
+
+- id: torch
+  item_type: gear
+  name: Torch
+  category: adventuring_gear
+  cost_gp: 1
+  weight_cn: 20
+
+- id: waterskin
+  item_type: gear
+  name: Waterskin
+  category: adventuring_gear
+  cost_gp: 1
+  weight_cn: 50
+
+- id: wine_skin
+  item_type: gear
+  name: Wine, Skin
+  category: adventuring_gear
+  cost_gp: 1
+  weight_cn: 50

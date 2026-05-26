@@ -187,17 +187,22 @@
                     {% endfor %}
                 </ul>
                 {% endif %}
-                {% if sheet.inventory %}
-                <h3>Carried</h3>
-                <ul>
-                    {% for item in sheet.inventory %}
-                    <li>{{ item }}</li>
-                    {% endfor %}
-                </ul>
-                {% endif %}
-                {% if not sheet.equipped and not sheet.inventory %}
-                <p class="muted">No equipment.</p>
-                {% endif %}
+
+                <div class="no-print">
+                    {% include "_equipment_ui.html" %}
+                </div>
+
+                {# Compact print-friendly inventory summary for the @media print pass #}
+                <div class="print-only">
+                    {% if inventory_rows %}
+                    <h3>Carried</h3>
+                    <ul>
+                        {% for row in inventory_rows %}
+                        <li>{{ row.name }}{% if row.count > 1 %} &times;{{ row.count }}{% endif %}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                </div>
             </section>
 
         </div>

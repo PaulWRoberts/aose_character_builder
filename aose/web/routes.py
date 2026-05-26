@@ -6,6 +6,15 @@ from fastapi.templating import Jinja2Templates
 
 from aose.characters.storage import list_character_ids, load_character, save_character
 from aose.engine.leveling import level_up as _level_up
+from aose.engine.shop import (
+    REMOVE_MODES,
+    InsufficientGold,
+    UnknownItem,
+    buy as shop_buy,
+    inventory_rows as shop_inventory_rows,
+    remove as shop_remove,
+    shop_categories,
+)
 from aose.sheet.view import build_sheet
 
 router = APIRouter()
@@ -48,9 +57,21 @@ async def character_sheet(request: Request, character_id: str):
         spec = load_character(character_id, request.app.state.characters_dir)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail=f"Character '{character_id}' not found")
-    sheet = build_sheet(spec, request.app.state.game_data)
+    game_data = request.app.state.game_data
+    sheet = build_sheet(spec, game_data)
     return templates.TemplateResponse(
-        request, "sheet.html", {"sheet": sheet, "character_id": character_id}
+        request, "sheet.html", {
+            "sheet": sheet,
+            "character_id": character_id,
+            # Equipment partial context (sheet-side: no starting-gold reroll).
+            "gold": spec.gold,
+            "gold_locked": True,
+            "inventory_rows": shop_inventory_rows(spec.inventory, game_data),
+            "shop": shop_categories(game_data),
+            "remove_modes": REMOVE_MODES,
+            "target_url_prefix": f"/character/{character_id}/equipment",
+            "show_gold_reroll": False,
+        },
     )
 
 
@@ -145,5 +166,40 @@ async def level_up_class(request: Request, character_id: str, class_id: str):
         _level_up(spec, request.app.state.game_data, class_id)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+# ── Equipment management on the live sheet ────────────────────────────────
+
+@router.post("/character/{character_id}/equipment/buy")
+async def equipment_buy(request: Request, character_id: str,
+                        item_id: str = Form(...)):
+    spec = _load_spec_or_404(request, character_id)
+    game_data = request.app.state.game_data
+    try:
+        new_inventory, new_gold = shop_buy(spec.inventory, spec.gold, item_id, game_data)
+    except (UnknownItem, InsufficientGold) as e:
+        raise HTTPException(400, str(e))
+    spec.inventory = new_inventory
+    spec.gold = new_gold
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/equipment/remove")
+async def equipment_remove(request: Request, character_id: str,
+                           item_id: str = Form(...),
+                           mode: str = Form(...)):
+    spec = _load_spec_or_404(request, character_id)
+    game_data = request.app.state.game_data
+    try:
+        new_inventory, new_gold = shop_remove(
+            spec.inventory, spec.gold, item_id, mode, game_data,
+        )
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    spec.inventory = new_inventory
+    spec.gold = new_gold
     save_character(character_id, spec, request.app.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)

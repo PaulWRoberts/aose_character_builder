@@ -19,6 +19,16 @@ from aose.characters import (
 from aose.engine.ability_mods import ability_modifier
 from aose.engine.dice import roll_3d6_in_order, roll_4d6_drop_lowest_in_order, roll_hp
 from aose.engine.proficiency import proficiency_groups, starting_proficiency_count
+from aose.engine.shop import (
+    InsufficientGold,
+    REMOVE_MODES,
+    UnknownItem,
+    buy as shop_buy,
+    inventory_rows,
+    remove as shop_remove,
+    roll_starting_gold,
+    shop_categories,
+)
 from aose.models import Ability, CharacterSpec, ClassEntry, RuleSet
 from aose.web.settings_routes import (
     CHOICE_GROUPS,
@@ -43,6 +53,7 @@ STEP_LABELS = {
     "skill": "Secondary Skill",
     "proficiencies": "Proficiencies",
     "hp": "Hit Points",
+    "equipment": "Equipment",
     "review": "Review",
 }
 
@@ -67,7 +78,7 @@ def _wizard_steps(draft: dict[str, Any]) -> list[str]:
         steps.append("skill")
     if rs.weapon_proficiency:
         steps.append("proficiencies")
-    steps += ["hp", "review"]
+    steps += ["hp", "equipment", "review"]
     return steps
 ABILITY_ORDER = [Ability.STR, Ability.INT, Ability.WIS, Ability.DEX, Ability.CON, Ability.CHA]
 ALIGNMENT_LABELS = {"law": "Lawful", "neutral": "Neutral", "chaos": "Chaotic"}
@@ -146,6 +157,8 @@ def _next_incomplete_step(draft: dict[str, Any]) -> str:
         return "proficiencies"
     if not _has_hp(draft):
         return "hp"
+    if "gold" not in draft:
+        return "equipment"
     return "review"
 
 
@@ -866,6 +879,99 @@ async def post_hp(request: Request, draft_id: str):
     draft = _load(request, draft_id)
     if not _has_hp(draft):
         raise HTTPException(400, "Roll HP first")
+    return _redirect(f"/wizard/{draft_id}/{_next_incomplete_step(draft)}")
+
+
+# ── Equipment (always-on step right before Review) ────────────────────────
+
+def _equipment_context(draft: dict[str, Any], game_data) -> dict:
+    """Build the rendering context for the equipment partial — shared between
+    the wizard equipment step and the live character sheet."""
+    inventory = draft.get("inventory", [])
+    return {
+        "gold": draft.get("gold", 0),
+        "gold_locked": draft.get("gold_locked", False),
+        "inventory_rows": inventory_rows(inventory, game_data),
+        "shop": shop_categories(game_data),
+        "remove_modes": REMOVE_MODES,
+    }
+
+
+@router.get("/{draft_id}/equipment", response_class=HTMLResponse)
+async def get_equipment(request: Request, draft_id: str):
+    draft = _load(request, draft_id)
+    redirect = _gate(draft, "equipment", draft_id)
+    if redirect:
+        return redirect
+    # First visit: roll starting gold.  Subsequent visits keep whatever the
+    # user has (rolled, re-rolled, or partially spent).
+    if "gold" not in draft:
+        draft["gold"] = roll_starting_gold()
+        draft.setdefault("inventory", [])
+        draft.setdefault("gold_locked", False)
+        save_draft(draft_id, draft, _drafts_dir(request))
+    ctx = _base_context(request, draft_id, draft, "equipment")
+    ctx.update(_equipment_context(draft, request.app.state.game_data))
+    ctx["target_url_prefix"] = f"/wizard/{draft_id}/equipment"
+    return templates.TemplateResponse(request, "wizard.html", ctx)
+
+
+@router.post("/{draft_id}/equipment/reroll-gold")
+async def post_equipment_reroll_gold(request: Request, draft_id: str):
+    draft = _load(request, draft_id)
+    if draft.get("gold_locked"):
+        raise HTTPException(400, "Starting gold is locked — a purchase has already been made.")
+    draft["gold"] = roll_starting_gold()
+    draft.setdefault("inventory", [])
+    save_draft(draft_id, draft, _drafts_dir(request))
+    return _redirect(f"/wizard/{draft_id}/equipment")
+
+
+@router.post("/{draft_id}/equipment/buy")
+async def post_equipment_buy(request: Request, draft_id: str, item_id: str = Form(...)):
+    draft = _load(request, draft_id)
+    data = request.app.state.game_data
+    try:
+        new_inventory, new_gold = shop_buy(
+            draft.get("inventory", []), draft.get("gold", 0), item_id, data,
+        )
+    except UnknownItem as e:
+        raise HTTPException(400, str(e))
+    except InsufficientGold as e:
+        raise HTTPException(400, str(e))
+    draft["inventory"] = new_inventory
+    draft["gold"] = new_gold
+    draft["gold_locked"] = True  # first purchase locks the starting-gold roll
+    save_draft(draft_id, draft, _drafts_dir(request))
+    return _redirect(f"/wizard/{draft_id}/equipment")
+
+
+@router.post("/{draft_id}/equipment/remove")
+async def post_equipment_remove(request: Request, draft_id: str,
+                                item_id: str = Form(...),
+                                mode: str = Form(...)):
+    draft = _load(request, draft_id)
+    data = request.app.state.game_data
+    try:
+        new_inventory, new_gold = shop_remove(
+            draft.get("inventory", []), draft.get("gold", 0), item_id, mode, data,
+        )
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    draft["inventory"] = new_inventory
+    draft["gold"] = new_gold
+    save_draft(draft_id, draft, _drafts_dir(request))
+    return _redirect(f"/wizard/{draft_id}/equipment")
+
+
+@router.post("/{draft_id}/equipment")
+async def post_equipment_continue(request: Request, draft_id: str):
+    """Advance from Equipment to Review.  Locks the gold roll even if the
+    user didn't buy anything — they've explicitly chosen to stop shopping."""
+    draft = _load(request, draft_id)
+    draft.setdefault("inventory", [])
+    draft.setdefault("gold_locked", True)
+    save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/review")
 
 
@@ -894,6 +1000,8 @@ def _draft_to_spec(draft: dict[str, Any]) -> CharacterSpec:
         alignment=draft["alignment"],
         secondary_skill=draft.get("secondary_skill"),
         chosen_proficiencies=list(draft.get("proficiencies", [])),
+        gold=draft.get("gold", 0),
+        inventory=list(draft.get("inventory", [])),
         ruleset=ruleset,
     )
 

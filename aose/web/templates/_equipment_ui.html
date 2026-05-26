@@ -1,0 +1,71 @@
+{# Shared equipment UI partial — used by the wizard's equipment step and the
+   live character sheet's equipment section.  Caller must supply:
+     - target_url_prefix   e.g. "/wizard/{id}/equipment" or "/character/{id}/equipment"
+     - gold                int
+     - gold_locked         bool   (re-roll button hidden when true)
+     - inventory_rows      list[InventoryRow]
+     - shop                list[ShopCategory]
+     - show_gold_reroll    bool   (only the wizard turns this on)
+#}
+
+<div class="equipment-header">
+    <span class="gold-display">Gold: <strong>{{ gold }} gp</strong></span>
+    {% if show_gold_reroll and not gold_locked %}
+    <form method="post" action="{{ target_url_prefix }}/reroll-gold" class="inline-form">
+        <button type="submit">Re-roll Starting Gold</button>
+    </form>
+    {% elif show_gold_reroll and gold_locked %}
+    <span class="muted small">Starting roll locked &mdash; a purchase has been made.</span>
+    {% endif %}
+</div>
+
+{% if inventory_rows %}
+<h3 class="subhead">Inventory</h3>
+<table class="inventory-table">
+    <thead>
+        <tr><th>Item</th><th class="num">Qty</th><th>Remove one</th></tr>
+    </thead>
+    <tbody>
+    {% for row in inventory_rows %}
+        <tr>
+            <td>{{ row.name }}</td>
+            <td class="num">{{ row.count }}</td>
+            <td>
+                <form method="post" action="{{ target_url_prefix }}/remove" class="remove-form">
+                    <input type="hidden" name="item_id" value="{{ row.id }}">
+                    <button type="submit" name="mode" value="drop"
+                            title="Throw away — no gold back">Drop</button>
+                    <button type="submit" name="mode" value="sell"
+                            title="Sell for half price">Sell&nbsp;(+{{ row.sell_gp }}&nbsp;gp)</button>
+                    <button type="submit" name="mode" value="refund"
+                            title="Refund the full purchase price">Refund&nbsp;(+{{ row.cost_gp | int }}&nbsp;gp)</button>
+                </form>
+            </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p class="muted">No items in inventory.</p>
+{% endif %}
+
+<h3 class="subhead">Shop</h3>
+{% for category in shop %}
+<h4 class="shop-category">{{ category.name }}</h4>
+<table class="shop-table">
+    <tbody>
+    {% for item in category.items %}
+        <tr class="{% if item.cost_gp > gold %}out-of-reach{% endif %}">
+            <td>{{ item.name }}</td>
+            <td class="num">{{ item.cost_gp | int }} gp</td>
+            <td>
+                <form method="post" action="{{ target_url_prefix }}/buy" class="inline-form">
+                    <input type="hidden" name="item_id" value="{{ item.id }}">
+                    <button type="submit" {% if item.cost_gp > gold %}disabled{% endif %}>Buy</button>
+                </form>
+            </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endfor %}

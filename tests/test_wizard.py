@@ -100,8 +100,14 @@ def test_full_wizard_flow_creates_character(client, tmp_path):
     draft = load_draft(draft_id, tmp_path / "drafts")
     assert 1 <= draft["hp_roll"] <= 8
 
-    # Advance to review
+    # HP now redirects to the equipment step, not directly to review.
     r = client.post(f"/wizard/{draft_id}/hp")
+    assert r.status_code == 303
+    assert r.headers["location"] == f"/wizard/{draft_id}/equipment"
+
+    # Visit equipment to roll starting gold, then continue to review.
+    client.get(f"/wizard/{draft_id}/equipment")  # seeds gold on first GET
+    r = client.post(f"/wizard/{draft_id}/equipment")
     assert r.status_code == 303
     assert r.headers["location"] == f"/wizard/{draft_id}/review"
 

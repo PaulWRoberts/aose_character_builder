@@ -245,5 +245,8 @@ def test_review_page_includes_skill(client):
     client.post(f"/wizard/{draft_id}/skill", data={"secondary_skill": "Cartographer"})
     client.post(f"/wizard/{draft_id}/hp/roll")
     client.post(f"/wizard/{draft_id}/hp")
+    # Equipment step now sits between HP and review; advance through it.
+    client.get(f"/wizard/{draft_id}/equipment")
+    client.post(f"/wizard/{draft_id}/equipment")
     r = client.get(f"/wizard/{draft_id}/review")
     assert "Cartographer" in r.text
