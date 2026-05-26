@@ -137,7 +137,14 @@
                 {% if sheet.proficiencies %}
                 <ul>
                     {% for p in sheet.proficiencies %}
-                    <li>{{ p }}</li>
+                    <li>
+                        <strong>{{ p.name }}</strong>
+                        {% if p.weapons %}
+                        <span class="muted small">&mdash;
+                            {% for w in p.weapons %}{{ w.name }} ({{ w.damage }}){% if not loop.last %}, {% endif %}{% endfor %}
+                        </span>
+                        {% endif %}
+                    </li>
                     {% endfor %}
                 </ul>
                 {% else %}
@@ -175,7 +182,9 @@
 
     <footer class="sheet-footer">
         <h2>Ruleset</h2>
-        <p>Encumbrance: <em>{{ sheet.encumbrance_mode }}</em></p>
+        <p>Encumbrance: <em>{{ sheet.encumbrance_mode }}</em>
+           {% if sheet.encumbrance_description %}<span class="muted small">&mdash; {{ sheet.encumbrance_description }}</span>{% endif %}
+        </p>
         {% if sheet.enabled_optional_rules %}
         <p>Optional rules in effect: {{ sheet.enabled_optional_rules | join(", ") }}</p>
         {% else %}

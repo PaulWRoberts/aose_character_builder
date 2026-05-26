@@ -52,7 +52,7 @@
             <div class="stat-row"><span>Skill</span><span>{{ sheet.secondary_skill }}</span></div>
             {% endif %}
             {% if sheet.weapon_proficiency_active %}
-            <div class="stat-row"><span>Profs</span><span>{{ sheet.proficiencies | join(", ") if sheet.proficiencies else "—" }}</span></div>
+            <div class="stat-row"><span>Profs</span><span>{{ sheet.proficiencies | map(attribute='name') | join(", ") if sheet.proficiencies else "—" }}</span></div>
             {% endif %}
         </section>
     </div>

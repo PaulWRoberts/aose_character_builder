@@ -44,7 +44,9 @@
         {% for field, label, options in choice_groups %}
         <fieldset class="rule-group">
             <legend>{{ label }}
+                {% if field not in implemented_choice_groups %}
                 <span class="rule-pending" title="Saved with the character, but builder behaviour for this choice is not yet implemented.">pending</span>
+                {% endif %}
             </legend>
             <div class="radio-stack">
                 {% for value, opt_label in options %}

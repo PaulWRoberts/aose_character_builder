@@ -86,14 +86,18 @@ def test_settings_page_links_in_nav(client):
     assert 'href="/settings"' in r.text
 
 
-def test_pending_badge_shown_for_unimplemented_rules(client):
+def test_no_pending_badges_when_all_rules_implemented(client):
+    """Regression guard for the matrix of optional rules.
+
+    Every bool rule is in IMPLEMENTED_RULES, every choice group in
+    IMPLEMENTED_CHOICE_GROUPS — so the settings page should not render the
+    'pending' badge anywhere any more.  If a new rule is added without
+    integration, this test will fail and remind the author to either
+    integrate it or explicitly add a new pending guard test.
+    """
     r = client.get("/settings")
-    # The radio-group rules (ability_roll_method, encumbrance) are still
-    # rendered with a pending badge — their fieldset legend carries it.
-    idx = r.text.index('name="ability_roll_method"')
-    # The legend is rendered before the inputs; look in a window straddling it.
-    window = r.text[max(0, idx - 600):idx]
-    assert "pending" in window
+    assert "rule-pending" not in r.text
+    assert ">pending<" not in r.text
 
 
 def test_no_pending_badge_for_ascending_ac(client):

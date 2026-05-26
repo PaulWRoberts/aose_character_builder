@@ -2,7 +2,12 @@ import random
 
 import pytest
 
-from aose.engine.dice import roll, roll_3d6_in_order, roll_hp
+from aose.engine.dice import (
+    roll,
+    roll_3d6_in_order,
+    roll_4d6_drop_lowest_in_order,
+    roll_hp,
+)
 
 
 def test_roll_1d6_range():
@@ -93,3 +98,27 @@ def test_roll_hp_default_matches_plain_roll():
 def test_roll_hp_invalid_notation_raises():
     with pytest.raises(ValueError):
         roll_hp("not a die")
+
+
+# ── 4d6-drop-lowest in order ─────────────────────────────────────────────
+
+def test_4d6_drop_lowest_returns_six_values_in_3_to_18():
+    scores = roll_4d6_drop_lowest_in_order(random.Random(0))
+    assert len(scores) == 6
+    assert all(3 <= s <= 18 for s in scores)
+
+
+def test_4d6_drop_lowest_deterministic_with_seed():
+    a = roll_4d6_drop_lowest_in_order(random.Random(99))
+    b = roll_4d6_drop_lowest_in_order(random.Random(99))
+    assert a == b
+
+
+def test_4d6_drop_lowest_shifted_higher_than_3d6_on_average():
+    """Sanity: across many rolls 4d6-drop-lowest should beat 3d6 in mean.
+    Uses a fixed seed for determinism."""
+    rng_a = random.Random(123)
+    rng_b = random.Random(123)
+    total_4d6 = sum(sum(roll_4d6_drop_lowest_in_order(rng_a)) for _ in range(40))
+    total_3d6 = sum(sum(roll_3d6_in_order(rng_b)) for _ in range(40))
+    assert total_4d6 > total_3d6

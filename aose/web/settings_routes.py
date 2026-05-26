@@ -40,7 +40,11 @@ IMPLEMENTED_RULES = {
     "weapon_proficiency",
     "separate_race_class",
     "multiclassing",
+    "variable_weapon_damage",
 }
+
+# Choice-group rules that have full integration too.
+IMPLEMENTED_CHOICE_GROUPS = {"ability_roll_method", "encumbrance"}
 
 RULE_GROUPS = [
     ("Combat", [
@@ -107,6 +111,7 @@ async def get_settings(request: Request):
             "choice_groups": CHOICE_GROUPS,
             "rule_labels": RULE_LABELS,
             "implemented_rules": IMPLEMENTED_RULES,
+            "implemented_choice_groups": IMPLEMENTED_CHOICE_GROUPS,
             "saved": saved,
         },
     )

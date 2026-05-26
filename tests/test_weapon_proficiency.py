@@ -297,7 +297,7 @@ def test_build_sheet_maps_group_ids_to_names():
         ruleset=RuleSet(weapon_proficiency=True),
     )
     sheet = build_sheet(spec, data)
-    assert sheet.proficiencies == ["Sword", "Bow"]
+    assert [p.name for p in sheet.proficiencies] == ["Sword", "Bow"]
     assert sheet.weapon_proficiency_active is True
 
 
@@ -315,3 +315,61 @@ def test_build_sheet_omits_proficiencies_when_rule_off():
     sheet = build_sheet(spec, data)
     assert sheet.proficiencies == []
     assert sheet.weapon_proficiency_active is False
+
+
+# ── Variable Weapon Damage: per-weapon damage on proficiency display ──────
+
+def test_proficiency_display_shows_default_damage_when_variable_off():
+    data = GameData.load(DATA_DIR)
+    spec = CharacterSpec(
+        name="X",
+        abilities={"STR": 15, "INT": 11, "WIS": 12, "DEX": 13, "CON": 14, "CHA": 10},
+        race_id="dwarf",
+        classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
+        alignment="law",
+        chosen_proficiencies=["sword"],
+        ruleset=RuleSet(weapon_proficiency=True, variable_weapon_damage=False),
+    )
+    sheet = build_sheet(spec, data)
+    sword = next(p for p in sheet.proficiencies if p.name == "Sword")
+    # Every sword shows the default-rule 1d6
+    for w in sword.weapons:
+        assert w.damage == "1d6", f"{w.name} should be 1d6 under default damage"
+
+
+def test_proficiency_display_shows_variable_damage_when_rule_on():
+    data = GameData.load(DATA_DIR)
+    spec = CharacterSpec(
+        name="X",
+        abilities={"STR": 15, "INT": 11, "WIS": 12, "DEX": 13, "CON": 14, "CHA": 10},
+        race_id="dwarf",
+        classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
+        alignment="law",
+        chosen_proficiencies=["sword"],
+        ruleset=RuleSet(weapon_proficiency=True, variable_weapon_damage=True),
+    )
+    sheet = build_sheet(spec, data)
+    sword = next(p for p in sheet.proficiencies if p.name == "Sword")
+    damages = {w.name: w.damage for w in sword.weapons}
+    assert damages["Short Sword"] == "1d6"
+    assert damages["Long Sword"] == "1d8"
+    assert damages["Two-Handed Sword"] == "1d10"
+
+
+def test_sheet_renders_variable_damages_inline(client):
+    """Smoke test against the HTML route — the rendered sheet should mention
+    a non-1d6 damage when the rule is on."""
+    save_settings(
+        client._settings_path,
+        RuleSet(weapon_proficiency=True, variable_weapon_damage=True),
+    )
+    draft_id = _start_through_class(client)
+    client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "law"})
+    client.post(
+        f"/wizard/{draft_id}/proficiencies",
+        data=_proficiency_post_data("sword", "axe", "bow", "sling"),
+    )
+    char_id = _finish_wizard(client, draft_id)
+    r = client.get(f"/character/{char_id}")
+    assert "1d8" in r.text  # long sword variable
+    assert "1d10" in r.text  # two-handed sword variable

@@ -22,6 +22,18 @@ def roll_3d6_in_order(rng: Optional[random.Random] = None) -> list[int]:
     return [sum(r.randint(1, 6) for _ in range(3)) for _ in range(6)]
 
 
+def roll_4d6_drop_lowest_in_order(rng: Optional[random.Random] = None) -> list[int]:
+    """Roll 4d6 and drop the lowest die, six times, for the six ability scores
+    (the AOSE optional generation method).  Each score is in the range 3..18
+    but the distribution is shifted noticeably higher than 3d6."""
+    r = rng or random.Random()
+    out: list[int] = []
+    for _ in range(6):
+        rolls = sorted(r.randint(1, 6) for _ in range(4))
+        out.append(sum(rolls[1:]))  # drop the smallest
+    return out
+
+
 def roll_hp(
     hit_die: str,
     rng: Optional[random.Random] = None,

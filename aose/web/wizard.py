@@ -17,7 +17,7 @@ from aose.characters import (
     unique_character_id,
 )
 from aose.engine.ability_mods import ability_modifier
-from aose.engine.dice import roll_3d6_in_order, roll_hp
+from aose.engine.dice import roll_3d6_in_order, roll_4d6_drop_lowest_in_order, roll_hp
 from aose.engine.proficiency import proficiency_groups, starting_proficiency_count
 from aose.models import Ability, CharacterSpec, ClassEntry, RuleSet
 
@@ -147,22 +147,50 @@ def _gate(draft: dict, required_step: str, draft_id: str) -> RedirectResponse | 
     return None
 
 
+def _roll_ability_values(method: str) -> list[int]:
+    """Return six ability-score values rolled by the chosen generation method.
+
+    For arrange mode we still roll 3d6 — the only difference from in-order is
+    that the user may reassign the rolls between abilities in the UI.
+    """
+    if method == "4d6_drop_lowest":
+        return roll_4d6_drop_lowest_in_order()
+    return roll_3d6_in_order()  # 3d6_in_order and 3d6_arrange both start here
+
+
+def _seed_draft_abilities(draft: dict[str, Any], ruleset: RuleSet) -> None:
+    """Populate (or replace) draft['abilities'] and the arrange pool for a re-roll."""
+    method = ruleset.ability_roll_method
+    values = _roll_ability_values(method)
+    draft["abilities"] = dict(zip([a.value for a in ABILITY_ORDER], values))
+    if method == "3d6_arrange":
+        draft["abilities_pool"] = sorted(values, reverse=True)
+    else:
+        draft.pop("abilities_pool", None)
+
+
 @router.get("/new")
 async def new_wizard(request: Request):
     draft_id = new_draft_id()
-    abilities = dict(zip([a.value for a in ABILITY_ORDER], roll_3d6_in_order()))
     ruleset = load_settings(request.app.state.settings_path)
-    save_draft(
-        draft_id,
-        {"abilities": abilities, "ruleset": ruleset.model_dump()},
-        _drafts_dir(request),
-    )
+    draft: dict[str, Any] = {"ruleset": ruleset.model_dump()}
+    _seed_draft_abilities(draft, ruleset)
+    save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/abilities")
+
+
+_METHOD_LABELS = {
+    "3d6_in_order": "Roll 3d6 in order",
+    "3d6_arrange": "Roll 3d6 and assign to taste",
+    "4d6_drop_lowest": "Roll 4d6, drop the lowest, in order",
+}
 
 
 @router.get("/{draft_id}/abilities", response_class=HTMLResponse)
 async def get_abilities(request: Request, draft_id: str):
     draft = _load(request, draft_id)
+    ruleset = _ruleset_of(draft)
+    method = ruleset.ability_roll_method
     ability_rows = [
         {
             "name": ab.value,
@@ -173,23 +201,51 @@ async def get_abilities(request: Request, draft_id: str):
     ]
     ctx = _base_context(request, draft_id, draft, "abilities")
     ctx["ability_rows"] = ability_rows
+    ctx["arrange_mode"] = method == "3d6_arrange"
+    ctx["pool"] = draft.get("abilities_pool", [])
+    ctx["method_label"] = _METHOD_LABELS.get(method, method)
     return templates.TemplateResponse(request, "wizard.html", ctx)
 
 
 @router.post("/{draft_id}/reroll")
 async def post_reroll(request: Request, draft_id: str):
     draft = _load(request, draft_id)
-    draft["abilities"] = dict(zip([a.value for a in ABILITY_ORDER], roll_3d6_in_order()))
+    ruleset = _ruleset_of(draft)
+    _seed_draft_abilities(draft, ruleset)
     save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/abilities")
 
 
 @router.post("/{draft_id}/abilities")
-async def post_abilities(request: Request, draft_id: str, name: str = Form(...)):
+async def post_abilities(request: Request, draft_id: str):
     draft = _load(request, draft_id)
-    if not name.strip():
+    form = await request.form()
+    name = (form.get("name") or "").strip()
+    if not name:
         raise HTTPException(400, "Name required")
-    draft["name"] = name.strip()
+    draft["name"] = name
+
+    # In arrange mode, the form also carries new STR/INT/WIS/DEX/CON/CHA values
+    # that must form a permutation of the rolled pool.
+    if _ruleset_of(draft).ability_roll_method == "3d6_arrange":
+        assigned: dict[str, int] = {}
+        for ab in ABILITY_ORDER:
+            raw = form.get(ab.value)
+            if raw is None:
+                raise HTTPException(400, f"Missing assignment for {ab.value}")
+            try:
+                assigned[ab.value] = int(raw)
+            except (TypeError, ValueError):
+                raise HTTPException(400, f"Invalid value for {ab.value!r}: {raw!r}")
+        pool = sorted(draft.get("abilities_pool", []))
+        if sorted(assigned.values()) != pool:
+            raise HTTPException(
+                400,
+                f"Ability assignment must use each rolled value exactly once "
+                f"(pool was {pool}, got {sorted(assigned.values())}).",
+            )
+        draft["abilities"] = assigned
+
     save_draft(draft_id, draft, _drafts_dir(request))
     # Route via _next_incomplete_step so race-as-class drafts skip /race.
     return _redirect(f"/wizard/{draft_id}/{_next_incomplete_step(draft)}")

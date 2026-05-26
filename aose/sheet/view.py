@@ -27,6 +27,12 @@ OPTIONAL_RULE_LABELS = {
     "variable_weapon_damage": "Variable Weapon Damage",
 }
 
+ENCUMBRANCE_DESCRIPTIONS = {
+    "none": "Encumbrance is ignored entirely.",
+    "basic": "Tracks armour and significant loads only.",
+    "detailed": "Tracks every item's weight in coins.",
+}
+
 
 class AbilityRow(BaseModel):
     ability: str
@@ -49,6 +55,16 @@ class SheetFeature(BaseModel):
 class EquippedRow(BaseModel):
     slot: str
     item_name: str
+
+
+class WeaponDisplay(BaseModel):
+    name: str
+    damage: str
+
+
+class ProficiencyDisplay(BaseModel):
+    name: str                       # group label, e.g. "Sword"
+    weapons: list[WeaponDisplay]    # weapons in that group with their damage
 
 
 class CharacterSheet(BaseModel):
@@ -83,11 +99,12 @@ class CharacterSheet(BaseModel):
     inventory: list[str]
 
     secondary_skill: str | None
-    proficiencies: list[str]  # human-readable proficiency-group names; empty when rule off
+    proficiencies: list["ProficiencyDisplay"]  # rich per-group display; empty when rule off
     weapon_proficiency_active: bool
 
     enabled_optional_rules: list[str]
     encumbrance_mode: str
+    encumbrance_description: str
 
 
 def _class_summary(spec: CharacterSpec, data: GameData) -> str:
@@ -155,14 +172,45 @@ def _enabled_optional_rules(rs: RuleSet) -> list[str]:
     return [label for field, label in OPTIONAL_RULE_LABELS.items() if getattr(rs, field)]
 
 
-def _proficiency_names(spec: CharacterSpec, data: GameData) -> list[str]:
-    """Map the spec's chosen group ids to human-readable names from the data set."""
+def _proficiency_display(spec: CharacterSpec, data: GameData) -> list[ProficiencyDisplay]:
+    """Build the rich per-group proficiency display for the character sheet.
+
+    Each entry lists the weapons in that group with the damage value the
+    character would deal under the active rules: the variable per-weapon damage
+    if Variable Weapon Damage is on, otherwise the default 1d6.  Returns an
+    empty list when the Weapon Proficiency rule is off or no groups were picked.
+    """
     from aose.engine.proficiency import proficiency_groups
+    from aose.models import Weapon
+
     if not spec.ruleset.weapon_proficiency or not spec.chosen_proficiencies:
         return []
-    id_to_name = {g["id"]: g["name"] for g in proficiency_groups(data)}
-    return [id_to_name.get(gid, gid.replace("_", " ").title())
-            for gid in spec.chosen_proficiencies]
+
+    use_variable = spec.ruleset.variable_weapon_damage
+    id_to_group = {g["id"]: g for g in proficiency_groups(data)}
+
+    # Pre-index weapons by their proficiency group id for one pass.
+    weapons_by_group: dict[str, list[Weapon]] = {}
+    for item in data.items.values():
+        if isinstance(item, Weapon) and item.proficiency_group:
+            weapons_by_group.setdefault(item.proficiency_group, []).append(item)
+
+    result: list[ProficiencyDisplay] = []
+    for gid in spec.chosen_proficiencies:
+        group_meta = id_to_group.get(gid)
+        group_name = group_meta["name"] if group_meta else gid.replace("_", " ").title()
+        weapons = sorted(weapons_by_group.get(gid, []), key=lambda w: w.name)
+        result.append(ProficiencyDisplay(
+            name=group_name,
+            weapons=[
+                WeaponDisplay(
+                    name=w.name,
+                    damage=(w.damage.variable if use_variable else w.damage.default),
+                )
+                for w in weapons
+            ],
+        ))
+    return result
 
 
 def _is_race_as_class(spec: CharacterSpec, data: GameData) -> bool:
@@ -224,8 +272,11 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
         equipped=_equipped(spec, data),
         inventory=_inventory(spec, data),
         secondary_skill=spec.secondary_skill,
-        proficiencies=_proficiency_names(spec, data),
+        proficiencies=_proficiency_display(spec, data),
         weapon_proficiency_active=spec.ruleset.weapon_proficiency,
         enabled_optional_rules=_enabled_optional_rules(spec.ruleset),
         encumbrance_mode=spec.ruleset.encumbrance,
+        encumbrance_description=ENCUMBRANCE_DESCRIPTIONS.get(
+            spec.ruleset.encumbrance, ""
+        ),
     )
