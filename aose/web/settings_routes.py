@@ -30,7 +30,12 @@ RULE_LABELS = {
 # Rules whose engine/builder integration is fully wired up.  The settings
 # page marks unimplemented rules so the user knows their choice is persisted
 # but not yet enforced.
-IMPLEMENTED_RULES = {"ascending_ac", "max_hp_at_l1", "reroll_1s_2s_hp_l1"}
+IMPLEMENTED_RULES = {
+    "ascending_ac",
+    "max_hp_at_l1",
+    "reroll_1s_2s_hp_l1",
+    "secondary_skills",
+}
 
 RULE_GROUPS = [
     ("Combat", [

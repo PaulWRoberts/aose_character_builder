@@ -550,6 +550,22 @@ button {
     max-width: 500px;
 }
 
+.skill-display {
+    margin: 15px 0;
+    padding: 15px;
+    background: #ede4cf;
+    border: 1px solid #c8b89a;
+    max-width: 400px;
+}
+
+.field select {
+    padding: 8px;
+    font-family: Georgia, serif;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    min-width: 240px;
+}
+
 .review-card {
     border: 2px solid #4a3728;
     padding: 20px;

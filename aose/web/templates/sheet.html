@@ -122,6 +122,13 @@
                 <p>{{ sheet.languages | join(", ") if sheet.languages else "—" }}</p>
             </section>
 
+            {% if sheet.secondary_skill %}
+            <section class="section">
+                <h2>Secondary Skill</h2>
+                <p>{{ sheet.secondary_skill }}</p>
+            </section>
+            {% endif %}
+
             <section class="section">
                 <h2>Equipment</h2>
                 {% if sheet.equipped %}

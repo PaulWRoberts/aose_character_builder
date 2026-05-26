@@ -46,6 +46,9 @@
             <div class="stat-row"><span>Move</span><span>{{ sheet.movement_base }}'/turn</span></div>
             <div class="stat-row"><span>XP to L{{ sheet.next_level }}</span><span>{{ sheet.xp_to_next }}</span></div>
             <div class="stat-row"><span>Languages</span><span>{{ sheet.languages | join(", ") }}</span></div>
+            {% if sheet.secondary_skill %}
+            <div class="stat-row"><span>Skill</span><span>{{ sheet.secondary_skill }}</span></div>
+            {% endif %}
         </section>
     </div>
 </div>

@@ -50,12 +50,37 @@ def _load_items(directory: Path) -> dict[str, Item]:
     return result
 
 
+def _load_secondary_skills(data_dir: Path) -> list[str]:
+    """Read ``secondary_skills.yaml`` as a flat list of skill names.
+
+    Returns an empty list if the file is absent so the loader stays usable
+    in test fixtures that pass minimal data dirs.
+    """
+    path = data_dir / "secondary_skills.yaml"
+    if not path.exists():
+        return []
+    with path.open("r", encoding="utf-8") as f:
+        raw = yaml.safe_load(f) or []
+    if not isinstance(raw, list):
+        raise ValueError("secondary_skills.yaml must be a YAML list of strings")
+    skills = [str(s).strip() for s in raw if str(s).strip()]
+    # Preserve order but drop duplicates so re-roll distributions stay uniform.
+    seen: set[str] = set()
+    unique: list[str] = []
+    for skill in skills:
+        if skill not in seen:
+            seen.add(skill)
+            unique.append(skill)
+    return unique
+
+
 @dataclass
 class GameData:
     races: dict[str, Race] = field(default_factory=dict)
     classes: dict[str, CharClass] = field(default_factory=dict)
     spells: dict[str, Spell] = field(default_factory=dict)
     items: dict[str, Item] = field(default_factory=dict)
+    secondary_skills: list[str] = field(default_factory=list)
 
     @classmethod
     def load(cls, data_dir: Path) -> "GameData":
@@ -64,4 +89,5 @@ class GameData:
             classes=_load_models(data_dir / "classes", CharClass),
             spells=_load_models(data_dir / "spells", Spell),
             items=_load_items(data_dir / "equipment"),
+            secondary_skills=_load_secondary_skills(data_dir),
         )

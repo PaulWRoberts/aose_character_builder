@@ -81,6 +81,8 @@ class CharacterSheet(BaseModel):
     equipped: list[EquippedRow]
     inventory: list[str]
 
+    secondary_skill: str | None
+
     enabled_optional_rules: list[str]
     encumbrance_mode: str
 
@@ -185,6 +187,7 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
         class_features=_class_features(spec, data),
         equipped=_equipped(spec, data),
         inventory=_inventory(spec, data),
+        secondary_skill=spec.secondary_skill,
         enabled_optional_rules=_enabled_optional_rules(spec.ruleset),
         encumbrance_mode=spec.ruleset.encumbrance,
     )

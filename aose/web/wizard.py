@@ -1,3 +1,4 @@
+import random
 from pathlib import Path
 from typing import Any
 
@@ -24,15 +25,32 @@ router = APIRouter(prefix="/wizard")
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
-WIZARD_STEPS = ["abilities", "race", "class", "alignment", "hp", "review"]
 STEP_LABELS = {
     "abilities": "Abilities",
     "race": "Race",
     "class": "Class",
     "alignment": "Alignment",
+    "skill": "Secondary Skill",
     "hp": "Hit Points",
     "review": "Review",
 }
+
+
+def _ruleset_of(draft: dict[str, Any]) -> RuleSet:
+    return RuleSet(**draft.get("ruleset", {}))
+
+
+def _wizard_steps(draft: dict[str, Any]) -> list[str]:
+    """Build the ordered list of wizard steps that apply to *this* draft.
+
+    Steps gated by optional rules are inserted only when the rule is active.
+    """
+    steps = ["abilities", "race", "class", "alignment"]
+    rs = _ruleset_of(draft)
+    if rs.secondary_skills:
+        steps.append("skill")
+    steps += ["hp", "review"]
+    return steps
 ABILITY_ORDER = [Ability.STR, Ability.INT, Ability.WIS, Ability.DEX, Ability.CON, Ability.CHA]
 ALIGNMENT_LABELS = {"law": "Lawful", "neutral": "Neutral", "chaos": "Chaotic"}
 
@@ -61,6 +79,9 @@ def _next_incomplete_step(draft: dict[str, Any]) -> str:
         return "class"
     if "alignment" not in draft:
         return "alignment"
+    rs = _ruleset_of(draft)
+    if rs.secondary_skills and "secondary_skill" not in draft:
+        return "skill"
     if "hp_roll" not in draft:
         return "hp"
     return "review"
@@ -71,21 +92,27 @@ def _redirect(url: str) -> RedirectResponse:
 
 
 def _base_context(request: Request, draft_id: str, draft: dict, current_step: str) -> dict:
-    current_index = WIZARD_STEPS.index(current_step)
+    steps = _wizard_steps(draft)
+    current_index = steps.index(current_step)
     return {
         "draft_id": draft_id,
         "draft": draft,
         "current_step": current_step,
         "current_step_index": current_index,
-        "wizard_steps": WIZARD_STEPS,
+        "wizard_steps": steps,
         "step_labels": STEP_LABELS,
     }
 
 
 def _gate(draft: dict, required_step: str, draft_id: str) -> RedirectResponse | None:
-    """Redirect to the next incomplete step if the user is past their progress."""
+    """Redirect to the next incomplete step if the user is past their progress
+    — or has wandered into a step that the active ruleset doesn't include."""
+    steps = _wizard_steps(draft)
+    if required_step not in steps:
+        # Rule turned off after the user landed here; bounce them forward.
+        return _redirect(f"/wizard/{draft_id}/{_next_incomplete_step(draft)}")
     next_step = _next_incomplete_step(draft)
-    if WIZARD_STEPS.index(required_step) > WIZARD_STEPS.index(next_step):
+    if steps.index(required_step) > steps.index(next_step):
         return _redirect(f"/wizard/{draft_id}/{next_step}")
     return None
 
@@ -264,6 +291,66 @@ async def post_alignment(request: Request, draft_id: str, alignment: str = Form(
     draft = _load(request, draft_id)
     draft["alignment"] = alignment
     save_draft(draft_id, draft, _drafts_dir(request))
+    next_step = _next_incomplete_step(draft)
+    return _redirect(f"/wizard/{draft_id}/{next_step}")
+
+
+# ── Secondary skill (optional, gated by ruleset.secondary_skills) ─────────
+
+def _available_skills(request: Request) -> list[str]:
+    return request.app.state.game_data.secondary_skills
+
+
+def _roll_skill(request: Request) -> str | None:
+    skills = _available_skills(request)
+    if not skills:
+        return None
+    return random.choice(skills)
+
+
+@router.get("/{draft_id}/skill", response_class=HTMLResponse)
+async def get_skill(request: Request, draft_id: str):
+    draft = _load(request, draft_id)
+    redirect = _gate(draft, "skill", draft_id)
+    if redirect:
+        return redirect
+    skills = _available_skills(request)
+    if not skills:
+        raise HTTPException(
+            500,
+            "Secondary Skills rule is active but data/secondary_skills.yaml is empty.",
+        )
+    # Auto-roll on first visit so the user has something to either accept,
+    # re-roll, or override from the dropdown.
+    if "secondary_skill" not in draft:
+        draft["secondary_skill"] = random.choice(skills)
+        save_draft(draft_id, draft, _drafts_dir(request))
+    ctx = _base_context(request, draft_id, draft, "skill")
+    ctx.update({
+        "skills": skills,
+        "current_skill": draft.get("secondary_skill"),
+    })
+    return templates.TemplateResponse(request, "wizard.html", ctx)
+
+
+@router.post("/{draft_id}/skill/reroll")
+async def post_skill_reroll(request: Request, draft_id: str):
+    draft = _load(request, draft_id)
+    skill = _roll_skill(request)
+    if skill is None:
+        raise HTTPException(500, "No secondary skills configured.")
+    draft["secondary_skill"] = skill
+    save_draft(draft_id, draft, _drafts_dir(request))
+    return _redirect(f"/wizard/{draft_id}/skill")
+
+
+@router.post("/{draft_id}/skill")
+async def post_skill(request: Request, draft_id: str, secondary_skill: str = Form(...)):
+    draft = _load(request, draft_id)
+    if secondary_skill not in _available_skills(request):
+        raise HTTPException(400, f"Unknown skill: {secondary_skill!r}")
+    draft["secondary_skill"] = secondary_skill
+    save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/hp")
 
 
@@ -333,6 +420,7 @@ def _draft_to_spec(draft: dict[str, Any]) -> CharacterSpec:
             hp_rolls=[draft["hp_roll"]],
         )],
         alignment=draft["alignment"],
+        secondary_skill=draft.get("secondary_skill"),
         ruleset=ruleset,
     )
 
