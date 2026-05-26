@@ -688,6 +688,32 @@ button {
     padding-bottom: 2px;
 }
 
+.shop-search {
+    width: 100%;
+    max-width: 360px;
+    padding: 6px 10px;
+    margin: 8px 0 4px 0;
+    border: 1px solid #c8b89a;
+    background: #fdfbf6;
+    font-family: Georgia, serif;
+    font-size: 13px;
+}
+
+.grant-gold-form {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+}
+
+.grant-gold-form input[type="number"] {
+    width: 70px;
+    padding: 3px 5px;
+    border: 1px solid #ccc;
+    font-family: Georgia, serif;
+    font-size: 13px;
+}
+
 /* ── Print/no-print pair ─────────────────────────────────── */
 
 .print-only {

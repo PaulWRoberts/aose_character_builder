@@ -121,6 +121,16 @@ def buy(inventory: list[str], gold: int, item_id: str,
     return ([*inventory, item_id], gold - cost)
 
 
+def add_free(inventory: list[str], item_id: str,
+             data: GameData) -> list[str]:
+    """Append ``item_id`` to ``inventory`` without changing gold — for items
+    granted by the GM, found as loot, or otherwise acquired off-ledger.
+    The complement of the ``drop`` removal mode."""
+    if item_id not in data.items:
+        raise UnknownItem(f"No item with id {item_id!r}")
+    return [*inventory, item_id]
+
+
 REMOVE_MODES = ("drop", "sell", "refund")
 
 

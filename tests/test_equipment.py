@@ -382,3 +382,87 @@ def test_sheet_does_not_offer_reroll_button(client):
     r = client.get("/character/test")
     # The reroll endpoint should not appear in any form on the sheet
     assert 'action="/character/test/equipment/reroll-gold"' not in r.text
+
+
+# ── Add (free) button ─────────────────────────────────────────────────────
+
+def test_sheet_add_route_grants_item_without_spending_gold(client):
+    _seed_character(client, gold=5)
+    r = client.post("/character/test/equipment/add", data={"item_id": "long_sword"})
+    assert r.status_code == 303
+    spec = load_character("test", client._characters_dir)
+    assert spec.inventory == ["long_sword"]
+    assert spec.gold == 5  # unchanged
+
+
+def test_sheet_add_rejects_unknown_item(client):
+    _seed_character(client, gold=100)
+    r = client.post("/character/test/equipment/add", data={"item_id": "imaginary"})
+    assert r.status_code == 400
+
+
+def test_sheet_renders_add_button_alongside_buy(client):
+    _seed_character(client, gold=50)
+    r = client.get("/character/test")
+    assert 'action="/character/test/equipment/add"' in r.text
+    # The Add button appears even when the user can't afford Buy
+    assert ">Add</button>" in r.text
+
+
+def test_wizard_add_route_does_not_lock_gold(client):
+    draft_id = _walk_to_equipment(client)
+    client.get(f"/wizard/{draft_id}/equipment")  # seeds gold
+    # Adding for free shouldn't lock the starting-roll
+    r = client.post(f"/wizard/{draft_id}/equipment/add", data={"item_id": "torch"})
+    assert r.status_code == 303
+    draft = load_draft(draft_id, client._drafts_dir)
+    assert draft["inventory"] == ["torch"]
+    assert draft.get("gold_locked") is False
+    # Re-roll should still work
+    r = client.post(f"/wizard/{draft_id}/equipment/reroll-gold")
+    assert r.status_code == 303
+
+
+# ── Shop search box ───────────────────────────────────────────────────────
+
+def test_sheet_shop_has_search_input(client):
+    _seed_character(client, gold=50)
+    r = client.get("/character/test")
+    assert 'id="shop-search"' in r.text
+
+
+def test_sheet_shop_rows_carry_search_metadata(client):
+    """Each shop row needs data-shop-name so the client-side filter works."""
+    _seed_character(client, gold=50)
+    r = client.get("/character/test")
+    # weapons.yaml has Long Sword → row should expose 'long sword' as name
+    assert 'data-shop-name="long sword"' in r.text
+
+
+# ── Gold-grant form on the sheet ──────────────────────────────────────────
+
+def test_sheet_grant_gold_form_present(client):
+    _seed_character(client, gold=10)
+    r = client.get("/character/test")
+    assert 'action="/character/test/gold"' in r.text
+
+
+def test_grant_gold_adds(client):
+    _seed_character(client, gold=10)
+    r = client.post("/character/test/gold", data={"amount": "50"})
+    assert r.status_code == 303
+    assert r.headers["location"] == "/character/test"
+    spec = load_character("test", client._characters_dir)
+    assert spec.gold == 60
+
+
+def test_grant_gold_negative_clamps_at_zero(client):
+    _seed_character(client, gold=5)
+    client.post("/character/test/gold", data={"amount": "-9999"})
+    spec = load_character("test", client._characters_dir)
+    assert spec.gold == 0
+
+
+def test_grant_gold_missing_character_404s(client):
+    r = client.post("/character/nobody/gold", data={"amount": "100"})
+    assert r.status_code == 404

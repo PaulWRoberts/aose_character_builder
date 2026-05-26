@@ -23,6 +23,7 @@ from aose.engine.shop import (
     InsufficientGold,
     REMOVE_MODES,
     UnknownItem,
+    add_free as shop_add_free,
     buy as shop_buy,
     inventory_rows,
     remove as shop_remove,
@@ -942,6 +943,20 @@ async def post_equipment_buy(request: Request, draft_id: str, item_id: str = For
     draft["inventory"] = new_inventory
     draft["gold"] = new_gold
     draft["gold_locked"] = True  # first purchase locks the starting-gold roll
+    save_draft(draft_id, draft, _drafts_dir(request))
+    return _redirect(f"/wizard/{draft_id}/equipment")
+
+
+@router.post("/{draft_id}/equipment/add")
+async def post_equipment_add(request: Request, draft_id: str, item_id: str = Form(...)):
+    """Add an item to inventory without paying — keeps the starting-gold roll
+    unlocked since no purchase happened."""
+    draft = _load(request, draft_id)
+    data = request.app.state.game_data
+    try:
+        draft["inventory"] = shop_add_free(draft.get("inventory", []), item_id, data)
+    except UnknownItem as e:
+        raise HTTPException(400, str(e))
     save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/equipment")
 

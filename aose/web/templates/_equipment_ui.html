@@ -5,7 +5,9 @@
      - gold_locked         bool   (re-roll button hidden when true)
      - inventory_rows      list[InventoryRow]
      - shop                list[ShopCategory]
-     - show_gold_reroll    bool   (only the wizard turns this on)
+     - show_gold_reroll    bool   (wizard only — for the starting-gold reroll)
+     - show_gold_grant     bool   (sheet only — for the +/- gold form)
+     - gold_grant_url      str    (sheet only — POST target for the grant form)
 #}
 
 <div class="equipment-header">
@@ -16,6 +18,15 @@
     </form>
     {% elif show_gold_reroll and gold_locked %}
     <span class="muted small">Starting roll locked &mdash; a purchase has been made.</span>
+    {% endif %}
+
+    {% if show_gold_grant %}
+    <form method="post" action="{{ gold_grant_url }}" class="grant-gold-form inline-form">
+        <label class="grant-xp-label">Adjust gold
+            <input type="number" name="amount" value="10" step="5">
+        </label>
+        <button type="submit">Apply</button>
+    </form>
     {% endif %}
 </div>
 
@@ -50,18 +61,29 @@
 {% endif %}
 
 <h3 class="subhead">Shop</h3>
+<input type="text" id="shop-search" class="shop-search"
+       placeholder="Search items by name…"
+       aria-label="Search items">
+
 {% for category in shop %}
-<h4 class="shop-category">{{ category.name }}</h4>
-<table class="shop-table">
+<h4 class="shop-category" data-shop-category="{{ category.id }}">{{ category.name }}</h4>
+<table class="shop-table" data-shop-category="{{ category.id }}">
     <tbody>
     {% for item in category.items %}
-        <tr class="{% if item.cost_gp > gold %}out-of-reach{% endif %}">
+        <tr class="shop-row {% if item.cost_gp > gold %}out-of-reach{% endif %}"
+            data-shop-name="{{ item.name | lower }}">
             <td>{{ item.name }}</td>
             <td class="num">{{ item.cost_gp | int }} gp</td>
             <td>
                 <form method="post" action="{{ target_url_prefix }}/buy" class="inline-form">
                     <input type="hidden" name="item_id" value="{{ item.id }}">
-                    <button type="submit" {% if item.cost_gp > gold %}disabled{% endif %}>Buy</button>
+                    <button type="submit"
+                            {% if item.cost_gp > gold %}disabled{% endif %}>Buy</button>
+                </form>
+                <form method="post" action="{{ target_url_prefix }}/add" class="inline-form">
+                    <input type="hidden" name="item_id" value="{{ item.id }}">
+                    <button type="submit"
+                            title="Add to inventory without spending gold (GM gift / found loot)">Add</button>
                 </form>
             </td>
         </tr>
@@ -69,3 +91,31 @@
     </tbody>
 </table>
 {% endfor %}
+
+<script>
+    // Client-side filter for the shop.  Server-side ordering is preserved;
+    // we just hide rows whose data-shop-name doesn't match the query, and
+    // hide category headers + tables that end up entirely empty.
+    (function () {
+        const input = document.getElementById('shop-search');
+        if (!input) return;
+        const rows = document.querySelectorAll('.shop-row');
+        function applyFilter() {
+            const q = input.value.trim().toLowerCase();
+            const visibleByCat = {};
+            rows.forEach(row => {
+                const matches = !q || row.dataset.shopName.includes(q);
+                row.style.display = matches ? '' : 'none';
+                if (matches) {
+                    const cat = row.closest('table').dataset.shopCategory;
+                    visibleByCat[cat] = (visibleByCat[cat] || 0) + 1;
+                }
+            });
+            document.querySelectorAll('[data-shop-category]').forEach(el => {
+                const cat = el.dataset.shopCategory;
+                el.style.display = (visibleByCat[cat] || 0) > 0 ? '' : 'none';
+            });
+        }
+        input.addEventListener('input', applyFilter);
+    })();
+</script>

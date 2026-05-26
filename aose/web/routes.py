@@ -10,6 +10,7 @@ from aose.engine.shop import (
     REMOVE_MODES,
     InsufficientGold,
     UnknownItem,
+    add_free as shop_add_free,
     buy as shop_buy,
     inventory_rows as shop_inventory_rows,
     remove as shop_remove,
@@ -71,6 +72,8 @@ async def character_sheet(request: Request, character_id: str):
             "remove_modes": REMOVE_MODES,
             "target_url_prefix": f"/character/{character_id}/equipment",
             "show_gold_reroll": False,
+            "show_gold_grant": True,
+            "gold_grant_url": f"/character/{character_id}/gold",
         },
     )
 
@@ -156,6 +159,16 @@ async def grant_xp(request: Request, character_id: str, amount: int = Form(...))
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
+@router.post("/character/{character_id}/gold")
+async def grant_gold(request: Request, character_id: str, amount: int = Form(...)):
+    """Add or subtract gold.  Clamped at zero — negative balances aren't a
+    thing in OSE, even if the GM claws back some treasure."""
+    spec = _load_spec_or_404(request, character_id)
+    spec.gold = max(0, spec.gold + amount)
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
 @router.post("/character/{character_id}/level-up/{class_id}")
 async def level_up_class(request: Request, character_id: str, class_id: str):
     """Advance one class by a single level, rolling its hit die for the
@@ -183,6 +196,20 @@ async def equipment_buy(request: Request, character_id: str,
         raise HTTPException(400, str(e))
     spec.inventory = new_inventory
     spec.gold = new_gold
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/equipment/add")
+async def equipment_add(request: Request, character_id: str,
+                        item_id: str = Form(...)):
+    """Add an item to inventory without spending gold — covers GM-given gear,
+    found loot, and similar off-ledger acquisitions."""
+    spec = _load_spec_or_404(request, character_id)
+    try:
+        spec.inventory = shop_add_free(spec.inventory, item_id, request.app.state.game_data)
+    except UnknownItem as e:
+        raise HTTPException(400, str(e))
     save_character(character_id, spec, request.app.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
