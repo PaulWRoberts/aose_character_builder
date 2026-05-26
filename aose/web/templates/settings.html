@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Settings - AOSE Character Builder{% endblock %}
+{% block content %}
+
+<section class="panel">
+    <div class="panel-header">
+        <h1>Ruleset Settings</h1>
+        <a href="/" class="button">Back</a>
+    </div>
+
+    <p class="muted settings-intro">
+        These choices form the default ruleset for every new character.  Each
+        character snapshots the active ruleset at creation, so later edits here
+        never alter existing characters.
+    </p>
+
+    {% if saved %}
+    <div class="flash flash-success">Settings saved.</div>
+    {% endif %}
+
+    <form method="post" action="/settings" class="settings-form">
+
+        {% for group_name, fields in rule_groups %}
+        <fieldset class="rule-group">
+            <legend>{{ group_name }}</legend>
+            {% for field, desc in fields %}
+            <label class="rule">
+                <input type="checkbox" name="{{ field }}"
+                       {% if ruleset[field] %}checked{% endif %}>
+                <span class="rule-body">
+                    <span class="rule-name">
+                        {{ rule_labels[field] }}
+                        {% if field not in implemented_rules %}
+                        <span class="rule-pending" title="Saved with the character, but builder/sheet behaviour for this rule is not yet implemented.">pending</span>
+                        {% endif %}
+                    </span>
+                    <span class="rule-desc">{{ desc }}</span>
+                </span>
+            </label>
+            {% endfor %}
+        </fieldset>
+        {% endfor %}
+
+        {% for field, label, options in choice_groups %}
+        <fieldset class="rule-group">
+            <legend>{{ label }}
+                <span class="rule-pending" title="Saved with the character, but builder behaviour for this choice is not yet implemented.">pending</span>
+            </legend>
+            <div class="radio-stack">
+                {% for value, opt_label in options %}
+                <label class="radio-card {% if ruleset[field] == value %}selected{% endif %}">
+                    <input type="radio" name="{{ field }}" value="{{ value }}"
+                           {% if ruleset[field] == value %}checked{% endif %}>
+                    <span class="radio-label">{{ opt_label }}</span>
+                </label>
+                {% endfor %}
+            </div>
+        </fieldset>
+        {% endfor %}
+
+        <div class="form-actions">
+            <button type="submit" class="button primary">Save Settings</button>
+            <a href="/" class="button">Cancel</a>
+        </div>
+
+    </form>
+</section>
+
+{% endblock %}

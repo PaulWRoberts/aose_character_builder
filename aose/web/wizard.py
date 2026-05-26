@@ -8,6 +8,7 @@ from fastapi.templating import Jinja2Templates
 from aose.characters import (
     delete_draft,
     load_draft,
+    load_settings,
     new_draft_id,
     save_character,
     save_draft,
@@ -93,7 +94,12 @@ def _gate(draft: dict, required_step: str, draft_id: str) -> RedirectResponse | 
 async def new_wizard(request: Request):
     draft_id = new_draft_id()
     abilities = dict(zip([a.value for a in ABILITY_ORDER], roll_3d6_in_order()))
-    save_draft(draft_id, {"abilities": abilities}, _drafts_dir(request))
+    ruleset = load_settings(request.app.state.settings_path)
+    save_draft(
+        draft_id,
+        {"abilities": abilities, "ruleset": ruleset.model_dump()},
+        _drafts_dir(request),
+    )
     return _redirect(f"/wizard/{draft_id}/abilities")
 
 
@@ -302,6 +308,7 @@ async def post_hp(request: Request, draft_id: str):
 
 
 def _draft_to_spec(draft: dict[str, Any]) -> CharacterSpec:
+    ruleset = RuleSet(**draft.get("ruleset", {}))
     return CharacterSpec(
         name=draft["name"],
         abilities=draft["abilities"],
@@ -312,7 +319,7 @@ def _draft_to_spec(draft: dict[str, Any]) -> CharacterSpec:
             hp_rolls=[draft["hp_roll"]],
         )],
         alignment=draft["alignment"],
-        ruleset=RuleSet(),
+        ruleset=ruleset,
     )
 
 

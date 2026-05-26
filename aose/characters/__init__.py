@@ -5,6 +5,11 @@ from .drafts import (
     new_draft_id,
     save_draft,
 )
+from .settings import (
+    DEFAULT_SETTINGS_PATH,
+    load_settings,
+    save_settings,
+)
 from .storage import (
     DEFAULT_CHARACTERS_DIR,
     delete_character,
@@ -28,4 +33,7 @@ __all__ = [
     "load_draft",
     "save_draft",
     "delete_draft",
+    "DEFAULT_SETTINGS_PATH",
+    "load_settings",
+    "save_settings",
 ]

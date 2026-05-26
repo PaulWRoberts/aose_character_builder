@@ -6,6 +6,7 @@ from fastapi.staticfiles import StaticFiles
 from aose.data.loader import GameData
 
 from .routes import router
+from .settings_routes import router as settings_router
 from .wizard import router as wizard_router
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -13,6 +14,7 @@ DEFAULT_DATA_DIR = PROJECT_ROOT / "data"
 DEFAULT_CHARACTERS_DIR = PROJECT_ROOT / "characters"
 DEFAULT_EXAMPLES_DIR = PROJECT_ROOT / "examples"
 DEFAULT_DRAFTS_DIR = PROJECT_ROOT / "drafts"
+DEFAULT_SETTINGS_PATH = PROJECT_ROOT / "settings.json"
 
 
 def _bootstrap_characters(characters_dir: Path, examples_dir: Path) -> None:
@@ -31,6 +33,7 @@ def create_app(
     characters_dir: Path = DEFAULT_CHARACTERS_DIR,
     drafts_dir: Path = DEFAULT_DRAFTS_DIR,
     examples_dir: Path = DEFAULT_EXAMPLES_DIR,
+    settings_path: Path = DEFAULT_SETTINGS_PATH,
     seed_from_examples: bool = True,
 ) -> FastAPI:
     app = FastAPI(title="AOSE Character Builder")
@@ -38,6 +41,7 @@ def create_app(
     app.state.characters_dir = characters_dir
     app.state.drafts_dir = drafts_dir
     app.state.examples_dir = examples_dir
+    app.state.settings_path = settings_path
     app.state.game_data = GameData.load(data_dir)
 
     if seed_from_examples:
@@ -48,6 +52,7 @@ def create_app(
 
     app.include_router(router)
     app.include_router(wizard_router)
+    app.include_router(settings_router)
     return app
 
 
