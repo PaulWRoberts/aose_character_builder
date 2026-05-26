@@ -5,10 +5,17 @@
     <header class="wizard-header">
         <h1>New Character</h1>
         <ol class="wizard-steps">
-            {% for step in wizard_steps %}
-            <li class="{% if step == current_step %}current{% elif loop.index0 < current_step_index %}done{% endif %}">
+            {% for s in step_states %}
+            <li class="{{ s.state }}">
+                {% if s.state == "done" %}
+                <a href="/wizard/{{ draft_id }}/{{ s.id }}" class="step-link">
+                    <span class="step-num">{{ loop.index }}</span>
+                    <span class="step-label">{{ s.label }}</span>
+                </a>
+                {% else %}
                 <span class="step-num">{{ loop.index }}</span>
-                <span class="step-label">{{ step_labels[step] }}</span>
+                <span class="step-label">{{ s.label }}</span>
+                {% endif %}
             </li>
             {% endfor %}
         </ol>

@@ -96,6 +96,25 @@ def _class_ids(draft: dict[str, Any]) -> list[str]:
     return []
 
 
+# ── Downstream-clear helpers (used when the user navigates back and changes
+# an earlier choice — keeps the draft from carrying stale data) ───────────
+
+def _clear_after_abilities(draft: dict[str, Any]) -> None:
+    for k in ("race_id", "class_id", "class_ids", "hp_roll", "hp_rolls",
+             "proficiencies"):
+        draft.pop(k, None)
+
+
+def _clear_after_race(draft: dict[str, Any]) -> None:
+    for k in ("class_id", "class_ids", "hp_roll", "hp_rolls", "proficiencies"):
+        draft.pop(k, None)
+
+
+def _clear_after_class(draft: dict[str, Any]) -> None:
+    for k in ("hp_roll", "hp_rolls", "proficiencies"):
+        draft.pop(k, None)
+
+
 def _next_incomplete_step(draft: dict[str, Any]) -> str:
     if "name" not in draft:
         return "abilities"
@@ -122,8 +141,30 @@ def _redirect(url: str) -> RedirectResponse:
 
 
 def _base_context(request: Request, draft_id: str, draft: dict, current_step: str) -> dict:
+    """Build the template context, including per-step state (done/current/todo)
+    so the breadcrumb can render completed steps as back-navigation links."""
     steps = _wizard_steps(draft)
     current_index = steps.index(current_step)
+    next_incomplete = _next_incomplete_step(draft)
+    try:
+        next_idx = steps.index(next_incomplete)
+    except ValueError:
+        next_idx = len(steps)  # ruleset changed; treat all as done
+
+    step_states: list[dict] = []
+    for i, step in enumerate(steps):
+        if step == current_step:
+            state = "current"
+        elif i < next_idx:
+            state = "done"
+        else:
+            state = "todo"
+        step_states.append({
+            "id": step,
+            "label": STEP_LABELS[step],
+            "state": state,
+        })
+
     return {
         "draft_id": draft_id,
         "draft": draft,
@@ -131,6 +172,7 @@ def _base_context(request: Request, draft_id: str, draft: dict, current_step: st
         "current_step_index": current_index,
         "wizard_steps": steps,
         "step_labels": STEP_LABELS,
+        "step_states": step_states,
     }
 
 
@@ -212,6 +254,9 @@ async def post_reroll(request: Request, draft_id: str):
     draft = _load(request, draft_id)
     ruleset = _ruleset_of(draft)
     _seed_draft_abilities(draft, ruleset)
+    # Abilities changed — race/class ability-requirement checks may no longer
+    # be satisfied; clear downstream choices to keep the draft consistent.
+    _clear_after_abilities(draft)
     save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/abilities")
 
@@ -244,7 +289,11 @@ async def post_abilities(request: Request, draft_id: str):
                 f"Ability assignment must use each rolled value exactly once "
                 f"(pool was {pool}, got {sorted(assigned.values())}).",
             )
-        draft["abilities"] = assigned
+        if assigned != draft.get("abilities"):
+            # The user moved values around — downstream ability-requirement
+            # checks may now fail.  Clear race/class/etc. defensively.
+            draft["abilities"] = assigned
+            _clear_after_abilities(draft)
 
     save_draft(draft_id, draft, _drafts_dir(request))
     # Route via _next_incomplete_step so race-as-class drafts skip /race.
@@ -290,8 +339,9 @@ async def post_race(request: Request, draft_id: str, race_id: str = Form(...)):
     if not _meets_ability_requirements(race.ability_requirements, draft["abilities"]):
         raise HTTPException(400, f"Abilities do not meet {race.name} requirements")
     if draft.get("race_id") != race_id:
-        # Race changed — class might no longer be valid; clear it
-        draft.pop("class_id", None)
+        # Race changed — class allowance, level caps, and any picked
+        # multi-class combos may no longer apply.  Clear everything downstream.
+        _clear_after_race(draft)
     draft["race_id"] = race_id
     save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/class")
@@ -437,8 +487,7 @@ async def post_class(request: Request, draft_id: str, class_id: str = Form(...))
 
         # Swap storage from multi → single if the user changed their mind.
         if _class_ids(draft) != [cid]:
-            draft.pop("hp_roll", None)
-            draft.pop("hp_rolls", None)
+            _clear_after_class(draft)
         draft.pop("class_ids", None)
         draft["class_id"] = cid
         save_draft(draft_id, draft, _drafts_dir(request))
@@ -473,8 +522,7 @@ async def post_class(request: Request, draft_id: str, class_id: str = Form(...))
             raise HTTPException(400, f"Abilities do not meet {cls.name} requirements")
 
     if _class_ids(draft) != ids:
-        draft.pop("hp_roll", None)
-        draft.pop("hp_rolls", None)
+        _clear_after_class(draft)
     draft.pop("class_id", None)
     draft["class_ids"] = ids
     save_draft(draft_id, draft, _drafts_dir(request))

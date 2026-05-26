@@ -393,6 +393,17 @@ button {
     border-color: #c8b89a;
 }
 
+.wizard-steps li.done .step-link {
+    color: inherit;
+    text-decoration: none;
+    display: block;
+}
+
+.wizard-steps li.done:hover {
+    background: #ddd0b4;
+    cursor: pointer;
+}
+
 .wizard-steps li.current {
     background: #4a3728;
     color: white;
