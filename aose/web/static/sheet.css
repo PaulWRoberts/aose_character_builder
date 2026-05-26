@@ -558,6 +558,53 @@ button {
     max-width: 400px;
 }
 
+/* ── Advancement section on the sheet ─────────────────────── */
+
+.advancement-row {
+    padding: 6px 0;
+    border-bottom: 1px dashed #d8ccae;
+}
+
+.advancement-row:last-of-type {
+    border-bottom: none;
+}
+
+.level-up-form {
+    margin: 6px 0 0 0;
+}
+
+.level-up-form button {
+    padding: 4px 10px;
+    font-size: 12px;
+}
+
+.grant-xp-form {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid #d8ccae;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.grant-xp-label {
+    font-size: 12px;
+    color: #555;
+}
+
+.grant-xp-form input[type="number"] {
+    width: 80px;
+    padding: 4px 6px;
+    border: 1px solid #ccc;
+    font-family: Georgia, serif;
+    font-size: 14px;
+}
+
+.grant-xp-form button {
+    padding: 4px 12px;
+    font-size: 12px;
+}
+
 .subhead {
     margin: 24px 0 6px 0;
     font-size: 14px;

@@ -1,0 +1,294 @@
+"""Tests for the leveling-up engine, the XP grant endpoint, and the
+level-up routes."""
+import random
+from dataclasses import replace
+from pathlib import Path
+
+import pytest
+from fastapi.testclient import TestClient
+
+from aose.characters import load_character, save_character, save_settings
+from aose.data.loader import GameData
+from aose.engine.leveling import (
+    all_advancement,
+    class_advancement,
+    level_up,
+    xp_share,
+)
+from aose.models import CharacterSpec, ClassEntry, RuleSet
+from aose.web.app import create_app
+
+PROJECT_ROOT = Path(__file__).parent.parent
+DATA_DIR = PROJECT_ROOT / "data"
+
+
+def _spec(level=1, xp=0, hp_rolls=None, multi=False, ruleset=None):
+    if ruleset is None:
+        ruleset = RuleSet()
+    if multi:
+        classes = [
+            ClassEntry(class_id="fighter", level=level, hp_rolls=hp_rolls or [8]),
+            ClassEntry(class_id="magic_user", level=level, hp_rolls=hp_rolls or [4]),
+        ]
+    else:
+        classes = [ClassEntry(class_id="fighter", level=level, hp_rolls=hp_rolls or [8])]
+    return CharacterSpec(
+        name="Test",
+        abilities={"STR": 13, "INT": 13, "WIS": 11, "DEX": 12, "CON": 14, "CHA": 10},
+        race_id="dwarf" if not multi else "elf",
+        classes=classes,
+        alignment="law",
+        xp=xp,
+        ruleset=ruleset,
+    )
+
+
+@pytest.fixture(scope="module")
+def data():
+    return GameData.load(DATA_DIR)
+
+
+# ── xp_share ───────────────────────────────────────────────────────────────
+
+def test_xp_share_single_class_returns_total():
+    assert xp_share(_spec(xp=1500)) == 1500
+
+
+def test_xp_share_multi_class_splits_evenly():
+    assert xp_share(_spec(xp=1000, multi=True)) == 500
+
+
+def test_xp_share_multi_class_integer_truncates():
+    # 999 / 2 = 499 remainder 1
+    assert xp_share(_spec(xp=999, multi=True)) == 499
+
+
+# ── class_advancement ──────────────────────────────────────────────────────
+
+def test_advancement_l1_below_threshold(data):
+    adv = class_advancement(_spec(level=1, xp=0), data, _spec(level=1).classes[0])
+    assert adv.current_level == 1
+    assert adv.next_level == 2
+    assert adv.next_threshold == 2000
+    assert adv.current_xp == 0
+    assert adv.can_level is False
+    assert adv.at_max is False
+
+
+def test_advancement_at_exact_threshold_can_level(data):
+    spec = _spec(level=1, xp=2000)
+    adv = class_advancement(spec, data, spec.classes[0])
+    assert adv.can_level is True
+
+
+def test_advancement_well_past_threshold_still_only_one_level(data):
+    """Even with 100k XP, the next level is only L2 — we don't multi-level."""
+    spec = _spec(level=1, xp=100000)
+    adv = class_advancement(spec, data, spec.classes[0])
+    assert adv.next_level == 2
+    assert adv.can_level is True
+
+
+def test_advancement_at_class_max_blocks_further_levels(data):
+    # Fighter progression file only defines L1-L5 in our data set
+    spec = _spec(level=5, xp=99999, hp_rolls=[8, 8, 8, 8, 8])
+    adv = class_advancement(spec, data, spec.classes[0])
+    assert adv.at_max is True
+    assert adv.can_level is False
+
+
+def test_advancement_respects_race_cap_when_rule_on(data):
+    """Synthetic: cap fighter at 2 for dwarves; a L2 dwarf fighter can't go higher."""
+    patched_race = data.races["dwarf"].model_copy(update={"class_level_caps": {"fighter": 2}})
+    patched = replace(data, races={**data.races, "dwarf": patched_race})
+    spec = _spec(level=2, xp=10000, hp_rolls=[8, 8],
+                 ruleset=RuleSet(demihuman_level_limits=True))
+    adv = class_advancement(spec, patched, spec.classes[0])
+    assert adv.at_max is True
+
+
+def test_advancement_ignores_race_cap_when_rule_off(data):
+    patched_race = data.races["dwarf"].model_copy(update={"class_level_caps": {"fighter": 2}})
+    patched = replace(data, races={**data.races, "dwarf": patched_race})
+    spec = _spec(level=2, xp=10000, hp_rolls=[8, 8],
+                 ruleset=RuleSet(demihuman_level_limits=False))
+    adv = class_advancement(spec, patched, spec.classes[0])
+    assert adv.at_max is False
+    assert adv.next_level == 3
+
+
+# ── level_up mutation ──────────────────────────────────────────────────────
+
+def test_level_up_increments_level_and_appends_hp(data):
+    spec = _spec(level=1, xp=2000)
+    rng = random.Random(0)
+    new_hp = level_up(spec, data, "fighter", rng=rng)
+    assert spec.classes[0].level == 2
+    assert spec.classes[0].hp_rolls == [8, new_hp]
+    assert 1 <= new_hp <= 8
+
+
+def test_level_up_xp_short_raises(data):
+    spec = _spec(level=1, xp=1999)
+    with pytest.raises(ValueError, match="Need 2000"):
+        level_up(spec, data, "fighter")
+
+
+def test_level_up_at_max_raises(data):
+    spec = _spec(level=5, xp=99999, hp_rolls=[8] * 5)
+    with pytest.raises(ValueError, match="maximum level"):
+        level_up(spec, data, "fighter")
+
+
+def test_level_up_unknown_class_raises(data):
+    spec = _spec(level=1, xp=2000)
+    with pytest.raises(ValueError, match="no class 'cleric'"):
+        level_up(spec, data, "cleric")
+
+
+def test_level_up_multi_advances_one_class_only(data):
+    """Multi-class fighter/magic-user: levelling fighter shouldn't touch MU."""
+    spec = _spec(level=1, xp=4000, multi=True)  # share = 2000 → fighter ready, MU not (needs 2500)
+    level_up(spec, data, "fighter")
+    levels = {e.class_id: e.level for e in spec.classes}
+    assert levels == {"fighter": 2, "magic_user": 1}
+
+
+def test_level_up_multi_xp_share_blocks_when_class_threshold_higher(data):
+    """MU threshold is 2500; with share=2000 the MU can't level even though
+    fighter just did."""
+    spec = _spec(level=1, xp=4000, multi=True)
+    level_up(spec, data, "fighter")
+    with pytest.raises(ValueError, match="Need 2500"):
+        level_up(spec, data, "magic_user")
+
+
+# ── all_advancement ────────────────────────────────────────────────────────
+
+def test_all_advancement_returns_one_per_class(data):
+    spec = _spec(level=1, xp=0, multi=True)
+    rows = all_advancement(spec, data)
+    assert [r.class_id for r in rows] == ["fighter", "magic_user"]
+
+
+# ── HTTP endpoints ─────────────────────────────────────────────────────────
+
+@pytest.fixture
+def client(tmp_path):
+    characters_dir = tmp_path / "characters"
+    drafts_dir = tmp_path / "drafts"
+    examples_dir = tmp_path / "examples"
+    examples_dir.mkdir()
+    settings_path = tmp_path / "settings.json"
+    save_settings(settings_path, RuleSet())
+    app = create_app(
+        data_dir=DATA_DIR,
+        characters_dir=characters_dir,
+        drafts_dir=drafts_dir,
+        examples_dir=examples_dir,
+        settings_path=settings_path,
+    )
+    c = TestClient(app, follow_redirects=False)
+    c._characters_dir = characters_dir
+    return c
+
+
+def _seed(client, **overrides):
+    spec = _spec(**overrides)
+    save_character("test", spec, client._characters_dir)
+    return spec
+
+
+def test_grant_xp_adds(client):
+    _seed(client, xp=500)
+    r = client.post("/character/test/xp", data={"amount": "1500"})
+    assert r.status_code == 303
+    assert r.headers["location"] == "/character/test"
+    assert load_character("test", client._characters_dir).xp == 2000
+
+
+def test_grant_xp_negative_clamps_at_zero(client):
+    _seed(client, xp=100)
+    client.post("/character/test/xp", data={"amount": "-9999"})
+    assert load_character("test", client._characters_dir).xp == 0
+
+
+def test_grant_xp_missing_character_404s(client):
+    r = client.post("/character/nobody/xp", data={"amount": "100"})
+    assert r.status_code == 404
+
+
+def test_level_up_route_advances_class(client):
+    _seed(client, level=1, xp=2000)
+    r = client.post("/character/test/level-up/fighter")
+    assert r.status_code == 303
+    spec = load_character("test", client._characters_dir)
+    assert spec.classes[0].level == 2
+    assert len(spec.classes[0].hp_rolls) == 2
+
+
+def test_level_up_route_insufficient_xp_400s(client):
+    _seed(client, level=1, xp=500)
+    r = client.post("/character/test/level-up/fighter")
+    assert r.status_code == 400
+    assert "Need 2000" in r.json()["detail"]
+
+
+def test_level_up_route_unknown_class_400s(client):
+    _seed(client, level=1, xp=10000)
+    r = client.post("/character/test/level-up/cleric")
+    assert r.status_code == 400
+
+
+def test_level_up_route_max_level_400s(client):
+    _seed(client, level=5, xp=99999, hp_rolls=[8] * 5)
+    r = client.post("/character/test/level-up/fighter")
+    assert r.status_code == 400
+
+
+# ── Sheet rendering of the new section ────────────────────────────────────
+
+def test_sheet_renders_total_xp_and_thresholds(client):
+    _seed(client, level=1, xp=1500)
+    r = client.get("/character/test")
+    assert "Total XP" in r.text
+    assert "1500" in r.text
+    assert "2000" in r.text  # next-level threshold
+
+
+def test_sheet_shows_level_up_button_when_ready(client):
+    _seed(client, level=1, xp=2500)
+    r = client.get("/character/test")
+    assert "Level Up" in r.text
+    assert 'action="/character/test/level-up/fighter"' in r.text
+
+
+def test_sheet_omits_level_up_button_when_short(client):
+    _seed(client, level=1, xp=500)
+    r = client.get("/character/test")
+    assert "/level-up/fighter" not in r.text
+
+
+def test_sheet_shows_max_level_label(client):
+    _seed(client, level=5, xp=99999, hp_rolls=[8] * 5)
+    r = client.get("/character/test")
+    assert "max level" in r.text.lower()
+
+
+def test_grant_xp_form_present(client):
+    _seed(client, xp=0)
+    r = client.get("/character/test")
+    assert 'action="/character/test/xp"' in r.text
+    assert 'name="amount"' in r.text
+
+
+# ── End-to-end: grant XP → level up → sheet reflects new level ────────────
+
+def test_full_grant_then_level_flow(client):
+    _seed(client, level=1, xp=0)
+    client.post("/character/test/xp", data={"amount": "2200"})
+    client.post("/character/test/level-up/fighter")
+    spec = load_character("test", client._characters_dir)
+    assert spec.classes[0].level == 2
+    r = client.get("/character/test")
+    assert "Fighter 2" in r.text  # class summary

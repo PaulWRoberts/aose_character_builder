@@ -85,12 +85,17 @@
 
     <section class="section">
         <h2>Experience</h2>
-        <div class="stat-row"><span>XP</span><span>{{ sheet.xp }}</span></div>
-        {% if sheet.xp_to_next is not none %}
-        <div class="stat-row"><span>To level {{ sheet.next_level }}</span><span>{{ sheet.xp_to_next }}</span></div>
-        {% else %}
-        <div class="stat-row muted"><span>Max level reached</span><span></span></div>
-        {% endif %}
+        <div class="stat-row"><span>Total XP</span><span>{{ sheet.xp }}</span></div>
+        {% for adv in sheet.advancement %}
+        <div class="stat-row">
+            <span>{{ adv.name }} L{{ adv.current_level }}</span>
+            {% if adv.at_max %}
+            <span>max</span>
+            {% else %}
+            <span>{{ adv.current_xp }} / {{ adv.next_threshold }}</span>
+            {% endif %}
+        </div>
+        {% endfor %}
     </section>
 
     <section class="section">

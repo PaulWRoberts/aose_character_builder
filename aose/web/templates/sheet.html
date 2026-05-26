@@ -79,13 +79,36 @@
             </section>
 
             <section class="section">
-                <h2>Experience</h2>
-                <div class="stat-row"><span>XP</span><span>{{ sheet.xp }}</span></div>
-                {% if sheet.xp_to_next is not none %}
-                <div class="stat-row"><span>To level {{ sheet.next_level }}</span><span>{{ sheet.xp_to_next }}</span></div>
-                {% else %}
-                <div class="stat-row muted"><span>Max level reached</span><span></span></div>
+                <h2>Advancement</h2>
+                <div class="stat-row"><span>Total XP</span><span class="stat-big">{{ sheet.xp }}</span></div>
+                {% if sheet.advancement | length > 1 %}
+                <div class="stat-row muted small"><span>Per-class share</span><span>{{ sheet.xp_share }}</span></div>
                 {% endif %}
+
+                {% for adv in sheet.advancement %}
+                <div class="advancement-row">
+                    <div class="stat-row">
+                        <span><strong>{{ adv.name }}</strong> &mdash; Level {{ adv.current_level }}</span>
+                        {% if adv.at_max %}
+                        <span class="muted small">max level</span>
+                        {% else %}
+                        <span class="small">{{ adv.current_xp }} / {{ adv.next_threshold }}</span>
+                        {% endif %}
+                    </div>
+                    {% if adv.can_level %}
+                    <form method="post" action="/character/{{ character_id }}/level-up/{{ adv.class_id }}" class="no-print level-up-form">
+                        <button type="submit" class="primary">Level Up &rarr; {{ adv.next_level }}</button>
+                    </form>
+                    {% endif %}
+                </div>
+                {% endfor %}
+
+                <form method="post" action="/character/{{ character_id }}/xp" class="grant-xp-form no-print">
+                    <label class="grant-xp-label">Award XP
+                        <input type="number" name="amount" value="100" step="50">
+                    </label>
+                    <button type="submit">Grant</button>
+                </form>
             </section>
 
         </div>

@@ -2,6 +2,7 @@ from pydantic import BaseModel
 
 from aose.data.loader import GameData
 from aose.engine import ability_mods, armor_class, attack_bonus, hp, saves
+from aose.engine.leveling import ClassAdvancement, all_advancement, xp_share
 from aose.models import Ability, CharacterSpec, RuleSet
 
 ABILITY_ORDER = [Ability.STR, Ability.INT, Ability.WIS, Ability.DEX, Ability.CON, Ability.CHA]
@@ -76,6 +77,8 @@ class CharacterSheet(BaseModel):
     xp: int
     next_level: int | None
     xp_to_next: int | None
+    xp_share: int                            # per-class share (== xp for single-class)
+    advancement: list[ClassAdvancement]      # one entry per class
 
     abilities: list[AbilityRow]
 
@@ -116,24 +119,19 @@ def _class_summary(spec: CharacterSpec, data: GameData) -> str:
 
 
 def _xp_to_next(spec: CharacterSpec, data: GameData) -> tuple[int | None, int | None]:
+    """Legacy single-class shim kept for the existing CharacterSheet fields.
+
+    Multi-class characters return (None, None) here — read ``sheet.advancement``
+    instead for the per-class story.  All cap/limit logic now lives in
+    :mod:`aose.engine.leveling`.
+    """
     if len(spec.classes) != 1:
         return None, None
-    entry = spec.classes[0]
-    cls = data.classes[entry.class_id]
-    next_level = entry.level + 1
-
-    # When demihuman level limits are in force, the race may cap the class
-    # below its own intrinsic maximum.
-    effective_max = cls.max_level
-    if spec.ruleset.demihuman_level_limits:
-        race = data.races[spec.race_id]
-        race_cap = race.class_level_caps.get(entry.class_id)
-        if race_cap is not None:
-            effective_max = min(effective_max, race_cap)
-
-    if next_level > effective_max or next_level not in cls.progression:
+    from aose.engine.leveling import class_advancement
+    adv = class_advancement(spec, data, spec.classes[0])
+    if adv.at_max:
         return None, None
-    return next_level, cls.progression[next_level].xp_required
+    return adv.next_level, adv.next_threshold
 
 
 def _race_features(spec: CharacterSpec, data: GameData) -> list[SheetFeature]:
@@ -246,6 +244,7 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
     ]
 
     next_level, xp_to_next = _xp_to_next(spec, data)
+    advancement_rows = all_advancement(spec, data)
 
     return CharacterSheet(
         name=spec.name,
@@ -256,6 +255,8 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
         xp=spec.xp,
         next_level=next_level,
         xp_to_next=xp_to_next,
+        xp_share=xp_share(spec),
+        advancement=advancement_rows,
         abilities=abilities,
         max_hp=hp.max_hp(spec, data),
         ac_descending=desc_ac,

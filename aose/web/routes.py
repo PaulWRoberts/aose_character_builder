@@ -1,10 +1,11 @@
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import HTMLResponse, Response
+from fastapi import APIRouter, Form, HTTPException, Request
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 
-from aose.characters.storage import list_character_ids, load_character
+from aose.characters.storage import list_character_ids, load_character, save_character
+from aose.engine.leveling import level_up as _level_up
 from aose.sheet.view import build_sheet
 
 router = APIRouter()
@@ -112,3 +113,37 @@ async def character_pdf(request: Request, character_id: str):
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{character_id}.pdf"'},
     )
+
+
+# ── Advancement: grant XP and level up ────────────────────────────────────
+
+def _load_spec_or_404(request: Request, character_id: str):
+    try:
+        return load_character(character_id, request.app.state.characters_dir)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail=f"Character '{character_id}' not found")
+
+
+@router.post("/character/{character_id}/xp")
+async def grant_xp(request: Request, character_id: str, amount: int = Form(...)):
+    """Add or subtract XP.  Total XP is clamped at zero — leveling down is
+    not modelled, so reducing XP below a class's threshold doesn't strip the
+    level (the user can edit the JSON if they really need to)."""
+    spec = _load_spec_or_404(request, character_id)
+    spec.xp = max(0, spec.xp + amount)
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/level-up/{class_id}")
+async def level_up_class(request: Request, character_id: str, class_id: str):
+    """Advance one class by a single level, rolling its hit die for the
+    new HP.  Returns 400 if the character can't level (cap reached or XP
+    short of the next threshold)."""
+    spec = _load_spec_or_404(request, character_id)
+    try:
+        _level_up(spec, request.app.state.game_data, class_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
