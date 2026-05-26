@@ -6,6 +6,9 @@ hit_die: 1d8
 weapons_allowed: all
 armor_allowed: all
 shields_allowed: true
+proficiency:
+  starting_slots: 4
+  new_slot_every_levels: 3
 progression:
   1:
     xp_required: 0

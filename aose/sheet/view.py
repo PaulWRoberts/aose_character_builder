@@ -82,6 +82,8 @@ class CharacterSheet(BaseModel):
     inventory: list[str]
 
     secondary_skill: str | None
+    proficiencies: list[str]  # human-readable proficiency-group names; empty when rule off
+    weapon_proficiency_active: bool
 
     enabled_optional_rules: list[str]
     encumbrance_mode: str
@@ -152,6 +154,16 @@ def _enabled_optional_rules(rs: RuleSet) -> list[str]:
     return [label for field, label in OPTIONAL_RULE_LABELS.items() if getattr(rs, field)]
 
 
+def _proficiency_names(spec: CharacterSpec, data: GameData) -> list[str]:
+    """Map the spec's chosen group ids to human-readable names from the data set."""
+    from aose.engine.proficiency import proficiency_groups
+    if not spec.ruleset.weapon_proficiency or not spec.chosen_proficiencies:
+        return []
+    id_to_name = {g["id"]: g["name"] for g in proficiency_groups(data)}
+    return [id_to_name.get(gid, gid.replace("_", " ").title())
+            for gid in spec.chosen_proficiencies]
+
+
 def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
     race = data.races[spec.race_id]
 
@@ -198,6 +210,8 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
         equipped=_equipped(spec, data),
         inventory=_inventory(spec, data),
         secondary_skill=spec.secondary_skill,
+        proficiencies=_proficiency_names(spec, data),
+        weapon_proficiency_active=spec.ruleset.weapon_proficiency,
         enabled_optional_rules=_enabled_optional_rules(spec.ruleset),
         encumbrance_mode=spec.ruleset.encumbrance,
     )

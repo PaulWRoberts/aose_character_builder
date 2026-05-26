@@ -1,0 +1,191 @@
+# Weapons.  `damage.default` is the 1d6 used under the standard rule;
+# `damage.variable` is used when the Variable Weapon Damage optional rule
+# is in effect.  `proficiency_group` ties related weapons together for the
+# Weapon Proficiency optional rule.
+
+# ── Bludgeons ──────────────────────────────────────────────
+- id: club
+  item_type: weapon
+  name: Club
+  category: weapons
+  cost_gp: 3
+  weight_cn: 50
+  damage: { default: "1d6", variable: "1d4" }
+  hands: 1
+  proficiency_group: bludgeon
+
+- id: mace
+  item_type: weapon
+  name: Mace
+  category: weapons
+  cost_gp: 5
+  weight_cn: 30
+  damage: { default: "1d6", variable: "1d6" }
+  hands: 1
+  proficiency_group: bludgeon
+
+- id: war_hammer
+  item_type: weapon
+  name: War Hammer
+  category: weapons
+  cost_gp: 5
+  weight_cn: 30
+  damage: { default: "1d6", variable: "1d6" }
+  hands: 1
+  proficiency_group: bludgeon
+
+# ── Axes ───────────────────────────────────────────────────
+- id: hand_axe
+  item_type: weapon
+  name: Hand Axe
+  category: weapons
+  cost_gp: 4
+  weight_cn: 30
+  damage: { default: "1d6", variable: "1d6" }
+  hands: 1
+  proficiency_group: axe
+
+- id: battle_axe
+  item_type: weapon
+  name: Battle Axe
+  category: weapons
+  cost_gp: 7
+  weight_cn: 50
+  damage: { default: "1d6", variable: "1d8" }
+  hands: 2
+  proficiency_group: axe
+
+# ── Swords ─────────────────────────────────────────────────
+- id: short_sword
+  item_type: weapon
+  name: Short Sword
+  category: weapons
+  cost_gp: 7
+  weight_cn: 30
+  damage: { default: "1d6", variable: "1d6" }
+  hands: 1
+  proficiency_group: sword
+
+- id: long_sword
+  item_type: weapon
+  name: Long Sword
+  category: weapons
+  cost_gp: 10
+  weight_cn: 60
+  damage: { default: "1d6", variable: "1d8" }
+  hands: 1
+  proficiency_group: sword
+
+- id: two_handed_sword
+  item_type: weapon
+  name: Two-Handed Sword
+  category: weapons
+  cost_gp: 15
+  weight_cn: 100
+  damage: { default: "1d6", variable: "1d10" }
+  hands: 2
+  proficiency_group: sword
+
+# ── Daggers ────────────────────────────────────────────────
+- id: dagger
+  item_type: weapon
+  name: Dagger
+  category: weapons
+  cost_gp: 3
+  weight_cn: 10
+  damage: { default: "1d6", variable: "1d4" }
+  hands: 1
+  ranged: true
+  range_short: 10
+  range_medium: 20
+  range_long: 30
+  proficiency_group: dagger
+
+# ── Pole-arms ──────────────────────────────────────────────
+- id: spear
+  item_type: weapon
+  name: Spear
+  category: weapons
+  cost_gp: 4
+  weight_cn: 30
+  damage: { default: "1d6", variable: "1d6" }
+  hands: 1
+  versatile: true
+  ranged: true
+  range_short: 20
+  range_medium: 40
+  range_long: 60
+  proficiency_group: polearm
+
+- id: polearm
+  item_type: weapon
+  name: Pole-arm
+  category: weapons
+  cost_gp: 7
+  weight_cn: 150
+  damage: { default: "1d6", variable: "1d10" }
+  hands: 2
+  proficiency_group: polearm
+
+# ── Bows ───────────────────────────────────────────────────
+- id: short_bow
+  item_type: weapon
+  name: Short Bow
+  category: weapons
+  cost_gp: 25
+  weight_cn: 30
+  damage: { default: "1d6", variable: "1d6" }
+  hands: 2
+  melee: false
+  ranged: true
+  range_short: 50
+  range_medium: 100
+  range_long: 150
+  proficiency_group: bow
+
+- id: long_bow
+  item_type: weapon
+  name: Long Bow
+  category: weapons
+  cost_gp: 40
+  weight_cn: 30
+  damage: { default: "1d6", variable: "1d6" }
+  hands: 2
+  melee: false
+  ranged: true
+  range_short: 70
+  range_medium: 140
+  range_long: 210
+  proficiency_group: bow
+
+# ── Crossbows ──────────────────────────────────────────────
+- id: light_crossbow
+  item_type: weapon
+  name: Light Crossbow
+  category: weapons
+  cost_gp: 16
+  weight_cn: 50
+  damage: { default: "1d6", variable: "1d6" }
+  hands: 2
+  melee: false
+  ranged: true
+  range_short: 60
+  range_medium: 120
+  range_long: 180
+  proficiency_group: crossbow
+
+# ── Slings ─────────────────────────────────────────────────
+- id: sling
+  item_type: weapon
+  name: Sling
+  category: weapons
+  cost_gp: 2
+  weight_cn: 20
+  damage: { default: "1d6", variable: "1d4" }
+  hands: 1
+  melee: false
+  ranged: true
+  range_short: 40
+  range_medium: 80
+  range_long: 160
+  proficiency_group: sling

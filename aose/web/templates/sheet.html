@@ -129,6 +129,22 @@
             </section>
             {% endif %}
 
+            {% if sheet.weapon_proficiency_active %}
+            <section class="section">
+                <h2>Weapon Proficiencies</h2>
+                {% if sheet.proficiencies %}
+                <ul>
+                    {% for p in sheet.proficiencies %}
+                    <li>{{ p }}</li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="muted">None</p>
+                {% endif %}
+                <p class="small muted">Non-proficient attacks: &minus;2 to hit.</p>
+            </section>
+            {% endif %}
+
             <section class="section">
                 <h2>Equipment</h2>
                 {% if sheet.equipped %}

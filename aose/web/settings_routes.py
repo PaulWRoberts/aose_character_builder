@@ -37,6 +37,7 @@ IMPLEMENTED_RULES = {
     "secondary_skills",
     "demihuman_level_limits",
     "demihuman_class_restrictions",
+    "weapon_proficiency",
 }
 
 RULE_GROUPS = [

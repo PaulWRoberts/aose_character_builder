@@ -88,8 +88,8 @@ def test_settings_page_links_in_nav(client):
 
 def test_pending_badge_shown_for_unimplemented_rules(client):
     r = client.get("/settings")
-    # weapon_proficiency is not yet implemented — should show pending badge
-    idx = r.text.index('name="weapon_proficiency"')
+    # multiclassing is still not implemented — should show pending badge
+    idx = r.text.index('name="multiclassing"')
     snippet = r.text[idx:idx + 600]
     assert "pending" in snippet
 

@@ -18,6 +18,7 @@ from aose.characters import (
 )
 from aose.engine.ability_mods import ability_modifier
 from aose.engine.dice import roll_3d6_in_order, roll_hp
+from aose.engine.proficiency import proficiency_groups, starting_proficiency_count
 from aose.models import Ability, CharacterSpec, ClassEntry, RuleSet
 
 router = APIRouter(prefix="/wizard")
@@ -31,6 +32,7 @@ STEP_LABELS = {
     "class": "Class",
     "alignment": "Alignment",
     "skill": "Secondary Skill",
+    "proficiencies": "Proficiencies",
     "hp": "Hit Points",
     "review": "Review",
 }
@@ -49,6 +51,8 @@ def _wizard_steps(draft: dict[str, Any]) -> list[str]:
     rs = _ruleset_of(draft)
     if rs.secondary_skills:
         steps.append("skill")
+    if rs.weapon_proficiency:
+        steps.append("proficiencies")
     steps += ["hp", "review"]
     return steps
 ABILITY_ORDER = [Ability.STR, Ability.INT, Ability.WIS, Ability.DEX, Ability.CON, Ability.CHA]
@@ -82,6 +86,8 @@ def _next_incomplete_step(draft: dict[str, Any]) -> str:
     rs = _ruleset_of(draft)
     if rs.secondary_skills and "secondary_skill" not in draft:
         return "skill"
+    if rs.weapon_proficiency and "proficiencies" not in draft:
+        return "proficiencies"
     if "hp_roll" not in draft:
         return "hp"
     return "review"
@@ -366,6 +372,67 @@ async def post_skill(request: Request, draft_id: str, secondary_skill: str = For
         raise HTTPException(400, f"Unknown skill: {secondary_skill!r}")
     draft["secondary_skill"] = secondary_skill
     save_draft(draft_id, draft, _drafts_dir(request))
+    next_step = _next_incomplete_step(draft)
+    return _redirect(f"/wizard/{draft_id}/{next_step}")
+
+
+# ── Weapon proficiencies (optional, gated by ruleset.weapon_proficiency) ──
+
+@router.get("/{draft_id}/proficiencies", response_class=HTMLResponse)
+async def get_proficiencies(request: Request, draft_id: str):
+    draft = _load(request, draft_id)
+    redirect = _gate(draft, "proficiencies", draft_id)
+    if redirect:
+        return redirect
+    data = request.app.state.game_data
+    cls = data.classes[draft["class_id"]]
+    required = starting_proficiency_count(cls)
+    chosen = set(draft.get("proficiencies", []))
+    groups = proficiency_groups(data)
+    if not groups:
+        raise HTTPException(
+            500,
+            "Weapon Proficiency rule is active but no weapons with "
+            "proficiency_group set are in the data set.",
+        )
+    rendered_groups = [
+        {**g, "selected": g["id"] in chosen} for g in groups
+    ]
+    ctx = _base_context(request, draft_id, draft, "proficiencies")
+    ctx.update({
+        "class_name": cls.name,
+        "required": required,
+        "groups": rendered_groups,
+        "currently_chosen": sorted(chosen),
+    })
+    return templates.TemplateResponse(request, "wizard.html", ctx)
+
+
+@router.post("/{draft_id}/proficiencies")
+async def post_proficiencies(request: Request, draft_id: str):
+    draft = _load(request, draft_id)
+    form = await request.form()
+    selected = form.getlist("proficiency_group")
+
+    data = request.app.state.game_data
+    cls = data.classes[draft["class_id"]]
+    required = starting_proficiency_count(cls)
+    valid_ids = {g["id"] for g in proficiency_groups(data)}
+
+    unknown = [s for s in selected if s not in valid_ids]
+    if unknown:
+        raise HTTPException(400, f"Unknown proficiency group(s): {unknown}")
+    # Deduplicate while preserving the user's intent count check below.
+    unique = list(dict.fromkeys(selected))
+    if len(unique) != required:
+        raise HTTPException(
+            400,
+            f"{cls.name} must pick exactly {required} proficiency groups; "
+            f"got {len(unique)}.",
+        )
+
+    draft["proficiencies"] = unique
+    save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/hp")
 
 
@@ -436,6 +503,7 @@ def _draft_to_spec(draft: dict[str, Any]) -> CharacterSpec:
         )],
         alignment=draft["alignment"],
         secondary_skill=draft.get("secondary_skill"),
+        chosen_proficiencies=list(draft.get("proficiencies", [])),
         ruleset=ruleset,
     )
 

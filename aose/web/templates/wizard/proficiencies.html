@@ -1,0 +1,47 @@
+<h2>Weapon Proficiencies</h2>
+<p>{{ class_name }} starts with <strong>{{ required }}</strong> weapon proficiencies.
+   Each covers an entire weapon group &mdash; pick the ones your character has trained with.
+   Non-proficient attacks suffer <strong>&minus;2 to hit</strong>.</p>
+
+<form method="post" action="/wizard/{{ draft_id }}/proficiencies" class="step-form">
+
+    <div class="card-grid"
+         data-required="{{ required }}">
+        {% for g in groups %}
+        <label class="card {% if g.selected %}selected{% endif %}">
+            <input type="checkbox" name="proficiency_group" value="{{ g.id }}"
+                   class="prof-checkbox"
+                   {% if g.selected %}checked{% endif %}>
+            <div class="card-name">{{ g.name }}</div>
+            <div class="card-detail">{{ g.weapons | join(", ") }}</div>
+        </label>
+        {% endfor %}
+    </div>
+
+    <p class="muted" id="prof-counter">Pick exactly {{ required }}.</p>
+
+    <button type="submit" class="primary">Next: Hit Points &rarr;</button>
+</form>
+
+<script>
+    // Lightweight client-side helper: highlight the card on toggle and warn
+    // when the user has picked the wrong number.  Submission validation
+    // still lives on the server.
+    (function () {
+        const required = {{ required }};
+        const grid = document.querySelector('.card-grid');
+        const counter = document.getElementById('prof-counter');
+        const boxes = grid.querySelectorAll('.prof-checkbox');
+
+        function refresh() {
+            const checked = grid.querySelectorAll('.prof-checkbox:checked');
+            counter.textContent = `Picked ${checked.length} of ${required}.`;
+            counter.className = (checked.length === required) ? '' : 'muted';
+            boxes.forEach(box => {
+                box.closest('.card').classList.toggle('selected', box.checked);
+            });
+        }
+        boxes.forEach(box => box.addEventListener('change', refresh));
+        refresh();
+    })();
+</script>
