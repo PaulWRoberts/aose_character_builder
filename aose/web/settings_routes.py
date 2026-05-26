@@ -39,6 +39,7 @@ IMPLEMENTED_RULES = {
     "demihuman_class_restrictions",
     "weapon_proficiency",
     "separate_race_class",
+    "multiclassing",
 }
 
 RULE_GROUPS = [

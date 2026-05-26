@@ -1,27 +1,50 @@
-<h2>Step 5: Roll Hit Points</h2>
-<p>{{ class_name }} rolls <strong>{{ hit_die }}</strong> for level 1 HP.
-   CON modifier: <strong>{{ "%+d"|format(con_mod) }}</strong>.</p>
+<h2>Roll Hit Points</h2>
+<p>
+    {{ class_name }} rolls
+    {% if is_multi %}
+    one hit die per class
+    {% else %}
+    <strong>{{ hit_die }}</strong>
+    {% endif %}
+    for level&nbsp;1 HP.
+    CON modifier: <strong>{{ "%+d"|format(con_mod) }}</strong>.
+</p>
 
 {% if max_hp_rule %}
-<p class="rule-active"><strong>Max HP at L1</strong> is active &mdash; you automatically take the maximum on the hit die.</p>
+<p class="rule-active"><strong>Max HP at L1</strong> is active &mdash; you automatically take the maximum on
+    {% if is_multi %}each hit die{% else %}the hit die{% endif %}.</p>
 {% elif reroll_rule %}
-<p class="rule-active"><strong>Reroll 1s &amp; 2s at L1</strong> is active &mdash; any 1 or 2 on the hit die is rerolled.</p>
+<p class="rule-active"><strong>Reroll 1s &amp; 2s at L1</strong> is active &mdash; any 1 or 2 on a hit die is rerolled.</p>
 {% endif %}
 
-{% if draft.hp_roll %}
+{% if is_multi %}
+<p class="muted small">Multi-class HP: <em>floor(average of class rolls)</em> + CON modifier (minimum&nbsp;1).</p>
+{% endif %}
+
+{% if rolls %}
 <div class="hp-display">
-    <div class="stat-row"><span>{% if max_hp_rule %}Maximum{% else %}Rolled{% endif %}</span><span class="stat-big">{{ draft.hp_roll }}</span></div>
-    <div class="stat-row"><span>Total HP</span><span class="stat-big">{{ total_hp }}</span></div>
+    {% for r in rolls %}
+    <div class="stat-row">
+        <span>{{ r.class_name }} ({{ r.hit_die }})</span>
+        <span class="stat-big">{{ r.roll if r.roll is not none else '—' }}</span>
+    </div>
+    {% endfor %}
+    {% if total_hp is not none %}
+    <div class="stat-row" style="border-top: 1px solid #c8b89a; margin-top: 6px; padding-top: 6px;">
+        <span><strong>Total HP</strong></span>
+        <span class="stat-big">{{ total_hp }}</span>
+    </div>
+    {% endif %}
 </div>
 {% endif %}
 
 {% if not max_hp_rule %}
 <form method="post" action="/wizard/{{ draft_id }}/hp/roll" class="inline-form">
-    <button type="submit">{% if draft.hp_roll %}Re-roll{% else %}Roll HP{% endif %}</button>
+    <button type="submit">{% if ready %}Re-roll{% else %}Roll HP{% endif %}</button>
 </form>
 {% endif %}
 
-{% if draft.hp_roll %}
+{% if ready %}
 <form method="post" action="/wizard/{{ draft_id }}/hp" class="step-form">
     <button type="submit" class="primary">Next: Review &rarr;</button>
 </form>

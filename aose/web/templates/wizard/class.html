@@ -32,5 +32,29 @@
         </label>
     {% endfor %}
     </div>
+
+    {% if combos %}
+    <h3 class="subhead">Multi-class Combinations</h3>
+    <p class="muted small">XP is split evenly between classes.
+       HP at L1 is the average roll across class hit dice (+ CON mod).</p>
+    <div class="card-grid">
+    {% for combo in combos %}
+        <label class="card {% if not combo.available %}disabled{% endif %} {% if combo.selected %}selected{% endif %}">
+            <input type="radio" name="class_id" value="{{ combo.id }}"
+                   {% if not combo.available %}disabled{% endif %}
+                   {% if combo.selected %}checked{% endif %}>
+            <div class="card-name">
+                {{ combo.name }}
+                <span class="rule-pending" title="Multi-class combination.">multi</span>
+            </div>
+            <div class="card-detail">{{ combo.class_names | join(" + ") }}</div>
+            {% if not combo.available %}
+            <div class="card-detail warn">Abilities don&rsquo;t meet every class&rsquo;s requirements</div>
+            {% endif %}
+        </label>
+    {% endfor %}
+    </div>
+    {% endif %}
+
     <button type="submit" class="primary">Next: Alignment &rarr;</button>
 </form>

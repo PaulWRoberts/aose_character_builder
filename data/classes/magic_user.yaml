@@ -1,0 +1,32 @@
+id: magic_user
+name: Magic-User
+prime_requisites: [INT]
+ability_requirements:
+  INT: 9
+max_level: 14
+hit_die: 1d4
+# Magic-Users may only wield daggers and use no armour or shields.
+weapons_allowed:
+  - dagger
+armor_allowed: []
+shields_allowed: false
+progression:
+  1:
+    xp_required: 0
+    thac0: 19
+    hit_dice: 1d4
+    saves: { death: 13, wands: 14, paralysis: 13, breath: 16, spells: 15 }
+    spell_slots:
+      1: 1
+  2:
+    xp_required: 2500
+    thac0: 19
+    hit_dice: 2d4
+    saves: { death: 13, wands: 14, paralysis: 13, breath: 16, spells: 15 }
+    spell_slots:
+      1: 2
+features:
+  - id: arcane_magic
+    name: Arcane Magic
+    text: "Magic-Users learn spells from a spellbook.  Read Magic is always known.  At 1st level the character knows one additional spell of their choice."
+    gained_at_level: 1

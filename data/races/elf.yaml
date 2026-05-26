@@ -1,0 +1,28 @@
+id: elf
+name: Elf
+ability_requirements:
+  INT: 9
+infravision: 60
+base_movement: 120
+languages:
+  - common
+  - elvish
+  - gnoll
+  - hobgoblin
+  - orcish
+allowed_classes:
+  - fighter
+  - magic_user
+class_level_caps:
+  fighter: 10
+  magic_user: 10
+# Permitted multi-class combinations under the Multiclassing optional rule.
+allowed_multiclass_combos:
+  - [fighter, magic_user]
+features:
+  - id: detect_secret_doors
+    name: Detect Secret Doors
+    text: "When actively searching, elves find secret doors on 1-2 on 1d6."
+  - id: resist_sleep_charm
+    name: Resist Sleep & Charm
+    text: "Elves are immune to ghoul paralysis and to sleep spells, and resistant to charm effects from creatures of the goblin family."

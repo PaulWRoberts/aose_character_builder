@@ -88,10 +88,12 @@ def test_settings_page_links_in_nav(client):
 
 def test_pending_badge_shown_for_unimplemented_rules(client):
     r = client.get("/settings")
-    # multiclassing is still not implemented — should show pending badge
-    idx = r.text.index('name="multiclassing"')
-    snippet = r.text[idx:idx + 600]
-    assert "pending" in snippet
+    # The radio-group rules (ability_roll_method, encumbrance) are still
+    # rendered with a pending badge — their fieldset legend carries it.
+    idx = r.text.index('name="ability_roll_method"')
+    # The legend is rendered before the inputs; look in a window straddling it.
+    window = r.text[max(0, idx - 600):idx]
+    assert "pending" in window
 
 
 def test_no_pending_badge_for_ascending_ac(client):

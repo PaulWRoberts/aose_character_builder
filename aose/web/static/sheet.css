@@ -558,6 +558,16 @@ button {
     max-width: 400px;
 }
 
+.subhead {
+    margin: 24px 0 6px 0;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #4a3728;
+    border-bottom: 1px solid #c8b89a;
+    padding-bottom: 4px;
+}
+
 .field select {
     padding: 8px;
     font-family: Georgia, serif;

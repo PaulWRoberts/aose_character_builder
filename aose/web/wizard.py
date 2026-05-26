@@ -79,6 +79,23 @@ def _load(request: Request, draft_id: str) -> dict[str, Any]:
         raise HTTPException(404, f"Draft '{draft_id}' not found")
 
 
+def _has_class_pick(draft: dict[str, Any]) -> bool:
+    return "class_id" in draft or "class_ids" in draft
+
+
+def _has_hp(draft: dict[str, Any]) -> bool:
+    return "hp_roll" in draft or "hp_rolls" in draft
+
+
+def _class_ids(draft: dict[str, Any]) -> list[str]:
+    """Return the picked class ids regardless of single/multi-class storage."""
+    if "class_ids" in draft:
+        return list(draft["class_ids"])
+    if "class_id" in draft:
+        return [draft["class_id"]]
+    return []
+
+
 def _next_incomplete_step(draft: dict[str, Any]) -> str:
     if "name" not in draft:
         return "abilities"
@@ -87,7 +104,7 @@ def _next_incomplete_step(draft: dict[str, Any]) -> str:
     # so we don't have a standalone race step to send the user to.
     if rs.separate_race_class and "race_id" not in draft:
         return "race"
-    if "class_id" not in draft:
+    if not _has_class_pick(draft):
         return "class"
     if "alignment" not in draft:
         return "alignment"
@@ -95,7 +112,7 @@ def _next_incomplete_step(draft: dict[str, Any]) -> str:
         return "skill"
     if rs.weapon_proficiency and "proficiencies" not in draft:
         return "proficiencies"
-    if "hp_roll" not in draft:
+    if not _has_hp(draft):
         return "hp"
     return "review"
 
@@ -287,10 +304,36 @@ async def get_class(request: Request, draft_id: str):
             "allowed_by_race": allowed_by_race,
             "meets_abilities": meets_abilities,
             "available": allowed_by_race and meets_abilities,
-            "selected": draft.get("class_id") == cls.id,
+            "selected": _class_ids(draft) == [cls.id],
         })
+
+    # Multi-class combos (only in split mode + multiclassing rule on +
+    # race actually has declared combos).
+    combos: list[dict] = []
+    if (ruleset.multiclassing
+            and ruleset.separate_race_class
+            and race is not None
+            and race.allowed_multiclass_combos):
+        chosen = _class_ids(draft)
+        for combo in race.allowed_multiclass_combos:
+            combo_classes = [data.classes.get(cid) for cid in combo]
+            if any(c is None for c in combo_classes):
+                continue  # combo references a class not present in data
+            meets_all = all(
+                _meets_ability_requirements(c.ability_requirements, abilities)
+                for c in combo_classes
+            )
+            combos.append({
+                "id": ",".join(combo),  # form value carries the combo
+                "name": " / ".join(c.name for c in combo_classes),
+                "class_names": [c.name for c in combo_classes],
+                "available": meets_all,
+                "selected": sorted(chosen) == sorted(combo),
+            })
+
     ctx = _base_context(request, draft_id, draft, "class")
     ctx["classes"] = classes
+    ctx["combos"] = combos
     ctx["race_name"] = race_name
     ctx["race_as_class_mode"] = not ruleset.separate_race_class
     return templates.TemplateResponse(request, "wizard.html", ctx)
@@ -298,43 +341,86 @@ async def get_class(request: Request, draft_id: str):
 
 @router.post("/{draft_id}/class")
 async def post_class(request: Request, draft_id: str, class_id: str = Form(...)):
+    """Accept either a single class id (``"fighter"``) or a comma-joined combo
+    (``"fighter,magic_user"``).  Combos require the Multiclassing rule and a
+    matching entry in the race's allowed_multiclass_combos."""
     draft = _load(request, draft_id)
     data = request.app.state.game_data
     ruleset = _ruleset_of(draft)
-    if class_id not in data.classes:
-        raise HTTPException(400, f"Unknown class '{class_id}'")
-    cls = data.classes[class_id]
 
-    if not _meets_ability_requirements(cls.ability_requirements, draft["abilities"]):
-        raise HTTPException(400, f"Abilities do not meet {cls.name} requirements")
+    ids = [x.strip() for x in class_id.split(",") if x.strip()]
+    if not ids:
+        raise HTTPException(400, "No class selected")
+    for cid in ids:
+        if cid not in data.classes:
+            raise HTTPException(400, f"Unknown class '{cid}'")
 
-    if ruleset.separate_race_class:
-        # Split mode: race already chosen.  Reject race-locked classes here
-        # too — they should not have appeared in the picker, but POST is
-        # a defence-in-depth.
+    # ── Single-class branch (the common case) ───────────────────────────
+    if len(ids) == 1:
+        cid = ids[0]
+        cls = data.classes[cid]
+
+        if not _meets_ability_requirements(cls.ability_requirements, draft["abilities"]):
+            raise HTTPException(400, f"Abilities do not meet {cls.name} requirements")
+
+        if ruleset.separate_race_class:
+            if cls.race_locked:
+                raise HTTPException(
+                    400,
+                    f"{cls.name} is a race-as-class entry and not available with "
+                    "Separate Race & Class on.",
+                )
+            race = data.races[draft["race_id"]]
+            if not _class_allowed_for_race(cid, race, ruleset):
+                raise HTTPException(400, f"{race.name} cannot be a {cls.name}")
+        else:
+            derived_race_id = cls.race_locked or "human"
+            if derived_race_id not in data.races:
+                raise HTTPException(500, f"Race '{derived_race_id}' missing from data/races/.")
+            draft["race_id"] = derived_race_id
+
+        # Swap storage from multi → single if the user changed their mind.
+        if _class_ids(draft) != [cid]:
+            draft.pop("hp_roll", None)
+            draft.pop("hp_rolls", None)
+        draft.pop("class_ids", None)
+        draft["class_id"] = cid
+        save_draft(draft_id, draft, _drafts_dir(request))
+        return _redirect(f"/wizard/{draft_id}/{_next_incomplete_step(draft)}")
+
+    # ── Multi-class branch ──────────────────────────────────────────────
+    if not ruleset.multiclassing:
+        raise HTTPException(400, "Multi-class picks require the Multiclassing rule.")
+    if not ruleset.separate_race_class:
+        # The race-as-class + multi-class interaction (e.g. dual-classing within
+        # a single race entry) isn't modelled yet; reject defensively.
+        raise HTTPException(
+            400,
+            "Multi-class with Race-as-Class is not supported in this build.",
+        )
+
+    race = data.races[draft["race_id"]]
+    allowed_sorted = [sorted(c) for c in race.allowed_multiclass_combos]
+    if sorted(ids) not in allowed_sorted:
+        raise HTTPException(
+            400,
+            f"Combination {ids} is not allowed for {race.name}.",
+        )
+    for cid in ids:
+        cls = data.classes[cid]
         if cls.race_locked:
             raise HTTPException(
                 400,
-                f"{cls.name} is a race-as-class entry and not available with "
-                "Separate Race & Class on.",
+                f"Race-locked class {cls.name!r} cannot appear in a multi-class combo.",
             )
-        race = data.races[draft["race_id"]]
-        if not _class_allowed_for_race(class_id, race, ruleset):
-            raise HTTPException(400, f"{race.name} cannot be a {cls.name}")
-    else:
-        # Race-as-class mode: the class determines the race.  Race-locked
-        # classes carry their race id; the rest fall through to "human".
-        derived_race_id = cls.race_locked or "human"
-        if derived_race_id not in data.races:
-            raise HTTPException(
-                500,
-                f"Race '{derived_race_id}' is missing from data/races/.",
-            )
-        draft["race_id"] = derived_race_id
+        if not _meets_ability_requirements(cls.ability_requirements, draft["abilities"]):
+            raise HTTPException(400, f"Abilities do not meet {cls.name} requirements")
 
-    if draft.get("class_id") != class_id:
+    if _class_ids(draft) != ids:
         draft.pop("hp_roll", None)
-    draft["class_id"] = class_id
+        draft.pop("hp_rolls", None)
+    draft.pop("class_id", None)
+    draft["class_ids"] = ids
     save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/{_next_incomplete_step(draft)}")
 
@@ -427,6 +513,20 @@ async def post_skill(request: Request, draft_id: str, secondary_skill: str = For
 
 # ── Weapon proficiencies (optional, gated by ruleset.weapon_proficiency) ──
 
+def _proficiency_slots_for(draft: dict[str, Any], data) -> tuple[int, str]:
+    """Slot count + a class-name label for the proficiency step.
+
+    For multi-class characters, AOSE Advanced grants the highest slot count
+    among the picked classes (not the sum)."""
+    ids = _class_ids(draft)
+    classes = [data.classes[cid] for cid in ids]
+    if len(classes) == 1:
+        return starting_proficiency_count(classes[0]), classes[0].name
+    best = max(starting_proficiency_count(c) for c in classes)
+    label = " / ".join(c.name for c in classes)
+    return best, label
+
+
 @router.get("/{draft_id}/proficiencies", response_class=HTMLResponse)
 async def get_proficiencies(request: Request, draft_id: str):
     draft = _load(request, draft_id)
@@ -434,8 +534,7 @@ async def get_proficiencies(request: Request, draft_id: str):
     if redirect:
         return redirect
     data = request.app.state.game_data
-    cls = data.classes[draft["class_id"]]
-    required = starting_proficiency_count(cls)
+    required, class_name = _proficiency_slots_for(draft, data)
     chosen = set(draft.get("proficiencies", []))
     groups = proficiency_groups(data)
     if not groups:
@@ -449,7 +548,7 @@ async def get_proficiencies(request: Request, draft_id: str):
     ]
     ctx = _base_context(request, draft_id, draft, "proficiencies")
     ctx.update({
-        "class_name": cls.name,
+        "class_name": class_name,
         "required": required,
         "groups": rendered_groups,
         "currently_chosen": sorted(chosen),
@@ -464,25 +563,30 @@ async def post_proficiencies(request: Request, draft_id: str):
     selected = form.getlist("proficiency_group")
 
     data = request.app.state.game_data
-    cls = data.classes[draft["class_id"]]
-    required = starting_proficiency_count(cls)
+    required, class_name = _proficiency_slots_for(draft, data)
     valid_ids = {g["id"] for g in proficiency_groups(data)}
 
     unknown = [s for s in selected if s not in valid_ids]
     if unknown:
         raise HTTPException(400, f"Unknown proficiency group(s): {unknown}")
-    # Deduplicate while preserving the user's intent count check below.
     unique = list(dict.fromkeys(selected))
     if len(unique) != required:
         raise HTTPException(
             400,
-            f"{cls.name} must pick exactly {required} proficiency groups; "
+            f"{class_name} must pick exactly {required} proficiency groups; "
             f"got {len(unique)}.",
         )
 
     draft["proficiencies"] = unique
     save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/hp")
+
+
+def _multiclass_total_hp(rolls: list[int], con_mod: int) -> int:
+    """Multi-class L1 HP: floor(avg of class rolls) + CON mod, min 1."""
+    if not rolls:
+        return 0
+    return max(1, sum(rolls) // len(rolls) + con_mod)
 
 
 @router.get("/{draft_id}/hp", response_class=HTMLResponse)
@@ -492,26 +596,55 @@ async def get_hp(request: Request, draft_id: str):
     if redirect:
         return redirect
     data = request.app.state.game_data
-    cls = data.classes[draft["class_id"]]
-    ruleset = RuleSet(**draft.get("ruleset", {}))
-
-    # Max HP at L1 is deterministic — auto-populate so the user just clicks Next.
-    if ruleset.max_hp_at_l1 and "hp_roll" not in draft:
-        draft["hp_roll"] = roll_hp(cls.hit_die, take_max=True)
-        save_draft(draft_id, draft, _drafts_dir(request))
-
+    ruleset = _ruleset_of(draft)
     con_mod = ability_modifier(draft["abilities"]["CON"])
+
+    ids = _class_ids(draft)
+    classes = [data.classes[cid] for cid in ids]
+    is_multi = len(ids) > 1
+
+    # Max HP at L1 is deterministic — populate every class's HP on first visit.
+    if ruleset.max_hp_at_l1:
+        if is_multi and "hp_rolls" not in draft:
+            draft["hp_rolls"] = [roll_hp(c.hit_die, take_max=True) for c in classes]
+            save_draft(draft_id, draft, _drafts_dir(request))
+        elif not is_multi and "hp_roll" not in draft:
+            draft["hp_roll"] = roll_hp(classes[0].hit_die, take_max=True)
+            save_draft(draft_id, draft, _drafts_dir(request))
+
+    # Pre-render per-class rolls (None if not rolled yet)
+    rolls_for_template: list[dict] = []
     total = None
-    if "hp_roll" in draft:
-        total = max(1, draft["hp_roll"] + con_mod)
+    if is_multi:
+        existing = draft.get("hp_rolls", [None] * len(ids))
+        for cls, roll_val in zip(classes, existing):
+            rolls_for_template.append({
+                "class_name": cls.name,
+                "hit_die": cls.hit_die,
+                "roll": roll_val,
+            })
+        if all(r is not None for r in existing) and existing:
+            total = _multiclass_total_hp(existing, con_mod)
+    else:
+        rolls_for_template.append({
+            "class_name": classes[0].name,
+            "hit_die": classes[0].hit_die,
+            "roll": draft.get("hp_roll"),
+        })
+        if "hp_roll" in draft:
+            total = max(1, draft["hp_roll"] + con_mod)
+
     ctx = _base_context(request, draft_id, draft, "hp")
     ctx.update({
-        "class_name": cls.name,
-        "hit_die": cls.hit_die,
+        "is_multi": is_multi,
+        "class_name": " / ".join(c.name for c in classes),
+        "hit_die": classes[0].hit_die,  # single-class template uses this
         "con_mod": con_mod,
+        "rolls": rolls_for_template,
         "total_hp": total,
         "max_hp_rule": ruleset.max_hp_at_l1,
         "reroll_rule": ruleset.reroll_1s_2s_hp_l1,
+        "ready": (total is not None),
     })
     return templates.TemplateResponse(request, "wizard.html", ctx)
 
@@ -520,13 +653,21 @@ async def get_hp(request: Request, draft_id: str):
 async def post_hp_roll(request: Request, draft_id: str):
     draft = _load(request, draft_id)
     data = request.app.state.game_data
-    cls = data.classes[draft["class_id"]]
-    ruleset = RuleSet(**draft.get("ruleset", {}))
-    draft["hp_roll"] = roll_hp(
-        cls.hit_die,
-        take_max=ruleset.max_hp_at_l1,
-        min_die=3 if ruleset.reroll_1s_2s_hp_l1 else 1,
-    )
+    ruleset = _ruleset_of(draft)
+    ids = _class_ids(draft)
+    classes = [data.classes[cid] for cid in ids]
+
+    take_max = ruleset.max_hp_at_l1
+    min_die = 3 if ruleset.reroll_1s_2s_hp_l1 else 1
+
+    if len(ids) == 1:
+        draft["hp_roll"] = roll_hp(classes[0].hit_die, take_max=take_max, min_die=min_die)
+        draft.pop("hp_rolls", None)
+    else:
+        draft["hp_rolls"] = [
+            roll_hp(c.hit_die, take_max=take_max, min_die=min_die) for c in classes
+        ]
+        draft.pop("hp_roll", None)
     save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/hp")
 
@@ -534,22 +675,33 @@ async def post_hp_roll(request: Request, draft_id: str):
 @router.post("/{draft_id}/hp")
 async def post_hp(request: Request, draft_id: str):
     draft = _load(request, draft_id)
-    if "hp_roll" not in draft:
+    if not _has_hp(draft):
         raise HTTPException(400, "Roll HP first")
     return _redirect(f"/wizard/{draft_id}/review")
 
 
 def _draft_to_spec(draft: dict[str, Any]) -> CharacterSpec:
     ruleset = RuleSet(**draft.get("ruleset", {}))
+    ids = _class_ids(draft)
+    if "hp_rolls" in draft:
+        hp_rolls = draft["hp_rolls"]
+    else:
+        hp_rolls = [draft["hp_roll"]]  # single-class storage
+
+    if len(ids) != len(hp_rolls):
+        raise RuntimeError(
+            f"Draft inconsistency: {len(ids)} class(es) vs {len(hp_rolls)} HP roll(s)"
+        )
+
+    classes = [
+        ClassEntry(class_id=cid, level=1, hp_rolls=[hp_rolls[i]])
+        for i, cid in enumerate(ids)
+    ]
     return CharacterSpec(
         name=draft["name"],
         abilities=draft["abilities"],
         race_id=draft["race_id"],
-        classes=[ClassEntry(
-            class_id=draft["class_id"],
-            level=1,
-            hp_rolls=[draft["hp_roll"]],
-        )],
+        classes=classes,
         alignment=draft["alignment"],
         secondary_skill=draft.get("secondary_skill"),
         chosen_proficiencies=list(draft.get("proficiencies", [])),
