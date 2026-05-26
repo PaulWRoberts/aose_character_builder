@@ -38,6 +38,7 @@ IMPLEMENTED_RULES = {
     "demihuman_level_limits",
     "demihuman_class_restrictions",
     "weapon_proficiency",
+    "separate_race_class",
 }
 
 RULE_GROUPS = [

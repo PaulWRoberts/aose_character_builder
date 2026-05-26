@@ -1,0 +1,43 @@
+id: dwarf_class
+name: Dwarf
+# Race-as-class entry.  Selecting this class in race-as-class mode also
+# locks the character's race to "dwarf" automatically.
+race_locked: dwarf
+prime_requisites: [STR]
+ability_requirements:
+  CON: 9          # mirrors the dwarf race requirement
+max_level: 12
+hit_die: 1d8
+weapons_allowed: all
+armor_allowed: all
+shields_allowed: true
+proficiency:
+  starting_slots: 4
+  new_slot_every_levels: 3
+progression:
+  1:
+    xp_required: 0
+    thac0: 19
+    hit_dice: 1d8
+    # Dwarves enjoy noticeably stouter saves than the fighter table.
+    saves: { death: 8, wands: 9, paralysis: 10, breath: 13, spells: 12 }
+  2:
+    xp_required: 2200
+    thac0: 19
+    hit_dice: 2d8
+    saves: { death: 8, wands: 9, paralysis: 10, breath: 13, spells: 12 }
+  3:
+    xp_required: 4400
+    thac0: 19
+    hit_dice: 3d8
+    saves: { death: 8, wands: 9, paralysis: 10, breath: 13, spells: 12 }
+  4:
+    xp_required: 8800
+    thac0: 17
+    hit_dice: 4d8
+    saves: { death: 6, wands: 7, paralysis: 8, breath: 10, spells: 10 }
+features:
+  - id: dwarf_combat_focus
+    name: Combat Focus
+    text: "Dwarves are skilled with any weapons, armour, and shields."
+    gained_at_level: 1

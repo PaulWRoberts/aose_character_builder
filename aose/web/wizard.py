@@ -46,9 +46,14 @@ def _wizard_steps(draft: dict[str, Any]) -> list[str]:
     """Build the ordered list of wizard steps that apply to *this* draft.
 
     Steps gated by optional rules are inserted only when the rule is active.
+    When ``separate_race_class`` is off, the race step is folded into the
+    class step (race-as-class mode), so it drops out of the breadcrumb.
     """
-    steps = ["abilities", "race", "class", "alignment"]
     rs = _ruleset_of(draft)
+    steps = ["abilities"]
+    if rs.separate_race_class:
+        steps.append("race")
+    steps += ["class", "alignment"]
     if rs.secondary_skills:
         steps.append("skill")
     if rs.weapon_proficiency:
@@ -77,13 +82,15 @@ def _load(request: Request, draft_id: str) -> dict[str, Any]:
 def _next_incomplete_step(draft: dict[str, Any]) -> str:
     if "name" not in draft:
         return "abilities"
-    if "race_id" not in draft:
+    rs = _ruleset_of(draft)
+    # In race-as-class mode, race_id is assigned by the class POST handler,
+    # so we don't have a standalone race step to send the user to.
+    if rs.separate_race_class and "race_id" not in draft:
         return "race"
     if "class_id" not in draft:
         return "class"
     if "alignment" not in draft:
         return "alignment"
-    rs = _ruleset_of(draft)
     if rs.secondary_skills and "secondary_skill" not in draft:
         return "skill"
     if rs.weapon_proficiency and "proficiencies" not in draft:
@@ -166,9 +173,9 @@ async def post_abilities(request: Request, draft_id: str, name: str = Form(...))
     if not name.strip():
         raise HTTPException(400, "Name required")
     draft["name"] = name.strip()
-    # Invalidate downstream choices that may no longer be valid
     save_draft(draft_id, draft, _drafts_dir(request))
-    return _redirect(f"/wizard/{draft_id}/race")
+    # Route via _next_incomplete_step so race-as-class drafts skip /race.
+    return _redirect(f"/wizard/{draft_id}/{_next_incomplete_step(draft)}")
 
 
 def _meets_ability_requirements(reqs: dict[Ability, int], abilities: dict[str, int]) -> bool:
@@ -238,27 +245,45 @@ async def get_class(request: Request, draft_id: str):
     if redirect:
         return redirect
     data = request.app.state.game_data
-    race = data.races[draft["race_id"]]
     abilities = draft["abilities"]
     ruleset = _ruleset_of(draft)
+
+    # In race-as-class mode the user has not picked a race yet, so race-based
+    # filtering and level caps don't apply on the cards.
+    if ruleset.separate_race_class:
+        race = data.races[draft["race_id"]]
+        race_name = race.name
+    else:
+        race = None
+        race_name = None
+
     classes = []
     for cls in sorted(data.classes.values(), key=lambda c: c.name):
-        if cls.race_locked:
-            continue  # race-as-class entries hidden in split mode (default)
-        allowed_by_race = _class_allowed_for_race(cls.id, race, ruleset)
+        # Split mode hides race-as-class entries; race-as-class mode shows
+        # everything (race-locked entries become the "demihuman as class" picks).
+        if ruleset.separate_race_class and cls.race_locked:
+            continue
+
         meets_abilities = _meets_ability_requirements(cls.ability_requirements, abilities)
-        # Only surface race-imposed caps when the rule that enforces them is on.
-        level_cap = (
-            race.class_level_caps.get(cls.id)
-            if ruleset.demihuman_level_limits
-            else None
-        )
+
+        if ruleset.separate_race_class:
+            allowed_by_race = _class_allowed_for_race(cls.id, race, ruleset)
+            level_cap = (
+                race.class_level_caps.get(cls.id)
+                if ruleset.demihuman_level_limits
+                else None
+            )
+        else:
+            allowed_by_race = True  # no race chosen yet
+            level_cap = None         # race caps don't bind a race-as-class entry
+
         classes.append({
             "id": cls.id,
             "name": cls.name,
             "hit_die": cls.hit_die,
             "prime_requisites": [a.value for a in cls.prime_requisites],
             "level_cap": level_cap,
+            "race_locked": cls.race_locked,
             "allowed_by_race": allowed_by_race,
             "meets_abilities": meets_abilities,
             "available": allowed_by_race and meets_abilities,
@@ -266,7 +291,8 @@ async def get_class(request: Request, draft_id: str):
         })
     ctx = _base_context(request, draft_id, draft, "class")
     ctx["classes"] = classes
-    ctx["race_name"] = race.name
+    ctx["race_name"] = race_name
+    ctx["race_as_class_mode"] = not ruleset.separate_race_class
     return templates.TemplateResponse(request, "wizard.html", ctx)
 
 
@@ -274,20 +300,43 @@ async def get_class(request: Request, draft_id: str):
 async def post_class(request: Request, draft_id: str, class_id: str = Form(...)):
     draft = _load(request, draft_id)
     data = request.app.state.game_data
+    ruleset = _ruleset_of(draft)
     if class_id not in data.classes:
         raise HTTPException(400, f"Unknown class '{class_id}'")
     cls = data.classes[class_id]
-    race = data.races[draft["race_id"]]
-    ruleset = _ruleset_of(draft)
-    if not _class_allowed_for_race(class_id, race, ruleset):
-        raise HTTPException(400, f"{race.name} cannot be a {cls.name}")
+
     if not _meets_ability_requirements(cls.ability_requirements, draft["abilities"]):
         raise HTTPException(400, f"Abilities do not meet {cls.name} requirements")
+
+    if ruleset.separate_race_class:
+        # Split mode: race already chosen.  Reject race-locked classes here
+        # too — they should not have appeared in the picker, but POST is
+        # a defence-in-depth.
+        if cls.race_locked:
+            raise HTTPException(
+                400,
+                f"{cls.name} is a race-as-class entry and not available with "
+                "Separate Race & Class on.",
+            )
+        race = data.races[draft["race_id"]]
+        if not _class_allowed_for_race(class_id, race, ruleset):
+            raise HTTPException(400, f"{race.name} cannot be a {cls.name}")
+    else:
+        # Race-as-class mode: the class determines the race.  Race-locked
+        # classes carry their race id; the rest fall through to "human".
+        derived_race_id = cls.race_locked or "human"
+        if derived_race_id not in data.races:
+            raise HTTPException(
+                500,
+                f"Race '{derived_race_id}' is missing from data/races/.",
+            )
+        draft["race_id"] = derived_race_id
+
     if draft.get("class_id") != class_id:
         draft.pop("hp_roll", None)
     draft["class_id"] = class_id
     save_draft(draft_id, draft, _drafts_dir(request))
-    return _redirect(f"/wizard/{draft_id}/alignment")
+    return _redirect(f"/wizard/{draft_id}/{_next_incomplete_step(draft)}")
 
 
 @router.get("/{draft_id}/alignment", response_class=HTMLResponse)

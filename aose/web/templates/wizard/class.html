@@ -1,5 +1,10 @@
-<h2>Step 3: Choose Class</h2>
+<h2>{% if race_as_class_mode %}Choose Class &amp; Race{% else %}Step 3: Choose Class{% endif %}</h2>
+{% if race_as_class_mode %}
+<p class="muted">Race-as-Class mode is active &mdash; demihumans are full classes.
+   Picking one (e.g. <em>Dwarf</em>) sets both class and race in one step.</p>
+{% else %}
 <p class="muted">Filtered by your race ({{ race_name }}) and ability scores.</p>
+{% endif %}
 
 <form method="post" action="/wizard/{{ draft_id }}/class" class="step-form">
     <div class="card-grid">
@@ -8,7 +13,12 @@
             <input type="radio" name="class_id" value="{{ cls.id }}" required
                    {% if not cls.available %}disabled{% endif %}
                    {% if cls.selected %}checked{% endif %}>
-            <div class="card-name">{{ cls.name }}</div>
+            <div class="card-name">
+                {{ cls.name }}
+                {% if cls.race_locked %}
+                <span class="rule-pending" title="Race-as-class entry — selecting this also locks your race.">demihuman</span>
+                {% endif %}
+            </div>
             <div class="card-detail">HD: {{ cls.hit_die }}</div>
             <div class="card-detail">Prime: {{ cls.prime_requisites | join(", ") }}</div>
             {% if cls.level_cap %}

@@ -9,7 +9,9 @@
 
 <header class="sheet-header">
     <h1>{{ sheet.name }}</h1>
-    <p class="subtitle">{{ sheet.race_name }} &middot; {{ sheet.class_summary }} &middot; {{ sheet.alignment }}</p>
+    <p class="subtitle">
+        {% if not sheet.race_as_class %}{{ sheet.race_name }} &middot; {% endif %}{{ sheet.class_summary }} &middot; {{ sheet.alignment }}
+    </p>
 </header>
 
 <table class="sheet-layout"><tbody><tr>

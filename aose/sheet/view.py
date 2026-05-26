@@ -54,6 +54,7 @@ class EquippedRow(BaseModel):
 class CharacterSheet(BaseModel):
     name: str
     race_name: str
+    race_as_class: bool  # true → omit race from subtitle (avoids "Dwarf · Dwarf 1")
     class_summary: str
     alignment: str
     xp: int
@@ -164,6 +165,18 @@ def _proficiency_names(spec: CharacterSpec, data: GameData) -> list[str]:
             for gid in spec.chosen_proficiencies]
 
 
+def _is_race_as_class(spec: CharacterSpec, data: GameData) -> bool:
+    """True when the character's (single) class is race-locked to their race.
+
+    Multi-class characters never trigger this — the subtitle would still need
+    to surface the race separately from each class.
+    """
+    if len(spec.classes) != 1:
+        return False
+    cls = data.classes[spec.classes[0].class_id]
+    return cls.race_locked == spec.race_id
+
+
 def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
     race = data.races[spec.race_id]
 
@@ -189,6 +202,7 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
     return CharacterSheet(
         name=spec.name,
         race_name=race.name,
+        race_as_class=_is_race_as_class(spec, data),
         class_summary=_class_summary(spec, data),
         alignment=ALIGNMENT_LABELS[spec.alignment],
         xp=spec.xp,

@@ -4,7 +4,9 @@
 <div class="review-card">
     <header class="review-header">
         <h3>{{ sheet.name }}</h3>
-        <p class="subtitle">{{ sheet.race_name }} &middot; {{ sheet.class_summary }} &middot; {{ sheet.alignment }}</p>
+        <p class="subtitle">
+            {% if not sheet.race_as_class %}{{ sheet.race_name }} &middot; {% endif %}{{ sheet.class_summary }} &middot; {{ sheet.alignment }}
+        </p>
     </header>
 
     <div class="review-grid">

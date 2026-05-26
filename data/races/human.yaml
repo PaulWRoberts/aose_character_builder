@@ -1,0 +1,12 @@
+id: human
+name: Human
+# Humans have no ability requirements, no class restrictions, and no level
+# caps in any class — leaving the lists empty is what encodes that.
+ability_requirements: {}
+infravision: 0
+base_movement: 120
+languages:
+  - common
+allowed_classes: []        # empty = any class allowed
+class_level_caps: {}       # empty = no race-imposed cap on any class
+features: []               # no innate racial abilities
