@@ -117,10 +117,10 @@ async def get_settings(request: Request):
     )
 
 
-@router.post("/settings")
-async def post_settings(request: Request):
-    form = await request.form()
-
+def parse_ruleset_from_form(form) -> RuleSet:
+    """Build a :class:`RuleSet` from the toggle/radio form fields used by the
+    settings page AND the wizard's per-character rules step.  Unknown radio
+    choices are silently dropped so the RuleSet defaults take over."""
     bool_field_names = {
         field for _, fields in RULE_GROUPS for field, _ in fields
     }
@@ -133,6 +133,12 @@ async def post_settings(request: Request):
         if chosen in valid_values:
             choices[field] = chosen
 
-    new_ruleset = RuleSet(**bools, **choices)
+    return RuleSet(**bools, **choices)
+
+
+@router.post("/settings")
+async def post_settings(request: Request):
+    form = await request.form()
+    new_ruleset = parse_ruleset_from_form(form)
     save_settings(_settings_path(request), new_ruleset)
     return RedirectResponse("/settings?saved=1", status_code=303)

@@ -20,6 +20,14 @@ from aose.engine.ability_mods import ability_modifier
 from aose.engine.dice import roll_3d6_in_order, roll_4d6_drop_lowest_in_order, roll_hp
 from aose.engine.proficiency import proficiency_groups, starting_proficiency_count
 from aose.models import Ability, CharacterSpec, ClassEntry, RuleSet
+from aose.web.settings_routes import (
+    CHOICE_GROUPS,
+    IMPLEMENTED_CHOICE_GROUPS,
+    IMPLEMENTED_RULES,
+    RULE_GROUPS,
+    RULE_LABELS,
+    parse_ruleset_from_form,
+)
 
 router = APIRouter(prefix="/wizard")
 
@@ -27,6 +35,7 @@ TEMPLATES_DIR = Path(__file__).parent / "templates"
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 STEP_LABELS = {
+    "rules": "Rules",
     "abilities": "Abilities",
     "race": "Race",
     "class": "Class",
@@ -50,7 +59,7 @@ def _wizard_steps(draft: dict[str, Any]) -> list[str]:
     class step (race-as-class mode), so it drops out of the breadcrumb.
     """
     rs = _ruleset_of(draft)
-    steps = ["abilities"]
+    steps = ["rules", "abilities"]
     if rs.separate_race_class:
         steps.append("race")
     steps += ["class", "alignment"]
@@ -116,6 +125,10 @@ def _clear_after_class(draft: dict[str, Any]) -> None:
 
 
 def _next_incomplete_step(draft: dict[str, Any]) -> str:
+    # The rules step is "complete" once it has rolled abilities — at /new we
+    # seed only the ruleset, so a draft without abilities is mid-rules step.
+    if "abilities" not in draft:
+        return "rules"
     if "name" not in draft:
         return "abilities"
     rs = _ruleset_of(draft)
@@ -215,10 +228,82 @@ def _seed_draft_abilities(draft: dict[str, Any], ruleset: RuleSet) -> None:
 async def new_wizard(request: Request):
     draft_id = new_draft_id()
     ruleset = load_settings(request.app.state.settings_path)
+    # Seed abilities up-front using the *default* method.  If the user then
+    # changes ability_roll_method on the rules step, the POST handler re-rolls
+    # via _apply_rule_changes.  Keeping the roll here means tests and other
+    # callers that inspect ``draft["abilities"]`` after ``/wizard/new`` keep
+    # working unchanged.
     draft: dict[str, Any] = {"ruleset": ruleset.model_dump()}
     _seed_draft_abilities(draft, ruleset)
     save_draft(draft_id, draft, _drafts_dir(request))
-    return _redirect(f"/wizard/{draft_id}/abilities")
+    return _redirect(f"/wizard/{draft_id}/rules")
+
+
+# ── Per-character ruleset (always the first step) ─────────────────────────
+
+@router.get("/{draft_id}/rules", response_class=HTMLResponse)
+async def get_rules(request: Request, draft_id: str):
+    draft = _load(request, draft_id)
+    ruleset = _ruleset_of(draft)
+    ctx = _base_context(request, draft_id, draft, "rules")
+    ctx.update({
+        "ruleset": ruleset.model_dump(),
+        "rule_groups": RULE_GROUPS,
+        "choice_groups": CHOICE_GROUPS,
+        "rule_labels": RULE_LABELS,
+        "implemented_rules": IMPLEMENTED_RULES,
+        "implemented_choice_groups": IMPLEMENTED_CHOICE_GROUPS,
+    })
+    return templates.TemplateResponse(request, "wizard.html", ctx)
+
+
+def _apply_rule_changes(draft: dict[str, Any], old_rs: RuleSet, new_rs: RuleSet) -> None:
+    """Save the new ruleset on the draft and apply targeted clears for any
+    rule changes that would invalidate downstream choices.
+
+    Cascading clears (most disruptive first):
+
+    * ability_roll_method change OR abilities not yet rolled  → re-seed
+      abilities + clear everything from race down.
+    * separate_race_class toggle → clear race + class + below (the race-as-class
+      flow restructures both steps).
+    * max_hp_at_l1 or reroll_1s_2s_hp_l1 change → clear hp_roll(s) only.
+    * weapon_proficiency change → clear proficiencies only.
+    * multiclassing turned OFF while a combo is picked → clear class + below.
+    """
+    draft["ruleset"] = new_rs.model_dump()
+
+    if (new_rs.ability_roll_method != old_rs.ability_roll_method
+            or "abilities" not in draft):
+        _seed_draft_abilities(draft, new_rs)
+        _clear_after_abilities(draft)
+        return
+
+    if new_rs.separate_race_class != old_rs.separate_race_class:
+        _clear_after_abilities(draft)
+        return
+
+    if (new_rs.max_hp_at_l1 != old_rs.max_hp_at_l1
+            or new_rs.reroll_1s_2s_hp_l1 != old_rs.reroll_1s_2s_hp_l1):
+        draft.pop("hp_roll", None)
+        draft.pop("hp_rolls", None)
+
+    if new_rs.weapon_proficiency != old_rs.weapon_proficiency:
+        draft.pop("proficiencies", None)
+
+    if not new_rs.multiclassing and "class_ids" in draft:
+        _clear_after_race(draft)
+
+
+@router.post("/{draft_id}/rules")
+async def post_rules(request: Request, draft_id: str):
+    draft = _load(request, draft_id)
+    form = await request.form()
+    new_rs = parse_ruleset_from_form(form)
+    old_rs = _ruleset_of(draft)
+    _apply_rule_changes(draft, old_rs, new_rs)
+    save_draft(draft_id, draft, _drafts_dir(request))
+    return _redirect(f"/wizard/{draft_id}/{_next_incomplete_step(draft)}")
 
 
 _METHOD_LABELS = {
