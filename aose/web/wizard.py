@@ -211,7 +211,15 @@ async def post_race(request: Request, draft_id: str, race_id: str = Form(...)):
     return _redirect(f"/wizard/{draft_id}/class")
 
 
-def _class_allowed_for_race(class_id: str, race) -> bool:
+def _class_allowed_for_race(class_id: str, race, ruleset: RuleSet) -> bool:
+    """Return whether a race may pick a class, given the active ruleset.
+
+    With ``demihuman_class_restrictions`` off, any race may pick any class.
+    Otherwise an empty ``allowed_classes`` is treated as "no restriction"
+    (the human-style default), and a populated list is enforced.
+    """
+    if not ruleset.demihuman_class_restrictions:
+        return True
     if not race.allowed_classes:
         return True
     return class_id in race.allowed_classes
@@ -226,13 +234,19 @@ async def get_class(request: Request, draft_id: str):
     data = request.app.state.game_data
     race = data.races[draft["race_id"]]
     abilities = draft["abilities"]
+    ruleset = _ruleset_of(draft)
     classes = []
     for cls in sorted(data.classes.values(), key=lambda c: c.name):
         if cls.race_locked:
             continue  # race-as-class entries hidden in split mode (default)
-        allowed_by_race = _class_allowed_for_race(cls.id, race)
+        allowed_by_race = _class_allowed_for_race(cls.id, race, ruleset)
         meets_abilities = _meets_ability_requirements(cls.ability_requirements, abilities)
-        level_cap = race.class_level_caps.get(cls.id)
+        # Only surface race-imposed caps when the rule that enforces them is on.
+        level_cap = (
+            race.class_level_caps.get(cls.id)
+            if ruleset.demihuman_level_limits
+            else None
+        )
         classes.append({
             "id": cls.id,
             "name": cls.name,
@@ -258,7 +272,8 @@ async def post_class(request: Request, draft_id: str, class_id: str = Form(...))
         raise HTTPException(400, f"Unknown class '{class_id}'")
     cls = data.classes[class_id]
     race = data.races[draft["race_id"]]
-    if not _class_allowed_for_race(class_id, race):
+    ruleset = _ruleset_of(draft)
+    if not _class_allowed_for_race(class_id, race, ruleset):
         raise HTTPException(400, f"{race.name} cannot be a {cls.name}")
     if not _meets_ability_requirements(cls.ability_requirements, draft["abilities"]):
         raise HTTPException(400, f"Abilities do not meet {cls.name} requirements")

@@ -101,7 +101,17 @@ def _xp_to_next(spec: CharacterSpec, data: GameData) -> tuple[int | None, int | 
     entry = spec.classes[0]
     cls = data.classes[entry.class_id]
     next_level = entry.level + 1
-    if next_level > cls.max_level or next_level not in cls.progression:
+
+    # When demihuman level limits are in force, the race may cap the class
+    # below its own intrinsic maximum.
+    effective_max = cls.max_level
+    if spec.ruleset.demihuman_level_limits:
+        race = data.races[spec.race_id]
+        race_cap = race.class_level_caps.get(entry.class_id)
+        if race_cap is not None:
+            effective_max = min(effective_max, race_cap)
+
+    if next_level > effective_max or next_level not in cls.progression:
         return None, None
     return next_level, cls.progression[next_level].xp_required
 

@@ -35,6 +35,8 @@ IMPLEMENTED_RULES = {
     "max_hp_at_l1",
     "reroll_1s_2s_hp_l1",
     "secondary_skills",
+    "demihuman_level_limits",
+    "demihuman_class_restrictions",
 }
 
 RULE_GROUPS = [
