@@ -1,0 +1,30 @@
+<h2>Step 2: Choose Race</h2>
+<p class="muted">Greyed-out races require ability scores you don't have.</p>
+
+<form method="post" action="/wizard/{{ draft_id }}/race" class="step-form">
+    <div class="card-grid">
+    {% for race in races %}
+        <label class="card {% if not race.meets_requirements %}disabled{% endif %} {% if race.selected %}selected{% endif %}">
+            <input type="radio" name="race_id" value="{{ race.id }}" required
+                   {% if not race.meets_requirements %}disabled{% endif %}
+                   {% if race.selected %}checked{% endif %}>
+            <div class="card-name">{{ race.name }}</div>
+            {% if race.requirements %}
+            <div class="card-detail">Requires:
+                {%- for ab, v in race.requirements.items() %}
+                    {{ ab }} {{ v }}+{% if not loop.last %},{% endif %}
+                {%- endfor %}
+            </div>
+            {% endif %}
+            <div class="card-detail">Movement: {{ race.base_movement }}'/turn</div>
+            {% if race.infravision %}
+            <div class="card-detail">Infravision: {{ race.infravision }}'</div>
+            {% endif %}
+            {% if race.languages %}
+            <div class="card-detail muted small">{{ race.languages | length }} languages</div>
+            {% endif %}
+        </label>
+    {% endfor %}
+    </div>
+    <button type="submit" class="primary">Next: Choose Class &rarr;</button>
+</form>

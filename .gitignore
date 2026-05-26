@@ -28,9 +28,10 @@ env/
 .DS_Store
 Thumbs.db
 
-# Project-specific: saved characters are user data, not source
-# (anchored to root so it doesn't shadow the aose/characters/ package)
+# Project-specific: saved characters and in-progress drafts are user data
+# (anchored to root so they don't shadow the aose/characters/ package)
 /characters/
+/drafts/
 
 # Claude Code local settings
 .claude/

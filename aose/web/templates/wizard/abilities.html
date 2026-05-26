@@ -1,0 +1,27 @@
+<h2>Step 1: Abilities & Name</h2>
+<p class="muted">Rolling method: 3d6 in order.</p>
+
+<table class="abilities-roll">
+    <thead><tr><th>Ability</th><th>Score</th><th>Mod</th></tr></thead>
+    <tbody>
+    {% for ab in ability_rows %}
+        <tr>
+            <td>{{ ab.name }}</td>
+            <td class="num">{{ ab.score }}</td>
+            <td class="num">{{ "%+d"|format(ab.modifier) }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+<form method="post" action="/wizard/{{ draft_id }}/reroll" class="inline-form">
+    <button type="submit">Re-roll All</button>
+</form>
+
+<form method="post" action="/wizard/{{ draft_id }}/abilities" class="step-form">
+    <label class="field">
+        <span>Character Name</span>
+        <input type="text" name="name" required value="{{ draft.name or '' }}" autofocus>
+    </label>
+    <button type="submit" class="primary">Next: Choose Race &rarr;</button>
+</form>

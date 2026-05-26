@@ -2,7 +2,10 @@
 {% block title %}Characters - AOSE Character Builder{% endblock %}
 {% block content %}
 <section class="panel">
-    <h1>Characters</h1>
+    <div class="panel-header">
+        <h1>Characters</h1>
+        <a href="/wizard/new" class="button primary">+ New Character</a>
+    </div>
     {% if characters %}
     <ul class="character-list">
         {% for c in characters %}
@@ -13,7 +16,7 @@
         {% endfor %}
     </ul>
     {% else %}
-    <p class="muted">No characters yet.</p>
+    <p class="muted">No characters yet. Create one to get started.</p>
     {% endif %}
 </section>
 {% endblock %}

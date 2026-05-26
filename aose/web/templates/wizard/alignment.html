@@ -1,0 +1,14 @@
+<h2>Step 4: Choose Alignment</h2>
+
+<form method="post" action="/wizard/{{ draft_id }}/alignment" class="step-form">
+    <div class="radio-stack">
+    {% for a in alignments %}
+        <label class="radio-card {% if draft.alignment == a.id %}selected{% endif %}">
+            <input type="radio" name="alignment" value="{{ a.id }}" required
+                   {% if draft.alignment == a.id %}checked{% endif %}>
+            <span class="radio-label">{{ a.label }}</span>
+        </label>
+    {% endfor %}
+    </div>
+    <button type="submit" class="primary">Next: Hit Points &rarr;</button>
+</form>

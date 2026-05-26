@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}New Character - AOSE Character Builder{% endblock %}
+{% block content %}
+<div class="wizard">
+    <header class="wizard-header">
+        <h1>New Character</h1>
+        <ol class="wizard-steps">
+            {% for step in wizard_steps %}
+            <li class="{% if step == current_step %}current{% elif loop.index0 < current_step_index %}done{% endif %}">
+                <span class="step-num">{{ loop.index }}</span>
+                <span class="step-label">{{ step_labels[step] }}</span>
+            </li>
+            {% endfor %}
+        </ol>
+    </header>
+    <section class="wizard-step">
+        {% include "wizard/" + current_step + ".html" %}
+    </section>
+    <footer class="wizard-footer">
+        <form method="post" action="/wizard/{{ draft_id }}/cancel">
+            <button type="submit" class="link-button">Cancel and discard draft</button>
+        </form>
+    </footer>
+</div>
+{% endblock %}

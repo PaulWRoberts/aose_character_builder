@@ -1,0 +1,55 @@
+<h2>Step 6: Review</h2>
+<p>Here's your character. Save to commit, or go back and re-roll anything.</p>
+
+<div class="review-card">
+    <header class="review-header">
+        <h3>{{ sheet.name }}</h3>
+        <p class="subtitle">{{ sheet.race_name }} &middot; {{ sheet.class_summary }} &middot; {{ sheet.alignment }}</p>
+    </header>
+
+    <div class="review-grid">
+        <section>
+            <h4>Abilities</h4>
+            <table>
+                <tbody>
+                {% for ab in sheet.abilities %}
+                    <tr>
+                        <td>{{ ab.ability }}</td>
+                        <td class="num">{{ ab.score }}</td>
+                        <td class="num">{{ "%+d"|format(ab.modifier) }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </section>
+
+        <section>
+            <h4>Combat</h4>
+            <div class="stat-row"><span>HP</span><span class="stat-big">{{ sheet.max_hp }}</span></div>
+            <div class="stat-row"><span>AC</span><span class="stat-big">{{ sheet.ac_descending }}</span></div>
+            <div class="stat-row"><span>THAC0</span><span class="stat-big">{{ sheet.thac0 }}</span></div>
+        </section>
+
+        <section>
+            <h4>Saves</h4>
+            <table>
+                <tbody>
+                {% for s in sheet.saves %}
+                    <tr><td>{{ s.label }}</td><td class="num">{{ s.target }}</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </section>
+
+        <section>
+            <h4>Movement & XP</h4>
+            <div class="stat-row"><span>Move</span><span>{{ sheet.movement_base }}'/turn</span></div>
+            <div class="stat-row"><span>XP to L{{ sheet.next_level }}</span><span>{{ sheet.xp_to_next }}</span></div>
+            <div class="stat-row"><span>Languages</span><span>{{ sheet.languages | join(", ") }}</span></div>
+        </section>
+    </div>
+</div>
+
+<form method="post" action="/wizard/{{ draft_id }}/finalize" class="step-form">
+    <button type="submit" class="primary">Save Character &rarr;</button>
+</form>

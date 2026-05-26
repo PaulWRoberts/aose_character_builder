@@ -1,9 +1,24 @@
 import json
+import re
 from pathlib import Path
 
 from aose.models import CharacterSpec
 
 DEFAULT_CHARACTERS_DIR = Path("characters")
+
+
+def slugify(name: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+    return slug or "character"
+
+
+def unique_character_id(base: str, characters_dir: Path = DEFAULT_CHARACTERS_DIR) -> str:
+    if not (characters_dir / f"{base}.json").exists():
+        return base
+    i = 2
+    while (characters_dir / f"{base}-{i}.json").exists():
+        i += 1
+    return f"{base}-{i}"
 
 
 def list_character_ids(characters_dir: Path = DEFAULT_CHARACTERS_DIR) -> list[str]:
