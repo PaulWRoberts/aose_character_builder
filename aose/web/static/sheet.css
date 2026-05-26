@@ -540,6 +540,16 @@ button {
     max-width: 300px;
 }
 
+.rule-active {
+    background: #eef4e0;
+    border: 1px solid #5a7a3a;
+    padding: 8px 12px;
+    margin: 12px 0;
+    font-size: 13px;
+    color: #2a3e15;
+    max-width: 500px;
+}
+
 .review-card {
     border: 2px solid #4a3728;
     padding: 20px;

@@ -201,3 +201,99 @@ def test_ascending_ac_renders_on_sheet(client, tmp_path):
     # Ascending AC sheets show "Attack Bonus", descending sheets show "THAC0"
     assert "Attack Bonus" in r.text
     assert "THAC0" not in r.text
+
+
+# ── Max HP at L1 ───────────────────────────────────────────────────────────
+
+def _start_draft_with(client, drafts_dir):
+    """Start a draft and walk it up to the HP step."""
+    from aose.characters import load_draft, save_draft
+    r = client.get("/wizard/new")
+    draft_id = r.headers["location"].split("/")[2]
+    draft = load_draft(draft_id, drafts_dir)
+    draft["abilities"] = {"STR": 15, "INT": 11, "WIS": 12, "DEX": 13, "CON": 14, "CHA": 10}
+    save_draft(draft_id, draft, drafts_dir)
+    client.post(f"/wizard/{draft_id}/abilities", data={"name": "Thorin"})
+    client.post(f"/wizard/{draft_id}/race", data={"race_id": "dwarf"})
+    client.post(f"/wizard/{draft_id}/class", data={"class_id": "fighter"})
+    client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "law"})
+    return draft_id
+
+
+def test_max_hp_rule_auto_fills_on_get(client, tmp_path):
+    """With max_hp_at_l1 active, GET /hp should populate hp_roll to die max."""
+    from aose.characters import load_draft
+    save_settings(client._settings_path, RuleSet(max_hp_at_l1=True))
+    draft_id = _start_draft_with(client, tmp_path / "drafts")
+
+    # Before visiting /hp, no roll exists
+    draft = load_draft(draft_id, tmp_path / "drafts")
+    assert "hp_roll" not in draft
+
+    r = client.get(f"/wizard/{draft_id}/hp")
+    assert r.status_code == 200
+    assert "Max HP at L1" in r.text
+
+    # Fighter has 1d8, so max is 8
+    draft = load_draft(draft_id, tmp_path / "drafts")
+    assert draft["hp_roll"] == 8
+
+
+def test_max_hp_rule_hides_roll_button(client, tmp_path):
+    save_settings(client._settings_path, RuleSet(max_hp_at_l1=True))
+    draft_id = _start_draft_with(client, tmp_path / "drafts")
+    r = client.get(f"/wizard/{draft_id}/hp")
+    # Roll button form action should not be present
+    assert f'/wizard/{draft_id}/hp/roll' not in r.text
+
+
+def test_max_hp_rule_persists_to_character(client, tmp_path):
+    save_settings(client._settings_path, RuleSet(max_hp_at_l1=True))
+    char_id = _run_wizard_to_completion(client, tmp_path / "drafts")
+    spec = load_character(char_id, tmp_path / "characters")
+    # Fighter d8 → 8 on the die + CON 14 (mod +1) = 9 max HP
+    assert spec.classes[0].hp_rolls == [8]
+    assert spec.ruleset.max_hp_at_l1 is True
+
+
+# ── Reroll 1s & 2s ─────────────────────────────────────────────────────────
+
+def test_reroll_rule_shows_banner(client, tmp_path):
+    save_settings(client._settings_path, RuleSet(reroll_1s_2s_hp_l1=True))
+    draft_id = _start_draft_with(client, tmp_path / "drafts")
+    r = client.get(f"/wizard/{draft_id}/hp")
+    assert "Reroll 1s &amp; 2s at L1" in r.text
+
+
+def test_reroll_rule_never_yields_1_or_2_after_many_rolls(client, tmp_path):
+    """Statistical: with reroll active, hp_roll on a d8 must stay ≥ 3."""
+    from aose.characters import load_draft
+    save_settings(client._settings_path, RuleSet(reroll_1s_2s_hp_l1=True))
+    draft_id = _start_draft_with(client, tmp_path / "drafts")
+    for _ in range(40):
+        client.post(f"/wizard/{draft_id}/hp/roll")
+        draft = load_draft(draft_id, tmp_path / "drafts")
+        assert draft["hp_roll"] >= 3, f"got {draft['hp_roll']} which should have been rerolled"
+
+
+def test_reroll_rule_still_shows_roll_button(client, tmp_path):
+    """Reroll rule keeps the user in control of clicking Roll."""
+    save_settings(client._settings_path, RuleSet(reroll_1s_2s_hp_l1=True))
+    draft_id = _start_draft_with(client, tmp_path / "drafts")
+    r = client.get(f"/wizard/{draft_id}/hp")
+    assert f'/wizard/{draft_id}/hp/roll' in r.text
+
+
+# ── No-rule baseline (regression guard) ───────────────────────────────────
+
+def test_default_ruleset_keeps_normal_hp_roll_flow(client, tmp_path):
+    """With no HP rules, the user still clicks Roll and any 1-8 result is valid."""
+    from aose.characters import load_draft
+    draft_id = _start_draft_with(client, tmp_path / "drafts")
+    r = client.get(f"/wizard/{draft_id}/hp")
+    # No rule banner
+    assert "Max HP at L1" not in r.text
+    assert "Reroll 1s" not in r.text
+    # hp_roll not auto-populated
+    draft = load_draft(draft_id, tmp_path / "drafts")
+    assert "hp_roll" not in draft

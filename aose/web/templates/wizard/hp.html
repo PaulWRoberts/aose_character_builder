@@ -2,16 +2,24 @@
 <p>{{ class_name }} rolls <strong>{{ hit_die }}</strong> for level 1 HP.
    CON modifier: <strong>{{ "%+d"|format(con_mod) }}</strong>.</p>
 
+{% if max_hp_rule %}
+<p class="rule-active"><strong>Max HP at L1</strong> is active &mdash; you automatically take the maximum on the hit die.</p>
+{% elif reroll_rule %}
+<p class="rule-active"><strong>Reroll 1s &amp; 2s at L1</strong> is active &mdash; any 1 or 2 on the hit die is rerolled.</p>
+{% endif %}
+
 {% if draft.hp_roll %}
 <div class="hp-display">
-    <div class="stat-row"><span>Rolled</span><span class="stat-big">{{ draft.hp_roll }}</span></div>
+    <div class="stat-row"><span>{% if max_hp_rule %}Maximum{% else %}Rolled{% endif %}</span><span class="stat-big">{{ draft.hp_roll }}</span></div>
     <div class="stat-row"><span>Total HP</span><span class="stat-big">{{ total_hp }}</span></div>
 </div>
 {% endif %}
 
+{% if not max_hp_rule %}
 <form method="post" action="/wizard/{{ draft_id }}/hp/roll" class="inline-form">
     <button type="submit">{% if draft.hp_roll %}Re-roll{% else %}Roll HP{% endif %}</button>
 </form>
+{% endif %}
 
 {% if draft.hp_roll %}
 <form method="post" action="/wizard/{{ draft_id }}/hp" class="step-form">

@@ -16,7 +16,7 @@ from aose.characters import (
     unique_character_id,
 )
 from aose.engine.ability_mods import ability_modifier
-from aose.engine.dice import roll, roll_3d6_in_order
+from aose.engine.dice import roll_3d6_in_order, roll_hp
 from aose.models import Ability, CharacterSpec, ClassEntry, RuleSet
 
 router = APIRouter(prefix="/wizard")
@@ -275,6 +275,13 @@ async def get_hp(request: Request, draft_id: str):
         return redirect
     data = request.app.state.game_data
     cls = data.classes[draft["class_id"]]
+    ruleset = RuleSet(**draft.get("ruleset", {}))
+
+    # Max HP at L1 is deterministic — auto-populate so the user just clicks Next.
+    if ruleset.max_hp_at_l1 and "hp_roll" not in draft:
+        draft["hp_roll"] = roll_hp(cls.hit_die, take_max=True)
+        save_draft(draft_id, draft, _drafts_dir(request))
+
     con_mod = ability_modifier(draft["abilities"]["CON"])
     total = None
     if "hp_roll" in draft:
@@ -285,6 +292,8 @@ async def get_hp(request: Request, draft_id: str):
         "hit_die": cls.hit_die,
         "con_mod": con_mod,
         "total_hp": total,
+        "max_hp_rule": ruleset.max_hp_at_l1,
+        "reroll_rule": ruleset.reroll_1s_2s_hp_l1,
     })
     return templates.TemplateResponse(request, "wizard.html", ctx)
 
@@ -294,7 +303,12 @@ async def post_hp_roll(request: Request, draft_id: str):
     draft = _load(request, draft_id)
     data = request.app.state.game_data
     cls = data.classes[draft["class_id"]]
-    draft["hp_roll"] = roll(cls.hit_die)
+    ruleset = RuleSet(**draft.get("ruleset", {}))
+    draft["hp_roll"] = roll_hp(
+        cls.hit_die,
+        take_max=ruleset.max_hp_at_l1,
+        min_die=3 if ruleset.reroll_1s_2s_hp_l1 else 1,
+    )
     save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/hp")
 
