@@ -1,0 +1,161 @@
+/* print.css — embedded in the standalone print/PDF template */
+
+@page {
+    size: letter;
+    margin: 14mm 16mm 14mm 16mm;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 9.5pt;
+    color: #000;
+    line-height: 1.3;
+}
+
+/* ── Header ─────────────────────────────────────────────── */
+.sheet-header {
+    text-align: center;
+    border-bottom: 1.5pt solid #000;
+    padding-bottom: 7pt;
+    margin-bottom: 10pt;
+}
+
+.sheet-header h1 {
+    font-size: 20pt;
+    margin: 0;
+}
+
+.subtitle {
+    font-style: italic;
+    color: #333;
+    margin: 3pt 0 0 0;
+    font-size: 10pt;
+}
+
+/* ── Two-column layout using table ───────────────────────── */
+.sheet-layout {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.sheet-layout > tbody > tr > td {
+    width: 50%;
+    vertical-align: top;
+    padding: 0;
+}
+
+.sheet-layout > tbody > tr > td:first-child {
+    padding-right: 8pt;
+}
+
+.sheet-layout > tbody > tr > td:last-child {
+    padding-left: 8pt;
+    border-left: 0.5pt solid #bbb;
+}
+
+/* ── Section boxes ───────────────────────────────────────── */
+.section {
+    border: 0.5pt solid #aaa;
+    padding: 5pt 7pt;
+    margin-bottom: 7pt;
+    background: #fff;
+    page-break-inside: avoid;
+}
+
+.section h2 {
+    font-size: 7.5pt;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    border-bottom: 0.5pt solid #888;
+    margin: 0 0 4pt 0;
+    padding-bottom: 2pt;
+}
+
+.section h3 {
+    font-size: 7pt;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #444;
+    margin: 7pt 0 3pt 0;
+}
+
+/* ── Tables ──────────────────────────────────────────────── */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9pt;
+}
+
+th, td {
+    padding: 2pt 4pt;
+    text-align: left;
+}
+
+th {
+    background: #e8e0d0;
+    font-size: 7.5pt;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+td.num, th.num { text-align: right; }
+
+/* ── Stat rows ───────────────────────────────────────────── */
+.stat-big {
+    font-size: 14pt;
+    font-weight: bold;
+}
+
+.stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 1.5pt 0;
+}
+
+.muted { color: #555; }
+.small { font-size: 7.5pt; }
+
+/* ── Features ────────────────────────────────────────────── */
+.feature {
+    margin-bottom: 5pt;
+    page-break-inside: avoid;
+}
+
+.feature-name {
+    font-weight: bold;
+    font-size: 9pt;
+}
+
+.feature-text {
+    font-size: 8.5pt;
+    color: #111;
+}
+
+/* ── Lists ───────────────────────────────────────────────── */
+ul {
+    margin: 2pt 0;
+    padding-left: 12pt;
+}
+
+li { font-size: 8.5pt; }
+
+/* ── Footer ──────────────────────────────────────────────── */
+.sheet-footer {
+    margin-top: 8pt;
+    padding-top: 6pt;
+    border-top: 0.5pt solid #aaa;
+    font-size: 7.5pt;
+    color: #333;
+}
+
+.sheet-footer h2 {
+    font-size: 7.5pt;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin: 0 0 3pt 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}

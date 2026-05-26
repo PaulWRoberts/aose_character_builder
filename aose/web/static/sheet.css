@@ -170,10 +170,26 @@ ul {
     padding-left: 20px;
 }
 
+/* ── Print / no-print helpers ─────────────────────────────── */
+
+.no-print { /* visible on screen, hidden when printing this page */ }
+
 @media print {
     body { background: white; padding: 0; max-width: none; }
-    .site-header { display: none; }
+    .site-header, .no-print { display: none !important; }
     .sheet { border: none; box-shadow: none; padding: 0; }
+    .sheet-grid { display: block; }
+    .sheet-column { width: 100%; }
+    .section { page-break-inside: avoid; }
+}
+
+/* ── Sheet action bar ─────────────────────────────────────── */
+
+.sheet-actions {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
 }
 
 /* --- Index page additions --- */
