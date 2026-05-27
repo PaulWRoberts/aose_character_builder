@@ -79,12 +79,32 @@ def carried_weight_cn(spec: CharacterSpec, data: GameData) -> int:
     via the inventory list to avoid the previous double-count bug.  Stashed
     items (``spec.stashed``) explicitly DO NOT count — that's their whole
     purpose.
+
+    Carried containers contribute their own ``weight_cn`` plus
+    ``int(weight_multiplier * raw_contents_weight)``.  Stashed containers
+    contribute zero.
     """
+    from aose.models import Container
+
     total = 0
     for item_id in spec.inventory:
         item = data.items.get(item_id)
         if item is not None:
             total += item.weight_cn
+
+    for c in spec.containers:
+        if c.state != "carried":
+            continue
+        catalog = data.items.get(c.catalog_id)
+        if not isinstance(catalog, Container):
+            continue
+        total += catalog.weight_cn
+        raw = sum(
+            (data.items[x].weight_cn if x in data.items else 0)
+            for x in c.contents
+        )
+        total += int(catalog.weight_multiplier * raw)
+
     return total
 
 

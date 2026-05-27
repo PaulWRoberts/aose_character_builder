@@ -408,3 +408,76 @@ def test_inventory_view_stashed_container_zero_effective_weight():
     assert cv.state == "stashed"
     # effective_weight is only meaningful when carried; stashed = 0
     assert cv.effective_weight_cn == 0
+
+
+# ── carried_weight_cn includes containers ─────────────────────────────────
+
+
+def test_carried_weight_includes_carried_container_own_weight(data):
+    """A carried Backpack (80 cn) contributes 80 even when empty."""
+    import copy
+    from aose.engine.encumbrance import carried_weight_cn
+    test_data = copy.deepcopy(data)
+    test_data.items["backpack"] = Container(
+        id="backpack", name="Backpack", category="containers",
+        item_type="container", cost_gp=5, weight_cn=80, capacity_cn=400,
+        weight_multiplier=1.0,
+    )
+    spec = _minimal_spec(ruleset=RuleSet(encumbrance="detailed"))
+    spec.containers = [ContainerInstance(
+        instance_id="x", catalog_id="backpack", state="carried", contents=[],
+    )]
+    assert carried_weight_cn(spec, test_data) == 80
+
+
+def test_carried_weight_includes_contents_via_multiplier(data):
+    """A carried Backpack with two torches inside.
+    80 (bag) + 1.0 * 40 (contents) = 120 cn."""
+    import copy
+    from aose.engine.encumbrance import carried_weight_cn
+    test_data = copy.deepcopy(data)
+    test_data.items["backpack"] = Container(
+        id="backpack", name="Backpack", category="containers",
+        item_type="container", cost_gp=5, weight_cn=80, capacity_cn=400,
+        weight_multiplier=1.0,
+    )
+    spec = _minimal_spec(ruleset=RuleSet(encumbrance="detailed"))
+    spec.containers = [ContainerInstance(
+        instance_id="x", catalog_id="backpack", state="carried",
+        contents=["torch", "torch"],
+    )]
+    assert carried_weight_cn(spec, test_data) == 80 + 40
+
+
+def test_stashed_container_contributes_zero(data):
+    import copy
+    from aose.engine.encumbrance import carried_weight_cn
+    test_data = copy.deepcopy(data)
+    test_data.items["backpack"] = Container(
+        id="backpack", name="Backpack", category="containers",
+        item_type="container", cost_gp=5, weight_cn=80, capacity_cn=400,
+    )
+    spec = _minimal_spec(ruleset=RuleSet(encumbrance="detailed"))
+    spec.containers = [ContainerInstance(
+        instance_id="x", catalog_id="backpack", state="stashed",
+        contents=["torch", "torch"],
+    )]
+    assert carried_weight_cn(spec, test_data) == 0
+
+
+def test_bag_of_holding_at_full_weighs_600(data):
+    """Bag of Holding at 10 000 cn raw: 0 own + int(0.06 * 10000) = 600."""
+    import copy
+    from aose.engine.encumbrance import carried_weight_cn
+    test_data = copy.deepcopy(data)
+    test_data.items["boh"] = Container(
+        id="boh", name="Bag of Holding", category="miscellaneous_magic_items",
+        item_type="container", cost_gp=0, weight_cn=0, capacity_cn=10000,
+        weight_multiplier=0.06,
+    )
+    spec = _minimal_spec(ruleset=RuleSet(encumbrance="detailed"))
+    spec.containers = [ContainerInstance(
+        instance_id="x", catalog_id="boh", state="carried",
+        contents=["torch"] * 500,
+    )]
+    assert carried_weight_cn(spec, test_data) == int(0.06 * 10000)
