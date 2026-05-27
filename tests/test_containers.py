@@ -273,3 +273,32 @@ def test_take_out_item_not_in_container_raises():
     bp = _carried_backpack(fake)
     with pytest.raises(ValueError, match="not in container"):
         take_out([], [], [bp], bp.instance_id, "torch")
+
+
+from aose.engine.shop import stash_container, unstash_container
+
+
+def test_stash_container_flips_state():
+    fake = _fake_container_data()
+    bp = _carried_backpack(fake)
+    result = stash_container([bp], bp.instance_id)
+    assert result[0].state == "stashed"
+    # Contents are untouched
+    assert result[0].contents == []
+
+
+def test_unstash_container_reverses():
+    fake = _fake_container_data()
+    bp = new_container_instance("backpack", fake, state="stashed")
+    result = unstash_container([bp], bp.instance_id)
+    assert result[0].state == "carried"
+
+
+def test_stash_container_unknown_raises():
+    with pytest.raises(UnknownContainer):
+        stash_container([], "missing-id")
+
+
+def test_unstash_container_unknown_raises():
+    with pytest.raises(UnknownContainer):
+        unstash_container([], "missing-id")

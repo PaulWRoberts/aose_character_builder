@@ -361,6 +361,31 @@ def take_out(inventory: list[str], stashed: list[str],
     return inventory, [*stashed, item_id], new_containers
 
 
+def stash_container(containers: list[ContainerInstance],
+                    instance_id: str) -> list[ContainerInstance]:
+    """Flip a container's state to ``stashed``.  Contents follow implicitly —
+    a stashed container's contents contribute zero to carried weight."""
+    return _set_container_state(containers, instance_id, "stashed")
+
+
+def unstash_container(containers: list[ContainerInstance],
+                      instance_id: str) -> list[ContainerInstance]:
+    """Flip a container's state to ``carried``."""
+    return _set_container_state(containers, instance_id, "carried")
+
+
+def _set_container_state(containers: list[ContainerInstance],
+                         instance_id: str, new_state: str) -> list[ContainerInstance]:
+    idx = next((i for i, c in enumerate(containers) if c.instance_id == instance_id), None)
+    if idx is None:
+        raise UnknownContainer(f"No container with id {instance_id!r}")
+    target = containers[idx]
+    if target.state == new_state:
+        return list(containers)
+    updated = target.model_copy(update={"state": new_state})
+    return [*containers[:idx], updated, *containers[idx + 1:]]
+
+
 def buy(inventory: list[str], gold: int, item_id: str,
         data: GameData) -> tuple[list[str], int]:
     """Append ``item_id`` to ``inventory`` and deduct its ``cost_gp`` from
