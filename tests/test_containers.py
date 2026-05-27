@@ -159,3 +159,77 @@ def test_add_free_container_does_not_deduct_gold():
     fake = _fake_container_data()
     new_containers = add_free_container([], "backpack", fake)
     assert len(new_containers) == 1
+
+
+def _carried_backpack(fake):
+    return new_container_instance("backpack", fake)
+
+
+def _weapon_for_tests(item_id: str, name: str, weight_cn: int, cost_gp: int):
+    from aose.models import Weapon, WeaponDamage
+    return Weapon(
+        id=item_id, name=name, category="weapons", item_type="weapon",
+        cost_gp=cost_gp, weight_cn=weight_cn,
+        damage=WeaponDamage(default="1d6", variable="1d8"),
+        hands=1, melee=True, ranged=False, proficiency_group="sword",
+    )
+
+
+from aose.engine.shop import ContainerFull, UnknownContainer, stow
+
+
+def test_stow_moves_item_from_inventory_into_container():
+    fake = _fake_container_data()
+    bp = _carried_backpack(fake)
+    inv, stashed, containers = stow(
+        inventory=["torch"], stashed=[], containers=[bp],
+        equipped={}, equipped_weapons=[],
+        instance_id=bp.instance_id, item_id="torch", data=fake,
+    )
+    assert inv == []
+    assert containers[0].contents == ["torch"]
+
+
+def test_stow_rejects_unknown_container():
+    fake = _fake_container_data()
+    with pytest.raises(UnknownContainer):
+        stow(["torch"], [], [], {}, [], "missing-id", "torch", fake)
+
+
+def test_stow_rejects_item_not_in_inventory():
+    fake = _fake_container_data()
+    bp = _carried_backpack(fake)
+    with pytest.raises(ValueError, match="not in inventory"):
+        stow([], [], [bp], {}, [], bp.instance_id, "torch", fake)
+
+
+def test_stow_rejects_equipped_item():
+    fake = _fake_container_data()
+    fake.items["long_sword"] = _weapon_for_tests("long_sword", "Long Sword", 60, 10)
+    bp = _carried_backpack(fake)
+    with pytest.raises(ValueError, match="equipped"):
+        stow(
+            inventory=["long_sword"], stashed=[], containers=[bp],
+            equipped={}, equipped_weapons=["long_sword"],
+            instance_id=bp.instance_id, item_id="long_sword", data=fake,
+        )
+
+
+def test_stow_rejects_container_item():
+    fake = _fake_container_data()
+    fake.items["sack"] = Container(
+        id="sack", name="Sack", category="containers", item_type="container",
+        cost_gp=1, weight_cn=5, capacity_cn=200,
+    )
+    bp = _carried_backpack(fake)
+    with pytest.raises(ValueError, match="containers cannot be stowed"):
+        stow(["sack"], [], [bp], {}, [], bp.instance_id, "sack", fake)
+
+
+def test_stow_capacity_full_raises():
+    fake = _fake_container_data()
+    # 20 torches = 400 cn, exactly at the backpack's 400 capacity.  21st fails.
+    bp = _carried_backpack(fake)
+    bp = bp.model_copy(update={"contents": ["torch"] * 20})
+    with pytest.raises(ContainerFull):
+        stow(["torch"], [], [bp], {}, [], bp.instance_id, "torch", fake)

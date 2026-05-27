@@ -281,6 +281,60 @@ def unstash(inventory: list[str], stashed: list[str],
     return [*inventory, item_id], new_stashed
 
 
+def stow(inventory: list[str], stashed: list[str],
+         containers: list[ContainerInstance],
+         equipped: dict[str, str], equipped_weapons: list[str],
+         instance_id: str, item_id: str, data: GameData,
+         ) -> tuple[list[str], list[str], list[ContainerInstance]]:
+    """Move one copy of ``item_id`` from ``inventory`` into the container with
+    ``instance_id``.  Source is always inventory — to stow a stashed item,
+    unstash it first; to stow an equipped item, unequip it first.
+
+    Raises:
+      * ``UnknownContainer`` if ``instance_id`` isn't in ``containers``.
+      * ``ValueError("not in inventory")`` if ``item_id`` isn't carried.
+      * ``ValueError("containers cannot be stowed")`` if ``item_id`` is itself
+        a container catalog item (no nesting).
+      * ``ValueError("item is equipped")`` if the item appears in ``equipped``
+        or ``equipped_weapons`` (unequip first).
+      * ``ContainerFull`` if adding the item's raw weight would exceed
+        ``capacity_cn``.
+    """
+    idx = next((i for i, c in enumerate(containers) if c.instance_id == instance_id), None)
+    if idx is None:
+        raise UnknownContainer(f"No container with id {instance_id!r}")
+
+    if item_id not in inventory:
+        raise ValueError(f"{item_id!r} is not in inventory")
+
+    item = data.items.get(item_id)
+    if isinstance(item, Container):
+        raise ValueError("containers cannot be stowed inside other containers")
+
+    if item_id in equipped.values() or item_id in equipped_weapons:
+        raise ValueError(f"{item_id!r} is equipped; unequip first")
+
+    target = containers[idx]
+    catalog = data.items[target.catalog_id]
+    new_weight = item.weight_cn if item else 0
+    if catalog.capacity_cn is not None:
+        used = sum(
+            (data.items[x].weight_cn if x in data.items else 0)
+            for x in target.contents
+        )
+        if used + new_weight > catalog.capacity_cn:
+            raise ContainerFull(
+                f"{catalog.name} full: {used}/{catalog.capacity_cn} cn, "
+                f"item adds {new_weight} cn"
+            )
+
+    new_inv = list(inventory)
+    new_inv.remove(item_id)
+    updated = target.model_copy(update={"contents": [*target.contents, item_id]})
+    new_containers = [*containers[:idx], updated, *containers[idx + 1:]]
+    return new_inv, stashed, new_containers
+
+
 def buy(inventory: list[str], gold: int, item_id: str,
         data: GameData) -> tuple[list[str], int]:
     """Append ``item_id`` to ``inventory`` and deduct its ``cost_gp`` from
