@@ -81,6 +81,9 @@
         <h2>Movement</h2>
         <div class="stat-row"><span>Exploration</span><span>{{ sheet.movement_base }}' / turn</span></div>
         <div class="stat-row"><span>Encounter</span><span>{{ sheet.movement_encounter }}' / round</span></div>
+        {% if sheet.carried_weight_cn is not none %}
+        <div class="stat-row muted small"><span>Carried</span><span>{{ sheet.carried_weight_cn }} cn</span></div>
+        {% endif %}
     </section>
 
     <section class="section">

@@ -117,6 +117,21 @@
                 <h2>Movement</h2>
                 <div class="stat-row"><span>Exploration</span><span>{{ sheet.movement_base }}' / turn</span></div>
                 <div class="stat-row"><span>Encounter</span><span>{{ sheet.movement_encounter }}' / round</span></div>
+                {% if sheet.movement_base != sheet.movement_unencumbered %}
+                <div class="stat-row muted small">
+                    <span>(unencumbered)</span>
+                    <span>{{ sheet.movement_unencumbered }}'</span>
+                </div>
+                {% endif %}
+                {% if sheet.carried_weight_cn is not none %}
+                <div class="stat-row muted small">
+                    <span>Carried</span>
+                    <span>{{ sheet.carried_weight_cn }} cn</span>
+                </div>
+                {% endif %}
+                {% if sheet.movement_base == 0 %}
+                <p class="rule-active" style="margin-top: 6px;"><strong>Over-encumbered.</strong> Drop or stash items to move.</p>
+                {% endif %}
             </section>
 
             <section class="section">

@@ -3,6 +3,11 @@ from pydantic import BaseModel
 from aose.data.loader import GameData
 from aose.engine import ability_mods, armor_class, attack_bonus, hp, saves
 from aose.engine.attacks import AttackProfile, attack_profiles
+from aose.engine.encumbrance import (
+    armor_movement_class,
+    carried_weight_cn,
+    effective_movement,
+)
 from aose.engine.leveling import ClassAdvancement, all_advancement, xp_share
 from aose.models import Ability, CharacterSpec, RuleSet
 
@@ -93,8 +98,11 @@ class CharacterSheet(BaseModel):
     saves: list[SheetSave]
 
     languages: list[str]
-    movement_base: int
-    movement_encounter: int
+    movement_base: int               # effective exploration move (after encumbrance)
+    movement_encounter: int          # = movement_base // 3
+    movement_unencumbered: int       # race base, for "before encumbrance" reference
+    carried_weight_cn: int | None    # None when encumbrance is "none"
+    armor_movement_class: str        # "none" / "leather" / "metal"
 
     race_features: list[SheetFeature]
     class_features: list[SheetFeature]
@@ -268,8 +276,13 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
         attack_bonus=attack_bonus.attack_bonus(spec, data),
         saves=save_rows,
         languages=race.languages,
-        movement_base=race.base_movement,
-        movement_encounter=race.base_movement // 3,
+        movement_base=effective_movement(spec, data),
+        movement_encounter=effective_movement(spec, data) // 3,
+        movement_unencumbered=race.base_movement,
+        carried_weight_cn=(
+            carried_weight_cn(spec, data) if spec.ruleset.encumbrance != "none" else None
+        ),
+        armor_movement_class=armor_movement_class(spec, data),
         race_features=_race_features(spec, data),
         class_features=_class_features(spec, data),
         equipped=_equipped(spec, data),
