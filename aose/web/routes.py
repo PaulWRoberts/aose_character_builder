@@ -13,9 +13,12 @@ from aose.engine.shop import (
     UnknownItem,
     add_free as shop_add_free,
     buy as shop_buy,
-    inventory_rows as shop_inventory_rows,
+    inventory_view as shop_inventory_view,
     remove as shop_remove,
+    remove_from_stash as shop_remove_from_stash,
     shop_categories,
+    stash as shop_stash,
+    unstash as shop_unstash,
 )
 from aose.sheet.view import build_sheet
 
@@ -68,8 +71,8 @@ async def character_sheet(request: Request, character_id: str):
             # Equipment partial context (sheet-side: no starting-gold reroll).
             "gold": spec.gold,
             "gold_locked": True,
-            "inventory_rows": shop_inventory_rows(
-                spec.inventory, game_data, spec.equipped, spec.equipped_weapons,
+            "inventory_view": shop_inventory_view(
+                spec.inventory, spec.stashed, spec.equipped, spec.equipped_weapons, game_data,
             ),
             "shop": shop_categories(game_data),
             "remove_modes": REMOVE_MODES,
@@ -250,16 +253,50 @@ async def equipment_unequip(request: Request, character_id: str,
 @router.post("/character/{character_id}/equipment/remove")
 async def equipment_remove(request: Request, character_id: str,
                            item_id: str = Form(...),
-                           mode: str = Form(...)):
+                           mode: str = Form(...),
+                           from_state: str = Form("carried")):
     spec = _load_spec_or_404(request, character_id)
     game_data = request.app.state.game_data
     try:
-        new_inventory, new_gold = shop_remove(
-            spec.inventory, spec.gold, item_id, mode, game_data,
+        if from_state == "stashed":
+            spec.stashed, spec.gold = shop_remove_from_stash(
+                spec.stashed, spec.gold, item_id, mode, game_data,
+            )
+        else:
+            spec.inventory, spec.gold, spec.equipped, spec.equipped_weapons = shop_remove(
+                spec.inventory, spec.gold, item_id, mode, game_data,
+                spec.equipped, spec.equipped_weapons,
+            )
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/equipment/stash")
+async def equipment_stash(request: Request, character_id: str,
+                          item_id: str = Form(...)):
+    spec = _load_spec_or_404(request, character_id)
+    try:
+        spec.inventory, spec.stashed, spec.equipped, spec.equipped_weapons = shop_stash(
+            spec.inventory, spec.stashed, spec.equipped, spec.equipped_weapons,
+            item_id, request.app.state.game_data,
         )
     except ValueError as e:
         raise HTTPException(400, str(e))
-    spec.inventory = new_inventory
-    spec.gold = new_gold
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/equipment/unstash")
+async def equipment_unstash(request: Request, character_id: str,
+                            item_id: str = Form(...)):
+    spec = _load_spec_or_404(request, character_id)
+    try:
+        spec.inventory, spec.stashed = shop_unstash(
+            spec.inventory, spec.stashed, item_id, request.app.state.game_data,
+        )
+    except ValueError as e:
+        raise HTTPException(400, str(e))
     save_character(character_id, spec, request.app.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)

@@ -4,9 +4,13 @@ from aose.data.loader import GameData
 from aose.engine import ability_mods, armor_class, attack_bonus, hp, saves
 from aose.engine.attacks import AttackProfile, attack_profiles
 from aose.engine.encumbrance import (
+    EncumbranceTable,
     armor_movement_class,
+    band_label,
     carried_weight_cn,
     effective_movement,
+    encumbrance_table,
+    weight_band,
 )
 from aose.engine.leveling import ClassAdvancement, all_advancement, xp_share
 from aose.models import Ability, CharacterSpec, RuleSet
@@ -103,6 +107,8 @@ class CharacterSheet(BaseModel):
     movement_unencumbered: int       # race base, for "before encumbrance" reference
     carried_weight_cn: int | None    # None when encumbrance is "none"
     armor_movement_class: str        # "none" / "leather" / "metal"
+    current_weight_band: str | None  # human-readable band label, None in basic/none modes
+    encumbrance_table: EncumbranceTable | None  # full threshold table for the sheet
 
     race_features: list[SheetFeature]
     class_features: list[SheetFeature]
@@ -283,6 +289,12 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
             carried_weight_cn(spec, data) if spec.ruleset.encumbrance != "none" else None
         ),
         armor_movement_class=armor_movement_class(spec, data),
+        current_weight_band=(
+            band_label(weight_band(carried_weight_cn(spec, data)))
+            if spec.ruleset.encumbrance == "detailed"
+            else None
+        ),
+        encumbrance_table=encumbrance_table(spec, data),
         race_features=_race_features(spec, data),
         class_features=_class_features(spec, data),
         equipped=_equipped(spec, data),

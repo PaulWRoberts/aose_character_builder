@@ -25,7 +25,11 @@ class CharacterSpec(BaseModel):
     alignment: Literal["law", "neutral", "chaos"]
     xp: int = 0
     gold: int = 0
+    # Items on the character's person — equipped items live here too.  Weight
+    # in this list contributes to encumbrance.
     inventory: list[str] = Field(default_factory=list)
+    # Items left behind / on a horse / at camp.  Don't contribute to weight.
+    stashed: list[str] = Field(default_factory=list)
     # slot -> item_id, for single-slot gear: {"armor": "chain_mail", "shield": "shield"}
     equipped: dict[str, str] = Field(default_factory=dict)
     # Equipped weapons — a list so duplicates and multiple ready weapons are OK.

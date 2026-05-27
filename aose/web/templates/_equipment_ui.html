@@ -3,7 +3,7 @@
      - target_url_prefix   e.g. "/wizard/{id}/equipment" or "/character/{id}/equipment"
      - gold                int
      - gold_locked         bool   (re-roll button hidden when true)
-     - inventory_rows      list[InventoryRow]
+     - inventory_view      InventoryView  (three sections: equipped / carried / stashed)
      - shop                list[ShopCategory]
      - show_gold_reroll    bool   (wizard only — for the starting-gold reroll)
      - show_gold_grant     bool   (sheet only — for the +/- gold form)
@@ -30,62 +30,75 @@
     {% endif %}
 </div>
 
-{% if inventory_rows %}
-<h3 class="subhead">Inventory</h3>
+{% macro inv_row_actions(row, target_url_prefix, state) %}
+    {# Per-row action buttons.  State drives which actions show. #}
+    {% if state == "equipped" %}
+    <form method="post" action="{{ target_url_prefix }}/unequip" class="inline-form">
+        <input type="hidden" name="item_id" value="{{ row.id }}">
+        <button type="submit">Unequip</button>
+    </form>
+    {% elif state == "carried" and row.equippable %}
+    <form method="post" action="{{ target_url_prefix }}/equip" class="inline-form">
+        <input type="hidden" name="item_id" value="{{ row.id }}">
+        <button type="submit">Equip</button>
+    </form>
+    {% elif state == "stashed" %}
+    <form method="post" action="{{ target_url_prefix }}/unstash" class="inline-form">
+        <input type="hidden" name="item_id" value="{{ row.id }}">
+        <button type="submit">Unstash</button>
+    </form>
+    {% endif %}
+    {% if state in ("equipped", "carried") %}
+    <form method="post" action="{{ target_url_prefix }}/stash" class="inline-form">
+        <input type="hidden" name="item_id" value="{{ row.id }}">
+        <button type="submit" title="Move off-person; stops contributing to encumbrance">Stash</button>
+    </form>
+    {% endif %}
+    <form method="post" action="{{ target_url_prefix }}/remove" class="remove-form">
+        <input type="hidden" name="item_id" value="{{ row.id }}">
+        <input type="hidden" name="from_state" value="{{ state }}">
+        <button type="submit" name="mode" value="drop"
+                title="Throw away — no gold back">Drop</button>
+        <button type="submit" name="mode" value="sell"
+                title="Sell for half price">Sell&nbsp;(+{{ row.sell_gp }}&nbsp;gp)</button>
+        <button type="submit" name="mode" value="refund"
+                title="Refund the full purchase price">Refund&nbsp;(+{{ row.cost_gp | int }}&nbsp;gp)</button>
+    </form>
+{% endmacro %}
+
+{% macro inv_table(rows, target_url_prefix, state, label, weight_note) %}
+{% if rows %}
+<h4 class="inv-section-head">{{ label }} {% if weight_note %}<span class="muted small">{{ weight_note }}</span>{% endif %}</h4>
 <table class="inventory-table">
     <thead>
         <tr>
             <th>Item</th>
             <th class="num">Qty</th>
-            <th>Equip</th>
-            <th>Remove one</th>
+            <th class="num">Weight</th>
+            <th>Actions</th>
         </tr>
     </thead>
     <tbody>
-    {% for row in inventory_rows %}
+    {% for row in rows %}
         <tr>
-            <td>
-                {{ row.name }}
-                {% if row.equipped_count > 0 %}
-                <span class="equipped-badge" title="Currently equipped">
-                    equipped{% if row.equipped_count > 1 %}&nbsp;&times;{{ row.equipped_count }}{% endif %}
-                </span>
-                {% endif %}
-            </td>
+            <td>{{ row.name }}</td>
             <td class="num">{{ row.count }}</td>
-            <td>
-                {% if row.equippable %}
-                <form method="post" action="{{ target_url_prefix }}/equip" class="inline-form">
-                    <input type="hidden" name="item_id" value="{{ row.id }}">
-                    <button type="submit"
-                            {% if row.equipped_count >= row.count %}disabled
-                                title="All {{ row.count }} copies already equipped"
-                            {% endif %}>Equip</button>
-                </form>
-                {% if row.equipped_count > 0 %}
-                <form method="post" action="{{ target_url_prefix }}/unequip" class="inline-form">
-                    <input type="hidden" name="item_id" value="{{ row.id }}">
-                    <button type="submit">Unequip</button>
-                </form>
-                {% endif %}
-                {% endif %}
-            </td>
-            <td>
-                <form method="post" action="{{ target_url_prefix }}/remove" class="remove-form">
-                    <input type="hidden" name="item_id" value="{{ row.id }}">
-                    <button type="submit" name="mode" value="drop"
-                            title="Throw away — no gold back">Drop</button>
-                    <button type="submit" name="mode" value="sell"
-                            title="Sell for half price">Sell&nbsp;(+{{ row.sell_gp }}&nbsp;gp)</button>
-                    <button type="submit" name="mode" value="refund"
-                            title="Refund the full purchase price">Refund&nbsp;(+{{ row.cost_gp | int }}&nbsp;gp)</button>
-                </form>
-            </td>
+            <td class="num">{{ (row.weight_cn * row.count) }}&nbsp;cn</td>
+            <td>{{ inv_row_actions(row, target_url_prefix, state) }}</td>
         </tr>
     {% endfor %}
     </tbody>
 </table>
+{% endif %}
+{% endmacro %}
+
+{% if inventory_view.equipped or inventory_view.carried or inventory_view.stashed %}
+<h3 class="subhead">Inventory</h3>
+{{ inv_table(inventory_view.equipped, target_url_prefix, "equipped", "Equipped", "contributes to weight") }}
+{{ inv_table(inventory_view.carried,  target_url_prefix, "carried",  "Carried",  "contributes to weight") }}
+{{ inv_table(inventory_view.stashed,  target_url_prefix, "stashed",  "Stashed",  "not on person — no weight") }}
 {% else %}
+<h3 class="subhead">Inventory</h3>
 <p class="muted">No items in inventory.</p>
 {% endif %}
 
@@ -97,12 +110,16 @@
 {% for category in shop %}
 <h4 class="shop-category" data-shop-category="{{ category.id }}">{{ category.name }}</h4>
 <table class="shop-table" data-shop-category="{{ category.id }}">
+    <thead>
+        <tr><th>Item</th><th class="num">Cost</th><th class="num">Weight</th><th>Actions</th></tr>
+    </thead>
     <tbody>
     {% for item in category.items %}
         <tr class="shop-row {% if item.cost_gp > gold %}out-of-reach{% endif %}"
             data-shop-name="{{ item.name | lower }}">
             <td>{{ item.name }}</td>
             <td class="num">{{ item.cost_gp | int }} gp</td>
+            <td class="num">{{ item.weight_cn }} cn</td>
             <td>
                 <form method="post" action="{{ target_url_prefix }}/buy" class="inline-form">
                     <input type="hidden" name="item_id" value="{{ item.id }}">

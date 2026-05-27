@@ -56,16 +56,19 @@ def test_weight_sums_inventory(data):
     assert carried_weight_cn(spec, data) == 20 + 20 + 60
 
 
-def test_weight_includes_equipped_armor(data):
+def test_weight_does_not_double_count_equipped_armor(data):
+    """Equipped items live inside ``inventory`` already, so weight is counted
+    once via the inventory list.  Equipping a piece of armour you already
+    own must not add its weight a second time."""
     spec = _spec(inventory=["chain_mail"], equipped={"armor": "chain_mail"})
-    # chain_mail is 400 cn; inventory + equipped both count
-    assert carried_weight_cn(spec, data) == 400 + 400
+    assert carried_weight_cn(spec, data) == 400
 
 
-def test_weight_includes_equipped_weapons(data):
+def test_weight_does_not_double_count_equipped_weapons(data):
+    """Same rule as for armour: an equipped weapon is just a flag on an
+    inventory item, not a separate copy."""
     spec = _spec(inventory=["long_sword"], equipped_weapons=["long_sword"])
-    # Long sword is in inventory (60) AND equipped (60)
-    assert carried_weight_cn(spec, data) == 120
+    assert carried_weight_cn(spec, data) == 60
 
 
 def test_unknown_item_id_contributes_zero(data):
@@ -114,32 +117,36 @@ def test_basic_mode_unarmored_human_unchanged(data):
     assert effective_movement(spec, data) == 120
 
 
-def test_basic_mode_leather_drops_30ft(data):
+def test_basic_mode_leather_drops_to_90ft(data):
+    """OSE Advanced table: leather + light load = 90' for a 120'-base human."""
     spec = _spec(
         race_id="human", inventory=["leather_armor"],
         equipped={"armor": "leather_armor"},
         encumbrance="basic",
     )
-    assert effective_movement(spec, data) == 90  # 120 - 30
+    assert effective_movement(spec, data) == 90
 
 
-def test_basic_mode_metal_drops_60ft(data):
+def test_basic_mode_metal_drops_to_60ft(data):
+    """OSE Advanced table: metal + light load = 60' for a 120'-base human."""
     spec = _spec(
         race_id="human", inventory=["chain_mail"],
         equipped={"armor": "chain_mail"},
         encumbrance="basic",
     )
-    assert effective_movement(spec, data) == 60  # 120 - 60
+    assert effective_movement(spec, data) == 60
 
 
-def test_basic_mode_dwarf_in_chain_to_zero(data):
-    """Dwarf base 60' - metal 60' = 0'.  Matches OSE Classic table."""
+def test_basic_mode_dwarf_in_chain_scales_to_30(data):
+    """Dwarf base 60' is half a human's 120', so the metal+light cell
+    (60' for a human) scales to 30'.  Matches the OSE Classic dwarf
+    rates: 60' unencumbered, 30' in chain."""
     spec = _spec(
         race_id="dwarf", inventory=["chain_mail"],
         equipped={"armor": "chain_mail"},
         encumbrance="basic",
     )
-    assert effective_movement(spec, data) == 0
+    assert effective_movement(spec, data) == 30
 
 
 def test_basic_mode_ignores_inventory_weight(data):
@@ -205,20 +212,19 @@ def test_detailed_over_encumbered_returns_zero(data):
     assert effective_movement(spec, data) == 0
 
 
-def test_detailed_armor_and_load_take_worst(data):
-    """Chain mail (400 cn worn, -60' armour) + lots of torches.
-    Armour-only penalty would be 60'; load-only might be 30'.  Result:
-    take the worse of the two."""
-    # chain mail = 400 cn; 5 torches = 100 cn; total = 500 cn (401-800 band → -30)
-    # armour penalty = 60
-    # max(60, 30) = 60 → 120 - 60 = 60
+def test_detailed_armor_and_load_via_table_lookup(data):
+    """Armour and load combine through the OSE Advanced table — armour
+    picks the column, load picks the row.  Chain mail + 500 cn total →
+    metal column, 401-800 band → 45'."""
+    # chain mail = 400 cn; 5 torches = 100 cn; total = 500 cn → band 1
+    # (401-800).  metal × band 1 = 45'.
     spec = _spec(
         race_id="human",
         inventory=["chain_mail"] + ["torch"] * 5,
         equipped={"armor": "chain_mail"},
         encumbrance="detailed",
     )
-    assert effective_movement(spec, data) == 60
+    assert effective_movement(spec, data) == 45
 
 
 # ── Sheet integration ─────────────────────────────────────────────────────
@@ -283,11 +289,14 @@ def test_sheet_html_renders_carried_weight_in_basic(tmp_path):
 
 
 def test_sheet_html_hides_carried_weight_in_none(tmp_path):
+    """The Movement section's Carried-weight stat row is suppressed in
+    ``none`` mode.  The inventory partial may still mention "Carried" as an
+    inventory section, so check for the specific Movement-section markup."""
     client = _make_client(tmp_path, RuleSet(encumbrance="none"))
     spec = _spec(encumbrance="none", inventory=["torch", "torch"])
     save_character("test", spec, client._characters_dir)
     r = client.get("/character/test")
-    assert "Carried" not in r.text or "cn" not in r.text  # weight row absent
+    assert "<span>Carried</span>" not in r.text
 
 
 def test_sheet_html_warns_when_over_encumbered(tmp_path):

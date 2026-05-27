@@ -296,11 +296,15 @@ def test_sheet_shows_no_weapons_message_when_unarmed(client):
     assert "No weapons equipped" in r.text
 
 
-def test_sheet_inventory_shows_equipped_badge(client):
+def test_sheet_inventory_shows_equipped_section(client):
+    """Equipped inventory items appear in their own ``Equipped`` subsection
+    of the inventory table — the new three-state split (equipped / carried /
+    stashed) replaces the old per-row badge.  The unequip form is the
+    actionable signal."""
     _seed(client, inventory=["long_sword"], equipped_weapons=["long_sword"])
     r = client.get("/character/test")
-    # The equipped badge text
-    assert "equipped-badge" in r.text
+    assert 'inv-section-head">Equipped' in r.text
+    assert 'action="/character/test/equipment/unequip"' in r.text
 
 
 def test_sheet_equip_rejects_unowned_item(client):

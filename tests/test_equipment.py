@@ -138,25 +138,25 @@ def test_buy_rejects_unknown_item(data):
 # ── remove ────────────────────────────────────────────────────────────────
 
 def test_remove_drop_no_refund(data):
-    inv, gold = remove(["long_sword"], 0, "long_sword", "drop", data)
+    inv, gold, _eq, _wp = remove(["long_sword"], 0, "long_sword", "drop", data)
     assert inv == []
     assert gold == 0
 
 
 def test_remove_sell_half_refund(data):
-    inv, gold = remove(["long_sword"], 0, "long_sword", "sell", data)
+    inv, gold, _eq, _wp = remove(["long_sword"], 0, "long_sword", "sell", data)
     assert inv == []
     assert gold == 5
 
 
 def test_remove_refund_full(data):
-    inv, gold = remove(["long_sword"], 0, "long_sword", "refund", data)
+    inv, gold, _eq, _wp = remove(["long_sword"], 0, "long_sword", "refund", data)
     assert inv == []
     assert gold == 10
 
 
 def test_remove_only_one_instance(data):
-    inv, gold = remove(["torch", "torch", "torch"], 0, "torch", "drop", data)
+    inv, gold, _eq, _wp = remove(["torch", "torch", "torch"], 0, "torch", "drop", data)
     assert inv == ["torch", "torch"]
 
 

@@ -26,10 +26,13 @@ from aose.engine.shop import (
     UnknownItem,
     add_free as shop_add_free,
     buy as shop_buy,
-    inventory_rows,
+    inventory_view,
     remove as shop_remove,
+    remove_from_stash as shop_remove_from_stash,
     roll_starting_gold,
     shop_categories,
+    stash as shop_stash,
+    unstash as shop_unstash,
 )
 from aose.models import Ability, CharacterSpec, ClassEntry, RuleSet
 from aose.web.settings_routes import (
@@ -890,15 +893,15 @@ def _equipment_context(draft: dict[str, Any], game_data) -> dict:
     """Build the rendering context for the equipment partial — shared between
     the wizard equipment step and the live character sheet."""
     inventory = draft.get("inventory", [])
+    stashed = draft.get("stashed", [])
     equipped = draft.get("equipped", {})
     equipped_weapons = draft.get("equipped_weapons", [])
     return {
         "gold": draft.get("gold", 0),
         "gold_locked": draft.get("gold_locked", False),
-        "inventory_rows": inventory_rows(inventory, game_data, equipped, equipped_weapons),
-        "equipped_armor_id": equipped.get("armor"),
-        "equipped_shield_id": equipped.get("shield"),
-        "equipped_weapon_ids": list(equipped_weapons),
+        "inventory_view": inventory_view(
+            inventory, stashed, equipped, equipped_weapons, game_data,
+        ),
         "shop": shop_categories(game_data),
         "remove_modes": REMOVE_MODES,
     }
@@ -1004,20 +1007,71 @@ async def post_equipment_unequip(request: Request, draft_id: str, item_id: str =
     return _redirect(f"/wizard/{draft_id}/equipment")
 
 
-@router.post("/{draft_id}/equipment/remove")
-async def post_equipment_remove(request: Request, draft_id: str,
-                                item_id: str = Form(...),
-                                mode: str = Form(...)):
+@router.post("/{draft_id}/equipment/stash")
+async def post_equipment_stash(request: Request, draft_id: str, item_id: str = Form(...)):
     draft = _load(request, draft_id)
     data = request.app.state.game_data
     try:
-        new_inventory, new_gold = shop_remove(
-            draft.get("inventory", []), draft.get("gold", 0), item_id, mode, data,
+        new_inv, new_stashed, new_eq, new_weapons = shop_stash(
+            draft.get("inventory", []),
+            draft.get("stashed", []),
+            draft.get("equipped", {}),
+            draft.get("equipped_weapons", []),
+            item_id, data,
         )
     except ValueError as e:
         raise HTTPException(400, str(e))
-    draft["inventory"] = new_inventory
-    draft["gold"] = new_gold
+    draft["inventory"] = new_inv
+    draft["stashed"] = new_stashed
+    draft["equipped"] = new_eq
+    draft["equipped_weapons"] = new_weapons
+    save_draft(draft_id, draft, _drafts_dir(request))
+    return _redirect(f"/wizard/{draft_id}/equipment")
+
+
+@router.post("/{draft_id}/equipment/unstash")
+async def post_equipment_unstash(request: Request, draft_id: str, item_id: str = Form(...)):
+    draft = _load(request, draft_id)
+    data = request.app.state.game_data
+    try:
+        new_inv, new_stashed = shop_unstash(
+            draft.get("inventory", []), draft.get("stashed", []), item_id, data,
+        )
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    draft["inventory"] = new_inv
+    draft["stashed"] = new_stashed
+    save_draft(draft_id, draft, _drafts_dir(request))
+    return _redirect(f"/wizard/{draft_id}/equipment")
+
+
+@router.post("/{draft_id}/equipment/remove")
+async def post_equipment_remove(request: Request, draft_id: str,
+                                item_id: str = Form(...),
+                                mode: str = Form(...),
+                                from_state: str = Form("carried")):
+    draft = _load(request, draft_id)
+    data = request.app.state.game_data
+    try:
+        if from_state == "stashed":
+            new_stashed, new_gold = shop_remove_from_stash(
+                draft.get("stashed", []), draft.get("gold", 0), item_id, mode, data,
+            )
+            draft["stashed"] = new_stashed
+            draft["gold"] = new_gold
+        else:
+            new_inv, new_gold, new_eq, new_weapons = shop_remove(
+                draft.get("inventory", []), draft.get("gold", 0),
+                item_id, mode, data,
+                draft.get("equipped", {}),
+                draft.get("equipped_weapons", []),
+            )
+            draft["inventory"] = new_inv
+            draft["gold"] = new_gold
+            draft["equipped"] = new_eq
+            draft["equipped_weapons"] = new_weapons
+    except ValueError as e:
+        raise HTTPException(400, str(e))
     save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/equipment")
 
@@ -1060,6 +1114,7 @@ def _draft_to_spec(draft: dict[str, Any]) -> CharacterSpec:
         chosen_proficiencies=list(draft.get("proficiencies", [])),
         gold=draft.get("gold", 0),
         inventory=list(draft.get("inventory", [])),
+        stashed=list(draft.get("stashed", [])),
         equipped=dict(draft.get("equipped", {})),
         equipped_weapons=list(draft.get("equipped_weapons", [])),
         ruleset=ruleset,

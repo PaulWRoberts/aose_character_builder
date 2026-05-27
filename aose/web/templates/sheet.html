@@ -126,11 +126,37 @@
                 {% if sheet.carried_weight_cn is not none %}
                 <div class="stat-row muted small">
                     <span>Carried</span>
-                    <span>{{ sheet.carried_weight_cn }} cn</span>
+                    <span>{{ sheet.carried_weight_cn }} cn{% if sheet.current_weight_band %} &mdash; {{ sheet.current_weight_band }}{% endif %}</span>
                 </div>
                 {% endif %}
                 {% if sheet.movement_base == 0 %}
                 <p class="rule-active" style="margin-top: 6px;"><strong>Over-encumbered.</strong> Drop or stash items to move.</p>
+                {% endif %}
+
+                {% if sheet.encumbrance_table %}
+                <details class="encumbrance-thresholds">
+                    <summary class="muted small">Movement thresholds ({{ sheet.encumbrance_table.mode }})</summary>
+                    <table class="threshold-table">
+                        <thead>
+                            <tr>
+                                {% if sheet.encumbrance_table.mode == "detailed" %}<th>Load</th>{% endif %}
+                                <th class="num">Unarmoured</th>
+                                <th class="num">Leather</th>
+                                <th class="num">Metal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for row in sheet.encumbrance_table.rows %}
+                            <tr class="{% if row.is_current_band %}current-band{% endif %}">
+                                {% if sheet.encumbrance_table.mode == "detailed" %}<td>{{ row.label }} cn</td>{% endif %}
+                                <td class="num">{{ row.movement_per_armor.none }}'</td>
+                                <td class="num">{{ row.movement_per_armor.leather }}'</td>
+                                <td class="num">{{ row.movement_per_armor.metal }}'</td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </details>
                 {% endif %}
             </section>
 
@@ -250,10 +276,21 @@
 
                 {# Compact print-friendly inventory summary for the @media print pass #}
                 <div class="print-only">
-                    {% if inventory_rows %}
+                    {% if inventory_view.equipped or inventory_view.carried %}
                     <h3>Carried</h3>
                     <ul>
-                        {% for row in inventory_rows %}
+                        {% for row in inventory_view.equipped %}
+                        <li>{{ row.name }}{% if row.count > 1 %} &times;{{ row.count }}{% endif %} <em class="small">(equipped)</em></li>
+                        {% endfor %}
+                        {% for row in inventory_view.carried %}
+                        <li>{{ row.name }}{% if row.count > 1 %} &times;{{ row.count }}{% endif %}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                    {% if inventory_view.stashed %}
+                    <h3>Stashed</h3>
+                    <ul>
+                        {% for row in inventory_view.stashed %}
                         <li>{{ row.name }}{% if row.count > 1 %} &times;{{ row.count }}{% endif %}</li>
                         {% endfor %}
                     </ul>

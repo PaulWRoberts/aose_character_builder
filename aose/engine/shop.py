@@ -24,6 +24,7 @@ class ShopItem(BaseModel):
     name: str
     category: str
     cost_gp: float
+    weight_cn: int = 0
 
 
 class ShopCategory(BaseModel):
@@ -36,10 +37,18 @@ class InventoryRow(BaseModel):
     id: str
     name: str
     count: int
-    cost_gp: float     # unit price; refund amount equals this
-    sell_gp: float     # 50% of cost, rounded down
+    weight_cn: int = 0          # per-unit weight; row total = count * weight_cn
+    cost_gp: float = 0          # unit price; refund amount equals this
+    sell_gp: float = 0          # 50% of cost, rounded down
     equippable: bool = False     # weapon / armour / shield → True
-    equipped_count: int = 0      # how many copies currently equipped
+    equipped_count: int = 0     # how many copies currently equipped (legacy flat view)
+
+
+class InventoryView(BaseModel):
+    """Three-state inventory split for the UI."""
+    equipped: list[InventoryRow]   # items currently equipped (subset of "on person")
+    carried: list[InventoryRow]    # on person but not equipped — contribute to weight
+    stashed: list[InventoryRow]    # off-person stash — no weight contribution
 
 
 def roll_starting_gold(rng: Optional[random.Random] = None) -> int:
@@ -68,51 +77,101 @@ def shop_categories(data: GameData) -> list[ShopCategory]:
             id=cid,
             name=_category_label(cid),
             items=[
-                ShopItem(id=i.id, name=i.name, category=i.category, cost_gp=i.cost_gp)
+                ShopItem(
+                    id=i.id, name=i.name, category=i.category,
+                    cost_gp=i.cost_gp, weight_cn=i.weight_cn,
+                )
                 for i in items
             ],
         ))
     return out
 
 
+def _build_row(item_id: str, count: int, data: GameData) -> InventoryRow:
+    from aose.models import Armor, Weapon  # local to avoid circular import
+    item = data.items.get(item_id)
+    if item is None:
+        # Stale id (item deleted from data after purchase) — surface it
+        # rather than silently dropping the entry.
+        return InventoryRow(id=item_id, name=item_id, count=count)
+    return InventoryRow(
+        id=item_id,
+        name=item.name,
+        count=count,
+        weight_cn=item.weight_cn,
+        cost_gp=item.cost_gp,
+        sell_gp=int(item.cost_gp // 2),
+        equippable=isinstance(item, (Weapon, Armor)),
+    )
+
+
+def inventory_view(inventory: list[str], stashed: list[str],
+                   equipped: dict[str, str], equipped_weapons: list[str],
+                   data: GameData) -> InventoryView:
+    """Three-section split of the character's items.
+
+    ``inventory`` contains everything on the character's person — *including*
+    items that are equipped, since being equipped is just a flag on an
+    inventory item, not a separate store.  ``stashed`` is a parallel list of
+    items that aren't on the person at all.
+
+    Rows are grouped by item id within each section, with a ``count`` for the
+    number of identical copies in that state.
+    """
+    # Tally how many copies of each item are equipped (across armor + weapons).
+    equipped_count: Counter[str] = Counter()
+    for v in equipped.values():
+        equipped_count[v] += 1
+    for v in equipped_weapons:
+        equipped_count[v] += 1
+
+    inv_count: Counter[str] = Counter(inventory)
+    stash_count: Counter[str] = Counter(stashed)
+
+    eq_rows: list[InventoryRow] = []
+    carried_rows: list[InventoryRow] = []
+    for item_id, total in inv_count.items():
+        eq_n = min(equipped_count[item_id], total)  # defensive: never exceed owned
+        carried_n = total - eq_n
+        if eq_n:
+            eq_rows.append(_build_row(item_id, eq_n, data))
+        if carried_n:
+            carried_rows.append(_build_row(item_id, carried_n, data))
+
+    stashed_rows: list[InventoryRow] = []
+    for item_id, count in stash_count.items():
+        stashed_rows.append(_build_row(item_id, count, data))
+
+    eq_rows.sort(key=lambda r: r.name)
+    carried_rows.sort(key=lambda r: r.name)
+    stashed_rows.sort(key=lambda r: r.name)
+    return InventoryView(equipped=eq_rows, carried=carried_rows, stashed=stashed_rows)
+
+
 def inventory_rows(inventory: list[str], data: GameData,
                    equipped: dict[str, str] | None = None,
                    equipped_weapons: list[str] | None = None) -> list[InventoryRow]:
-    """Group repeated item ids into ``Item × N`` rows for display.
-
-    When ``equipped`` and/or ``equipped_weapons`` are provided, each row gets
-    ``equippable`` and ``equipped_count`` filled in for the equip/unequip UI.
-    """
-    from aose.models import Armor, Weapon  # local to avoid circular import
-    equipped = equipped or {}
-    equipped_weapons = equipped_weapons or []
-
-    def _equipped_count(item_id: str) -> int:
-        n = sum(1 for v in equipped.values() if v == item_id)
-        n += sum(1 for v in equipped_weapons if v == item_id)
-        return n
-
-    counts = Counter(inventory)
-    out: list[InventoryRow] = []
-    for item_id, count in counts.items():
-        item = data.items.get(item_id)
-        if item is None:
-            out.append(InventoryRow(
-                id=item_id, name=item_id, count=count, cost_gp=0, sell_gp=0,
-            ))
-            continue
-        is_equippable = isinstance(item, (Weapon, Armor))
-        out.append(InventoryRow(
-            id=item_id,
-            name=item.name,
-            count=count,
-            cost_gp=item.cost_gp,
-            sell_gp=int(item.cost_gp // 2),
-            equippable=is_equippable,
-            equipped_count=_equipped_count(item_id) if is_equippable else 0,
-        ))
-    out.sort(key=lambda r: r.name)
-    return out
+    """Legacy flat-row API — preserved for callers that don't care about
+    the three-state split.  Stash list isn't surfaced through this entry
+    point; use :func:`inventory_view` instead."""
+    view = inventory_view(
+        inventory, [], equipped or {}, equipped_weapons or [], data,
+    )
+    # Merge equipped + carried into one row per item, with equipped_count
+    # carrying the equipped half for callers using the legacy flat API.
+    merged: dict[str, InventoryRow] = {}
+    for row in view.carried:
+        merged[row.id] = row.model_copy()
+    for row in view.equipped:
+        if row.id in merged:
+            existing = merged[row.id]
+            merged[row.id] = existing.model_copy(update={
+                "count": existing.count + row.count,
+                "equipped_count": row.count,
+            })
+        else:
+            merged[row.id] = row.model_copy(update={"equipped_count": row.count})
+    return sorted(merged.values(), key=lambda r: r.name)
 
 
 class InsufficientGold(ValueError):
@@ -121,6 +180,45 @@ class InsufficientGold(ValueError):
 
 class UnknownItem(ValueError):
     pass
+
+
+def stash(inventory: list[str], stashed: list[str],
+          equipped: dict[str, str], equipped_weapons: list[str],
+          item_id: str, data: GameData) -> tuple[list[str], list[str], dict[str, str], list[str]]:
+    """Move one copy of ``item_id`` from inventory to the stashed list.
+
+    If the item is currently equipped, that equipped slot/instance is freed
+    automatically — the item is going off-person.  Returns new
+    ``(inventory, stashed, equipped, equipped_weapons)``.  Raises ValueError
+    if the item isn't in inventory.
+    """
+    if item_id not in inventory:
+        raise ValueError(f"{item_id!r} is not in inventory")
+    new_inv = list(inventory)
+    new_inv.remove(item_id)
+    new_stashed = [*stashed, item_id]
+
+    new_eq = dict(equipped)
+    for slot, equipped_id in list(new_eq.items()):
+        if equipped_id == item_id:
+            del new_eq[slot]
+            break  # only one copy went off-person
+
+    new_weapons = list(equipped_weapons)
+    if item_id in new_weapons:
+        new_weapons.remove(item_id)
+
+    return new_inv, new_stashed, new_eq, new_weapons
+
+
+def unstash(inventory: list[str], stashed: list[str],
+            item_id: str, data: GameData) -> tuple[list[str], list[str]]:
+    """Move one copy of ``item_id`` from stashed back into inventory."""
+    if item_id not in stashed:
+        raise ValueError(f"{item_id!r} is not in stash")
+    new_stashed = list(stashed)
+    new_stashed.remove(item_id)
+    return [*inventory, item_id], new_stashed
 
 
 def buy(inventory: list[str], gold: int, item_id: str,
@@ -152,29 +250,68 @@ def add_free(inventory: list[str], item_id: str,
 REMOVE_MODES = ("drop", "sell", "refund")
 
 
+def _refund_amount(item_id: str, mode: str, data: GameData) -> int:
+    if mode not in ("sell", "refund"):
+        return 0
+    item = data.items.get(item_id)
+    cost = int(item.cost_gp) if item else 0
+    return cost // 2 if mode == "sell" else cost
+
+
 def remove(inventory: list[str], gold: int, item_id: str, mode: str,
-           data: GameData) -> tuple[list[str], int]:
+           data: GameData,
+           equipped: dict[str, str] | None = None,
+           equipped_weapons: list[str] | None = None,
+           ) -> tuple[list[str], int, dict[str, str], list[str]]:
     """Remove one instance of ``item_id`` from inventory.  ``mode`` controls
     the gold refund:
 
     * ``drop``   — no refund (you threw it away)
-    * ``sell``   — half the listed cost (rounded down) — the standard B/X
-                   "selling looted goods" rate
+    * ``sell``   — half the listed cost (rounded down)
     * ``refund`` — full refund (you bought it by mistake)
+
+    If the dropped instance was equipped, its slot/list entry is freed
+    automatically (you can't keep wielding an item you just sold).  Pass
+    ``equipped`` and ``equipped_weapons`` to enable that cleanup — they're
+    optional for backward compatibility with the older two-tuple return.
     """
     if item_id not in inventory:
         raise ValueError(f"{item_id!r} not in inventory")
     if mode not in REMOVE_MODES:
         raise ValueError(f"Unknown remove mode {mode!r}; want one of {REMOVE_MODES}")
 
-    # Pop one instance (leave the others alone).
     new_inv = list(inventory)
     new_inv.remove(item_id)
 
-    refund = 0
-    if mode in ("sell", "refund"):
-        item = data.items.get(item_id)
-        cost = int(item.cost_gp) if item else 0
-        refund = cost // 2 if mode == "sell" else cost
+    new_eq = dict(equipped or {})
+    new_weapons = list(equipped_weapons or [])
 
-    return (new_inv, gold + refund)
+    # If the removed instance pushes equipped count past the remaining
+    # inventory count, free up one equipped slot/instance.
+    remaining = new_inv.count(item_id)
+    eq_uses = sum(1 for v in new_eq.values() if v == item_id) + new_weapons.count(item_id)
+    if eq_uses > remaining:
+        # Try the slot dict first
+        for slot, eid in list(new_eq.items()):
+            if eid == item_id:
+                del new_eq[slot]
+                break
+        else:
+            # Otherwise drop one from weapons
+            if item_id in new_weapons:
+                new_weapons.remove(item_id)
+
+    return new_inv, gold + _refund_amount(item_id, mode, data), new_eq, new_weapons
+
+
+def remove_from_stash(stashed: list[str], gold: int, item_id: str, mode: str,
+                      data: GameData) -> tuple[list[str], int]:
+    """Drop / sell / refund an item that's in the stashed pile.  Stashed
+    items aren't equipped (by definition), so no equipment cleanup is needed."""
+    if item_id not in stashed:
+        raise ValueError(f"{item_id!r} not in stash")
+    if mode not in REMOVE_MODES:
+        raise ValueError(f"Unknown remove mode {mode!r}; want one of {REMOVE_MODES}")
+    new_stashed = list(stashed)
+    new_stashed.remove(item_id)
+    return new_stashed, gold + _refund_amount(item_id, mode, data)
