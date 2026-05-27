@@ -61,18 +61,21 @@ override. Changing a rule mid-wizard applies targeted downstream clears
 Every flag in `RuleSet` is integrated end-to-end. The settings page never
 renders a "pending" badge — a regression test guards this.
 
-## Current state (2026-05-26)
+## Current state (2026-05-27)
 
-Last clean commit: `3cd46d9 Encumbrance enforcement…`. Tree is dirty —
-user is mid-refactor adding a **stashed inventory** concept plus the
-**table-lookup encumbrance model** (replaces the old base-minus-penalty math).
-9 tests fail against the WIP; they predate the refactor and will need
-updating once the refactor lands.
+Last commit: `6e486a2 Stashed inventory + table-lookup encumbrance`.
+Tree is clean; all 380 tests pass.
 
-Modified, uncommitted: `aose/engine/{encumbrance,shop}.py`,
-`aose/models/character.py`, `aose/sheet/view.py`, `aose/web/{routes,wizard}.py`,
-`aose/web/static/sheet.css`, `aose/web/templates/{_equipment_ui,sheet}.html`.
+Key concepts now live:
 
-See the project memory `project_aose_builder.md` for the longer architectural
-narrative; the session memory `project_stashed_inventory_wip.md` covers the
-in-flight refactor specifically.
+- **Stashed inventory** — `CharacterSpec.stashed: list[str]` for items left
+  off-person (no weight contribution). Sheet renders three inventory
+  subsections: Equipped / Carried / Stashed.
+- **Table-lookup encumbrance** — movement is *set* by `(armor_class, weight_band)`
+  per the OSE Advanced table; armour no longer subtracts from a base.
+  Demihuman rates scale from the 120'-base human row by `base / 120`,
+  rounded down to 5'. See `aose/engine/encumbrance.py` for the table.
+- Equipped items live inside `inventory` already — weight is counted once
+  via the inventory list, not twice via `equipped` / `equipped_weapons`.
+
+See `project_aose_builder.md` for the longer architectural narrative.
