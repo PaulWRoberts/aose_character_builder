@@ -302,3 +302,56 @@ def test_stash_container_unknown_raises():
 def test_unstash_container_unknown_raises():
     with pytest.raises(UnknownContainer):
         unstash_container([], "missing-id")
+
+
+from aose.engine.shop import ContainerNotEmpty, remove_container
+
+
+def test_remove_container_drop_with_contents():
+    fake = _fake_container_data()
+    bp = _carried_backpack(fake).model_copy(update={"contents": ["torch", "torch"]})
+    containers, gold = remove_container([bp], 0, bp.instance_id, "drop", fake)
+    assert containers == []
+    assert gold == 0  # drop refunds nothing
+
+
+def test_remove_container_sell_empty_refunds_half():
+    fake = _fake_container_data()
+    bp = _carried_backpack(fake)
+    containers, gold = remove_container([bp], 0, bp.instance_id, "sell", fake)
+    assert containers == []
+    assert gold == 2  # 5 // 2
+
+
+def test_remove_container_refund_empty_returns_full_cost():
+    fake = _fake_container_data()
+    bp = _carried_backpack(fake)
+    containers, gold = remove_container([bp], 0, bp.instance_id, "refund", fake)
+    assert gold == 5
+
+
+def test_remove_container_sell_non_empty_raises():
+    fake = _fake_container_data()
+    bp = _carried_backpack(fake).model_copy(update={"contents": ["torch"]})
+    with pytest.raises(ContainerNotEmpty):
+        remove_container([bp], 0, bp.instance_id, "sell", fake)
+
+
+def test_remove_container_refund_non_empty_raises():
+    fake = _fake_container_data()
+    bp = _carried_backpack(fake).model_copy(update={"contents": ["torch"]})
+    with pytest.raises(ContainerNotEmpty):
+        remove_container([bp], 0, bp.instance_id, "refund", fake)
+
+
+def test_remove_container_unknown_raises():
+    fake = _fake_container_data()
+    with pytest.raises(UnknownContainer):
+        remove_container([], 0, "missing-id", "drop", fake)
+
+
+def test_remove_container_bad_mode_raises():
+    fake = _fake_container_data()
+    bp = _carried_backpack(fake)
+    with pytest.raises(ValueError, match="Unknown remove mode"):
+        remove_container([bp], 0, bp.instance_id, "burn", fake)

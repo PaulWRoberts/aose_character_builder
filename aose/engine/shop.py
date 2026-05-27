@@ -386,6 +386,40 @@ def _set_container_state(containers: list[ContainerInstance],
     return [*containers[:idx], updated, *containers[idx + 1:]]
 
 
+def remove_container(containers: list[ContainerInstance], gold: int,
+                     instance_id: str, mode: str, data: GameData,
+                     ) -> tuple[list[ContainerInstance], int]:
+    """Remove a container instance.
+
+    * ``drop``    — instance + contents discarded, no refund.
+    * ``sell``    — refunds half cost; raises ``ContainerNotEmpty`` if non-empty.
+    * ``refund``  — refunds full cost; raises ``ContainerNotEmpty`` if non-empty.
+    """
+    if mode not in REMOVE_MODES:
+        raise ValueError(f"Unknown remove mode {mode!r}; want one of {REMOVE_MODES}")
+
+    idx = next((i for i, c in enumerate(containers) if c.instance_id == instance_id), None)
+    if idx is None:
+        raise UnknownContainer(f"No container with id {instance_id!r}")
+    target = containers[idx]
+
+    if mode in ("sell", "refund") and target.contents:
+        raise ContainerNotEmpty(
+            f"Cannot {mode} a container with contents — empty it first"
+        )
+
+    catalog = data.items.get(target.catalog_id)
+    cost = int(catalog.cost_gp) if catalog else 0
+    refund = 0
+    if mode == "sell":
+        refund = cost // 2
+    elif mode == "refund":
+        refund = cost
+
+    new_containers = [*containers[:idx], *containers[idx + 1:]]
+    return new_containers, gold + refund
+
+
 def buy(inventory: list[str], gold: int, item_id: str,
         data: GameData) -> tuple[list[str], int]:
     """Append ``item_id`` to ``inventory`` and deduct its ``cost_gp`` from
