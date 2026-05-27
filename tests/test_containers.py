@@ -42,3 +42,35 @@ def test_container_defaults_unlimited_and_full_weight():
     )
     assert c.capacity_cn is None
     assert c.weight_multiplier == 1.0
+
+
+from aose.models import CharacterSpec, ClassEntry, ContainerInstance, RuleSet
+
+
+def _minimal_spec(**overrides):
+    base = dict(
+        name="Tester",
+        abilities={"STR": 12, "INT": 12, "WIS": 11, "DEX": 12, "CON": 12, "CHA": 10},
+        race_id="human",
+        classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[6])],
+        alignment="law",
+        ruleset=RuleSet(),
+    )
+    base.update(overrides)
+    return CharacterSpec(**base)
+
+
+def test_container_instance_construct():
+    inst = ContainerInstance(
+        instance_id="abc123",
+        catalog_id="backpack",
+        state="carried",
+        contents=["torch", "rope"],
+    )
+    assert inst.state == "carried"
+    assert inst.contents == ["torch", "rope"]
+
+
+def test_character_spec_defaults_containers_empty():
+    spec = _minimal_spec()
+    assert spec.containers == []

@@ -18,7 +18,7 @@ from .item import (
     Poison,
     WeaponDamage,
 )
-from .character import CharacterSpec, ClassEntry
+from .character import CharacterSpec, ClassEntry, ContainerInstance
 
 __all__ = [
     "Ability",
@@ -40,4 +40,5 @@ __all__ = [
     "WeaponDamage",
     "CharacterSpec",
     "ClassEntry",
+    "ContainerInstance",
 ]

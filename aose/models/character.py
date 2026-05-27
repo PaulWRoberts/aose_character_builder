@@ -6,6 +6,20 @@ from .ability import Ability
 from .ruleset import RuleSet
 
 
+class ContainerInstance(BaseModel):
+    """A specific container the character owns — per-instance state, separate
+    from the catalog ``Container`` item.  Items inside ``contents`` are not in
+    ``CharacterSpec.inventory`` or ``CharacterSpec.stashed``; they live inside
+    the container and follow its state (carried/stashed) for weight purposes.
+    """
+    model_config = ConfigDict(extra="forbid")
+
+    instance_id: str
+    catalog_id: str
+    state: Literal["carried", "stashed"]
+    contents: list[str] = Field(default_factory=list)
+
+
 class ClassEntry(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -34,6 +48,7 @@ class CharacterSpec(BaseModel):
     equipped: dict[str, str] = Field(default_factory=dict)
     # Equipped weapons — a list so duplicates and multiple ready weapons are OK.
     equipped_weapons: list[str] = Field(default_factory=list)
+    containers: list[ContainerInstance] = Field(default_factory=list)
     secondary_skill: str | None = None
     chosen_proficiencies: list[str] = Field(default_factory=list)
     ruleset: RuleSet = Field(default_factory=RuleSet)
