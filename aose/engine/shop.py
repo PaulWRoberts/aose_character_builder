@@ -9,6 +9,7 @@ automatically.
 from __future__ import annotations
 
 import random
+import uuid
 from collections import Counter
 from typing import Optional
 
@@ -16,7 +17,7 @@ from pydantic import BaseModel
 
 from aose.data.loader import GameData
 from aose.engine.dice import roll
-from aose.models import Item
+from aose.models import Container, ContainerInstance, Item
 
 
 class ShopItem(BaseModel):
@@ -192,6 +193,53 @@ class ContainerNotEmpty(ValueError):
 
 class UnknownContainer(ValueError):
     pass
+
+
+def new_container_instance(catalog_id: str, data: GameData,
+                           state: str = "carried") -> ContainerInstance:
+    """Create a fresh ContainerInstance for the given catalog item.
+
+    Validates that ``catalog_id`` is a Container in ``data.items``.  Returns a
+    ContainerInstance with a uuid4-hex ``instance_id``.  Raises ``UnknownItem``
+    if the id isn't in ``data.items`` and ``ValueError`` if the item exists
+    but isn't a Container.
+    """
+    item = data.items.get(catalog_id)
+    if item is None:
+        raise UnknownItem(f"No item with id {catalog_id!r}")
+    if not isinstance(item, Container):
+        raise ValueError(f"{catalog_id!r} is not a container")
+    return ContainerInstance(
+        instance_id=uuid.uuid4().hex,
+        catalog_id=catalog_id,
+        state=state,  # type: ignore[arg-type]
+        contents=[],
+    )
+
+
+def buy_container(containers: list[ContainerInstance], gold: int,
+                  catalog_id: str, data: GameData
+                  ) -> tuple[list[ContainerInstance], int]:
+    """Like ``buy()`` but creates a ContainerInstance instead of appending to a
+    flat inventory list.  Deducts ``cost_gp`` (rounded down) from ``gold``."""
+    item = data.items.get(catalog_id)
+    if item is None:
+        raise UnknownItem(f"No item with id {catalog_id!r}")
+    if not isinstance(item, Container):
+        raise ValueError(f"{catalog_id!r} is not a container")
+    cost = int(item.cost_gp)
+    if gold < cost:
+        raise InsufficientGold(
+            f"Cannot afford {item.name}: {cost} gp required, {gold} on hand"
+        )
+    return ([*containers, new_container_instance(catalog_id, data)], gold - cost)
+
+
+def add_free_container(containers: list[ContainerInstance],
+                       catalog_id: str, data: GameData
+                       ) -> list[ContainerInstance]:
+    """Append a new container instance without deducting gold (GM gift / loot)."""
+    return [*containers, new_container_instance(catalog_id, data)]
 
 
 def stash(inventory: list[str], stashed: list[str],
