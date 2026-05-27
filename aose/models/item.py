@@ -53,7 +53,13 @@ class Poison(ItemBase):
     effect: str | None = None
 
 
+class Container(ItemBase):
+    item_type: Literal["container"]
+    capacity_cn: int | None = None
+    weight_multiplier: float = 1.0
+
+
 Item = Annotated[
-    Union[Weapon, Armor, AdventuringGear, Poison],
+    Union[Weapon, Armor, AdventuringGear, Poison, Container],
     Field(discriminator="item_type"),
 ]
