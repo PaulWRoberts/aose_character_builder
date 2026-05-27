@@ -2,6 +2,7 @@ from pydantic import BaseModel
 
 from aose.data.loader import GameData
 from aose.engine import ability_mods, armor_class, attack_bonus, hp, saves
+from aose.engine.attacks import AttackProfile, attack_profiles
 from aose.engine.leveling import ClassAdvancement, all_advancement, xp_share
 from aose.models import Ability, CharacterSpec, RuleSet
 
@@ -100,6 +101,7 @@ class CharacterSheet(BaseModel):
 
     equipped: list[EquippedRow]
     inventory: list[str]
+    attacks: list[AttackProfile]
 
     secondary_skill: str | None
     proficiencies: list["ProficiencyDisplay"]  # rich per-group display; empty when rule off
@@ -272,6 +274,7 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
         class_features=_class_features(spec, data),
         equipped=_equipped(spec, data),
         inventory=_inventory(spec, data),
+        attacks=attack_profiles(spec, data),
         secondary_skill=spec.secondary_skill,
         proficiencies=_proficiency_display(spec, data),
         weapon_proficiency_active=spec.ruleset.weapon_proficiency,

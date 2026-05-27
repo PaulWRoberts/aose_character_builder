@@ -5,6 +5,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 
 from aose.characters.storage import list_character_ids, load_character, save_character
+from aose.engine.equip import equip as _equip, unequip as _unequip
 from aose.engine.leveling import level_up as _level_up
 from aose.engine.shop import (
     REMOVE_MODES,
@@ -67,7 +68,9 @@ async def character_sheet(request: Request, character_id: str):
             # Equipment partial context (sheet-side: no starting-gold reroll).
             "gold": spec.gold,
             "gold_locked": True,
-            "inventory_rows": shop_inventory_rows(spec.inventory, game_data),
+            "inventory_rows": shop_inventory_rows(
+                spec.inventory, game_data, spec.equipped, spec.equipped_weapons,
+            ),
             "shop": shop_categories(game_data),
             "remove_modes": REMOVE_MODES,
             "target_url_prefix": f"/character/{character_id}/equipment",
@@ -209,6 +212,36 @@ async def equipment_add(request: Request, character_id: str,
     try:
         spec.inventory = shop_add_free(spec.inventory, item_id, request.app.state.game_data)
     except UnknownItem as e:
+        raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/equipment/equip")
+async def equipment_equip(request: Request, character_id: str,
+                          item_id: str = Form(...)):
+    spec = _load_spec_or_404(request, character_id)
+    try:
+        spec.equipped, spec.equipped_weapons = _equip(
+            spec.inventory, spec.equipped, spec.equipped_weapons,
+            item_id, request.app.state.game_data,
+        )
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/equipment/unequip")
+async def equipment_unequip(request: Request, character_id: str,
+                            item_id: str = Form(...)):
+    spec = _load_spec_or_404(request, character_id)
+    try:
+        spec.equipped, spec.equipped_weapons = _unequip(
+            spec.equipped, spec.equipped_weapons,
+            item_id, request.app.state.game_data,
+        )
+    except ValueError as e:
         raise HTTPException(400, str(e))
     save_character(character_id, spec, request.app.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)

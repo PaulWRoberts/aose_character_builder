@@ -34,13 +34,42 @@
 <h3 class="subhead">Inventory</h3>
 <table class="inventory-table">
     <thead>
-        <tr><th>Item</th><th class="num">Qty</th><th>Remove one</th></tr>
+        <tr>
+            <th>Item</th>
+            <th class="num">Qty</th>
+            <th>Equip</th>
+            <th>Remove one</th>
+        </tr>
     </thead>
     <tbody>
     {% for row in inventory_rows %}
         <tr>
-            <td>{{ row.name }}</td>
+            <td>
+                {{ row.name }}
+                {% if row.equipped_count > 0 %}
+                <span class="equipped-badge" title="Currently equipped">
+                    equipped{% if row.equipped_count > 1 %}&nbsp;&times;{{ row.equipped_count }}{% endif %}
+                </span>
+                {% endif %}
+            </td>
             <td class="num">{{ row.count }}</td>
+            <td>
+                {% if row.equippable %}
+                <form method="post" action="{{ target_url_prefix }}/equip" class="inline-form">
+                    <input type="hidden" name="item_id" value="{{ row.id }}">
+                    <button type="submit"
+                            {% if row.equipped_count >= row.count %}disabled
+                                title="All {{ row.count }} copies already equipped"
+                            {% endif %}>Equip</button>
+                </form>
+                {% if row.equipped_count > 0 %}
+                <form method="post" action="{{ target_url_prefix }}/unequip" class="inline-form">
+                    <input type="hidden" name="item_id" value="{{ row.id }}">
+                    <button type="submit">Unequip</button>
+                </form>
+                {% endif %}
+                {% endif %}
+            </td>
             <td>
                 <form method="post" action="{{ target_url_prefix }}/remove" class="remove-form">
                     <input type="hidden" name="item_id" value="{{ row.id }}">

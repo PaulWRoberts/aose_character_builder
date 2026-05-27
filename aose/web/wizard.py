@@ -18,6 +18,7 @@ from aose.characters import (
 )
 from aose.engine.ability_mods import ability_modifier
 from aose.engine.dice import roll_3d6_in_order, roll_4d6_drop_lowest_in_order, roll_hp
+from aose.engine.equip import equip as _equip, unequip as _unequip
 from aose.engine.proficiency import proficiency_groups, starting_proficiency_count
 from aose.engine.shop import (
     InsufficientGold,
@@ -889,10 +890,15 @@ def _equipment_context(draft: dict[str, Any], game_data) -> dict:
     """Build the rendering context for the equipment partial — shared between
     the wizard equipment step and the live character sheet."""
     inventory = draft.get("inventory", [])
+    equipped = draft.get("equipped", {})
+    equipped_weapons = draft.get("equipped_weapons", [])
     return {
         "gold": draft.get("gold", 0),
         "gold_locked": draft.get("gold_locked", False),
-        "inventory_rows": inventory_rows(inventory, game_data),
+        "inventory_rows": inventory_rows(inventory, game_data, equipped, equipped_weapons),
+        "equipped_armor_id": equipped.get("armor"),
+        "equipped_shield_id": equipped.get("shield"),
+        "equipped_weapon_ids": list(equipped_weapons),
         "shop": shop_categories(game_data),
         "remove_modes": REMOVE_MODES,
     }
@@ -961,6 +967,43 @@ async def post_equipment_add(request: Request, draft_id: str, item_id: str = For
     return _redirect(f"/wizard/{draft_id}/equipment")
 
 
+@router.post("/{draft_id}/equipment/equip")
+async def post_equipment_equip(request: Request, draft_id: str, item_id: str = Form(...)):
+    draft = _load(request, draft_id)
+    data = request.app.state.game_data
+    try:
+        new_eq, new_weapons = _equip(
+            draft.get("inventory", []),
+            draft.get("equipped", {}),
+            draft.get("equipped_weapons", []),
+            item_id, data,
+        )
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    draft["equipped"] = new_eq
+    draft["equipped_weapons"] = new_weapons
+    save_draft(draft_id, draft, _drafts_dir(request))
+    return _redirect(f"/wizard/{draft_id}/equipment")
+
+
+@router.post("/{draft_id}/equipment/unequip")
+async def post_equipment_unequip(request: Request, draft_id: str, item_id: str = Form(...)):
+    draft = _load(request, draft_id)
+    data = request.app.state.game_data
+    try:
+        new_eq, new_weapons = _unequip(
+            draft.get("equipped", {}),
+            draft.get("equipped_weapons", []),
+            item_id, data,
+        )
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    draft["equipped"] = new_eq
+    draft["equipped_weapons"] = new_weapons
+    save_draft(draft_id, draft, _drafts_dir(request))
+    return _redirect(f"/wizard/{draft_id}/equipment")
+
+
 @router.post("/{draft_id}/equipment/remove")
 async def post_equipment_remove(request: Request, draft_id: str,
                                 item_id: str = Form(...),
@@ -1017,6 +1060,8 @@ def _draft_to_spec(draft: dict[str, Any]) -> CharacterSpec:
         chosen_proficiencies=list(draft.get("proficiencies", [])),
         gold=draft.get("gold", 0),
         inventory=list(draft.get("inventory", [])),
+        equipped=dict(draft.get("equipped", {})),
+        equipped_weapons=list(draft.get("equipped_weapons", [])),
         ruleset=ruleset,
     )
 

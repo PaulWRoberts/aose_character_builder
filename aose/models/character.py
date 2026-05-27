@@ -26,8 +26,10 @@ class CharacterSpec(BaseModel):
     xp: int = 0
     gold: int = 0
     inventory: list[str] = Field(default_factory=list)
-    # slot -> item_id (e.g., {"armor": "chain_mail", "shield": "shield"})
+    # slot -> item_id, for single-slot gear: {"armor": "chain_mail", "shield": "shield"}
     equipped: dict[str, str] = Field(default_factory=dict)
+    # Equipped weapons — a list so duplicates and multiple ready weapons are OK.
+    equipped_weapons: list[str] = Field(default_factory=list)
     secondary_skill: str | None = None
     chosen_proficiencies: list[str] = Field(default_factory=list)
     ruleset: RuleSet = Field(default_factory=RuleSet)

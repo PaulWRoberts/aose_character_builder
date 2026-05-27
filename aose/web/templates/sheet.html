@@ -62,6 +62,47 @@
             </section>
 
             <section class="section">
+                <h2>Attacks</h2>
+                {% if sheet.attacks %}
+                <table class="attacks-table">
+                    <thead>
+                        <tr>
+                            <th>Weapon</th>
+                            <th class="num">{% if sheet.use_ascending %}Atk{% else %}THAC0{% endif %}</th>
+                            <th>Damage</th>
+                            <th>Range</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for atk in sheet.attacks %}
+                        <tr>
+                            <td>
+                                {{ atk.name }}{% if atk.count > 1 %} &times;{{ atk.count }}{% endif %}
+                                {% if not atk.proficient %}
+                                <span class="muted small" title="Non-proficient: -2 to hit applied">(non-prof)</span>
+                                {% endif %}
+                            </td>
+                            <td class="num">
+                                {% if sheet.use_ascending %}
+                                    {{ "%+d"|format(atk.to_hit_ascending) }}
+                                {% else %}
+                                    {{ atk.to_hit_thac0 }}
+                                {% endif %}
+                            </td>
+                            <td>{{ atk.damage }}</td>
+                            <td class="small">
+                                {% if atk.range_ft %}{{ atk.range_ft[0] }}/{{ atk.range_ft[1] }}/{{ atk.range_ft[2] }}'{% else %}&mdash;{% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p class="muted small">No weapons equipped.</p>
+                {% endif %}
+            </section>
+
+            <section class="section">
                 <h2>Saving Throws</h2>
                 <table>
                     <tbody>

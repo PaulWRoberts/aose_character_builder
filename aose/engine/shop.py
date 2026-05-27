@@ -38,6 +38,8 @@ class InventoryRow(BaseModel):
     count: int
     cost_gp: float     # unit price; refund amount equals this
     sell_gp: float     # 50% of cost, rounded down
+    equippable: bool = False     # weapon / armour / shield → True
+    equipped_count: int = 0      # how many copies currently equipped
 
 
 def roll_starting_gold(rng: Optional[random.Random] = None) -> int:
@@ -73,25 +75,41 @@ def shop_categories(data: GameData) -> list[ShopCategory]:
     return out
 
 
-def inventory_rows(inventory: list[str], data: GameData) -> list[InventoryRow]:
-    """Group repeated item ids into ``Item × N`` rows for display."""
+def inventory_rows(inventory: list[str], data: GameData,
+                   equipped: dict[str, str] | None = None,
+                   equipped_weapons: list[str] | None = None) -> list[InventoryRow]:
+    """Group repeated item ids into ``Item × N`` rows for display.
+
+    When ``equipped`` and/or ``equipped_weapons`` are provided, each row gets
+    ``equippable`` and ``equipped_count`` filled in for the equip/unequip UI.
+    """
+    from aose.models import Armor, Weapon  # local to avoid circular import
+    equipped = equipped or {}
+    equipped_weapons = equipped_weapons or []
+
+    def _equipped_count(item_id: str) -> int:
+        n = sum(1 for v in equipped.values() if v == item_id)
+        n += sum(1 for v in equipped_weapons if v == item_id)
+        return n
+
     counts = Counter(inventory)
     out: list[InventoryRow] = []
     for item_id, count in counts.items():
         item = data.items.get(item_id)
         if item is None:
-            # Stale id (item deleted from data after purchase) — surface it
-            # rather than silently dropping the inventory entry.
             out.append(InventoryRow(
                 id=item_id, name=item_id, count=count, cost_gp=0, sell_gp=0,
             ))
             continue
+        is_equippable = isinstance(item, (Weapon, Armor))
         out.append(InventoryRow(
             id=item_id,
             name=item.name,
             count=count,
             cost_gp=item.cost_gp,
             sell_gp=int(item.cost_gp // 2),
+            equippable=is_equippable,
+            equipped_count=_equipped_count(item_id) if is_equippable else 0,
         ))
     out.sort(key=lambda r: r.name)
     return out

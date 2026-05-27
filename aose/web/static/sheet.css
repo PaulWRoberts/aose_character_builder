@@ -714,6 +714,41 @@ button {
     font-size: 13px;
 }
 
+/* ── Equipped badge on inventory rows ─────────────────────── */
+
+.equipped-badge {
+    display: inline-block;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    background: #5a7a3a;
+    color: white;
+    padding: 1px 6px;
+    border-radius: 8px;
+    margin-left: 6px;
+    vertical-align: middle;
+}
+
+/* ── Attacks table ─────────────────────────────────────────── */
+
+.attacks-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.attacks-table th {
+    background: #ede4cf;
+    font-size: 11px;
+    text-transform: uppercase;
+    padding: 3px 5px;
+}
+
+.attacks-table td {
+    padding: 4px 5px;
+    border-bottom: 1px dashed #e0d6b8;
+}
+
 /* ── Print/no-print pair ─────────────────────────────────── */
 
 .print-only {
