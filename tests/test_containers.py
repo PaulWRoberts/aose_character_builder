@@ -47,6 +47,13 @@ def test_container_defaults_unlimited_and_full_weight():
 from aose.models import CharacterSpec, ClassEntry, ContainerInstance, RuleSet
 
 
+def test_container_exceptions_exist():
+    from aose.engine.shop import ContainerFull, ContainerNotEmpty, UnknownContainer
+    assert issubclass(ContainerFull, ValueError)
+    assert issubclass(ContainerNotEmpty, ValueError)
+    assert issubclass(UnknownContainer, ValueError)
+
+
 def _minimal_spec(**overrides):
     base = dict(
         name="Tester",

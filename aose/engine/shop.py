@@ -182,6 +182,18 @@ class UnknownItem(ValueError):
     pass
 
 
+class ContainerFull(ValueError):
+    pass
+
+
+class ContainerNotEmpty(ValueError):
+    pass
+
+
+class UnknownContainer(ValueError):
+    pass
+
+
 def stash(inventory: list[str], stashed: list[str],
           equipped: dict[str, str], equipped_weapons: list[str],
           item_id: str, data: GameData) -> tuple[list[str], list[str], dict[str, str], list[str]]:
