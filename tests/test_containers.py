@@ -233,3 +233,43 @@ def test_stow_capacity_full_raises():
     bp = bp.model_copy(update={"contents": ["torch"] * 20})
     with pytest.raises(ContainerFull):
         stow(["torch"], [], [bp], {}, [], bp.instance_id, "torch", fake)
+
+
+from aose.engine.shop import take_out
+
+
+def test_take_out_from_carried_container_returns_to_inventory():
+    fake = _fake_container_data()
+    bp = _carried_backpack(fake).model_copy(update={"contents": ["torch"]})
+    inv, stashed, containers = take_out(
+        inventory=[], stashed=[], containers=[bp],
+        instance_id=bp.instance_id, item_id="torch",
+    )
+    assert inv == ["torch"]
+    assert containers[0].contents == []
+
+
+def test_take_out_from_stashed_container_returns_to_stashed_list():
+    fake = _fake_container_data()
+    bp = new_container_instance("backpack", fake, state="stashed").model_copy(
+        update={"contents": ["torch", "torch"]}
+    )
+    inv, stashed, containers = take_out(
+        inventory=[], stashed=[], containers=[bp],
+        instance_id=bp.instance_id, item_id="torch",
+    )
+    assert stashed == ["torch"]
+    assert inv == []
+    assert containers[0].contents == ["torch"]
+
+
+def test_take_out_unknown_container_raises():
+    with pytest.raises(UnknownContainer):
+        take_out([], [], [], "missing-id", "torch")
+
+
+def test_take_out_item_not_in_container_raises():
+    fake = _fake_container_data()
+    bp = _carried_backpack(fake)
+    with pytest.raises(ValueError, match="not in container"):
+        take_out([], [], [bp], bp.instance_id, "torch")

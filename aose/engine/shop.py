@@ -335,6 +335,32 @@ def stow(inventory: list[str], stashed: list[str],
     return new_inv, stashed, new_containers
 
 
+def take_out(inventory: list[str], stashed: list[str],
+             containers: list[ContainerInstance],
+             instance_id: str, item_id: str,
+             ) -> tuple[list[str], list[str], list[ContainerInstance]]:
+    """Remove one copy of ``item_id`` from the container's contents.
+
+    Destination follows container state: a carried container puts the item
+    back in ``inventory``; a stashed container puts it in ``stashed``.
+    """
+    idx = next((i for i, c in enumerate(containers) if c.instance_id == instance_id), None)
+    if idx is None:
+        raise UnknownContainer(f"No container with id {instance_id!r}")
+    target = containers[idx]
+    if item_id not in target.contents:
+        raise ValueError(f"{item_id!r} not in container {instance_id!r}")
+
+    new_contents = list(target.contents)
+    new_contents.remove(item_id)
+    updated = target.model_copy(update={"contents": new_contents})
+    new_containers = [*containers[:idx], updated, *containers[idx + 1:]]
+
+    if target.state == "carried":
+        return [*inventory, item_id], stashed, new_containers
+    return inventory, [*stashed, item_id], new_containers
+
+
 def buy(inventory: list[str], gold: int, item_id: str,
         data: GameData) -> tuple[list[str], int]:
     """Append ``item_id`` to ``inventory`` and deduct its ``cost_gp`` from
