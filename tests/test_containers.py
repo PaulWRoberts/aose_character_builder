@@ -355,3 +355,56 @@ def test_remove_container_bad_mode_raises():
     bp = _carried_backpack(fake)
     with pytest.raises(ValueError, match="Unknown remove mode"):
         remove_container([bp], 0, bp.instance_id, "burn", fake)
+
+
+def test_inventory_view_splits_loose_and_containers():
+    fake = _fake_container_data()
+    bp = _carried_backpack(fake).model_copy(update={"contents": ["torch"]})
+    from aose.engine.shop import inventory_view
+    view = inventory_view(
+        inventory=["torch"], stashed=[], equipped={}, equipped_weapons=[],
+        containers=[bp], data=fake,
+    )
+    # The loose torch shows up in carried; the contained torch shows up
+    # under the container, not in carried.
+    assert len(view.carried) == 1
+    assert view.carried[0].count == 1
+    assert len(view.containers) == 1
+    cv = view.containers[0]
+    assert cv.instance_id == bp.instance_id
+    assert cv.name == "Backpack"
+    assert cv.state == "carried"
+    assert cv.capacity_cn == 400
+    assert cv.used_cn == 20  # one torch
+    assert cv.effective_weight_cn == 100  # 80 own + 1.0 * 20
+    assert len(cv.contents) == 1
+
+
+def test_inventory_view_container_weight_with_multiplier():
+    fake = _fake_container_data()
+    fake.items["boh"] = Container(
+        id="boh", name="Bag of Holding", category="miscellaneous_magic_items",
+        item_type="container", cost_gp=0, weight_cn=0, capacity_cn=10000,
+        weight_multiplier=0.06,
+    )
+    bag = new_container_instance("boh", fake).model_copy(
+        update={"contents": ["torch"] * 100}  # 100 * 20 = 2000 cn raw
+    )
+    from aose.engine.shop import inventory_view
+    view = inventory_view([], [], {}, [], [bag], fake)
+    cv = view.containers[0]
+    assert cv.used_cn == 2000
+    assert cv.effective_weight_cn == int(0.06 * 2000)  # 120
+
+
+def test_inventory_view_stashed_container_zero_effective_weight():
+    fake = _fake_container_data()
+    bp = new_container_instance("backpack", fake, state="stashed").model_copy(
+        update={"contents": ["torch"]}
+    )
+    from aose.engine.shop import inventory_view
+    view = inventory_view([], [], {}, [], [bp], fake)
+    cv = view.containers[0]
+    assert cv.state == "stashed"
+    # effective_weight is only meaningful when carried; stashed = 0
+    assert cv.effective_weight_cn == 0

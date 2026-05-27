@@ -45,11 +45,26 @@ class InventoryRow(BaseModel):
     equipped_count: int = 0     # how many copies currently equipped (legacy flat view)
 
 
+class ContainerView(BaseModel):
+    """Per-instance container rendering data for the inventory partial."""
+    instance_id: str
+    catalog_id: str
+    name: str
+    state: str   # "carried" or "stashed"
+    capacity_cn: int | None
+    used_cn: int                 # raw sum of contents weight (for capacity)
+    weight_multiplier: float
+    own_weight_cn: int
+    effective_weight_cn: int     # own + int(multiplier * used_cn) when carried, else 0
+    contents: list[InventoryRow]
+
+
 class InventoryView(BaseModel):
     """Three-state inventory split for the UI."""
     equipped: list[InventoryRow]   # items currently equipped (subset of "on person")
     carried: list[InventoryRow]    # on person but not equipped — contribute to weight
     stashed: list[InventoryRow]    # off-person stash — no weight contribution
+    containers: list[ContainerView] = []
 
 
 def roll_starting_gold(rng: Optional[random.Random] = None) -> int:
@@ -108,18 +123,16 @@ def _build_row(item_id: str, count: int, data: GameData) -> InventoryRow:
 
 def inventory_view(inventory: list[str], stashed: list[str],
                    equipped: dict[str, str], equipped_weapons: list[str],
-                   data: GameData) -> InventoryView:
-    """Three-section split of the character's items.
+                   containers: list[ContainerInstance] | None = None,
+                   data: GameData = None) -> InventoryView:
+    """Three-section split of the character's loose items, plus a parallel
+    ``containers`` list with each instance's contents already grouped.
 
-    ``inventory`` contains everything on the character's person — *including*
-    items that are equipped, since being equipped is just a flag on an
-    inventory item, not a separate store.  ``stashed`` is a parallel list of
-    items that aren't on the person at all.
-
-    Rows are grouped by item id within each section, with a ``count`` for the
-    number of identical copies in that state.
+    Items inside container ``contents`` are not surfaced in equipped/carried/
+    stashed — they live only inside the container view.
     """
-    # Tally how many copies of each item are equipped (across armor + weapons).
+    containers = containers or []
+
     equipped_count: Counter[str] = Counter()
     for v in equipped.values():
         equipped_count[v] += 1
@@ -132,21 +145,52 @@ def inventory_view(inventory: list[str], stashed: list[str],
     eq_rows: list[InventoryRow] = []
     carried_rows: list[InventoryRow] = []
     for item_id, total in inv_count.items():
-        eq_n = min(equipped_count[item_id], total)  # defensive: never exceed owned
+        eq_n = min(equipped_count[item_id], total)
         carried_n = total - eq_n
         if eq_n:
             eq_rows.append(_build_row(item_id, eq_n, data))
         if carried_n:
             carried_rows.append(_build_row(item_id, carried_n, data))
 
-    stashed_rows: list[InventoryRow] = []
-    for item_id, count in stash_count.items():
-        stashed_rows.append(_build_row(item_id, count, data))
+    stashed_rows = [_build_row(i, n, data) for i, n in stash_count.items()]
+
+    container_views: list[ContainerView] = []
+    for c in containers:
+        catalog = data.items.get(c.catalog_id)
+        if not isinstance(catalog, Container):
+            continue   # stale catalog id; surface as zero-state
+        rows_by_id: Counter[str] = Counter(c.contents)
+        content_rows = [_build_row(i, n, data) for i, n in rows_by_id.items()]
+        content_rows.sort(key=lambda r: r.name)
+        raw_used = sum(
+            (data.items[x].weight_cn if x in data.items else 0)
+            for x in c.contents
+        )
+        effective = (
+            catalog.weight_cn + int(catalog.weight_multiplier * raw_used)
+            if c.state == "carried" else 0
+        )
+        container_views.append(ContainerView(
+            instance_id=c.instance_id,
+            catalog_id=c.catalog_id,
+            name=catalog.name,
+            state=c.state,
+            capacity_cn=catalog.capacity_cn,
+            used_cn=raw_used,
+            weight_multiplier=catalog.weight_multiplier,
+            own_weight_cn=catalog.weight_cn,
+            effective_weight_cn=effective,
+            contents=content_rows,
+        ))
 
     eq_rows.sort(key=lambda r: r.name)
     carried_rows.sort(key=lambda r: r.name)
     stashed_rows.sort(key=lambda r: r.name)
-    return InventoryView(equipped=eq_rows, carried=carried_rows, stashed=stashed_rows)
+    container_views.sort(key=lambda v: (v.state, v.name))
+    return InventoryView(
+        equipped=eq_rows, carried=carried_rows, stashed=stashed_rows,
+        containers=container_views,
+    )
 
 
 def inventory_rows(inventory: list[str], data: GameData,
@@ -156,7 +200,7 @@ def inventory_rows(inventory: list[str], data: GameData,
     the three-state split.  Stash list isn't surfaced through this entry
     point; use :func:`inventory_view` instead."""
     view = inventory_view(
-        inventory, [], equipped or {}, equipped_weapons or [], data,
+        inventory, [], equipped or {}, equipped_weapons or [], None, data,
     )
     # Merge equipped + carried into one row per item, with equipped_count
     # carrying the equipped half for callers using the legacy flat API.

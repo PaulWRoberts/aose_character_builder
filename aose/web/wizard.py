@@ -34,7 +34,7 @@ from aose.engine.shop import (
     stash as shop_stash,
     unstash as shop_unstash,
 )
-from aose.models import Ability, CharacterSpec, ClassEntry, RuleSet
+from aose.models import Ability, CharacterSpec, ClassEntry, ContainerInstance, RuleSet
 from aose.web.settings_routes import (
     CHOICE_GROUPS,
     IMPLEMENTED_CHOICE_GROUPS,
@@ -896,11 +896,14 @@ def _equipment_context(draft: dict[str, Any], game_data) -> dict:
     stashed = draft.get("stashed", [])
     equipped = draft.get("equipped", {})
     equipped_weapons = draft.get("equipped_weapons", [])
+    containers = [
+        ContainerInstance.model_validate(c) for c in draft.get("containers", [])
+    ]
     return {
         "gold": draft.get("gold", 0),
         "gold_locked": draft.get("gold_locked", False),
         "inventory_view": inventory_view(
-            inventory, stashed, equipped, equipped_weapons, game_data,
+            inventory, stashed, equipped, equipped_weapons, containers, game_data,
         ),
         "shop": shop_categories(game_data),
         "remove_modes": REMOVE_MODES,

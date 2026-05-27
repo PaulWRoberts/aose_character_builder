@@ -72,7 +72,8 @@ async def character_sheet(request: Request, character_id: str):
             "gold": spec.gold,
             "gold_locked": True,
             "inventory_view": shop_inventory_view(
-                spec.inventory, spec.stashed, spec.equipped, spec.equipped_weapons, game_data,
+                spec.inventory, spec.stashed, spec.equipped, spec.equipped_weapons,
+                spec.containers, game_data,
             ),
             "shop": shop_categories(game_data),
             "remove_modes": REMOVE_MODES,
