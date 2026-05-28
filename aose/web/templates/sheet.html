@@ -29,12 +29,15 @@
                     {% for ab in sheet.abilities %}
                         <tr>
                             <td>{{ ab.ability }}</td>
-                            <td class="num">{{ ab.score }}</td>
+                            <td class="num">{{ ab.score }}{% if ab.modified %}<span class="ability-modified" title="Modified by a magic item">*</span>{% endif %}</td>
                             <td class="num">{{ "%+d"|format(ab.modifier) }}</td>
                         </tr>
                     {% endfor %}
                     </tbody>
                 </table>
+                {% if sheet.abilities | selectattr("modified") | list %}
+                <p class="small muted">* modified by a magic item</p>
+                {% endif %}
             </section>
 
             <section class="section">
@@ -75,7 +78,7 @@
                     </thead>
                     <tbody>
                     {% for atk in sheet.attacks %}
-                        <tr>
+                        <tr class="{% if atk.unarmed %}unarmed-row{% endif %}">
                             <td>
                                 {{ atk.name }}{% if atk.count > 1 %} &times;{{ atk.count }}{% endif %}
                                 {% if not atk.proficient %}
@@ -94,6 +97,20 @@
                                 {% if atk.range_ft %}{{ atk.range_ft[0] }}/{{ atk.range_ft[1] }}/{{ atk.range_ft[2] }}'{% else %}&mdash;{% endif %}
                             </td>
                         </tr>
+                        {% if atk.conditional %}
+                        <tr class="attack-conditional">
+                            <td class="small muted">&nbsp;&nbsp;({{ atk.conditional.label }})</td>
+                            <td class="num">
+                                {% if sheet.use_ascending %}
+                                    {{ "%+d"|format(atk.conditional.to_hit_ascending) }}
+                                {% else %}
+                                    {{ atk.conditional.to_hit_thac0 }}
+                                {% endif %}
+                            </td>
+                            <td>{{ atk.conditional.damage }}</td>
+                            <td class="small">&mdash;</td>
+                        </tr>
+                        {% endif %}
                     {% endfor %}
                     </tbody>
                 </table>
@@ -256,6 +273,31 @@
                 <p class="muted">None</p>
                 {% endif %}
                 <p class="small muted">Non-proficient attacks: &minus;2 to hit.</p>
+            </section>
+            {% endif %}
+
+            {% if sheet.magic_items %}
+            <section class="section">
+                <h2>Magic Items</h2>
+                {% for mi in sheet.magic_items %}
+                <div class="magic-item-row">
+                    <div class="feature-name">
+                        {{ mi.name }}
+                        {% if mi.instance_id and mi.equippable %}<span class="small muted">({{ "worn" if mi.equipped else "not worn" }})</span>{% endif %}
+                        {% if mi.charges_remaining is not none %}<span class="small muted">[{{ mi.charges_remaining }}/{{ mi.charges_max }} charges]</span>{% endif %}
+                    </div>
+                    {% if mi.modifier_summary %}
+                    <div>{% for chip in mi.modifier_summary %}<span class="modifier-chip">{{ chip }}</span>{% endfor %}</div>
+                    {% endif %}
+                    {% if mi.description %}
+                    <details class="magic-desc">
+                        <summary class="small muted">Description</summary>
+                        <div class="feature-text">{{ mi.description }}</div>
+                    </details>
+                    {% endif %}
+                    {% if mi.note %}<div class="small muted">Note: {{ mi.note }}</div>{% endif %}
+                </div>
+                {% endfor %}
             </section>
             {% endif %}
 

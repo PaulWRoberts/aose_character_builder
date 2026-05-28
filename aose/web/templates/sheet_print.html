@@ -191,6 +191,17 @@
         {% endif %}
     </section>
 
+    {% if sheet.magic_items %}
+    <section class="section">
+        <h2>Magic Items</h2>
+        <ul>
+            {% for mi in sheet.magic_items %}
+            <li><strong>{{ mi.name }}</strong>{% if mi.modifier_summary %} — {{ mi.modifier_summary | join(", ") }}{% endif %}</li>
+            {% endfor %}
+        </ul>
+    </section>
+    {% endif %}
+
 </td>
 </tr></tbody></table>
 

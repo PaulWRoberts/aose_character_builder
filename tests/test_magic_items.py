@@ -976,6 +976,44 @@ def test_wizard_use_charge_roundtrips(tmp_path):
     assert draft["magic_items"][0]["charges_remaining"] == start - 1
 
 
+# ── Task 17: Sheet & print display ───────────────────────────────────────────
+
+def test_sheet_html_shows_magic_section_and_markers(tmp_path):
+    client = _make_client(tmp_path)
+    _seed_character(client, abilities={"STR": 9, "INT": 12, "WIS": 11, "DEX": 12, "CON": 12, "CHA": 10})
+    client.post("/character/test/equipment/add", data={"item_id": "gauntlets_of_ogre_power"})
+    spec = load_character("test", client._characters_dir)
+    iid = spec.magic_items[0].instance_id
+    client.post("/character/test/equipment/equip-magic", data={"instance_id": iid})
+    page = client.get("/character/test").text
+    assert "Magic Items" in page
+    assert "Gauntlets of Ogre Power" in page
+    assert "18" in page          # effective STR
+    assert "*" in page           # modified marker on the ability row
+    assert "Unarmed" in page     # always-present attack row
+
+
+def test_sheet_html_shows_conditional_attack(tmp_path):
+    client = _make_client(tmp_path)
+    _seed_character(client)
+    client.post("/character/test/equipment/add", data={"item_id": "sword_plus_1_vs_undead"})
+    client.post("/character/test/equipment/equip", data={"item_id": "sword_plus_1_vs_undead"})
+    page = client.get("/character/test").text
+    assert "vs undead" in page
+
+
+def test_print_html_lists_magic_items(tmp_path):
+    client = _make_client(tmp_path)
+    _seed_character(client)
+    client.post("/character/test/equipment/add", data={"item_id": "ring_of_protection"})
+    spec = load_character("test", client._characters_dir)
+    client.post("/character/test/equipment/equip-magic",
+                data={"instance_id": spec.magic_items[0].instance_id})
+    page = client.get("/character/test/print").text
+    assert "Ring of Protection" in page
+    assert "+1 AC" in page  # one-line modifier summary
+
+
 # ── Task 16: Equipment editor UI ─────────────────────────────────────────────
 
 def test_shop_renders_magic_addonly_section(tmp_path):
