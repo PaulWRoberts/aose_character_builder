@@ -19,6 +19,16 @@ from aose.characters import (
 from aose.engine.ability_mods import ability_modifier
 from aose.engine.dice import roll_3d6_in_order, roll_4d6_drop_lowest_in_order, roll_hp
 from aose.engine.equip import equip as _equip, unequip as _unequip
+from aose.engine.magic import (
+    add_free_magic_item,
+    equip_magic as _equip_magic,
+    needs_instance,
+    remove_magic as _remove_magic,
+    reset_charges as _reset_charges,
+    set_magic_note as _set_magic_note,
+    unequip_magic as _unequip_magic,
+    use_charge as _use_charge,
+)
 from aose.engine.proficiency import proficiency_groups, starting_proficiency_count
 from aose.engine.shop import (
     InsufficientGold,
@@ -41,7 +51,15 @@ from aose.engine.shop import (
     unstash as shop_unstash,
     unstash_container as shop_unstash_container,
 )
-from aose.models import Ability, CharacterSpec, ClassEntry, ContainerInstance, RuleSet
+from aose.models import (
+    Ability,
+    CharacterSpec,
+    ClassEntry,
+    ContainerInstance,
+    MagicItemInstance,
+    RuleSet,
+)
+from aose.sheet.view import magic_items_view
 from aose.web.move_dispatch import dispatch_move
 from aose.web.settings_routes import (
     CHOICE_GROUPS,
@@ -897,6 +915,10 @@ async def post_hp(request: Request, draft_id: str):
 
 # ── Equipment (always-on step right before Review) ────────────────────────
 
+def _draft_magic(draft: dict[str, Any]) -> list[MagicItemInstance]:
+    return [MagicItemInstance.model_validate(m) for m in draft.get("magic_items", [])]
+
+
 def _equipment_context(draft: dict[str, Any], game_data) -> dict:
     """Build the rendering context for the equipment partial — shared between
     the wizard equipment step and the live character sheet."""
@@ -912,6 +934,9 @@ def _equipment_context(draft: dict[str, Any], game_data) -> dict:
         "gold_locked": draft.get("gold_locked", False),
         "inventory_view": inventory_view(
             inventory, stashed, equipped, equipped_weapons, containers, game_data,
+        ),
+        "magic_items_view": magic_items_view(
+            _draft_magic(draft), list(inventory), game_data,
         ),
         "shop": shop_categories(game_data),
         "remove_modes": REMOVE_MODES,
@@ -985,7 +1010,10 @@ async def post_equipment_add(request: Request, draft_id: str, item_id: str = For
     item = data.items.get(item_id)
     from aose.models import Container
     try:
-        if isinstance(item, Container):
+        if needs_instance(item):
+            magic_items = add_free_magic_item(_draft_magic(draft), item_id, data)
+            draft["magic_items"] = [m.model_dump() for m in magic_items]
+        elif isinstance(item, Container):
             containers_raw = draft.get("containers", [])
             containers = [ContainerInstance.model_validate(c) for c in containers_raw]
             new_containers = add_free_container(containers, item_id, data)
@@ -1170,6 +1198,84 @@ async def equipment_remove_container(request: Request, draft_id: str,
     return _redirect(f"/wizard/{draft_id}/equipment")
 
 
+@router.post("/{draft_id}/equipment/equip-magic")
+async def wiz_equip_magic(request: Request, draft_id: str, instance_id: str = Form(...)):
+    draft = _load(request, draft_id)
+    try:
+        items = _equip_magic(_draft_magic(draft), instance_id, request.app.state.game_data)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    draft["magic_items"] = [m.model_dump() for m in items]
+    save_draft(draft_id, draft, _drafts_dir(request))
+    return _redirect(f"/wizard/{draft_id}/equipment")
+
+
+@router.post("/{draft_id}/equipment/unequip-magic")
+async def wiz_unequip_magic(request: Request, draft_id: str, instance_id: str = Form(...)):
+    draft = _load(request, draft_id)
+    try:
+        items = _unequip_magic(_draft_magic(draft), instance_id)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    draft["magic_items"] = [m.model_dump() for m in items]
+    save_draft(draft_id, draft, _drafts_dir(request))
+    return _redirect(f"/wizard/{draft_id}/equipment")
+
+
+@router.post("/{draft_id}/equipment/use-charge")
+async def wiz_use_charge(request: Request, draft_id: str, instance_id: str = Form(...)):
+    draft = _load(request, draft_id)
+    try:
+        items = _use_charge(_draft_magic(draft), instance_id)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    draft["magic_items"] = [m.model_dump() for m in items]
+    save_draft(draft_id, draft, _drafts_dir(request))
+    return _redirect(f"/wizard/{draft_id}/equipment")
+
+
+@router.post("/{draft_id}/equipment/reset-charges")
+async def wiz_reset_charges(request: Request, draft_id: str, instance_id: str = Form(...)):
+    draft = _load(request, draft_id)
+    try:
+        items = _reset_charges(_draft_magic(draft), instance_id)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    draft["magic_items"] = [m.model_dump() for m in items]
+    save_draft(draft_id, draft, _drafts_dir(request))
+    return _redirect(f"/wizard/{draft_id}/equipment")
+
+
+@router.post("/{draft_id}/equipment/remove-magic")
+async def wiz_remove_magic(request: Request, draft_id: str,
+                           instance_id: str = Form(...), mode: str = Form("drop")):
+    draft = _load(request, draft_id)
+    try:
+        items, gold = _remove_magic(
+            _draft_magic(draft), draft.get("gold", 0), instance_id, mode,
+            request.app.state.game_data,
+        )
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    draft["magic_items"] = [m.model_dump() for m in items]
+    draft["gold"] = gold
+    save_draft(draft_id, draft, _drafts_dir(request))
+    return _redirect(f"/wizard/{draft_id}/equipment")
+
+
+@router.post("/{draft_id}/equipment/magic-note")
+async def wiz_magic_note(request: Request, draft_id: str,
+                         instance_id: str = Form(...), note: str = Form("")):
+    draft = _load(request, draft_id)
+    try:
+        items = _set_magic_note(_draft_magic(draft), instance_id, note)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    draft["magic_items"] = [m.model_dump() for m in items]
+    save_draft(draft_id, draft, _drafts_dir(request))
+    return _redirect(f"/wizard/{draft_id}/equipment")
+
+
 @router.post("/{draft_id}/equipment/move")
 async def equipment_move(request: Request, draft_id: str,
                          source: str = Form(...),
@@ -1276,6 +1382,9 @@ def _draft_to_spec(draft: dict[str, Any]) -> CharacterSpec:
         equipped_weapons=list(draft.get("equipped_weapons", [])),
         containers=[
             ContainerInstance.model_validate(c) for c in draft.get("containers", [])
+        ],
+        magic_items=[
+            MagicItemInstance.model_validate(m) for m in draft.get("magic_items", [])
         ],
         ruleset=ruleset,
     )

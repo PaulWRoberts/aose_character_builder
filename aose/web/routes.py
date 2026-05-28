@@ -96,6 +96,7 @@ async def character_sheet(request: Request, character_id: str):
                 spec.inventory, spec.stashed, spec.equipped, spec.equipped_weapons,
                 spec.containers, game_data,
             ),
+            "magic_items_view": sheet.magic_items,
             "shop": shop_categories(game_data),
             "remove_modes": REMOVE_MODES,
             "target_url_prefix": f"/character/{character_id}/equipment",

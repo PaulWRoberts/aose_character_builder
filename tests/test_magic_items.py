@@ -906,3 +906,71 @@ def test_magic_note_and_remove(tmp_path):
     client.post("/character/test/equipment/remove-magic", data={"instance_id": iid, "mode": "drop"})
     spec = load_character("test", client._characters_dir)
     assert spec.magic_items == []
+
+
+# ── Wizard mirror (Task 15) ──────────────────────────────────────────────────
+
+from aose.characters import load_draft, save_draft
+
+
+def _start_wizard_to_equipment(client):
+    """Drive a fresh wizard draft up to the equipment step (mirrors the flow
+    used by tests/test_containers.py::_walk_to_equipment)."""
+    r = client.get("/wizard/new")
+    draft_id = r.headers["location"].split("/")[2]
+    client.post(f"/wizard/{draft_id}/rules", data={
+        "ability_roll_method": "3d6_in_order", "encumbrance": "basic",
+        "separate_race_class": "on",
+        "demihuman_level_limits": "on",
+        "demihuman_class_restrictions": "on",
+    })
+    draft = load_draft(draft_id, client._drafts_dir)
+    draft["abilities"] = {"STR": 15, "INT": 11, "WIS": 12, "DEX": 13, "CON": 14, "CHA": 10}
+    save_draft(draft_id, draft, client._drafts_dir)
+    client.post(f"/wizard/{draft_id}/abilities", data={"name": "Tester"})
+    client.post(f"/wizard/{draft_id}/race", data={"race_id": "dwarf"})
+    client.post(f"/wizard/{draft_id}/class", data={"class_id": "fighter"})
+    client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "law"})
+    client.post(f"/wizard/{draft_id}/hp/roll")
+    client.post(f"/wizard/{draft_id}/hp")
+    client.get(f"/wizard/{draft_id}/equipment")
+    return draft_id
+
+
+def test_wizard_add_worn_item_creates_instance_in_draft(tmp_path):
+    client = _make_client(tmp_path)
+    draft_id = _start_wizard_to_equipment(client)
+    client.post(f"/wizard/{draft_id}/equipment/add", data={"item_id": "ring_of_protection"})
+    draft = load_draft(draft_id, client._drafts_dir)
+    assert draft.get("inventory", []) == []
+    assert len(draft["magic_items"]) == 1
+    assert draft["magic_items"][0]["catalog_id"] == "ring_of_protection"
+
+
+def test_wizard_finalize_roundtrips_magic_items(tmp_path):
+    """Regression guard: _draft_to_spec must include magic_items."""
+    client = _make_client(tmp_path)
+    draft_id = _start_wizard_to_equipment(client)
+    client.post(f"/wizard/{draft_id}/equipment/add", data={"item_id": "ring_of_protection"})
+    draft = load_draft(draft_id, client._drafts_dir)
+    iid = draft["magic_items"][0]["instance_id"]
+    client.post(f"/wizard/{draft_id}/equipment/equip-magic", data={"instance_id": iid})
+    r = client.post(f"/wizard/{draft_id}/finalize")
+    assert r.status_code == 303
+    char_id = r.headers["location"].rsplit("/", 1)[-1]
+    spec = load_character(char_id, client._characters_dir)
+    assert len(spec.magic_items) == 1
+    assert spec.magic_items[0].equipped is True
+
+
+def test_wizard_use_charge_roundtrips(tmp_path):
+    client = _make_client(tmp_path)
+    draft_id = _start_wizard_to_equipment(client)
+    client.post(f"/wizard/{draft_id}/equipment/add", data={"item_id": "ring_of_spell_turning"})
+    draft = load_draft(draft_id, client._drafts_dir)
+    iid = draft["magic_items"][0]["instance_id"]
+    start = draft["magic_items"][0]["charges_remaining"]
+    assert start is not None and start >= 1
+    client.post(f"/wizard/{draft_id}/equipment/use-charge", data={"instance_id": iid})
+    draft = load_draft(draft_id, client._drafts_dir)
+    assert draft["magic_items"][0]["charges_remaining"] == start - 1
