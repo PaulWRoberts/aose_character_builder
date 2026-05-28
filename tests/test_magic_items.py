@@ -69,3 +69,39 @@ def test_magic_item_charge_fields():
     )
     assert wand.charge_dice == "2d6"
     assert wand.modifiers == []
+
+
+from aose.models import Armor, ConditionalBonus, Weapon, WeaponDamage
+
+
+def test_weapon_magic_fields_default_off():
+    w = Weapon(
+        id="dagger", name="Dagger", category="weapons", item_type="weapon",
+        cost_gp=3, weight_cn=10, damage=WeaponDamage(default="1d6", variable="1d4"),
+        proficiency_group="dagger",
+    )
+    assert w.magic_bonus == 0
+    assert w.conditional_bonus is None
+
+
+def test_magic_weapon_with_conditional():
+    w = Weapon(
+        id="sword_plus_1_vs_undead", name="Sword +1, +3 vs Undead",
+        category="magic_swords", item_type="weapon", cost_gp=0, weight_cn=60,
+        damage=WeaponDamage(default="1d6", variable="1d8"),
+        proficiency_group="sword", magic=True, magic_bonus=1,
+        conditional_bonus=ConditionalBonus(vs="undead", bonus=2),
+    )
+    assert w.magic_bonus == 1
+    assert w.conditional_bonus.vs == "undead"
+    assert w.conditional_bonus.bonus == 2
+
+
+def test_armor_magic_and_weight_multiplier():
+    a = Armor(
+        id="chain_mail_plus_1", name="Chain Mail +1", category="magic_armour",
+        item_type="armor", cost_gp=0, weight_cn=400, ac_descending=5,
+        movement_impact="metal", magic=True, magic_bonus=1, weight_multiplier=0.5,
+    )
+    assert a.magic_bonus == 1
+    assert a.weight_multiplier == 0.5

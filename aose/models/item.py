@@ -25,6 +25,12 @@ class WeaponDamage(BaseModel):
     variable_two_handed: str | None = None
 
 
+class ConditionalBonus(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    vs: str          # creature-category label, e.g. "undead"
+    bonus: int       # ADDITIONAL bonus on top of magic_bonus when it applies
+
+
 class Weapon(ItemBase):
     item_type: Literal["weapon"]
     damage: WeaponDamage
@@ -37,6 +43,8 @@ class Weapon(ItemBase):
     range_long: int | None = None
     qualities: list[str] = Field(default_factory=list)
     proficiency_group: str | None = None
+    magic_bonus: int = 0
+    conditional_bonus: ConditionalBonus | None = None
 
 
 class Armor(ItemBase):
@@ -44,6 +52,8 @@ class Armor(ItemBase):
     ac_descending: int
     movement_impact: Literal["none", "leather", "metal"] = "metal"
     is_shield: bool = False
+    magic_bonus: int = 0
+    weight_multiplier: float = 1.0   # 0.5 for enchanted armour
 
 
 class AdventuringGear(ItemBase):
