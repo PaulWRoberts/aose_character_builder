@@ -21,7 +21,7 @@ from .item import (
     WeaponDamage,
 )
 from .modifier import Modifier
-from .character import CharacterSpec, ClassEntry, ContainerInstance
+from .character import CharacterSpec, ClassEntry, ContainerInstance, MagicItemInstance
 
 __all__ = [
     "Ability",
@@ -47,4 +47,5 @@ __all__ = [
     "CharacterSpec",
     "ClassEntry",
     "ContainerInstance",
+    "MagicItemInstance",
 ]

@@ -105,3 +105,34 @@ def test_armor_magic_and_weight_multiplier():
     )
     assert a.magic_bonus == 1
     assert a.weight_multiplier == 0.5
+
+
+from aose.models import CharacterSpec, ClassEntry, MagicItemInstance, RuleSet
+
+
+def _minimal_spec(**overrides):
+    base = dict(
+        name="Tester",
+        abilities={"STR": 12, "INT": 12, "WIS": 11, "DEX": 12, "CON": 12, "CHA": 10},
+        race_id="human",
+        classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[6])],
+        alignment="law",
+        ruleset=RuleSet(),
+    )
+    base.update(overrides)
+    return CharacterSpec(**base)
+
+
+def test_magic_item_instance_construct():
+    inst = MagicItemInstance(
+        instance_id="abc123", catalog_id="ring_of_protection", equipped=True,
+    )
+    assert inst.equipped is True
+    assert inst.charges_remaining is None
+    assert inst.extra_modifiers == []
+    assert inst.note == ""
+
+
+def test_character_spec_defaults_magic_items_empty():
+    spec = _minimal_spec()
+    assert spec.magic_items == []

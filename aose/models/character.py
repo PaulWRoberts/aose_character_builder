@@ -3,7 +3,27 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from .ability import Ability
+from .modifier import Modifier
 from .ruleset import RuleSet
+
+
+class MagicItemInstance(BaseModel):
+    """A specific magic item the character owns — per-instance state separate
+    from the catalog ``MagicItem``.  Tracked here (not in ``inventory``) only
+    when the catalog item is ``equippable`` or has charges; stateless magic
+    items (potions, magic weapons/armour) stay plain inventory ids.
+
+    Modifiers apply only while ``equipped`` is True.
+    """
+    model_config = ConfigDict(extra="forbid")
+
+    instance_id: str                         # uuid4 hex
+    catalog_id: str                          # references a MagicItem
+    equipped: bool = False
+    charges_max: int | None = None
+    charges_remaining: int | None = None
+    extra_modifiers: list[Modifier] = Field(default_factory=list)  # escape hatch
+    note: str = ""                                                 # escape hatch
 
 
 class ContainerInstance(BaseModel):
@@ -49,6 +69,7 @@ class CharacterSpec(BaseModel):
     # Equipped weapons — a list so duplicates and multiple ready weapons are OK.
     equipped_weapons: list[str] = Field(default_factory=list)
     containers: list[ContainerInstance] = Field(default_factory=list)
+    magic_items: list[MagicItemInstance] = Field(default_factory=list)
     secondary_skill: str | None = None
     chosen_proficiencies: list[str] = Field(default_factory=list)
     ruleset: RuleSet = Field(default_factory=RuleSet)
