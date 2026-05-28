@@ -910,3 +910,17 @@ button {
     background: #ecf3e0;
 }
 
+/* ── Magic items ─────────────────────────────────────────── */
+.magic-item-row { margin: 6px 0; padding: 4px 0; border-bottom: 1px dashed #ddd; }
+.magic-desc { margin-top: 3px; }
+.modifier-chip {
+    display: inline-block; font-size: 0.78rem; padding: 1px 7px; margin: 1px 3px 1px 0;
+    background: #eef2ff; color: #3344aa; border-radius: 10px; white-space: nowrap;
+}
+.charges { white-space: nowrap; }
+.ability-modified { color: #b8860b; font-weight: bold; margin-left: 1px; }
+.attack-conditional td { padding-top: 0; border-top: none; }
+.attack-conditional { color: #666; }
+.unarmed-row { color: #555; }
+.magic-items-table input[type="text"] { width: 9rem; }
+

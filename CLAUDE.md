@@ -63,8 +63,8 @@ renders a "pending" badge — a regression test guards this.
 
 ## Current state (2026-05-28)
 
-Container items just landed (22-task plan, all on `main`). Tree is clean;
-all 454 tests pass.
+Magic items just landed (18-task plan, all on `main`). Tree is clean;
+all 524 tests pass.
 
 Key concepts now live:
 
@@ -92,5 +92,40 @@ Key concepts now live:
   drag-and-drop dispatcher in `aose/web/move_dispatch.py`). UI: inline
   collapsible container rows + `inventory_dnd.js` (vanilla HTML5 DnD).
   Spec/plan: `docs/superpowers/{specs,plans}/2026-05-27-container-items*`.
+- **Magic items** — data-driven. A `Modifier` value type
+  (`aose/models/modifier.py`: `target` / `op` add|set|set_min|set_max / `value`)
+  is shared by catalog `MagicItem.modifiers` and per-instance
+  `MagicItemInstance.extra_modifiers`. `MagicItem` is an `Item` union variant
+  (`item_type: magic`, `equippable`, `modifiers`, `max_charges` / `charge_dice`);
+  `ItemBase` gained `description` + a cross-cutting `magic` flag. Magic
+  weapons/armour stay native `Weapon`/`Armor` with a `magic_bonus` field
+  (Armor also gained `weight_multiplier` for half-weight enchanted armour;
+  Weapon gained `conditional_bonus` → a `{vs, bonus}` second attack line).
+  Per-instance state lives on `CharacterSpec.magic_items` (mirrors
+  `ContainerInstance`); modifiers apply only when `equipped`.
+  `aose/engine/magic.py` is the **cycle-free core** (imports only models +
+  loader + dice): `apply_modifiers` (literal set→add→set_min→set_max),
+  `active_modifiers`, `effective_abilities`, `carry_capacity_bonus`,
+  `needs_instance`, plus the instance/charge helpers (`new_magic_instance`,
+  `add_free_magic_item`, `equip_magic`/`unequip_magic`, `use_charge`/
+  `reset_charges`, `remove_magic`, `set_magic_note`). The derivation modules
+  import *from* it: AC adds `magic_bonus` + `ac` mods over effective DEX;
+  saves apply `save:*` mods with a floor of 2; THAC0 applies `thac0` mods
+  (Girdle `set_max`); attacks use effective abilities, `magic_bonus`, global
+  `attack`/`damage` mods, the conditional variant, and a synthetic always-first
+  **Unarmed** profile (1d2, STR); encumbrance halves enchanted-armour weight,
+  counts instance weight, and bands on `banding_weight_cn` (raw −
+  `carry_capacity_bonus`) while displaying raw carried weight. Acquisition is
+  **Add-only** (GM grant, no Buy/gold): `/add` routes a `needs_instance` item to
+  `add_free_magic_item`. Sheet + wizard share routes (`/equip-magic`,
+  `/unequip-magic`, `/use-charge`, `/reset-charges`, `/remove-magic`,
+  `/magic-note`). Sheet shows a Magic Items section (collapsible descriptions +
+  `modifier_summary` chips), a `*` marker on modified abilities, and the Unarmed
+  + conditional attack rows. Seed data: `data/equipment/magic_items.yaml`
+  (auto-loaded by the equipment glob — there is no `ITEM_FILES` list).
+  No magic-item drag-and-drop in V1 (buttons/forms only; magic weapons/armour
+  still DnD as plain inventory ids). Escape hatch: free-text `note` +
+  homebrew `extra_modifiers`. Spec/plan:
+  `docs/superpowers/{specs,plans}/2026-05-28-magic-items*`.
 
 See `project_aose_builder.md` for the longer architectural narrative.
