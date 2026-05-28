@@ -1,0 +1,44 @@
+- id: backpack
+  name: Backpack
+  category: containers
+  item_type: container
+  cost_gp: 5
+  weight_cn: 80
+  capacity_cn: 400
+  weight_multiplier: 1.0
+
+- id: sack_small
+  name: Sack, Small
+  category: containers
+  item_type: container
+  cost_gp: 1
+  weight_cn: 5
+  capacity_cn: 200
+  weight_multiplier: 1.0
+
+- id: sack_large
+  name: Sack, Large
+  category: containers
+  item_type: container
+  cost_gp: 2
+  weight_cn: 20
+  capacity_cn: 600
+  weight_multiplier: 1.0
+
+- id: saddle_bags
+  name: Saddle Bags
+  category: containers
+  item_type: container
+  cost_gp: 4
+  weight_cn: 50
+  capacity_cn: 300
+  weight_multiplier: 1.0
+
+- id: bag_of_holding
+  name: Bag of Holding
+  category: miscellaneous_magic_items
+  item_type: container
+  cost_gp: 0
+  weight_cn: 0
+  capacity_cn: 10000
+  weight_multiplier: 0.06

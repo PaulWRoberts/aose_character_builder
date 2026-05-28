@@ -1,13 +1,6 @@
 # Adventuring gear -- the items every party scavenges over.
 # weight_cn is in coins (10 cn = 1 lb in standard B/X encumbrance).
 
-- id: backpack
-  item_type: gear
-  name: Backpack
-  category: adventuring_gear
-  cost_gp: 5
-  weight_cn: 20
-
 - id: bedroll
   item_type: gear
   name: Bedroll

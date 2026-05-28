@@ -488,3 +488,26 @@ def test_equip_rejects_container_catalog_item():
     fake = _fake_container_data()
     with pytest.raises(ValueError, match="not equippable"):
         equip(["backpack"], {}, [], "backpack", fake)
+
+
+def test_containers_yaml_loads(data):
+    assert "backpack" in data.items
+    bp = data.items["backpack"]
+    assert isinstance(bp, Container)
+    assert bp.capacity_cn == 400
+
+
+def test_bag_of_holding_loaded(data):
+    assert "bag_of_holding" in data.items
+    boh = data.items["bag_of_holding"]
+    assert isinstance(boh, Container)
+    assert boh.capacity_cn == 10000
+    assert boh.weight_multiplier == 0.06
+    assert boh.category == "miscellaneous_magic_items"
+
+
+def test_shop_categories_includes_containers_and_magic(data):
+    from aose.engine.shop import shop_categories
+    cats = {c.id for c in shop_categories(data)}
+    assert "containers" in cats
+    assert "miscellaneous_magic_items" in cats
