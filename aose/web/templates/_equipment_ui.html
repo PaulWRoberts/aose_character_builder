@@ -8,6 +8,7 @@
      - show_gold_reroll    bool   (wizard only — for the starting-gold reroll)
      - show_gold_grant     bool   (sheet only — for the +/- gold form)
      - gold_grant_url      str    (sheet only — POST target for the grant form)
+     - magic_items_view    list[MagicItemView]  (instances + inventory-magic rows)
 #}
 
 <div data-equipment-url-prefix="{{ target_url_prefix }}">
@@ -194,30 +195,97 @@
 <p class="muted">No items in inventory.</p>
 {% endif %}
 
+{% set owned_instances = magic_items_view | selectattr("instance_id") | list %}
+{% if owned_instances %}
+<h3 class="subhead">Magic Items</h3>
+<table class="inventory-table magic-items-table">
+  <thead><tr><th>Item</th><th>State</th><th>Charges</th><th>Note</th><th>Actions</th></tr></thead>
+  <tbody>
+  {% for mi in owned_instances %}
+    <tr class="magic-item-row">
+      <td>
+        <strong>{{ mi.name }}</strong>
+        {% for chip in mi.modifier_summary %}<span class="modifier-chip">{{ chip }}</span>{% endfor %}
+      </td>
+      <td>
+        {% if mi.equippable %}
+          {% if mi.equipped %}
+          <form method="post" action="{{ target_url_prefix }}/unequip-magic" class="inline-form">
+            <input type="hidden" name="instance_id" value="{{ mi.instance_id }}">
+            <button type="submit">Unequip</button>
+          </form>
+          {% else %}
+          <form method="post" action="{{ target_url_prefix }}/equip-magic" class="inline-form">
+            <input type="hidden" name="instance_id" value="{{ mi.instance_id }}">
+            <button type="submit">Equip</button>
+          </form>
+          {% endif %}
+        {% else %}<span class="muted small">—</span>{% endif %}
+      </td>
+      <td class="charges">
+        {% if mi.charges_remaining is not none %}
+          {{ mi.charges_remaining }} / {{ mi.charges_max }}
+          <form method="post" action="{{ target_url_prefix }}/use-charge" class="inline-form">
+            <input type="hidden" name="instance_id" value="{{ mi.instance_id }}">
+            <button type="submit" {% if mi.charges_remaining == 0 %}disabled{% endif %}>Use</button>
+          </form>
+          <form method="post" action="{{ target_url_prefix }}/reset-charges" class="inline-form">
+            <input type="hidden" name="instance_id" value="{{ mi.instance_id }}">
+            <button type="submit">Reset</button>
+          </form>
+        {% else %}<span class="muted small">—</span>{% endif %}
+      </td>
+      <td>
+        <form method="post" action="{{ target_url_prefix }}/magic-note" class="inline-form">
+          <input type="hidden" name="instance_id" value="{{ mi.instance_id }}">
+          <input type="text" name="note" value="{{ mi.note }}" placeholder="note…">
+          <button type="submit">Save</button>
+        </form>
+      </td>
+      <td>
+        <form method="post" action="{{ target_url_prefix }}/remove-magic" class="inline-form">
+          <input type="hidden" name="instance_id" value="{{ mi.instance_id }}">
+          <button type="submit" name="mode" value="drop">Remove</button>
+        </form>
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
 <h3 class="subhead">Shop</h3>
 <input type="text" id="shop-search" class="shop-search"
        placeholder="Search items by name…"
        aria-label="Search items">
 
 {% for category in shop %}
+{% set is_magic_cat = category.items | selectattr("magic") | list | length == category.items | length %}
+{% if is_magic_cat %}
+<details data-shop-category="{{ category.id }}">
+<summary class="shop-category" data-shop-category="{{ category.id }}">{{ category.name }}</summary>
+{% else %}
 <h4 class="shop-category" data-shop-category="{{ category.id }}">{{ category.name }}</h4>
+{% endif %}
 <table class="shop-table" data-shop-category="{{ category.id }}">
     <thead>
         <tr><th>Item</th><th class="num">Cost</th><th class="num">Weight</th><th>Actions</th></tr>
     </thead>
     <tbody>
     {% for item in category.items %}
-        <tr class="shop-row {% if item.cost_gp > gold %}out-of-reach{% endif %}"
+        <tr class="shop-row {% if not item.magic and item.cost_gp > gold %}out-of-reach{% endif %}"
             data-shop-name="{{ item.name | lower }}">
             <td>{{ item.name }}</td>
-            <td class="num">{{ item.cost_gp | int }} gp</td>
+            <td class="num">{% if item.magic %}—{% else %}{{ item.cost_gp | int }} gp{% endif %}</td>
             <td class="num">{{ item.weight_cn }} cn</td>
             <td>
+                {% if not item.magic %}
                 <form method="post" action="{{ target_url_prefix }}/buy" class="inline-form">
                     <input type="hidden" name="item_id" value="{{ item.id }}">
                     <button type="submit"
                             {% if item.cost_gp > gold %}disabled{% endif %}>Buy</button>
                 </form>
+                {% endif %}
                 <form method="post" action="{{ target_url_prefix }}/add" class="inline-form">
                     <input type="hidden" name="item_id" value="{{ item.id }}">
                     <button type="submit"
@@ -228,6 +296,7 @@
     {% endfor %}
     </tbody>
 </table>
+{% if is_magic_cat %}</details>{% endif %}
 {% endfor %}
 
 <script>

@@ -974,3 +974,25 @@ def test_wizard_use_charge_roundtrips(tmp_path):
     client.post(f"/wizard/{draft_id}/equipment/use-charge", data={"instance_id": iid})
     draft = load_draft(draft_id, client._drafts_dir)
     assert draft["magic_items"][0]["charges_remaining"] == start - 1
+
+
+# ── Task 16: Equipment editor UI ─────────────────────────────────────────────
+
+def test_shop_renders_magic_addonly_section(tmp_path):
+    client = _make_client(tmp_path)
+    _seed_character(client)
+    page = client.get("/character/test").text
+    # Magic categories appear (label title-cased) and offer Add, not Buy.
+    assert "Magic Swords" in page or "Magic Rings" in page
+    assert "/equipment/add" in page  # add form present for magic items
+
+
+def test_owned_magic_panel_renders(tmp_path):
+    client = _make_client(tmp_path)
+    _seed_character(client)
+    client.post("/character/test/equipment/add", data={"item_id": "ring_of_spell_turning"})
+    page = client.get("/character/test").text
+    assert "Ring of Spell Turning" in page
+    assert "/equipment/equip-magic" in page
+    assert "/equipment/use-charge" in page
+    assert "/equipment/magic-note" in page
