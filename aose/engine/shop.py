@@ -26,6 +26,7 @@ class ShopItem(BaseModel):
     category: str
     cost_gp: float
     weight_cn: int = 0
+    magic: bool = False
 
 
 class ShopCategory(BaseModel):
@@ -96,6 +97,7 @@ def shop_categories(data: GameData) -> list[ShopCategory]:
                 ShopItem(
                     id=i.id, name=i.name, category=i.category,
                     cost_gp=i.cost_gp, weight_cn=i.weight_cn,
+                    magic=i.magic,
                 )
                 for i in items
             ],

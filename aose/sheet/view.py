@@ -14,7 +14,8 @@ from aose.engine.encumbrance import (
     weight_band,
 )
 from aose.engine.leveling import ClassAdvancement, all_advancement, xp_share
-from aose.models import Ability, CharacterSpec, RuleSet
+from aose.engine.magic import effective_abilities
+from aose.models import Ability, CharacterSpec, MagicItem, MagicItemInstance, RuleSet
 
 ABILITY_ORDER = [Ability.STR, Ability.INT, Ability.WIS, Ability.DEX, Ability.CON, Ability.CHA]
 
@@ -50,6 +51,7 @@ class AbilityRow(BaseModel):
     ability: str
     score: int
     modifier: int
+    modified: bool = False
 
 
 class SheetSave(BaseModel):
@@ -77,6 +79,19 @@ class WeaponDisplay(BaseModel):
 class ProficiencyDisplay(BaseModel):
     name: str                       # group label, e.g. "Sword"
     weapons: list[WeaponDisplay]    # weapons in that group with their damage
+
+
+class MagicItemView(BaseModel):
+    instance_id: str | None
+    catalog_id: str
+    name: str
+    description: str | None
+    equippable: bool
+    equipped: bool
+    charges_remaining: int | None
+    charges_max: int | None
+    note: str
+    modifier_summary: list[str]
 
 
 class CharacterSheet(BaseModel):
@@ -122,9 +137,125 @@ class CharacterSheet(BaseModel):
     proficiencies: list["ProficiencyDisplay"]  # rich per-group display; empty when rule off
     weapon_proficiency_active: bool
 
+    magic_items: list[MagicItemView]
+
     enabled_optional_rules: list[str]
     encumbrance_mode: str
     encumbrance_description: str
+
+
+def _summarize_modifier(m) -> str:
+    """Return a human-readable one-line description of a Modifier."""
+    t = m.target
+    if t.startswith("ability:"):
+        ab = t.split(":", 1)[1]
+        return (
+            f"{ab} → {m.value}"
+            if m.op in ("set", "set_min", "set_max")
+            else f"{ab} {'+' if m.value >= 0 else ''}{m.value}"
+        )
+    if t == "ac":
+        return f"+{m.value} AC" if m.op == "add" else f"AC {m.value}"
+    if t == "save:all":
+        return f"+{m.value} all saves" if m.op == "add" else f"saves {m.value}"
+    if t.startswith("save:"):
+        cat = t.split(":", 1)[1]
+        return f"+{m.value} {cat} save" if m.op == "add" else f"{cat} save {m.value}"
+    if t == "attack":
+        return f"+{m.value} to hit"
+    if t == "damage":
+        return f"+{m.value} damage"
+    if t == "carry_capacity":
+        return f"+{m.value} cn capacity"
+    if t == "thac0":
+        return f"THAC0 {m.value}" if m.op != "add" else f"+{m.value} THAC0"
+    return f"{t} {m.op} {m.value}"
+
+
+def _magic_bonus_summary(item) -> list[str]:
+    """Return mechanical bullet-points for a plain-inventory magic weapon or armour."""
+    from aose.models import Armor, Weapon
+    out: list[str] = []
+    if isinstance(item, Weapon) and item.magic_bonus:
+        out.append(f"+{item.magic_bonus} to hit & damage")
+        if item.conditional_bonus:
+            out.append(
+                f"+{item.magic_bonus + item.conditional_bonus.bonus}"
+                f" vs {item.conditional_bonus.vs}"
+            )
+    if isinstance(item, Armor) and item.magic_bonus:
+        out.append(f"+{item.magic_bonus} AC")
+    return out
+
+
+def magic_items_view(
+    magic_items: list[MagicItemInstance],
+    inventory: list[str],
+    data: GameData,
+) -> list[MagicItemView]:
+    """Build the Magic Items view rows from raw instance + inventory lists.
+
+    (a) Every ``MagicItemInstance`` → a row with instance_id set; summary
+        combines catalog.modifiers + inst.extra_modifiers via
+        ``_summarize_modifier``.
+    (b) Plain-inventory items whose catalog ``.magic`` is True → a row with
+        instance_id None; deduped by catalog_id; summary via
+        ``_magic_bonus_summary``.
+
+    This is the canonical implementation.  ``_magic_items`` is a thin wrapper
+    so ``build_sheet`` stays unchanged; the wizard can call this helper directly
+    with raw draft lists.
+    """
+    views: list[MagicItemView] = []
+
+    # Instance-tracked magic items (equippable / charged)
+    for inst in magic_items:
+        catalog = data.items.get(inst.catalog_id)
+        is_magic = isinstance(catalog, MagicItem)
+        summary = (
+            [_summarize_modifier(m) for m in catalog.modifiers] if is_magic else []
+        ) + [_summarize_modifier(m) for m in inst.extra_modifiers]
+        views.append(MagicItemView(
+            instance_id=inst.instance_id,
+            catalog_id=inst.catalog_id,
+            name=catalog.name if catalog else inst.catalog_id,
+            description=catalog.description if catalog else None,
+            equippable=bool(is_magic and catalog.equippable),
+            equipped=inst.equipped,
+            charges_remaining=inst.charges_remaining,
+            charges_max=inst.charges_max,
+            note=inst.note,
+            modifier_summary=summary,
+        ))
+
+    # Plain-inventory magic items (deduped by catalog_id; V1 has no count field)
+    seen: set[str] = set()
+    for item_id in inventory:
+        if item_id in seen:
+            continue
+        item = data.items.get(item_id)
+        if item is None or not getattr(item, "magic", False):
+            continue
+        seen.add(item_id)
+        views.append(MagicItemView(
+            instance_id=None,
+            catalog_id=item_id,
+            name=item.name,
+            description=item.description,
+            equippable=False,
+            equipped=False,
+            charges_remaining=None,
+            charges_max=None,
+            note="",
+            modifier_summary=_magic_bonus_summary(item),
+        ))
+
+    return views
+
+
+def _magic_items(spec: CharacterSpec, data: GameData) -> list[MagicItemView]:
+    """Thin wrapper — delegates to the public ``magic_items_view`` helper."""
+    return magic_items_view(spec.magic_items, spec.inventory, data)
 
 
 def _class_summary(spec: CharacterSpec, data: GameData) -> str:
@@ -243,11 +374,13 @@ def _is_race_as_class(spec: CharacterSpec, data: GameData) -> bool:
 def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
     race = data.races[spec.race_id]
 
+    eff = effective_abilities(spec, data)
     abilities = [
         AbilityRow(
             ability=ab.value,
-            score=spec.abilities[ab],
-            modifier=ability_mods.ability_modifier(spec.abilities[ab]),
+            score=eff[ab],
+            modifier=ability_mods.ability_modifier(eff[ab]),
+            modified=(eff[ab] != spec.abilities[ab]),
         )
         for ab in ABILITY_ORDER
     ]
@@ -304,6 +437,7 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
         secondary_skill=spec.secondary_skill,
         proficiencies=_proficiency_display(spec, data),
         weapon_proficiency_active=spec.ruleset.weapon_proficiency,
+        magic_items=_magic_items(spec, data),
         enabled_optional_rules=_enabled_optional_rules(spec.ruleset),
         encumbrance_mode=spec.ruleset.encumbrance,
         encumbrance_description=ENCUMBRANCE_DESCRIPTIONS.get(

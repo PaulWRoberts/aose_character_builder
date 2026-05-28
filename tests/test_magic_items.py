@@ -702,3 +702,78 @@ def test_magic_categories_appear_in_shop(data):
     assert "magic_swords" in cats
     assert "magic_rings" in cats
     assert "miscellaneous_magic_items" in cats
+
+
+# ---------------------------------------------------------------------------
+# Task 13: Sheet view — effective abilities marker, MagicItemView, ShopItem.magic
+# ---------------------------------------------------------------------------
+
+def test_ability_row_marks_modified(data):
+    from aose.sheet.view import build_sheet
+    from aose.engine.magic import add_free_magic_item, equip_magic
+    d = _with_magic(data)
+    spec = _minimal_spec(abilities={"STR": 9, "INT": 12, "WIS": 11, "DEX": 12, "CON": 12, "CHA": 10})
+    spec.magic_items = add_free_magic_item([], "gauntlets_of_ogre_power", d)
+    spec.magic_items = equip_magic(spec.magic_items, spec.magic_items[0].instance_id, d)
+    sheet = build_sheet(spec, d)
+    str_row = next(r for r in sheet.abilities if r.ability == "STR")
+    assert str_row.score == 18
+    assert str_row.modified is True
+    dex_row = next(r for r in sheet.abilities if r.ability == "DEX")
+    assert dex_row.modified is False
+
+
+def test_magic_items_view_lists_instance_and_inventory(data):
+    from aose.sheet.view import build_sheet
+    from aose.engine.magic import add_free_magic_item, equip_magic
+    d = _with_magic(data)
+    d.items["potion_of_healing"] = __import__("aose.models", fromlist=["AdventuringGear"]).AdventuringGear(
+        id="potion_of_healing", name="Potion of Healing", category="magic_potions",
+        item_type="gear", cost_gp=0, weight_cn=10, magic=True,
+        description="Restores HP.",
+    )
+    spec = _minimal_spec()
+    spec.inventory = ["potion_of_healing"]
+    spec.magic_items = add_free_magic_item([], "ring_of_protection", d)
+    spec.magic_items = equip_magic(spec.magic_items, spec.magic_items[0].instance_id, d)
+    sheet = build_sheet(spec, d)
+    names = {v.name for v in sheet.magic_items}
+    assert "Ring of Protection" in names
+    assert "Potion of Healing" in names
+    ring = next(v for v in sheet.magic_items if v.name == "Ring of Protection")
+    assert ring.instance_id is not None
+    assert ring.equipped is True
+    assert ring.modifier_summary  # non-empty human-readable list
+    potion = next(v for v in sheet.magic_items if v.name == "Potion of Healing")
+    assert potion.instance_id is None
+
+
+def test_shop_item_carries_magic_flag(data):
+    from aose.engine.shop import shop_categories
+    flat = {i.id: i for c in shop_categories(data) for i in c.items}
+    assert flat["ring_of_protection"].magic is True
+    # a mundane item is not magic
+    some_mundane = next(i for i in flat.values() if not i.magic)
+    assert some_mundane.magic is False
+
+
+def test_magic_items_view_public_helper(data):
+    """magic_items_view public helper returns same result as _magic_items via build_sheet."""
+    from aose.sheet.view import magic_items_view
+    from aose.engine.magic import add_free_magic_item, equip_magic
+    d = _with_magic(data)
+    spec = _minimal_spec()
+    spec.magic_items = add_free_magic_item([], "ring_of_protection", d)
+    spec.magic_items = equip_magic(spec.magic_items, spec.magic_items[0].instance_id, d)
+    # Call the public helper directly
+    views = magic_items_view(spec.magic_items, spec.inventory, d)
+    assert len(views) == 1
+    assert views[0].name == "Ring of Protection"
+    assert views[0].instance_id is not None
+
+
+def test_ability_row_modified_default_false():
+    """Direct AbilityRow construction without modified still works (default False)."""
+    from aose.sheet.view import AbilityRow
+    row = AbilityRow(ability="STR", score=12, modifier=0)
+    assert row.modified is False
