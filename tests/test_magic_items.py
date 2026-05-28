@@ -777,3 +777,132 @@ def test_ability_row_modified_default_false():
     from aose.sheet.view import AbilityRow
     row = AbilityRow(ability="STR", score=12, modifier=0)
     assert row.modified is False
+
+
+# ── Task 14: Sheet HTTP routes ─────────────────────────────────────────────
+
+from fastapi.testclient import TestClient
+
+from aose.characters import load_character, save_character, save_settings
+from aose.web.app import create_app
+
+
+def _make_client(tmp_path, ruleset=None):
+    characters_dir = tmp_path / "characters"
+    drafts_dir = tmp_path / "drafts"
+    examples_dir = tmp_path / "examples"
+    examples_dir.mkdir(parents=True)
+    settings_path = tmp_path / "settings.json"
+    save_settings(settings_path, ruleset or RuleSet())
+    app = create_app(
+        data_dir=DATA_DIR, characters_dir=characters_dir, drafts_dir=drafts_dir,
+        examples_dir=examples_dir, settings_path=settings_path,
+    )
+    client = TestClient(app, follow_redirects=False)
+    client._characters_dir = characters_dir
+    client._drafts_dir = drafts_dir
+    return client
+
+
+def _seed_character(client, **overrides):
+    spec = _minimal_spec(**overrides)
+    save_character("test", spec, client._characters_dir)
+    return "test"
+
+
+def test_add_worn_item_creates_instance(tmp_path):
+    client = _make_client(tmp_path)
+    _seed_character(client)
+    r = client.post("/character/test/equipment/add", data={"item_id": "ring_of_protection"})
+    assert r.status_code == 303
+    spec = load_character("test", client._characters_dir)
+    assert spec.inventory == []
+    assert len(spec.magic_items) == 1
+    assert spec.magic_items[0].catalog_id == "ring_of_protection"
+
+
+def test_add_potion_goes_to_inventory(tmp_path):
+    client = _make_client(tmp_path)
+    _seed_character(client)
+    client.post("/character/test/equipment/add", data={"item_id": "potion_of_healing"})
+    spec = load_character("test", client._characters_dir)
+    assert "potion_of_healing" in spec.inventory
+    assert spec.magic_items == []
+
+
+def test_add_sword_inventory_then_equip(tmp_path):
+    client = _make_client(tmp_path)
+    _seed_character(client)
+    client.post("/character/test/equipment/add", data={"item_id": "sword_plus_1"})
+    spec = load_character("test", client._characters_dir)
+    assert "sword_plus_1" in spec.inventory
+    client.post("/character/test/equipment/equip", data={"item_id": "sword_plus_1"})
+    spec = load_character("test", client._characters_dir)
+    assert "sword_plus_1" in spec.equipped_weapons
+
+
+def test_equip_unequip_magic_roundtrip_reflects_on_sheet(tmp_path):
+    client = _make_client(tmp_path, RuleSet(ascending_ac=True))
+    _seed_character(client, abilities={"STR": 12, "INT": 12, "WIS": 11, "DEX": 10, "CON": 12, "CHA": 10})
+    client.post("/character/test/equipment/add", data={"item_id": "ring_of_protection"})
+    spec = load_character("test", client._characters_dir)
+    iid = spec.magic_items[0].instance_id
+    r = client.post("/character/test/equipment/equip-magic", data={"instance_id": iid})
+    assert r.status_code == 303
+    page = client.get("/character/test").text
+    assert "Ring of Protection" in page
+    spec = load_character("test", client._characters_dir)
+    assert spec.magic_items[0].equipped is True
+    client.post("/character/test/equipment/unequip-magic", data={"instance_id": iid})
+    spec = load_character("test", client._characters_dir)
+    assert spec.magic_items[0].equipped is False
+
+
+def test_equip_magic_non_equippable_400(tmp_path):
+    client = _make_client(tmp_path)
+    _seed_character(client)
+    # A bogus instance_id raises UnknownMagicItem (subclass of ValueError) → 400.
+    r = client.post("/character/test/equipment/equip-magic", data={"instance_id": "nope"})
+    assert r.status_code == 400
+
+
+def test_use_and_reset_charges(tmp_path):
+    client = _make_client(tmp_path)
+    _seed_character(client)
+    client.post("/character/test/equipment/add", data={"item_id": "ring_of_spell_turning"})
+    spec = load_character("test", client._characters_dir)
+    iid = spec.magic_items[0].instance_id
+    start = spec.magic_items[0].charges_remaining
+    assert start is not None and start >= 1
+    client.post("/character/test/equipment/use-charge", data={"instance_id": iid})
+    spec = load_character("test", client._characters_dir)
+    assert spec.magic_items[0].charges_remaining == start - 1
+    client.post("/character/test/equipment/reset-charges", data={"instance_id": iid})
+    spec = load_character("test", client._characters_dir)
+    assert spec.magic_items[0].charges_remaining == start
+
+
+def test_use_charge_at_zero_400(tmp_path):
+    client = _make_client(tmp_path)
+    _seed_character(client)
+    client.post("/character/test/equipment/add", data={"item_id": "ring_of_spell_turning"})
+    spec = load_character("test", client._characters_dir)
+    iid = spec.magic_items[0].instance_id
+    for _ in range(spec.magic_items[0].charges_remaining):
+        client.post("/character/test/equipment/use-charge", data={"instance_id": iid})
+    r = client.post("/character/test/equipment/use-charge", data={"instance_id": iid})
+    assert r.status_code == 400
+
+
+def test_magic_note_and_remove(tmp_path):
+    client = _make_client(tmp_path)
+    _seed_character(client)
+    client.post("/character/test/equipment/add", data={"item_id": "ring_of_protection"})
+    spec = load_character("test", client._characters_dir)
+    iid = spec.magic_items[0].instance_id
+    client.post("/character/test/equipment/magic-note", data={"instance_id": iid, "note": "cursed?"})
+    spec = load_character("test", client._characters_dir)
+    assert spec.magic_items[0].note == "cursed?"
+    client.post("/character/test/equipment/remove-magic", data={"instance_id": iid, "mode": "drop"})
+    spec = load_character("test", client._characters_dir)
+    assert spec.magic_items == []
