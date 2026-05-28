@@ -236,3 +236,120 @@ def test_carry_capacity_bonus_sums_active():
         MagicItemInstance(instance_id="i", catalog_id="gauntlets", equipped=True),
     ])
     assert carry_capacity_bonus(spec, fake) == 1000
+
+
+import random as _random
+
+
+def _charged_fake():
+    fake = _fake_magic_data()
+    fake.items["wand"] = MagicItem(
+        id="wand", name="Wand", category="magic_wands", item_type="magic",
+        cost_gp=0, weight_cn=10, magic=True, equippable=True, charge_dice="2d6",
+    )
+    fake.items["staff"] = MagicItem(
+        id="staff", name="Staff", category="magic_staves", item_type="magic",
+        cost_gp=0, weight_cn=40, magic=True, equippable=True, max_charges=10,
+    )
+    return fake
+
+
+def test_new_magic_instance_rolls_charge_dice():
+    from aose.engine.magic import new_magic_instance
+    fake = _charged_fake()
+    inst = new_magic_instance("wand", fake, rng=_random.Random(1))
+    assert inst.charges_max == inst.charges_remaining
+    assert 2 <= inst.charges_max <= 12
+    assert len(inst.instance_id) >= 16
+    assert inst.equipped is False
+
+
+def test_new_magic_instance_uses_max_charges():
+    from aose.engine.magic import new_magic_instance
+    fake = _charged_fake()
+    inst = new_magic_instance("staff", fake)
+    assert inst.charges_max == 10
+    assert inst.charges_remaining == 10
+
+
+def test_new_magic_instance_no_charges_when_neither():
+    from aose.engine.magic import new_magic_instance
+    fake = _fake_magic_data()
+    inst = new_magic_instance("ring_prot", fake)
+    assert inst.charges_max is None
+    assert inst.charges_remaining is None
+
+
+def test_new_magic_instance_rejects_unknown_and_non_magic():
+    from aose.engine.magic import UnknownMagicItem, new_magic_instance
+    fake = _fake_magic_data()
+    fake.items["torch"] = __import__("aose.models", fromlist=["AdventuringGear"]).AdventuringGear(
+        id="torch", name="Torch", category="gear", item_type="gear", cost_gp=1, weight_cn=20,
+    )
+    with pytest.raises(UnknownMagicItem):
+        new_magic_instance("missing", fake)
+    with pytest.raises(UnknownMagicItem):
+        new_magic_instance("torch", fake)  # exists but not a MagicItem
+
+
+def test_add_free_then_equip_unequip():
+    from aose.engine.magic import add_free_magic_item, equip_magic, unequip_magic, NotEquippable
+    fake = _charged_fake()
+    items = add_free_magic_item([], "ring_prot", fake)
+    assert len(items) == 1 and items[0].equipped is False
+    iid = items[0].instance_id
+    items = equip_magic(items, iid, fake)
+    assert items[0].equipped is True
+    items = unequip_magic(items, iid)
+    assert items[0].equipped is False
+
+
+def test_equip_magic_rejects_non_equippable():
+    from aose.engine.magic import add_free_magic_item, equip_magic, NotEquippable
+    fake = _charged_fake()
+    fake.items["amulet"] = MagicItem(
+        id="amulet", name="Amulet", category="misc", item_type="magic",
+        cost_gp=0, weight_cn=0, magic=True, equippable=False, max_charges=3,
+    )
+    items = add_free_magic_item([], "amulet", fake)
+    with pytest.raises(NotEquippable):
+        equip_magic(items, items[0].instance_id, fake)
+
+
+def test_use_charge_decrements_and_raises_at_zero():
+    from aose.engine.magic import add_free_magic_item, use_charge, reset_charges, NoCharges
+    fake = _charged_fake()
+    items = add_free_magic_item([], "staff", fake)   # 10 charges
+    iid = items[0].instance_id
+    for _ in range(10):
+        items = use_charge(items, iid)
+    assert items[0].charges_remaining == 0
+    with pytest.raises(NoCharges):
+        use_charge(items, iid)
+    items = reset_charges(items, iid)
+    assert items[0].charges_remaining == 10
+
+
+def test_use_charge_on_uncharged_raises():
+    from aose.engine.magic import add_free_magic_item, use_charge, NoCharges
+    fake = _fake_magic_data()
+    items = add_free_magic_item([], "ring_prot", fake)
+    with pytest.raises(NoCharges):
+        use_charge(items, items[0].instance_id)
+
+
+def test_remove_magic_drop_removes_instance():
+    from aose.engine.magic import add_free_magic_item, remove_magic
+    fake = _fake_magic_data()
+    items = add_free_magic_item([], "ring_prot", fake)
+    new_items, gold = remove_magic(items, 5, items[0].instance_id, "drop", fake)
+    assert new_items == []
+    assert gold == 5  # cost_gp 0 → no refund regardless of mode
+
+
+def test_set_magic_note_persists():
+    from aose.engine.magic import add_free_magic_item, set_magic_note
+    fake = _fake_magic_data()
+    items = add_free_magic_item([], "ring_prot", fake)
+    items = set_magic_note(items, items[0].instance_id, "found in dragon hoard")
+    assert items[0].note == "found in dragon hoard"

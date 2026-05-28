@@ -91,3 +91,100 @@ def needs_instance(item) -> bool:
     return isinstance(item, MagicItem) and (
         item.equippable or item.max_charges is not None or item.charge_dice is not None
     )
+
+
+REMOVE_MODES = ("drop", "sell", "refund")
+
+
+def _index(magic_items: list[MagicItemInstance], instance_id: str) -> int:
+    for i, m in enumerate(magic_items):
+        if m.instance_id == instance_id:
+            return i
+    raise UnknownMagicItem(f"No magic item instance {instance_id!r}")
+
+
+def new_magic_instance(catalog_id: str, data: GameData,
+                       rng: random.Random | None = None) -> MagicItemInstance:
+    """Create a fresh MagicItemInstance.  Validates the catalog is a MagicItem.
+    Rolls ``charge_dice`` (via engine.dice) or uses ``max_charges`` to seed
+    ``charges_max == charges_remaining``; ``uuid4`` hex id."""
+    item = data.items.get(catalog_id)
+    if not isinstance(item, MagicItem):
+        raise UnknownMagicItem(f"{catalog_id!r} is not a magic item")
+    charges_max: int | None = None
+    if item.charge_dice:
+        charges_max = roll(item.charge_dice, rng)
+    elif item.max_charges is not None:
+        charges_max = item.max_charges
+    return MagicItemInstance(
+        instance_id=uuid.uuid4().hex,
+        catalog_id=catalog_id,
+        equipped=False,
+        charges_max=charges_max,
+        charges_remaining=charges_max,
+    )
+
+
+def add_free_magic_item(magic_items: list[MagicItemInstance], catalog_id: str,
+                        data: GameData) -> list[MagicItemInstance]:
+    return [*magic_items, new_magic_instance(catalog_id, data)]
+
+
+def equip_magic(magic_items: list[MagicItemInstance], instance_id: str,
+                data: GameData) -> list[MagicItemInstance]:
+    idx = _index(magic_items, instance_id)
+    catalog = data.items.get(magic_items[idx].catalog_id)
+    if not (isinstance(catalog, MagicItem) and catalog.equippable):
+        raise NotEquippable(f"{magic_items[idx].catalog_id!r} is not equippable")
+    updated = magic_items[idx].model_copy(update={"equipped": True})
+    return [*magic_items[:idx], updated, *magic_items[idx + 1:]]
+
+
+def unequip_magic(magic_items: list[MagicItemInstance],
+                  instance_id: str) -> list[MagicItemInstance]:
+    idx = _index(magic_items, instance_id)
+    updated = magic_items[idx].model_copy(update={"equipped": False})
+    return [*magic_items[:idx], updated, *magic_items[idx + 1:]]
+
+
+def use_charge(magic_items: list[MagicItemInstance],
+               instance_id: str) -> list[MagicItemInstance]:
+    idx = _index(magic_items, instance_id)
+    inst = magic_items[idx]
+    if inst.charges_remaining is None or inst.charges_remaining <= 0:
+        raise NoCharges(f"{inst.catalog_id!r} has no charges left")
+    updated = inst.model_copy(update={"charges_remaining": inst.charges_remaining - 1})
+    return [*magic_items[:idx], updated, *magic_items[idx + 1:]]
+
+
+def reset_charges(magic_items: list[MagicItemInstance],
+                  instance_id: str) -> list[MagicItemInstance]:
+    idx = _index(magic_items, instance_id)
+    inst = magic_items[idx]
+    updated = inst.model_copy(update={"charges_remaining": inst.charges_max})
+    return [*magic_items[:idx], updated, *magic_items[idx + 1:]]
+
+
+def remove_magic(magic_items: list[MagicItemInstance], gold: int,
+                 instance_id: str, mode: str,
+                 data: GameData) -> tuple[list[MagicItemInstance], int]:
+    """drop = discard, no refund.  sell/refund refund only when cost_gp > 0
+    (seed magic items are cost 0, so this is effectively drop for them)."""
+    if mode not in REMOVE_MODES:
+        raise ValueError(f"Unknown remove mode {mode!r}; want one of {REMOVE_MODES}")
+    idx = _index(magic_items, instance_id)
+    catalog = data.items.get(magic_items[idx].catalog_id)
+    cost = int(catalog.cost_gp) if catalog else 0
+    refund = 0
+    if cost > 0 and mode == "sell":
+        refund = cost // 2
+    elif cost > 0 and mode == "refund":
+        refund = cost
+    return [*magic_items[:idx], *magic_items[idx + 1:]], gold + refund
+
+
+def set_magic_note(magic_items: list[MagicItemInstance], instance_id: str,
+                   note: str) -> list[MagicItemInstance]:
+    idx = _index(magic_items, instance_id)
+    updated = magic_items[idx].model_copy(update={"note": note})
+    return [*magic_items[:idx], updated, *magic_items[idx + 1:]]
