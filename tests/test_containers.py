@@ -481,3 +481,10 @@ def test_bag_of_holding_at_full_weighs_600(data):
         contents=["torch"] * 500,
     )]
     assert carried_weight_cn(spec, test_data) == int(0.06 * 10000)
+
+
+def test_equip_rejects_container_catalog_item():
+    from aose.engine.equip import equip
+    fake = _fake_container_data()
+    with pytest.raises(ValueError, match="not equippable"):
+        equip(["backpack"], {}, [], "backpack", fake)
