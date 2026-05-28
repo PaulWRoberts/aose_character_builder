@@ -843,6 +843,91 @@ def test_wizard_remove_container_drop_clears_contents(tmp_path):
     assert draft["inventory"] == []
 
 
+def test_move_carried_to_equipped_equips(tmp_path):
+    client = _make_client(tmp_path)
+    _seed_character(client, inventory=["long_sword"])
+    r = client.post("/character/test/equipment/move", data={
+        "source": "carried", "target": "equipped",
+        "item_id": "long_sword",
+    })
+    assert r.status_code == 303
+    spec = load_character("test", client._characters_dir)
+    assert spec.equipped_weapons == ["long_sword"]
+
+
+def test_move_equipped_to_carried_unequips(tmp_path):
+    client = _make_client(tmp_path)
+    _seed_character(client, inventory=["long_sword"])
+    client.post("/character/test/equipment/equip", data={"item_id": "long_sword"})
+    r = client.post("/character/test/equipment/move", data={
+        "source": "equipped", "target": "carried",
+        "item_id": "long_sword",
+    })
+    assert r.status_code == 303
+    spec = load_character("test", client._characters_dir)
+    assert spec.equipped_weapons == []
+
+
+def test_move_carried_to_container_stows(tmp_path):
+    client = _make_client(tmp_path)
+    _seed_character(client, inventory=["torch"])
+    client.post("/character/test/equipment/add", data={"item_id": "backpack"})
+    spec = load_character("test", client._characters_dir)
+    instance_id = spec.containers[0].instance_id
+    r = client.post("/character/test/equipment/move", data={
+        "source": "carried", "target": f"container:{instance_id}",
+        "item_id": "torch",
+    })
+    assert r.status_code == 303
+    spec = load_character("test", client._characters_dir)
+    assert spec.inventory == []
+    assert spec.containers[0].contents == ["torch"]
+
+
+def test_move_container_row_to_stashed_section_stashes(tmp_path):
+    client = _make_client(tmp_path)
+    _seed_character(client)
+    client.post("/character/test/equipment/add", data={"item_id": "backpack"})
+    spec = load_character("test", client._characters_dir)
+    instance_id = spec.containers[0].instance_id
+    r = client.post("/character/test/equipment/move", data={
+        "source": f"container_row:{instance_id}", "target": "stashed",
+        "item_id": "",
+    })
+    assert r.status_code == 303
+    spec = load_character("test", client._characters_dir)
+    assert spec.containers[0].state == "stashed"
+
+
+def test_move_container_to_carried_takes_out(tmp_path):
+    client = _make_client(tmp_path)
+    _seed_character(client, inventory=["torch"])
+    client.post("/character/test/equipment/add", data={"item_id": "backpack"})
+    spec = load_character("test", client._characters_dir)
+    instance_id = spec.containers[0].instance_id
+    client.post("/character/test/equipment/stow", data={
+        "instance_id": instance_id, "item_id": "torch",
+    })
+    r = client.post("/character/test/equipment/move", data={
+        "source": f"container:{instance_id}", "target": "carried",
+        "item_id": "torch",
+    })
+    assert r.status_code == 303
+    spec = load_character("test", client._characters_dir)
+    assert spec.inventory == ["torch"]
+    assert spec.containers[0].contents == []
+
+
+def test_move_invalid_combo_returns_400(tmp_path):
+    client = _make_client(tmp_path)
+    _seed_character(client, inventory=["torch"])
+    r = client.post("/character/test/equipment/move", data={
+        "source": "carried", "target": "equipped",
+        "item_id": "torch",   # torch isn't equippable
+    })
+    assert r.status_code == 400
+
+
 def test_wizard_containers_persist_through_finalize(tmp_path):
     """The core regression: containers added in the wizard must survive
     finalization into the saved CharacterSpec."""

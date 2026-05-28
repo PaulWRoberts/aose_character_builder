@@ -42,6 +42,7 @@ from aose.engine.shop import (
     unstash_container as shop_unstash_container,
 )
 from aose.models import Ability, CharacterSpec, ClassEntry, ContainerInstance, RuleSet
+from aose.web.move_dispatch import dispatch_move
 from aose.web.settings_routes import (
     CHOICE_GROUPS,
     IMPLEMENTED_CHOICE_GROUPS,
@@ -1167,6 +1168,38 @@ async def equipment_remove_container(request: Request, draft_id: str,
     draft["gold"] = new_gold
     save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/equipment")
+
+
+@router.post("/{draft_id}/equipment/move")
+async def equipment_move(request: Request, draft_id: str,
+                         source: str = Form(...),
+                         target: str = Form(...),
+                         item_id: str = Form(""),
+                         instance_id: str = Form("")):
+    draft = _load(request, draft_id)
+    game_data = request.app.state.game_data
+
+    class _DraftShim:
+        pass
+
+    shim = _DraftShim()
+    shim.inventory = draft.get("inventory", [])
+    shim.stashed = draft.get("stashed", [])
+    shim.equipped = draft.get("equipped", {})
+    shim.equipped_weapons = draft.get("equipped_weapons", [])
+    shim.containers = [ContainerInstance.model_validate(c)
+                       for c in draft.get("containers", [])]
+    try:
+        dispatch_move(shim, source, target, item_id, instance_id, game_data)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    draft["inventory"] = shim.inventory
+    draft["stashed"] = shim.stashed
+    draft["equipped"] = shim.equipped
+    draft["equipped_weapons"] = shim.equipped_weapons
+    draft["containers"] = [c.model_dump() for c in shim.containers]
+    save_draft(draft_id, draft, request.app.state.drafts_dir)
+    return RedirectResponse(f"/wizard/{draft_id}/equipment", status_code=303)
 
 
 @router.post("/{draft_id}/equipment/remove")

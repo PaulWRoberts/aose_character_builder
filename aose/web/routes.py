@@ -28,6 +28,7 @@ from aose.engine.shop import (
     unstash_container as shop_unstash_container,
 )
 from aose.sheet.view import build_sheet
+from aose.web.move_dispatch import dispatch_move
 
 router = APIRouter()
 
@@ -390,6 +391,22 @@ async def equipment_remove_container(request: Request, character_id: str,
             spec.containers, spec.gold, instance_id, mode,
             request.app.state.game_data,
         )
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/equipment/move")
+async def equipment_move(request: Request, character_id: str,
+                         source: str = Form(...),
+                         target: str = Form(...),
+                         item_id: str = Form(""),
+                         instance_id: str = Form("")):
+    spec = _load_spec_or_404(request, character_id)
+    game_data = request.app.state.game_data
+    try:
+        dispatch_move(spec, source, target, item_id, instance_id, game_data)
     except ValueError as e:
         raise HTTPException(400, str(e))
     save_character(character_id, spec, request.app.state.characters_dir)
