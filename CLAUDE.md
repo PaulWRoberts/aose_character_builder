@@ -61,10 +61,10 @@ override. Changing a rule mid-wizard applies targeted downstream clears
 Every flag in `RuleSet` is integrated end-to-end. The settings page never
 renders a "pending" badge — a regression test guards this.
 
-## Current state (2026-05-27)
+## Current state (2026-05-28)
 
-Last commit: `6e486a2 Stashed inventory + table-lookup encumbrance`.
-Tree is clean; all 380 tests pass.
+Container items just landed (22-task plan, all on `main`). Tree is clean;
+all 454 tests pass.
 
 Key concepts now live:
 
@@ -77,5 +77,20 @@ Key concepts now live:
   rounded down to 5'. See `aose/engine/encumbrance.py` for the table.
 - Equipped items live inside `inventory` already — weight is counted once
   via the inventory list, not twice via `equipped` / `equipped_weapons`.
+- **Container items** — `Container` catalog variant (`item_type: container`,
+  `capacity_cn`, `weight_multiplier`) + per-instance `ContainerInstance`
+  (`instance_id`, `catalog_id`, `state`, `contents`) on
+  `CharacterSpec.containers`. Items inside a container aren't in `inventory`
+  /`stashed`; they follow the container's carried/stashed state for weight.
+  Carried containers contribute `own_weight + int(multiplier * raw_contents)`;
+  a Bag of Holding (×0.06) at 10 000 cn weighs 600 cn. Capacity uses raw
+  weight. No nesting. Engine helpers in `shop.py`: `stow` / `take_out` /
+  `stash_container` / `unstash_container` / `remove_container` /
+  `buy_container` / `inventory_view` (returns a `containers` list).
+  Sheet + wizard share routes (`/stow`, `/take-out`, `/stash-container`,
+  `/unstash-container`, `/remove-container`, and a unified `/move`
+  drag-and-drop dispatcher in `aose/web/move_dispatch.py`). UI: inline
+  collapsible container rows + `inventory_dnd.js` (vanilla HTML5 DnD).
+  Spec/plan: `docs/superpowers/{specs,plans}/2026-05-27-container-items*`.
 
 See `project_aose_builder.md` for the longer architectural narrative.
