@@ -287,11 +287,47 @@
                         {% endfor %}
                     </ul>
                     {% endif %}
+
+                    {% set carried_bags = inventory_view.containers | selectattr("state", "equalto", "carried") | list %}
+                    {% if carried_bags %}
+                    <h3>Containers (carried)</h3>
+                    <ul>
+                        {% for c in carried_bags %}
+                        <li>
+                            <strong>{{ c.name }}</strong>
+                            ({{ c.used_cn }}{% if c.capacity_cn %}/{{ c.capacity_cn }}{% endif %} cn):
+                            {% if c.contents %}
+                                {% for row in c.contents %}{{ row.name }}{% if row.count > 1 %} &times;{{ row.count }}{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}
+                            {% else %}
+                                <em>empty</em>
+                            {% endif %}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+
                     {% if inventory_view.stashed %}
                     <h3>Stashed</h3>
                     <ul>
                         {% for row in inventory_view.stashed %}
                         <li>{{ row.name }}{% if row.count > 1 %} &times;{{ row.count }}{% endif %}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+
+                    {% set stashed_bags = inventory_view.containers | selectattr("state", "equalto", "stashed") | list %}
+                    {% if stashed_bags %}
+                    <h3>Containers (stashed)</h3>
+                    <ul>
+                        {% for c in stashed_bags %}
+                        <li>
+                            <strong>{{ c.name }}</strong>:
+                            {% if c.contents %}
+                                {% for row in c.contents %}{{ row.name }}{% if row.count > 1 %} &times;{{ row.count }}{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}
+                            {% else %}
+                                <em>empty</em>
+                            {% endif %}
+                        </li>
                         {% endfor %}
                     </ul>
                     {% endif %}

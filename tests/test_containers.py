@@ -1012,3 +1012,19 @@ def test_sheet_container_row_collapse_button_present(tmp_path):
     client.post("/character/test/equipment/add", data={"item_id": "backpack"})
     r = client.get("/character/test")
     assert 'class="container-toggle"' in r.text
+
+
+def test_sheet_print_only_lists_container_contents(tmp_path):
+    client = _make_client(tmp_path)
+    _seed_character(client)
+    client.post("/character/test/equipment/add", data={"item_id": "backpack"})
+    spec = load_character("test", client._characters_dir)
+    instance_id = spec.containers[0].instance_id
+    client.post("/character/test/equipment/add", data={"item_id": "torch"})
+    client.post("/character/test/equipment/stow", data={
+        "instance_id": instance_id, "item_id": "torch",
+    })
+    r = client.get("/character/test")
+    # The print-only block names the container and its contents
+    assert "Backpack" in r.text
+    assert "Torch" in r.text
