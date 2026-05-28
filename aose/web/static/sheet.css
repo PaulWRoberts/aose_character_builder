@@ -846,3 +846,67 @@ button {
     border-top: 1px solid #eee;
     text-align: center;
 }
+
+/* ── Container rows ────────────────────────────────────────────────── */
+
+.containers-table .container-row {
+    background: #f6f3eb;
+    border-top: 1px solid #c5b88a;
+}
+
+.container-row td:first-child strong {
+    margin-left: 4px;
+}
+
+.container-toggle {
+    background: none;
+    border: 0;
+    cursor: pointer;
+    font-size: 0.9em;
+    padding: 0 4px;
+    transition: transform 0.15s;
+}
+
+.container-toggle[aria-expanded="false"] {
+    transform: rotate(-90deg);
+}
+
+.container-child td:first-child .indent {
+    color: #8a7a4a;
+    margin-right: 4px;
+}
+
+.container-collapsed {
+    display: none;
+}
+
+.capacity-badge {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 8px;
+    background: #e6dec3;
+    color: #5b4f2e;
+    font-size: 0.85em;
+}
+
+.capacity-badge.capacity-full {
+    background: #c45a4a;
+    color: #fff;
+}
+
+/* ── Drag-and-drop visual feedback ─────────────────────────────────── */
+
+[draggable="true"] {
+    cursor: grab;
+}
+
+[draggable="true"]:active {
+    cursor: grabbing;
+}
+
+.drag-over {
+    outline: 2px dashed #5b8f3e;
+    outline-offset: -2px;
+    background: #ecf3e0;
+}
+
