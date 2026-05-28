@@ -2,6 +2,8 @@ from typing import Annotated, Literal, Union
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from .modifier import Modifier
+
 
 class ItemBase(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -11,6 +13,8 @@ class ItemBase(BaseModel):
     category: str
     cost_gp: float
     weight_cn: int = 0
+    description: str | None = None   # long flavour / rules text
+    magic: bool = False              # drives Magic Items section + Add-only acquisition
 
 
 class WeaponDamage(BaseModel):
@@ -59,7 +63,15 @@ class Container(ItemBase):
     weight_multiplier: float = 1.0
 
 
+class MagicItem(ItemBase):
+    item_type: Literal["magic"]
+    equippable: bool = False
+    modifiers: list[Modifier] = Field(default_factory=list)
+    max_charges: int | None = None     # fixed charge ceiling, OR…
+    charge_dice: str | None = None     # …rolled at acquisition (e.g. "2d6")
+
+
 Item = Annotated[
-    Union[Weapon, Armor, AdventuringGear, Poison, Container],
+    Union[Weapon, Armor, AdventuringGear, Poison, Container, MagicItem],
     Field(discriminator="item_type"),
 ]

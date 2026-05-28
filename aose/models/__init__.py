@@ -15,6 +15,7 @@ from .item import (
     Armor,
     AdventuringGear,
     Container,
+    MagicItem,
     Poison,
     WeaponDamage,
 )
@@ -37,6 +38,7 @@ __all__ = [
     "Armor",
     "AdventuringGear",
     "Container",
+    "MagicItem",
     "Poison",
     "WeaponDamage",
     "Modifier",
