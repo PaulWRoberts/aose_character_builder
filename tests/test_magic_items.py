@@ -483,3 +483,49 @@ def test_ac_set_takes_better_base(data):
     desc, _ = armor_class(spec, d)
     # base min(9, 4) = 4, then ring -1 (add) → 3
     assert desc == 3
+
+
+def test_saves_ring_improves_all_by_one(data):
+    from aose.engine.saves import saving_throws
+    d = _with_magic(data)
+    base = saving_throws(_minimal_spec(), d)
+    spec = _equip_magic_spec(d, "ring_of_protection")
+    improved = saving_throws(spec, d)
+    for cat, val in base.items():
+        assert improved[cat] == max(2, val - 1)
+
+
+def test_saves_single_category(data):
+    from aose.engine.saves import saving_throws
+    from aose.engine.magic import add_free_magic_item, equip_magic
+    from aose.models import MagicItem, Modifier
+    d = _copy.deepcopy(data)
+    d.items["cloak_death"] = MagicItem(
+        id="cloak_death", name="Cloak vs Death", category="misc",
+        item_type="magic", cost_gp=0, weight_cn=0, magic=True, equippable=True,
+        modifiers=[Modifier(target="save:death", op="add", value=2)],
+    )
+    base = saving_throws(_minimal_spec(), d)
+    spec = _minimal_spec()
+    spec.magic_items = add_free_magic_item([], "cloak_death", d)
+    spec.magic_items = equip_magic(spec.magic_items, spec.magic_items[0].instance_id, d)
+    improved = saving_throws(spec, d)
+    assert improved["death"] == max(2, base["death"] - 2)
+    assert improved["wands"] == base["wands"]  # untouched
+
+
+def test_saves_clamp_floor(data):
+    from aose.engine.saves import saving_throws
+    from aose.engine.magic import add_free_magic_item, equip_magic
+    from aose.models import MagicItem, Modifier
+    d = _copy.deepcopy(data)
+    d.items["overkill"] = MagicItem(
+        id="overkill", name="Overkill Amulet", category="misc",
+        item_type="magic", cost_gp=0, weight_cn=0, magic=True, equippable=True,
+        modifiers=[Modifier(target="save:all", op="add", value=99)],
+    )
+    spec = _minimal_spec()
+    spec.magic_items = add_free_magic_item([], "overkill", d)
+    spec.magic_items = equip_magic(spec.magic_items, spec.magic_items[0].instance_id, d)
+    improved = saving_throws(spec, d)
+    assert all(v == 2 for v in improved.values())
