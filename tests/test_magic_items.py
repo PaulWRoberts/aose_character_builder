@@ -136,3 +136,103 @@ def test_magic_item_instance_construct():
 def test_character_spec_defaults_magic_items_empty():
     spec = _minimal_spec()
     assert spec.magic_items == []
+
+
+from aose.data.loader import GameData
+from aose.models import MagicItem
+
+
+def _fake_magic_data():
+    """In-memory GameData with the magic items the engine tests need."""
+    return GameData(items={
+        "gauntlets": MagicItem(
+            id="gauntlets", name="Gauntlets of Ogre Power",
+            category="miscellaneous_magic_items", item_type="magic",
+            cost_gp=0, weight_cn=0, magic=True, equippable=True,
+            modifiers=[
+                {"target": "ability:STR", "op": "set", "value": 18},
+                {"target": "carry_capacity", "op": "add", "value": 1000},
+            ],
+        ),
+        "ring_prot": MagicItem(
+            id="ring_prot", name="Ring of Protection", category="magic_rings",
+            item_type="magic", cost_gp=0, weight_cn=0, magic=True, equippable=True,
+            modifiers=[
+                {"target": "ac", "op": "add", "value": 1},
+                {"target": "save:all", "op": "add", "value": 1},
+            ],
+        ),
+    })
+
+
+def test_apply_modifiers_order_set_then_add_then_bounds():
+    from aose.engine.magic import apply_modifiers
+    from aose.models import Modifier
+    mods = [
+        Modifier(target="x", op="add", value=2),
+        Modifier(target="x", op="set", value=10),
+        Modifier(target="x", op="set_max", value=11),
+        Modifier(target="x", op="set_min", value=12),
+        Modifier(target="other", op="add", value=99),  # filtered out
+    ]
+    # set→10, add→12, set_min(max(12,12))→12, set_max(min(12,11))→11
+    assert apply_modifiers(0, mods, "x") == 11
+
+
+def test_active_modifiers_empty_when_none_equipped():
+    from aose.engine.magic import active_modifiers
+    from aose.models import MagicItemInstance
+    fake = _fake_magic_data()
+    spec = _minimal_spec(magic_items=[
+        MagicItemInstance(instance_id="i1", catalog_id="ring_prot", equipped=False),
+    ])
+    assert active_modifiers(spec, fake) == []
+
+
+def test_active_modifiers_collects_equipped_catalog_and_extra():
+    from aose.engine.magic import active_modifiers
+    from aose.models import MagicItemInstance, Modifier
+    fake = _fake_magic_data()
+    spec = _minimal_spec(magic_items=[
+        MagicItemInstance(
+            instance_id="i1", catalog_id="ring_prot", equipped=True,
+            extra_modifiers=[Modifier(target="thac0", op="set_max", value=15)],
+        ),
+    ])
+    mods = active_modifiers(spec, fake)
+    targets = sorted(m.target for m in mods)
+    assert targets == ["ac", "save:all", "thac0"]
+
+
+def test_effective_abilities_applies_set_and_leaves_rest():
+    from aose.engine.magic import effective_abilities
+    from aose.models import Ability, MagicItemInstance
+    fake = _fake_magic_data()
+    spec = _minimal_spec(
+        abilities={"STR": 9, "INT": 12, "WIS": 11, "DEX": 13, "CON": 12, "CHA": 10},
+        magic_items=[MagicItemInstance(instance_id="i", catalog_id="gauntlets", equipped=True)],
+    )
+    eff = effective_abilities(spec, fake)
+    assert eff[Ability.STR] == 18
+    assert eff[Ability.DEX] == 13  # untouched
+
+
+def test_effective_abilities_base_when_unequipped():
+    from aose.engine.magic import effective_abilities
+    from aose.models import Ability, MagicItemInstance
+    fake = _fake_magic_data()
+    spec = _minimal_spec(
+        abilities={"STR": 9, "INT": 12, "WIS": 11, "DEX": 13, "CON": 12, "CHA": 10},
+        magic_items=[MagicItemInstance(instance_id="i", catalog_id="gauntlets", equipped=False)],
+    )
+    assert effective_abilities(spec, fake)[Ability.STR] == 9
+
+
+def test_carry_capacity_bonus_sums_active():
+    from aose.engine.magic import carry_capacity_bonus
+    from aose.models import MagicItemInstance
+    fake = _fake_magic_data()
+    spec = _minimal_spec(magic_items=[
+        MagicItemInstance(instance_id="i", catalog_id="gauntlets", equipped=True),
+    ])
+    assert carry_capacity_bonus(spec, fake) == 1000
