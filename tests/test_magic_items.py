@@ -353,3 +353,133 @@ def test_set_magic_note_persists():
     items = add_free_magic_item([], "ring_prot", fake)
     items = set_magic_note(items, items[0].instance_id, "found in dragon hoard")
     assert items[0].note == "found in dragon hoard"
+
+
+import copy as _copy
+
+
+@pytest.fixture(scope="module")
+def data():
+    return GameData.load(DATA_DIR)
+
+
+def _with_magic(data):
+    """Deep-copy real GameData and inject the magic catalog items the AC /
+    saves / attacks tests need (so these tasks don't depend on Task 12)."""
+    from aose.models import Armor, MagicItem, Weapon, WeaponDamage, ConditionalBonus
+    d = _copy.deepcopy(data)
+    d.items["ring_of_protection"] = MagicItem(
+        id="ring_of_protection", name="Ring of Protection", category="magic_rings",
+        item_type="magic", cost_gp=0, weight_cn=0, magic=True, equippable=True,
+        modifiers=[
+            {"target": "ac", "op": "add", "value": 1},
+            {"target": "save:all", "op": "add", "value": 1},
+        ],
+    )
+    d.items["gauntlets_of_ogre_power"] = MagicItem(
+        id="gauntlets_of_ogre_power", name="Gauntlets of Ogre Power",
+        category="miscellaneous_magic_items", item_type="magic", cost_gp=0,
+        weight_cn=0, magic=True, equippable=True,
+        modifiers=[
+            {"target": "ability:STR", "op": "set", "value": 18},
+            {"target": "carry_capacity", "op": "add", "value": 1000},
+        ],
+    )
+    d.items["girdle_of_giant_strength"] = MagicItem(
+        id="girdle_of_giant_strength", name="Girdle of Giant Strength",
+        category="miscellaneous_magic_items", item_type="magic", cost_gp=0,
+        weight_cn=0, magic=True, equippable=True,
+        modifiers=[{"target": "thac0", "op": "set_max", "value": 14}],
+    )
+    d.items["chain_mail_plus_1"] = Armor(
+        id="chain_mail_plus_1", name="Chain Mail +1", category="magic_armour",
+        item_type="armor", cost_gp=0, weight_cn=400, ac_descending=5,
+        movement_impact="metal", magic=True, magic_bonus=1, weight_multiplier=0.5,
+    )
+    d.items["shield_plus_1"] = Armor(
+        id="shield_plus_1", name="Shield +1", category="magic_armour",
+        item_type="armor", cost_gp=0, weight_cn=100, ac_descending=9,
+        is_shield=True, magic=True, magic_bonus=1, weight_multiplier=0.5,
+    )
+    d.items["sword_plus_1"] = Weapon(
+        id="sword_plus_1", name="Sword +1", category="magic_swords",
+        item_type="weapon", cost_gp=0, weight_cn=60,
+        damage=WeaponDamage(default="1d6", variable="1d8"), melee=True,
+        proficiency_group="sword", magic=True, magic_bonus=1,
+    )
+    d.items["sword_plus_1_vs_undead"] = Weapon(
+        id="sword_plus_1_vs_undead", name="Sword +1, +3 vs Undead",
+        category="magic_swords", item_type="weapon", cost_gp=0, weight_cn=60,
+        damage=WeaponDamage(default="1d6", variable="1d8"), melee=True,
+        proficiency_group="sword", magic=True, magic_bonus=1,
+        conditional_bonus=ConditionalBonus(vs="undead", bonus=2),
+    )
+    return d
+
+
+def _equip_magic_spec(data, catalog_id, **spec_kwargs):
+    from aose.engine.magic import add_free_magic_item, equip_magic
+    spec = _minimal_spec(**spec_kwargs)
+    spec.magic_items = add_free_magic_item([], catalog_id, data)
+    spec.magic_items = equip_magic(spec.magic_items, spec.magic_items[0].instance_id, data)
+    return spec
+
+
+def test_ac_ring_of_protection(data):
+    from aose.engine.armor_class import armor_class
+    d = _with_magic(data)
+    spec = _minimal_spec(abilities={"STR": 12, "INT": 12, "WIS": 11, "DEX": 10, "CON": 12, "CHA": 10})
+    base_desc, base_asc = armor_class(spec, d)
+    spec = _equip_magic_spec(d, "ring_of_protection",
+                             abilities={"STR": 12, "INT": 12, "WIS": 11, "DEX": 10, "CON": 12, "CHA": 10})
+    desc, asc = armor_class(spec, d)
+    assert desc == base_desc - 1
+    assert asc == base_asc + 1
+
+
+def test_ac_chain_mail_plus_1(data):
+    from aose.engine.armor_class import armor_class
+    d = _with_magic(data)
+    spec = _minimal_spec(abilities={"STR": 12, "INT": 12, "WIS": 11, "DEX": 10, "CON": 12, "CHA": 10})
+    spec.inventory = ["chain_mail_plus_1"]
+    spec.equipped = {"armor": "chain_mail_plus_1"}
+    desc, asc = armor_class(spec, d)
+    assert desc == 4   # 5 - 1
+    assert asc == 15
+
+
+def test_ac_shield_plus_1_two_points(data):
+    from aose.engine.armor_class import armor_class
+    d = _with_magic(data)
+    spec = _minimal_spec(abilities={"STR": 12, "INT": 12, "WIS": 11, "DEX": 10, "CON": 12, "CHA": 10})
+    spec.inventory = ["shield_plus_1"]
+    spec.equipped = {"shield": "shield_plus_1"}
+    desc, _ = armor_class(spec, d)
+    assert desc == 9 - 2  # unarmored 9, shield bonus 1 + magic 1
+
+
+def test_ac_chain_and_ring_stack(data):
+    from aose.engine.armor_class import armor_class
+    d = _with_magic(data)
+    spec = _equip_magic_spec(d, "ring_of_protection",
+                             abilities={"STR": 12, "INT": 12, "WIS": 11, "DEX": 10, "CON": 12, "CHA": 10})
+    spec.inventory = ["chain_mail_plus_1"]
+    spec.equipped = {"armor": "chain_mail_plus_1"}
+    desc, _ = armor_class(spec, d)
+    assert desc == 4 - 1  # chain+1 base 4, ring -1
+
+
+def test_ac_set_takes_better_base(data):
+    """ad-hoc bracers-style 'ac set 4' base candidate via extra_modifiers."""
+    from aose.engine.armor_class import armor_class
+    from aose.engine.magic import add_free_magic_item, equip_magic
+    from aose.models import Modifier
+    d = _with_magic(data)
+    spec = _minimal_spec(abilities={"STR": 12, "INT": 12, "WIS": 11, "DEX": 10, "CON": 12, "CHA": 10})
+    spec.magic_items = add_free_magic_item([], "ring_of_protection", d)
+    iid = spec.magic_items[0].instance_id
+    spec.magic_items[0].extra_modifiers = [Modifier(target="ac", op="set", value=4)]
+    spec.magic_items = equip_magic(spec.magic_items, iid, d)
+    desc, _ = armor_class(spec, d)
+    # base min(9, 4) = 4, then ring -1 (add) → 3
+    assert desc == 3
