@@ -10,6 +10,7 @@
      - gold_grant_url      str    (sheet only — POST target for the grant form)
 #}
 
+<div data-equipment-url-prefix="{{ target_url_prefix }}">
 <div class="equipment-header">
     <span class="gold-display">Gold: <strong>{{ gold }} gp</strong></span>
     {% if show_gold_reroll and not gold_locked %}
@@ -256,3 +257,6 @@
         input.addEventListener('input', applyFilter);
     })();
 </script>
+
+<script src="/static/inventory_dnd.js" defer></script>
+</div>

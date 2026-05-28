@@ -989,3 +989,26 @@ def test_wizard_containers_persist_through_finalize(tmp_path):
     assert len(spec.containers) == 1, "containers must survive finalization"
     assert spec.containers[0].catalog_id == "backpack"
     assert spec.containers[0].contents == ["torch"]
+
+
+def test_sheet_includes_dnd_script_tag(tmp_path):
+    client = _make_client(tmp_path)
+    _seed_character(client)
+    r = client.get("/character/test")
+    assert "inventory_dnd.js" in r.text
+
+
+def test_sheet_inventory_rows_carry_dnd_attributes(tmp_path):
+    client = _make_client(tmp_path)
+    _seed_character(client, inventory=["long_sword"])
+    r = client.get("/character/test")
+    assert 'data-source="carried"' in r.text
+    assert 'data-item-id="long_sword"' in r.text
+
+
+def test_sheet_container_row_collapse_button_present(tmp_path):
+    client = _make_client(tmp_path)
+    _seed_character(client)
+    client.post("/character/test/equipment/add", data={"item_id": "backpack"})
+    r = client.get("/character/test")
+    assert 'class="container-toggle"' in r.text
