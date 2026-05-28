@@ -17,12 +17,15 @@ from aose.engine.shop import (
     buy_container,
     inventory_view as shop_inventory_view,
     remove as shop_remove,
+    remove_container as shop_remove_container,
     remove_from_stash as shop_remove_from_stash,
     shop_categories,
     stash as shop_stash,
+    stash_container as shop_stash_container,
     stow as shop_stow,
     take_out as shop_take_out,
     unstash as shop_unstash,
+    unstash_container as shop_unstash_container,
 )
 from aose.sheet.view import build_sheet
 
@@ -346,6 +349,46 @@ async def equipment_take_out(request: Request, character_id: str,
         spec.inventory, spec.stashed, spec.containers = shop_take_out(
             spec.inventory, spec.stashed, spec.containers,
             instance_id, item_id,
+        )
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/equipment/stash-container")
+async def equipment_stash_container(request: Request, character_id: str,
+                                    instance_id: str = Form(...)):
+    spec = _load_spec_or_404(request, character_id)
+    try:
+        spec.containers = shop_stash_container(spec.containers, instance_id)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/equipment/unstash-container")
+async def equipment_unstash_container(request: Request, character_id: str,
+                                      instance_id: str = Form(...)):
+    spec = _load_spec_or_404(request, character_id)
+    try:
+        spec.containers = shop_unstash_container(spec.containers, instance_id)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/equipment/remove-container")
+async def equipment_remove_container(request: Request, character_id: str,
+                                     instance_id: str = Form(...),
+                                     mode: str = Form(...)):
+    spec = _load_spec_or_404(request, character_id)
+    try:
+        spec.containers, spec.gold = shop_remove_container(
+            spec.containers, spec.gold, instance_id, mode,
+            request.app.state.game_data,
         )
     except ValueError as e:
         raise HTTPException(400, str(e))

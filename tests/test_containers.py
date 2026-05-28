@@ -724,3 +724,85 @@ def test_wizard_take_out_endpoint(tmp_path):
     draft = load_draft(draft_id, client._drafts_dir)
     assert draft["inventory"] == ["torch"]
     assert draft["containers"][0]["contents"] == []
+
+
+def test_sheet_stash_container_flips_state(tmp_path):
+    client = _make_client(tmp_path)
+    _seed_character(client)
+    client.post("/character/test/equipment/add", data={"item_id": "backpack"})
+    spec = load_character("test", client._characters_dir)
+    instance_id = spec.containers[0].instance_id
+    r = client.post("/character/test/equipment/stash-container", data={
+        "instance_id": instance_id,
+    })
+    assert r.status_code == 303
+    spec = load_character("test", client._characters_dir)
+    assert spec.containers[0].state == "stashed"
+
+
+def test_sheet_unstash_container_flips_state(tmp_path):
+    client = _make_client(tmp_path)
+    _seed_character(client)
+    client.post("/character/test/equipment/add", data={"item_id": "backpack"})
+    spec = load_character("test", client._characters_dir)
+    instance_id = spec.containers[0].instance_id
+    client.post("/character/test/equipment/stash-container", data={
+        "instance_id": instance_id,
+    })
+    r = client.post("/character/test/equipment/unstash-container", data={
+        "instance_id": instance_id,
+    })
+    assert r.status_code == 303
+    spec = load_character("test", client._characters_dir)
+    assert spec.containers[0].state == "carried"
+
+
+def test_sheet_remove_container_drop_clears_contents(tmp_path):
+    client = _make_client(tmp_path)
+    _seed_character(client, gold=0)
+    client.post("/character/test/equipment/add", data={"item_id": "backpack"})
+    spec = load_character("test", client._characters_dir)
+    instance_id = spec.containers[0].instance_id
+    client.post("/character/test/equipment/add", data={"item_id": "torch"})
+    client.post("/character/test/equipment/stow", data={
+        "instance_id": instance_id, "item_id": "torch",
+    })
+    r = client.post("/character/test/equipment/remove-container", data={
+        "instance_id": instance_id, "mode": "drop",
+    })
+    assert r.status_code == 303
+    spec = load_character("test", client._characters_dir)
+    assert spec.containers == []
+    assert spec.inventory == []
+    assert spec.gold == 0
+
+
+def test_sheet_remove_container_sell_non_empty_returns_400(tmp_path):
+    client = _make_client(tmp_path)
+    _seed_character(client)
+    client.post("/character/test/equipment/add", data={"item_id": "backpack"})
+    spec = load_character("test", client._characters_dir)
+    instance_id = spec.containers[0].instance_id
+    client.post("/character/test/equipment/add", data={"item_id": "torch"})
+    client.post("/character/test/equipment/stow", data={
+        "instance_id": instance_id, "item_id": "torch",
+    })
+    r = client.post("/character/test/equipment/remove-container", data={
+        "instance_id": instance_id, "mode": "sell",
+    })
+    assert r.status_code == 400
+
+
+def test_sheet_remove_container_sell_empty_refunds_half(tmp_path):
+    client = _make_client(tmp_path)
+    _seed_character(client, gold=0)
+    client.post("/character/test/equipment/add", data={"item_id": "backpack"})
+    spec = load_character("test", client._characters_dir)
+    instance_id = spec.containers[0].instance_id
+    r = client.post("/character/test/equipment/remove-container", data={
+        "instance_id": instance_id, "mode": "sell",
+    })
+    assert r.status_code == 303
+    spec = load_character("test", client._characters_dir)
+    assert spec.containers == []
+    assert spec.gold == 2  # 5 // 2

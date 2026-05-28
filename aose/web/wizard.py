@@ -30,13 +30,16 @@ from aose.engine.shop import (
     buy_container,
     inventory_view,
     remove as shop_remove,
+    remove_container as shop_remove_container,
     remove_from_stash as shop_remove_from_stash,
     roll_starting_gold,
     shop_categories,
     stash as shop_stash,
+    stash_container as shop_stash_container,
     stow as shop_stow,
     take_out as shop_take_out,
     unstash as shop_unstash,
+    unstash_container as shop_unstash_container,
 )
 from aose.models import Ability, CharacterSpec, ClassEntry, ContainerInstance, RuleSet
 from aose.web.settings_routes import (
@@ -1112,6 +1115,56 @@ async def equipment_take_out(request: Request, draft_id: str,
     draft["inventory"] = new_inv
     draft["stashed"] = new_stashed
     draft["containers"] = [c.model_dump() for c in new_containers]
+    save_draft(draft_id, draft, _drafts_dir(request))
+    return _redirect(f"/wizard/{draft_id}/equipment")
+
+
+@router.post("/{draft_id}/equipment/stash-container")
+async def equipment_stash_container(request: Request, draft_id: str,
+                                    instance_id: str = Form(...)):
+    draft = _load(request, draft_id)
+    containers = [ContainerInstance.model_validate(c)
+                  for c in draft.get("containers", [])]
+    try:
+        new_containers = shop_stash_container(containers, instance_id)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    draft["containers"] = [c.model_dump() for c in new_containers]
+    save_draft(draft_id, draft, _drafts_dir(request))
+    return _redirect(f"/wizard/{draft_id}/equipment")
+
+
+@router.post("/{draft_id}/equipment/unstash-container")
+async def equipment_unstash_container(request: Request, draft_id: str,
+                                      instance_id: str = Form(...)):
+    draft = _load(request, draft_id)
+    containers = [ContainerInstance.model_validate(c)
+                  for c in draft.get("containers", [])]
+    try:
+        new_containers = shop_unstash_container(containers, instance_id)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    draft["containers"] = [c.model_dump() for c in new_containers]
+    save_draft(draft_id, draft, _drafts_dir(request))
+    return _redirect(f"/wizard/{draft_id}/equipment")
+
+
+@router.post("/{draft_id}/equipment/remove-container")
+async def equipment_remove_container(request: Request, draft_id: str,
+                                     instance_id: str = Form(...),
+                                     mode: str = Form(...)):
+    draft = _load(request, draft_id)
+    containers = [ContainerInstance.model_validate(c)
+                  for c in draft.get("containers", [])]
+    try:
+        new_containers, new_gold = shop_remove_container(
+            containers, draft.get("gold", 0), instance_id, mode,
+            request.app.state.game_data,
+        )
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    draft["containers"] = [c.model_dump() for c in new_containers]
+    draft["gold"] = new_gold
     save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/equipment")
 
