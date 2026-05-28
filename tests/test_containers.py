@@ -806,3 +806,70 @@ def test_sheet_remove_container_sell_empty_refunds_half(tmp_path):
     spec = load_character("test", client._characters_dir)
     assert spec.containers == []
     assert spec.gold == 2  # 5 // 2
+
+
+# ── Wizard container routes: stash-container, remove-container ───────────────
+
+def test_wizard_stash_container_endpoint(tmp_path):
+    client = _make_client(tmp_path)
+    draft_id = _walk_to_equipment(client)
+    client.post(f"/wizard/{draft_id}/equipment/add", data={"item_id": "backpack"})
+    draft = load_draft(draft_id, client._drafts_dir)
+    instance_id = draft["containers"][0]["instance_id"]
+    r = client.post(f"/wizard/{draft_id}/equipment/stash-container", data={
+        "instance_id": instance_id,
+    })
+    assert r.status_code == 303
+    draft = load_draft(draft_id, client._drafts_dir)
+    assert draft["containers"][0]["state"] == "stashed"
+
+
+def test_wizard_remove_container_drop_clears_contents(tmp_path):
+    client = _make_client(tmp_path)
+    draft_id = _walk_to_equipment(client)
+    client.post(f"/wizard/{draft_id}/equipment/add", data={"item_id": "backpack"})
+    client.post(f"/wizard/{draft_id}/equipment/add", data={"item_id": "torch"})
+    draft = load_draft(draft_id, client._drafts_dir)
+    instance_id = draft["containers"][0]["instance_id"]
+    client.post(f"/wizard/{draft_id}/equipment/stow", data={
+        "instance_id": instance_id, "item_id": "torch",
+    })
+    r = client.post(f"/wizard/{draft_id}/equipment/remove-container", data={
+        "instance_id": instance_id, "mode": "drop",
+    })
+    assert r.status_code == 303
+    draft = load_draft(draft_id, client._drafts_dir)
+    assert draft["containers"] == []
+    assert draft["inventory"] == []
+
+
+def test_wizard_containers_persist_through_finalize(tmp_path):
+    """The core regression: containers added in the wizard must survive
+    finalization into the saved CharacterSpec."""
+    client = _make_client(tmp_path)
+    draft_id = _walk_to_equipment(client)
+    # Spend enough gold to buy a backpack
+    draft = load_draft(draft_id, client._drafts_dir)
+    draft["gold"] = 100
+    save_draft(draft_id, draft, client._drafts_dir)
+
+    client.post(f"/wizard/{draft_id}/equipment/buy", data={"item_id": "backpack"})
+    draft = load_draft(draft_id, client._drafts_dir)
+    instance_id = draft["containers"][0]["instance_id"]
+    # Add a torch and stow it inside
+    client.post(f"/wizard/{draft_id}/equipment/add", data={"item_id": "torch"})
+    client.post(f"/wizard/{draft_id}/equipment/stow", data={
+        "instance_id": instance_id, "item_id": "torch",
+    })
+
+    # Submit equipment step, then finalize
+    client.post(f"/wizard/{draft_id}/equipment")
+    r = client.post(f"/wizard/{draft_id}/finalize")
+    assert r.status_code == 303
+    char_id = r.headers["location"].split("/")[-1]
+    spec = load_character(char_id, client._characters_dir)
+
+    # The bug being regression-tested: containers were silently dropped.
+    assert len(spec.containers) == 1, "containers must survive finalization"
+    assert spec.containers[0].catalog_id == "backpack"
+    assert spec.containers[0].contents == ["torch"]

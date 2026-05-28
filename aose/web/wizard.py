@@ -1241,6 +1241,9 @@ def _draft_to_spec(draft: dict[str, Any]) -> CharacterSpec:
         stashed=list(draft.get("stashed", [])),
         equipped=dict(draft.get("equipped", {})),
         equipped_weapons=list(draft.get("equipped_weapons", [])),
+        containers=[
+            ContainerInstance.model_validate(c) for c in draft.get("containers", [])
+        ],
         ruleset=ruleset,
     )
 
