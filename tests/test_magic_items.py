@@ -529,3 +529,31 @@ def test_saves_clamp_floor(data):
     spec.magic_items = equip_magic(spec.magic_items, spec.magic_items[0].instance_id, d)
     improved = saving_throws(spec, d)
     assert all(v == 2 for v in improved.values())
+
+
+def test_thac0_girdle_set_max_lowers_worse(data):
+    """A class with a worse (higher) THAC0 is capped at 14 by the Girdle."""
+    from aose.engine.attack_bonus import thac0
+    d = _with_magic(data)
+    spec = _minimal_spec()  # fighter L1 → THAC0 19
+    base = thac0(spec, d)
+    assert base > 14
+    spec = _equip_magic_spec(d, "girdle_of_giant_strength")
+    assert thac0(spec, d) == 14
+
+
+def test_thac0_set_max_leaves_better_untouched(data):
+    """A natural THAC0 already better than 14 is not worsened by set_max 14."""
+    from aose.engine.attack_bonus import thac0
+    from aose.engine.magic import add_free_magic_item, equip_magic
+    from aose.models import MagicItem, Modifier
+    d = _copy.deepcopy(data)
+    d.items["girdle"] = MagicItem(
+        id="girdle", name="Girdle", category="misc", item_type="magic",
+        cost_gp=0, weight_cn=0, magic=True, equippable=True,
+        modifiers=[Modifier(target="thac0", op="set_max", value=14)],
+    )
+    # Force a better base THAC0 by monkey-injecting via a higher-level class is
+    # awkward; instead assert the literal min() semantics directly:
+    from aose.engine.magic import apply_modifiers
+    assert apply_modifiers(11, [Modifier(target="thac0", op="set_max", value=14)], "thac0") == 11
