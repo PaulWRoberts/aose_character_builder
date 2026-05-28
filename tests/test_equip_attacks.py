@@ -303,7 +303,7 @@ def test_sheet_inventory_shows_equipped_section(client):
     actionable signal."""
     _seed(client, inventory=["long_sword"], equipped_weapons=["long_sword"])
     r = client.get("/character/test")
-    assert 'inv-section-head">Equipped' in r.text
+    assert 'class="inv-section-head"' in r.text and ">Equipped" in r.text
     assert 'action="/character/test/equipment/unequip"' in r.text
 
 

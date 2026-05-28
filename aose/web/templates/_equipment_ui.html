@@ -3,7 +3,7 @@
      - target_url_prefix   e.g. "/wizard/{id}/equipment" or "/character/{id}/equipment"
      - gold                int
      - gold_locked         bool   (re-roll button hidden when true)
-     - inventory_view      InventoryView  (three sections: equipped / carried / stashed)
+     - inventory_view      InventoryView  (three sections: equipped / carried / stashed + containers)
      - shop                list[ShopCategory]
      - show_gold_reroll    bool   (wizard only — for the starting-gold reroll)
      - show_gold_grant     bool   (sheet only — for the +/- gold form)
@@ -48,6 +48,18 @@
         <button type="submit">Unstash</button>
     </form>
     {% endif %}
+    {% set carried_bags = inventory_view.containers | selectattr("state", "equalto", "carried") | list %}
+    {% if state == "carried" and carried_bags %}
+    <form method="post" action="{{ target_url_prefix }}/stow" class="inline-form">
+        <input type="hidden" name="item_id" value="{{ row.id }}">
+        <select name="instance_id">
+            {% for c in carried_bags %}
+            <option value="{{ c.instance_id }}">{{ c.name }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit">Stow</button>
+    </form>
+    {% endif %}
     {% if state in ("equipped", "carried") %}
     <form method="post" action="{{ target_url_prefix }}/stash" class="inline-form">
         <input type="hidden" name="item_id" value="{{ row.id }}">
@@ -68,7 +80,7 @@
 
 {% macro inv_table(rows, target_url_prefix, state, label, weight_note) %}
 {% if rows %}
-<h4 class="inv-section-head">{{ label }} {% if weight_note %}<span class="muted small">{{ weight_note }}</span>{% endif %}</h4>
+<h4 class="inv-section-head" data-target="{{ state }}">{{ label }} {% if weight_note %}<span class="muted small">{{ weight_note }}</span>{% endif %}</h4>
 <table class="inventory-table">
     <thead>
         <tr>
@@ -80,7 +92,7 @@
     </thead>
     <tbody>
     {% for row in rows %}
-        <tr>
+        <tr class="inv-row" draggable="true" data-source="{{ state }}" data-item-id="{{ row.id }}">
             <td>{{ row.name }}</td>
             <td class="num">{{ row.count }}</td>
             <td class="num">{{ (row.weight_cn * row.count) }}&nbsp;cn</td>
@@ -92,11 +104,90 @@
 {% endif %}
 {% endmacro %}
 
-{% if inventory_view.equipped or inventory_view.carried or inventory_view.stashed %}
+{% macro container_table(state, label) %}
+{% set bags = inventory_view.containers | selectattr("state", "equalto", state) | list %}
+{% if bags %}
+<h4 class="inv-section-head" data-target="{{ state }}">{{ label }} containers</h4>
+<table class="inventory-table containers-table">
+    <thead>
+        <tr>
+            <th>Container</th>
+            <th class="num">Capacity</th>
+            <th class="num">Weight</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for c in bags %}
+        <tr class="container-row"
+            data-instance-id="{{ c.instance_id }}"
+            data-state="{{ c.state }}"
+            draggable="true">
+            <td>
+                <button type="button" class="container-toggle" aria-expanded="true"
+                        aria-controls="cnt-{{ c.instance_id }}">&#9662;</button>
+                <strong>{{ c.name }}</strong>
+            </td>
+            <td class="num">
+                <span class="capacity-badge{% if c.capacity_cn and c.used_cn >= c.capacity_cn %} capacity-full{% endif %}">
+                    {{ c.used_cn }} / {{ c.capacity_cn if c.capacity_cn else "&#8734;" }} cn
+                </span>
+            </td>
+            <td class="num">{{ c.effective_weight_cn }} cn</td>
+            <td>
+                {% if c.state == "carried" %}
+                <form method="post" action="{{ target_url_prefix }}/stash-container" class="inline-form">
+                    <input type="hidden" name="instance_id" value="{{ c.instance_id }}">
+                    <button type="submit" title="Move container off-person">Stash</button>
+                </form>
+                {% else %}
+                <form method="post" action="{{ target_url_prefix }}/unstash-container" class="inline-form">
+                    <input type="hidden" name="instance_id" value="{{ c.instance_id }}">
+                    <button type="submit">Unstash</button>
+                </form>
+                {% endif %}
+                <form method="post" action="{{ target_url_prefix }}/remove-container" class="remove-form">
+                    <input type="hidden" name="instance_id" value="{{ c.instance_id }}">
+                    <button type="submit" name="mode" value="drop"
+                            title="Discard the container and its contents">Drop</button>
+                    <button type="submit" name="mode" value="sell"
+                            {% if c.contents %}disabled title="Empty the container first"{% endif %}>Sell</button>
+                    <button type="submit" name="mode" value="refund"
+                            {% if c.contents %}disabled title="Empty the container first"{% endif %}>Refund</button>
+                </form>
+            </td>
+        </tr>
+        {% for row in c.contents %}
+        <tr class="container-child" id="cnt-{{ c.instance_id }}"
+            data-instance-id="{{ c.instance_id }}"
+            data-item-id="{{ row.id }}"
+            data-source="container:{{ c.instance_id }}"
+            draggable="true">
+            <td><span class="indent">&#8627;</span> {{ row.name }}</td>
+            <td class="num">{{ row.count }}</td>
+            <td class="num">{{ row.weight_cn * row.count }} cn</td>
+            <td>
+                <form method="post" action="{{ target_url_prefix }}/take-out" class="inline-form">
+                    <input type="hidden" name="instance_id" value="{{ c.instance_id }}">
+                    <input type="hidden" name="item_id" value="{{ row.id }}">
+                    <button type="submit">Take Out</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+{% endmacro %}
+
+{% if inventory_view.equipped or inventory_view.carried or inventory_view.stashed or inventory_view.containers %}
 <h3 class="subhead">Inventory</h3>
 {{ inv_table(inventory_view.equipped, target_url_prefix, "equipped", "Equipped", "contributes to weight") }}
 {{ inv_table(inventory_view.carried,  target_url_prefix, "carried",  "Carried",  "contributes to weight") }}
+{{ container_table("carried", "Carried") }}
 {{ inv_table(inventory_view.stashed,  target_url_prefix, "stashed",  "Stashed",  "not on person — no weight") }}
+{{ container_table("stashed", "Stashed") }}
 {% else %}
 <h3 class="subhead">Inventory</h3>
 <p class="muted">No items in inventory.</p>

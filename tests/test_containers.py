@@ -928,6 +928,37 @@ def test_move_invalid_combo_returns_400(tmp_path):
     assert r.status_code == 400
 
 
+def test_sheet_renders_container_row_with_capacity_badge(tmp_path):
+    client = _make_client(tmp_path)
+    _seed_character(client)
+    client.post("/character/test/equipment/add", data={"item_id": "backpack"})
+    spec = load_character("test", client._characters_dir)
+    instance_id = spec.containers[0].instance_id
+    r = client.get("/character/test")
+    assert r.status_code == 200
+    assert f'data-instance-id="{instance_id}"' in r.text
+    assert "Backpack" in r.text
+    assert "0 / 400" in r.text  # capacity badge
+    # Stow control appears on loose carried items when containers exist
+    client.post("/character/test/equipment/add", data={"item_id": "torch"})
+    r = client.get("/character/test")
+    assert 'action="/character/test/equipment/stow"' in r.text
+
+
+def test_sheet_renders_container_contents_after_stow(tmp_path):
+    client = _make_client(tmp_path)
+    _seed_character(client)
+    client.post("/character/test/equipment/add", data={"item_id": "backpack"})
+    spec = load_character("test", client._characters_dir)
+    instance_id = spec.containers[0].instance_id
+    client.post("/character/test/equipment/add", data={"item_id": "torch"})
+    client.post("/character/test/equipment/stow", data={
+        "instance_id": instance_id, "item_id": "torch",
+    })
+    r = client.get("/character/test")
+    assert 'action="/character/test/equipment/take-out"' in r.text
+
+
 def test_wizard_containers_persist_through_finalize(tmp_path):
     """The core regression: containers added in the wizard must survive
     finalization into the saved CharacterSpec."""
