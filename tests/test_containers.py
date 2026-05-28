@@ -634,3 +634,93 @@ def test_wizard_add_creates_container_without_locking_gold(tmp_path):
     draft = load_draft(draft_id, client._drafts_dir)
     assert len(draft["containers"]) == 1
     assert draft.get("gold_locked") is False
+
+
+def test_sheet_stow_endpoint(tmp_path):
+    client = _make_client(tmp_path)
+    _seed_character(client, gold=0, inventory=["torch"])
+    # Add a backpack via add route (avoids importing the engine helpers)
+    client.post("/character/test/equipment/add", data={"item_id": "backpack"})
+    spec = load_character("test", client._characters_dir)
+    instance_id = spec.containers[0].instance_id
+    r = client.post("/character/test/equipment/stow", data={
+        "instance_id": instance_id, "item_id": "torch",
+    })
+    assert r.status_code == 303
+    spec = load_character("test", client._characters_dir)
+    assert spec.inventory == []
+    assert spec.containers[0].contents == ["torch"]
+
+
+def test_sheet_take_out_endpoint(tmp_path):
+    client = _make_client(tmp_path)
+    _seed_character(client)
+    client.post("/character/test/equipment/add", data={"item_id": "backpack"})
+    spec = load_character("test", client._characters_dir)
+    instance_id = spec.containers[0].instance_id
+    client.post("/character/test/equipment/add", data={"item_id": "torch"})
+    client.post("/character/test/equipment/stow", data={
+        "instance_id": instance_id, "item_id": "torch",
+    })
+    r = client.post("/character/test/equipment/take-out", data={
+        "instance_id": instance_id, "item_id": "torch",
+    })
+    assert r.status_code == 303
+    spec = load_character("test", client._characters_dir)
+    assert spec.inventory == ["torch"]
+    assert spec.containers[0].contents == []
+
+
+def test_sheet_stow_rejects_full_container(tmp_path):
+    client = _make_client(tmp_path)
+    _seed_character(client)
+    client.post("/character/test/equipment/add", data={"item_id": "sack_small"})
+    spec = load_character("test", client._characters_dir)
+    instance_id = spec.containers[0].instance_id
+    # 10 torches at 20 cn = 200 cn = sack_small capacity
+    for _ in range(10):
+        client.post("/character/test/equipment/add", data={"item_id": "torch"})
+        client.post("/character/test/equipment/stow", data={
+            "instance_id": instance_id, "item_id": "torch",
+        })
+    client.post("/character/test/equipment/add", data={"item_id": "torch"})
+    r = client.post("/character/test/equipment/stow", data={
+        "instance_id": instance_id, "item_id": "torch",
+    })
+    assert r.status_code == 400
+    assert "full" in r.text.lower()
+
+
+def test_wizard_stow_endpoint(tmp_path):
+    client = _make_client(tmp_path)
+    draft_id = _walk_to_equipment(client)
+    client.post(f"/wizard/{draft_id}/equipment/add", data={"item_id": "backpack"})
+    client.post(f"/wizard/{draft_id}/equipment/add", data={"item_id": "torch"})
+    draft = load_draft(draft_id, client._drafts_dir)
+    instance_id = draft["containers"][0]["instance_id"]
+    r = client.post(f"/wizard/{draft_id}/equipment/stow", data={
+        "instance_id": instance_id, "item_id": "torch",
+    })
+    assert r.status_code == 303
+    draft = load_draft(draft_id, client._drafts_dir)
+    assert draft["inventory"] == []
+    assert draft["containers"][0]["contents"] == ["torch"]
+
+
+def test_wizard_take_out_endpoint(tmp_path):
+    client = _make_client(tmp_path)
+    draft_id = _walk_to_equipment(client)
+    client.post(f"/wizard/{draft_id}/equipment/add", data={"item_id": "backpack"})
+    client.post(f"/wizard/{draft_id}/equipment/add", data={"item_id": "torch"})
+    draft = load_draft(draft_id, client._drafts_dir)
+    instance_id = draft["containers"][0]["instance_id"]
+    client.post(f"/wizard/{draft_id}/equipment/stow", data={
+        "instance_id": instance_id, "item_id": "torch",
+    })
+    r = client.post(f"/wizard/{draft_id}/equipment/take-out", data={
+        "instance_id": instance_id, "item_id": "torch",
+    })
+    assert r.status_code == 303
+    draft = load_draft(draft_id, client._drafts_dir)
+    assert draft["inventory"] == ["torch"]
+    assert draft["containers"][0]["contents"] == []
