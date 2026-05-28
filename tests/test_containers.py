@@ -511,3 +511,75 @@ def test_shop_categories_includes_containers_and_magic(data):
     cats = {c.id for c in shop_categories(data)}
     assert "containers" in cats
     assert "miscellaneous_magic_items" in cats
+
+
+# ── HTTP routes: /buy and /add for container catalog items ────────────────
+
+from fastapi.testclient import TestClient
+
+from aose.characters import load_character, save_character, save_settings
+from aose.web.app import create_app
+
+
+def _make_client(tmp_path, ruleset=None):
+    characters_dir = tmp_path / "characters"
+    drafts_dir = tmp_path / "drafts"
+    examples_dir = tmp_path / "examples"
+    examples_dir.mkdir(parents=True)
+    settings_path = tmp_path / "settings.json"
+    save_settings(settings_path, ruleset or RuleSet())
+    app = create_app(
+        data_dir=DATA_DIR, characters_dir=characters_dir,
+        drafts_dir=drafts_dir, examples_dir=examples_dir,
+        settings_path=settings_path,
+    )
+    client = TestClient(app, follow_redirects=False)
+    client._characters_dir = characters_dir
+    client._drafts_dir = drafts_dir
+    return client
+
+
+def _seed_character(client, gold=100, inventory=None, containers=None) -> str:
+    spec = _minimal_spec(
+        gold=gold,
+        inventory=list(inventory or []),
+        containers=list(containers or []),
+    )
+    save_character("test", spec, client._characters_dir)
+    return "test"
+
+
+def test_sheet_buy_creates_container_instance(tmp_path):
+    client = _make_client(tmp_path)
+    _seed_character(client, gold=20)
+    r = client.post("/character/test/equipment/buy", data={"item_id": "backpack"})
+    assert r.status_code == 303
+    spec = load_character("test", client._characters_dir)
+    assert spec.gold == 15  # 20 - 5
+    # Container is in spec.containers, NOT in inventory
+    assert spec.inventory == []
+    assert len(spec.containers) == 1
+    assert spec.containers[0].catalog_id == "backpack"
+    assert spec.containers[0].state == "carried"
+
+
+def test_sheet_add_creates_container_instance_without_gold_deduction(tmp_path):
+    client = _make_client(tmp_path)
+    _seed_character(client, gold=20)
+    r = client.post("/character/test/equipment/add", data={"item_id": "bag_of_holding"})
+    assert r.status_code == 303
+    spec = load_character("test", client._characters_dir)
+    assert spec.gold == 20  # unchanged
+    assert len(spec.containers) == 1
+    assert spec.containers[0].catalog_id == "bag_of_holding"
+
+
+def test_sheet_buy_regular_item_still_uses_inventory(tmp_path):
+    """Non-container Buy is unchanged."""
+    client = _make_client(tmp_path)
+    _seed_character(client, gold=20)
+    r = client.post("/character/test/equipment/buy", data={"item_id": "long_sword"})
+    assert r.status_code == 303
+    spec = load_character("test", client._characters_dir)
+    assert spec.inventory == ["long_sword"]
+    assert spec.containers == []

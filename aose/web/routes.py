@@ -12,7 +12,9 @@ from aose.engine.shop import (
     InsufficientGold,
     UnknownItem,
     add_free as shop_add_free,
+    add_free_container,
     buy as shop_buy,
+    buy_container,
     inventory_view as shop_inventory_view,
     remove as shop_remove,
     remove_from_stash as shop_remove_from_stash,
@@ -197,12 +199,19 @@ async def equipment_buy(request: Request, character_id: str,
                         item_id: str = Form(...)):
     spec = _load_spec_or_404(request, character_id)
     game_data = request.app.state.game_data
+    item = game_data.items.get(item_id)
+    from aose.models import Container
     try:
-        new_inventory, new_gold = shop_buy(spec.inventory, spec.gold, item_id, game_data)
-    except (UnknownItem, InsufficientGold) as e:
+        if isinstance(item, Container):
+            spec.containers, spec.gold = buy_container(
+                spec.containers, spec.gold, item_id, game_data,
+            )
+        else:
+            new_inventory, new_gold = shop_buy(spec.inventory, spec.gold, item_id, game_data)
+            spec.inventory = new_inventory
+            spec.gold = new_gold
+    except (UnknownItem, InsufficientGold, ValueError) as e:
         raise HTTPException(400, str(e))
-    spec.inventory = new_inventory
-    spec.gold = new_gold
     save_character(character_id, spec, request.app.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
@@ -213,9 +222,15 @@ async def equipment_add(request: Request, character_id: str,
     """Add an item to inventory without spending gold — covers GM-given gear,
     found loot, and similar off-ledger acquisitions."""
     spec = _load_spec_or_404(request, character_id)
+    game_data = request.app.state.game_data
+    item = game_data.items.get(item_id)
+    from aose.models import Container
     try:
-        spec.inventory = shop_add_free(spec.inventory, item_id, request.app.state.game_data)
-    except UnknownItem as e:
+        if isinstance(item, Container):
+            spec.containers = add_free_container(spec.containers, item_id, game_data)
+        else:
+            spec.inventory = shop_add_free(spec.inventory, item_id, game_data)
+    except (UnknownItem, ValueError) as e:
         raise HTTPException(400, str(e))
     save_character(character_id, spec, request.app.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
