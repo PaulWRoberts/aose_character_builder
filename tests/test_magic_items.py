@@ -670,3 +670,35 @@ def test_carry_capacity_keeps_band_0(data):
     assert carried_weight_cn(spec, d) == 1400          # displayed raw
     assert banding_weight_cn(spec, d) == 400           # 1400 - 1000
     assert weight_band(banding_weight_cn(spec, d)) == 0
+
+
+# ── Task 12: Seed data/equipment/magic_items.yaml ────────────────────────────
+
+
+def test_magic_items_yaml_loads(data):
+    from aose.models import MagicItem, Weapon, Armor
+    assert isinstance(data.items["gauntlets_of_ogre_power"], MagicItem)
+    assert isinstance(data.items["ring_of_protection"], MagicItem)
+    assert isinstance(data.items["sword_plus_1"], Weapon)
+    assert data.items["sword_plus_1"].magic_bonus == 1
+    assert isinstance(data.items["chain_mail_plus_1"], Armor)
+    assert data.items["chain_mail_plus_1"].weight_multiplier == 0.5
+    assert data.items["potion_of_healing"].magic is True
+
+
+def test_ring_of_spell_turning_has_charge_dice(data):
+    assert data.items["ring_of_spell_turning"].charge_dice == "2d6"
+
+
+def test_sword_vs_undead_conditional(data):
+    w = data.items["sword_plus_1_vs_undead"]
+    assert w.conditional_bonus.vs == "undead"
+    assert w.conditional_bonus.bonus == 2
+
+
+def test_magic_categories_appear_in_shop(data):
+    from aose.engine.shop import shop_categories
+    cats = {c.id for c in shop_categories(data)}
+    assert "magic_swords" in cats
+    assert "magic_rings" in cats
+    assert "miscellaneous_magic_items" in cats
