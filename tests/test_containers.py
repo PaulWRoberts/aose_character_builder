@@ -583,3 +583,54 @@ def test_sheet_buy_regular_item_still_uses_inventory(tmp_path):
     spec = load_character("test", client._characters_dir)
     assert spec.inventory == ["long_sword"]
     assert spec.containers == []
+
+
+# ── Wizard /buy and /add for container catalog items ─────────────────────────
+
+from aose.characters import load_draft, save_draft
+
+
+def _walk_to_equipment(client):
+    r = client.get("/wizard/new")
+    draft_id = r.headers["location"].split("/")[2]
+    client.post(f"/wizard/{draft_id}/rules", data={
+        "ability_roll_method": "3d6_in_order", "encumbrance": "basic",
+        "separate_race_class": "on",
+        "demihuman_level_limits": "on",
+        "demihuman_class_restrictions": "on",
+    })
+    draft = load_draft(draft_id, client._drafts_dir)
+    draft["abilities"] = {"STR": 15, "INT": 11, "WIS": 12, "DEX": 13, "CON": 14, "CHA": 10}
+    save_draft(draft_id, draft, client._drafts_dir)
+    client.post(f"/wizard/{draft_id}/abilities", data={"name": "Tester"})
+    client.post(f"/wizard/{draft_id}/race", data={"race_id": "dwarf"})
+    client.post(f"/wizard/{draft_id}/class", data={"class_id": "fighter"})
+    client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "law"})
+    client.post(f"/wizard/{draft_id}/hp/roll")
+    client.post(f"/wizard/{draft_id}/hp")
+    client.get(f"/wizard/{draft_id}/equipment")
+    return draft_id
+
+
+def test_wizard_buy_creates_container_in_draft(tmp_path):
+    client = _make_client(tmp_path)
+    draft_id = _walk_to_equipment(client)
+    draft = load_draft(draft_id, client._drafts_dir)
+    draft["gold"] = 100
+    save_draft(draft_id, draft, client._drafts_dir)
+    r = client.post(f"/wizard/{draft_id}/equipment/buy", data={"item_id": "backpack"})
+    assert r.status_code == 303
+    draft = load_draft(draft_id, client._drafts_dir)
+    assert len(draft["containers"]) == 1
+    assert draft["containers"][0]["catalog_id"] == "backpack"
+    assert draft["gold"] == 95
+
+
+def test_wizard_add_creates_container_without_locking_gold(tmp_path):
+    client = _make_client(tmp_path)
+    draft_id = _walk_to_equipment(client)
+    r = client.post(f"/wizard/{draft_id}/equipment/add", data={"item_id": "bag_of_holding"})
+    assert r.status_code == 303
+    draft = load_draft(draft_id, client._drafts_dir)
+    assert len(draft["containers"]) == 1
+    assert draft.get("gold_locked") is False

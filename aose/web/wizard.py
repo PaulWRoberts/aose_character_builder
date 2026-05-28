@@ -25,7 +25,9 @@ from aose.engine.shop import (
     REMOVE_MODES,
     UnknownItem,
     add_free as shop_add_free,
+    add_free_container,
     buy as shop_buy,
+    buy_container,
     inventory_view,
     remove as shop_remove,
     remove_from_stash as shop_remove_from_stash,
@@ -944,17 +946,26 @@ async def post_equipment_reroll_gold(request: Request, draft_id: str):
 async def post_equipment_buy(request: Request, draft_id: str, item_id: str = Form(...)):
     draft = _load(request, draft_id)
     data = request.app.state.game_data
+    item = data.items.get(item_id)
+    from aose.models import Container
     try:
-        new_inventory, new_gold = shop_buy(
-            draft.get("inventory", []), draft.get("gold", 0), item_id, data,
-        )
-    except UnknownItem as e:
+        if isinstance(item, Container):
+            containers_raw = draft.get("containers", [])
+            containers = [ContainerInstance.model_validate(c) for c in containers_raw]
+            new_containers, new_gold = buy_container(
+                containers, draft.get("gold", 0), item_id, data,
+            )
+            draft["containers"] = [c.model_dump() for c in new_containers]
+            draft["gold"] = new_gold
+        else:
+            new_inventory, new_gold = shop_buy(
+                draft.get("inventory", []), draft.get("gold", 0), item_id, data,
+            )
+            draft["inventory"] = new_inventory
+            draft["gold"] = new_gold
+        draft["gold_locked"] = True  # first purchase locks the starting-gold roll
+    except (UnknownItem, InsufficientGold, ValueError) as e:
         raise HTTPException(400, str(e))
-    except InsufficientGold as e:
-        raise HTTPException(400, str(e))
-    draft["inventory"] = new_inventory
-    draft["gold"] = new_gold
-    draft["gold_locked"] = True  # first purchase locks the starting-gold roll
     save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/equipment")
 
@@ -965,9 +976,17 @@ async def post_equipment_add(request: Request, draft_id: str, item_id: str = For
     unlocked since no purchase happened."""
     draft = _load(request, draft_id)
     data = request.app.state.game_data
+    item = data.items.get(item_id)
+    from aose.models import Container
     try:
-        draft["inventory"] = shop_add_free(draft.get("inventory", []), item_id, data)
-    except UnknownItem as e:
+        if isinstance(item, Container):
+            containers_raw = draft.get("containers", [])
+            containers = [ContainerInstance.model_validate(c) for c in containers_raw]
+            new_containers = add_free_container(containers, item_id, data)
+            draft["containers"] = [c.model_dump() for c in new_containers]
+        else:
+            draft["inventory"] = shop_add_free(draft.get("inventory", []), item_id, data)
+    except (UnknownItem, ValueError) as e:
         raise HTTPException(400, str(e))
     save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/equipment")
