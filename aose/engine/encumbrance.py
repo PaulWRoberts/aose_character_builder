@@ -83,13 +83,23 @@ def carried_weight_cn(spec: CharacterSpec, data: GameData) -> int:
     Carried containers contribute their own ``weight_cn`` plus
     ``int(weight_multiplier * raw_contents_weight)``.  Stashed containers
     contribute zero.
+
+    ``Armor`` items in inventory contribute ``int(weight_cn * weight_multiplier)``
+    so enchanted armour (``weight_multiplier=0.5``) weighs half as much.
+
+    Each ``MagicItemInstance`` in ``spec.magic_items`` contributes its catalog
+    ``weight_cn`` on-person whether equipped or not.
     """
-    from aose.models import Container
+    from aose.models import Armor, Container
 
     total = 0
     for item_id in spec.inventory:
         item = data.items.get(item_id)
-        if item is not None:
+        if item is None:
+            continue
+        if isinstance(item, Armor):
+            total += int(item.weight_cn * item.weight_multiplier)
+        else:
             total += item.weight_cn
 
     for c in spec.containers:
@@ -105,7 +115,20 @@ def carried_weight_cn(spec: CharacterSpec, data: GameData) -> int:
         )
         total += int(catalog.weight_multiplier * raw)
 
+    for mi in spec.magic_items:
+        catalog = data.items.get(mi.catalog_id)
+        if catalog is not None:
+            total += catalog.weight_cn
+
     return total
+
+
+def banding_weight_cn(spec: CharacterSpec, data: GameData) -> int:
+    """Weight used for movement banding: raw carried weight minus the active
+    carry-capacity bonus, floored at zero.  The *displayed* carried weight stays
+    raw — only the band/movement improves."""
+    from aose.engine.magic import carry_capacity_bonus
+    return max(0, carried_weight_cn(spec, data) - carry_capacity_bonus(spec, data))
 
 
 def armor_movement_class(spec: CharacterSpec, data: GameData) -> ArmorMovementClass:
@@ -132,7 +155,7 @@ def effective_movement(spec: CharacterSpec, data: GameData) -> int:
         # Light band only — armour alone drives it.
         return _scale(_TABLE_HUMAN[(armor_cls, 0)], base)
 
-    band = weight_band(carried_weight_cn(spec, data))
+    band = weight_band(banding_weight_cn(spec, data))
     return _scale(_TABLE_HUMAN[(armor_cls, band)], base)
 
 
@@ -162,7 +185,7 @@ def encumbrance_table(spec: CharacterSpec, data: GameData) -> EncumbranceTable |
     base = data.races[spec.race_id].base_movement
     current_band = 0
     if mode == "detailed":
-        current_band = weight_band(carried_weight_cn(spec, data))
+        current_band = weight_band(banding_weight_cn(spec, data))
 
     rows: list[ThresholdRow] = []
     bands = range(4) if mode == "detailed" else [0]

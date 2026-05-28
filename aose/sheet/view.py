@@ -7,6 +7,7 @@ from aose.engine.encumbrance import (
     EncumbranceTable,
     armor_movement_class,
     band_label,
+    banding_weight_cn,
     carried_weight_cn,
     effective_movement,
     encumbrance_table,
@@ -290,7 +291,7 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
         ),
         armor_movement_class=armor_movement_class(spec, data),
         current_weight_band=(
-            band_label(weight_band(carried_weight_cn(spec, data)))
+            band_label(weight_band(banding_weight_cn(spec, data)))
             if spec.ruleset.encumbrance == "detailed"
             else None
         ),

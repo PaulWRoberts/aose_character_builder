@@ -632,3 +632,41 @@ def test_variable_weapon_damage_with_magic(data):
                         ruleset=RuleSet(variable_weapon_damage=True))
     sword = next(p for p in attack_profiles(spec, d) if p.weapon_id == "sword_plus_1")
     assert sword.damage == "1d8+1"  # variable 1d8, STR 0, +1 magic
+
+
+# ── Task 11: Encumbrance — half-weight armour, instance weight, capacity banding ──
+
+def test_magic_armour_half_weight(data):
+    from aose.engine.encumbrance import carried_weight_cn
+    d = _with_magic(data)
+    spec = _minimal_spec(ruleset=RuleSet(encumbrance="detailed"))
+    spec.inventory = ["chain_mail_plus_1"]   # 400 cn × 0.5
+    assert carried_weight_cn(spec, d) == 200
+
+
+def test_magic_instance_contributes_weight(data):
+    from aose.engine.encumbrance import carried_weight_cn
+    from aose.engine.magic import add_free_magic_item
+    d = _copy.deepcopy(data)
+    d.items["heavy_orb"] = MagicItem(
+        id="heavy_orb", name="Heavy Orb", category="misc", item_type="magic",
+        cost_gp=0, weight_cn=120, magic=True, equippable=True,
+    )
+    spec = _minimal_spec(ruleset=RuleSet(encumbrance="detailed"))
+    spec.magic_items = add_free_magic_item([], "heavy_orb", d)
+    assert carried_weight_cn(spec, d) == 120  # on-person whether worn or not
+
+
+def test_carry_capacity_keeps_band_0(data):
+    """Gauntlets +1000: 1400 cn raw → bands at 400 → still band 0 (move 120')."""
+    from aose.engine.encumbrance import banding_weight_cn, weight_band, carried_weight_cn
+    from aose.engine.magic import add_free_magic_item, equip_magic
+    d = _with_magic(data)
+    spec = _minimal_spec(race_id="human", ruleset=RuleSet(encumbrance="detailed"))
+    # torch: id="torch", weight_cn=20; 70 × 20 = 1400 cn exactly
+    spec.inventory = ["torch"] * 70
+    spec.magic_items = add_free_magic_item([], "gauntlets_of_ogre_power", d)
+    spec.magic_items = equip_magic(spec.magic_items, spec.magic_items[0].instance_id, d)
+    assert carried_weight_cn(spec, d) == 1400          # displayed raw
+    assert banding_weight_cn(spec, d) == 400           # 1400 - 1000
+    assert weight_band(banding_weight_cn(spec, d)) == 0
