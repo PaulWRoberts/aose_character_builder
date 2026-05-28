@@ -153,18 +153,23 @@ def test_inventory_rows_counts_equipped_copies(data):
 # ════════════════════════════════════════════════════════════════════════════
 
 def test_no_weapons_yields_empty_profile_list(data):
+    # Unarmed is always prepended; "no weapons" means only the Unarmed profile.
     profiles = attack_profiles(_spec(), data)
-    assert profiles == []
+    weapons = [p for p in profiles if not p.unarmed]
+    assert weapons == []
+    assert len(profiles) == 1
+    assert profiles[0].unarmed is True
 
 
 def test_melee_weapon_adds_str_mod_to_to_hit_and_damage(data):
     # STR 16 → +2 mod, Fighter L1 THAC0 = 19
-    profiles = attack_profiles(
+    all_profiles = attack_profiles(
         _spec(inventory=["long_sword"], equipped_weapons=["long_sword"]),
         data,
     )
-    assert len(profiles) == 1
-    p = profiles[0]
+    weapons = [p for p in all_profiles if not p.unarmed]
+    assert len(weapons) == 1
+    p = weapons[0]
     assert p.name == "Long Sword"
     assert p.melee is True
     assert p.to_hit_thac0 == 17        # 19 - 2 (STR)
@@ -175,11 +180,12 @@ def test_melee_weapon_adds_str_mod_to_to_hit_and_damage(data):
 
 def test_ranged_weapon_uses_dex_mod_for_to_hit_only(data):
     # DEX 12 → +0 mod, so no change vs base THAC0 19
-    profiles = attack_profiles(
+    all_profiles = attack_profiles(
         _spec(inventory=["short_bow"], equipped_weapons=["short_bow"]),
         data,
     )
-    p = profiles[0]
+    weapons = [p for p in all_profiles if not p.unarmed]
+    p = weapons[0]
     assert p.melee is False
     assert p.ranged is True
     assert p.to_hit_thac0 == 19
@@ -189,60 +195,63 @@ def test_ranged_weapon_uses_dex_mod_for_to_hit_only(data):
 
 def test_ranged_weapon_with_high_dex(data):
     abilities = {"STR": 10, "INT": 10, "WIS": 10, "DEX": 18, "CON": 10, "CHA": 10}
-    profiles = attack_profiles(
+    all_profiles = attack_profiles(
         _spec(abilities=abilities, inventory=["short_bow"], equipped_weapons=["short_bow"]),
         data,
     )
-    # DEX 18 → +3 mod
-    assert profiles[0].to_hit_thac0 == 16
-    assert profiles[0].to_hit_ascending == 3
+    # DEX 18 → +3 mod; get the ranged weapon, not Unarmed
+    bow = next(p for p in all_profiles if p.weapon_id == "short_bow")
+    assert bow.to_hit_thac0 == 16
+    assert bow.to_hit_ascending == 3
 
 
 def test_variable_damage_rule_swaps_damage_die(data):
-    profiles = attack_profiles(
+    all_profiles = attack_profiles(
         _spec(inventory=["long_sword"], equipped_weapons=["long_sword"],
               ruleset=RuleSet(variable_weapon_damage=True)),
         data,
     )
     # Long Sword variable damage is 1d8, plus STR +2
-    assert profiles[0].damage == "1d8+2"
+    sword = next(p for p in all_profiles if p.weapon_id == "long_sword")
+    assert sword.damage == "1d8+2"
 
 
 def test_non_proficiency_applies_minus_two(data):
-    profiles = attack_profiles(
+    all_profiles = attack_profiles(
         _spec(inventory=["long_sword"], equipped_weapons=["long_sword"],
               ruleset=RuleSet(weapon_proficiency=True),
               chosen_proficiencies=["axe"]),  # not "sword"
         data,
     )
-    p = profiles[0]
-    assert p.proficient is False
+    sword = next(p for p in all_profiles if p.weapon_id == "long_sword")
+    assert sword.proficient is False
     # Base 19, STR +2, prof -2 → THAC0 = 19 - 2 - (-2) = 19 ... wait
     # to_hit_thac0 = base_thac0 - atk_mod - prof_pen
     # = 19 - 2 - (-2) = 19
-    assert p.to_hit_thac0 == 19
+    assert sword.to_hit_thac0 == 19
 
 
 def test_proficient_user_takes_no_penalty(data):
-    profiles = attack_profiles(
+    all_profiles = attack_profiles(
         _spec(inventory=["long_sword"], equipped_weapons=["long_sword"],
               ruleset=RuleSet(weapon_proficiency=True),
               chosen_proficiencies=["sword"]),
         data,
     )
-    p = profiles[0]
-    assert p.proficient is True
-    assert p.to_hit_thac0 == 17  # STR mod applied, no -2 penalty
+    sword = next(p for p in all_profiles if p.weapon_id == "long_sword")
+    assert sword.proficient is True
+    assert sword.to_hit_thac0 == 17  # STR mod applied, no -2 penalty
 
 
 def test_multiple_identical_weapons_collapse_to_count(data):
-    profiles = attack_profiles(
+    all_profiles = attack_profiles(
         _spec(inventory=["dagger", "dagger", "dagger"],
               equipped_weapons=["dagger", "dagger"]),
         data,
     )
-    assert len(profiles) == 1
-    assert profiles[0].count == 2
+    weapons = [p for p in all_profiles if not p.unarmed]
+    assert len(weapons) == 1
+    assert weapons[0].count == 2
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -290,10 +299,12 @@ def test_sheet_attack_profiles_appear_when_weapon_equipped(client):
     assert "17" in r.text
 
 
-def test_sheet_shows_no_weapons_message_when_unarmed(client):
+def test_sheet_shows_unarmed_when_no_weapons_equipped(client):
+    # Unarmed is always the first profile; even with no equipped weapons the
+    # Attacks section renders with "Unarmed" rather than a "No weapons" message.
     _seed(client, inventory=["long_sword"])  # owned but not equipped
     r = client.get("/character/test")
-    assert "No weapons equipped" in r.text
+    assert "Unarmed" in r.text
 
 
 def test_sheet_inventory_shows_equipped_section(client):

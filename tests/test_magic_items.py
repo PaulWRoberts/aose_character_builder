@@ -557,3 +557,78 @@ def test_thac0_set_max_leaves_better_untouched(data):
     # awkward; instead assert the literal min() semantics directly:
     from aose.engine.magic import apply_modifiers
     assert apply_modifiers(11, [Modifier(target="thac0", op="set_max", value=14)], "thac0") == 11
+
+
+# ── Task 10: Unarmed + magic weapon attack profiles ───────────────────────
+
+
+def _weapon_spec(data, weapon_id, **kwargs):
+    spec = _minimal_spec(**kwargs)
+    spec.inventory = [weapon_id]
+    spec.equipped_weapons = [weapon_id]
+    return spec
+
+
+def test_unarmed_profile_always_present_and_first(data):
+    from aose.engine.attacks import attack_profiles
+    spec = _minimal_spec(abilities={"STR": 13, "INT": 12, "WIS": 11, "DEX": 12, "CON": 12, "CHA": 10})
+    profiles = attack_profiles(spec, data)
+    assert profiles[0].unarmed is True
+    assert profiles[0].name == "Unarmed"
+    assert profiles[0].proficient is True
+    assert profiles[0].damage == "1d2+1"  # STR 13 → +1
+
+
+def test_gauntlets_buff_unarmed_and_melee(data):
+    from aose.engine.attacks import attack_profiles
+    d = _with_magic(data)
+    # base STR 9 (mod 0); gauntlets set STR 18 (mod +3)
+    spec = _weapon_spec(d, "sword_plus_1",
+                        abilities={"STR": 9, "INT": 12, "WIS": 11, "DEX": 12, "CON": 12, "CHA": 10})
+    from aose.engine.magic import add_free_magic_item, equip_magic
+    spec.magic_items = add_free_magic_item([], "gauntlets_of_ogre_power", d)
+    spec.magic_items = equip_magic(spec.magic_items, spec.magic_items[0].instance_id, d)
+    profiles = attack_profiles(spec, d)
+    unarmed = next(p for p in profiles if p.unarmed)
+    assert unarmed.damage == "1d2+3"
+    sword = next(p for p in profiles if p.weapon_id == "sword_plus_1")
+    # variable_weapon_damage off → base 1d6; +3 STR, +1 magic = +4
+    assert sword.damage == "1d6+4"
+
+
+def test_magic_bonus_to_hit_and_damage(data):
+    from aose.engine.attacks import attack_profiles
+    from aose.engine.attack_bonus import thac0
+    d = _with_magic(data)
+    spec = _weapon_spec(d, "sword_plus_1",
+                        abilities={"STR": 12, "INT": 12, "WIS": 11, "DEX": 12, "CON": 12, "CHA": 10})
+    base_thac0 = thac0(_minimal_spec(), d)
+    sword = next(p for p in attack_profiles(spec, d) if p.weapon_id == "sword_plus_1")
+    assert sword.to_hit_thac0 == base_thac0 - 1   # STR 12 mod 0, +1 magic
+    assert sword.to_hit_ascending == (19 - base_thac0) + 1
+    assert sword.damage == "1d6+1"
+
+
+def test_conditional_attack_profile(data):
+    from aose.engine.attacks import attack_profiles
+    from aose.engine.attack_bonus import thac0
+    d = _with_magic(data)
+    spec = _weapon_spec(d, "sword_plus_1_vs_undead",
+                        abilities={"STR": 12, "INT": 12, "WIS": 11, "DEX": 12, "CON": 12, "CHA": 10})
+    base_thac0 = thac0(_minimal_spec(), d)
+    sword = next(p for p in attack_profiles(spec, d) if p.weapon_id == "sword_plus_1_vs_undead")
+    assert sword.to_hit_thac0 == base_thac0 - 1   # normal: +1
+    assert sword.conditional is not None
+    assert sword.conditional.label == "vs undead"
+    assert sword.conditional.to_hit_thac0 == base_thac0 - 3  # +1 base +2 extra
+    assert sword.conditional.damage == "1d6+3"
+
+
+def test_variable_weapon_damage_with_magic(data):
+    from aose.engine.attacks import attack_profiles
+    d = _with_magic(data)
+    spec = _weapon_spec(d, "sword_plus_1",
+                        abilities={"STR": 9, "INT": 12, "WIS": 11, "DEX": 12, "CON": 12, "CHA": 10},
+                        ruleset=RuleSet(variable_weapon_damage=True))
+    sword = next(p for p in attack_profiles(spec, d) if p.weapon_id == "sword_plus_1")
+    assert sword.damage == "1d8+1"  # variable 1d8, STR 0, +1 magic
