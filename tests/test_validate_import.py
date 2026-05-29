@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from tools.validate_import import validate_file
+from tools.validate_import import validate_file, duplicate_ids_in_dir, load_game_data
 
 
 def _write(path: Path, text: str) -> Path:
@@ -57,3 +57,32 @@ def test_validate_file_list_of_items(tmp_path):
   weight_cn: 20
 """)
     assert validate_file(f, "item") == []
+
+
+# ---------------------------------------------------------------------------
+# Slice 2: cross-file ID uniqueness + full loader check
+# ---------------------------------------------------------------------------
+
+def test_duplicate_ids_in_dir(tmp_path):
+    (tmp_path / "a.yaml").write_text(
+        "- {id: x, item_type: gear, name: X, category: g, cost_gp: 1}\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "b.yaml").write_text(
+        "- {id: x, item_type: gear, name: X2, category: g, cost_gp: 1}\n",
+        encoding="utf-8",
+    )
+    dupes = duplicate_ids_in_dir(tmp_path)
+    assert "x" in dupes
+    assert {p.name for p in dupes["x"]} == {"a.yaml", "b.yaml"}
+
+
+def test_duplicate_ids_clean(tmp_path):
+    (tmp_path / "a.yaml").write_text("- {id: x}\n", encoding="utf-8")
+    (tmp_path / "b.yaml").write_text("- {id: y}\n", encoding="utf-8")
+    assert duplicate_ids_in_dir(tmp_path) == {}
+
+
+def test_load_game_data_real_dir():
+    # The shipped data/ must load cleanly.
+    assert load_game_data() == []
