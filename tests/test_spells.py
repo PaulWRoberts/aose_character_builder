@@ -37,3 +37,24 @@ def test_loader_spell_lists_empty_when_absent(tmp_path):
     from aose.data.loader import GameData
     data = GameData.load(tmp_path)
     assert data.spell_lists == {}
+
+
+def test_class_entry_has_spellbook_and_prepared():
+    from aose.models import ClassEntry
+    e = ClassEntry(class_id="magic_user", level=1, hp_rolls=[3])
+    assert e.spellbook == []
+    assert e.prepared == []
+
+
+def test_class_entry_rejects_old_chosen_spells_field():
+    from aose.models import ClassEntry
+    with pytest.raises(ValueError):
+        ClassEntry(class_id="magic_user", chosen_spells=["x"])
+
+
+def test_thorin_example_loads():
+    import json
+    from aose.models import CharacterSpec
+    raw = json.loads((PROJECT_ROOT / "examples" / "thorin.json").read_text(encoding="utf-8"))
+    spec = CharacterSpec.model_validate(raw)
+    assert spec.classes[0].spellbook == []

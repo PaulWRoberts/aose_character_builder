@@ -13,8 +13,7 @@
     {
       "class_id": "fighter",
       "level": 1,
-      "hp_rolls": [7],
-      "chosen_spells": []
+      "hp_rolls": [7]
     }
   ],
   "alignment": "law",

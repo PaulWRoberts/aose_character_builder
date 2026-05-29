@@ -46,7 +46,12 @@ class ClassEntry(BaseModel):
     class_id: str
     level: int = 1
     hp_rolls: list[int] = Field(default_factory=list)
-    chosen_spells: list[str] = Field(default_factory=list)
+    # Known spells (arcane spellbook).  Empty for divine casters, who know
+    # their whole list automatically; see aose/engine/spells.py.
+    spellbook: list[str] = Field(default_factory=list)
+    # Daily prepared / memorised loadout; duplicates allowed (memorise a spell
+    # twice with two slots).  Hard-capped per spell level by spell_slots.
+    prepared: list[str] = Field(default_factory=list)
 
 
 class CharacterSpec(BaseModel):
