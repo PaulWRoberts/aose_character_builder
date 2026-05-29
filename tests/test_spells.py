@@ -76,3 +76,16 @@ def test_magic_user_class_tags_its_list():
     from aose.data.loader import GameData
     data = GameData.load(DATA_DIR)
     assert data.classes["magic_user"].spell_lists == ["magic_user"]
+
+
+def test_ruleset_has_advanced_spell_books_default_off():
+    from aose.models import RuleSet
+    assert RuleSet().advanced_spell_books is False
+
+
+def test_advanced_spell_books_is_wired():
+    from aose.web.settings_routes import IMPLEMENTED_RULES, RULE_GROUPS, RULE_LABELS
+    assert "advanced_spell_books" in IMPLEMENTED_RULES
+    assert "advanced_spell_books" in RULE_LABELS
+    all_group_fields = {f for _, fields in RULE_GROUPS for f, _ in fields}
+    assert "advanced_spell_books" in all_group_fields

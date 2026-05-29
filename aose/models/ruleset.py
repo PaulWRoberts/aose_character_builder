@@ -20,6 +20,7 @@ class RuleSet(BaseModel):
     demihuman_level_limits: bool = True
     demihuman_class_restrictions: bool = True
     variable_weapon_damage: bool = False
+    advanced_spell_books: bool = False
 
     ability_roll_method: AbilityRollMethod = "3d6_in_order"
     encumbrance: EncumbranceMode = "basic"

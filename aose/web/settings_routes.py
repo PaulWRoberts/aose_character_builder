@@ -25,6 +25,7 @@ RULE_LABELS = {
     "separate_race_class": "Separate Race & Class",
     "secondary_skills": "Secondary Skills",
     "multiclassing": "Multiclassing",
+    "advanced_spell_books": "Advanced Spell Books",
 }
 
 # Rules whose engine/builder integration is fully wired up.  The settings
@@ -41,6 +42,7 @@ IMPLEMENTED_RULES = {
     "separate_race_class",
     "multiclassing",
     "variable_weapon_damage",
+    "advanced_spell_books",
 }
 
 # Choice-group rules that have full integration too.
@@ -77,6 +79,12 @@ RULE_GROUPS = [
          "Each character has a secondary skill (a non-adventuring trade)."),
         ("multiclassing",
          "Demihumans may pursue two or three classes simultaneously, sharing XP."),
+    ]),
+    ("Magic", [
+        ("advanced_spell_books",
+         "Arcane spell books have no size limit and the number of beginning "
+         "spells is set by Intelligence. Off = standard rules: the book holds "
+         "exactly the spells the caster can memorise."),
     ]),
 ]
 
