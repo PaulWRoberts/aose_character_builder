@@ -36,3 +36,6 @@ Thumbs.db
 
 # Claude Code local settings
 .claude/
+
+# Copyrighted source PDFs for the content-import pipeline
+import/pdfs/

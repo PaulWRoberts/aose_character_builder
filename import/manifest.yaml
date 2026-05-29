@@ -1,0 +1,12 @@
+# Machine-managed status fields: md / yaml / validated are written by the
+# pipeline and tools/validate_import.py. Avoid YAML comments inside list rows
+# (the validator rewrites this file with yaml.safe_dump).
+- unit: class/fighter
+  type: class            # class | race | race-as-class | spell | item | magic-item
+  source: ose-advanced
+  pdf: ose-advanced.pdf
+  pages: "24-25"
+  md: null               # -> import/markdown/classes/fighter.md when Phase 1 done
+  yaml: null             # -> data/classes/fighter.yaml when Phase 2 done
+  validated: false
+  notes: ""
