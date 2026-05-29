@@ -167,3 +167,83 @@ def test_beginning_spell_count_standard_vs_advanced():
     assert spells.beginning_spell_count(e, cls, 13, adv) == 3
     assert spells.beginning_spell_count(e, cls, 9, adv) == 2
     assert spells.beginning_spell_count(e, cls, 18, adv) == 5
+
+
+def test_learn_adds_to_spellbook():
+    from aose.data.loader import GameData
+    from aose.engine import spells
+    data = GameData.load(DATA_DIR)
+    e = ClassEntry(class_id="magic_user", level=1, spellbook=[])
+    cls = data.classes["magic_user"]
+    e2 = spells.learn(e, cls, data, RuleSet(), "magic_missile")
+    assert e2.spellbook == ["magic_missile"]
+    assert e.spellbook == []  # original untouched
+
+
+def test_learn_rejects_off_list_or_off_level():
+    from aose.data.loader import GameData
+    from aose.engine import spells
+    data = GameData.load(DATA_DIR)
+    e = ClassEntry(class_id="magic_user", level=1)
+    cls = data.classes["magic_user"]
+    with pytest.raises(spells.SpellError):
+        spells.learn(e, cls, data, RuleSet(), "faerie_fire")   # druid-only
+
+
+def test_learn_standard_caps_at_memorizable():
+    from aose.data.loader import GameData
+    from aose.engine import spells
+    data = GameData.load(DATA_DIR)
+    e = ClassEntry(class_id="magic_user", level=1, spellbook=["magic_missile"])
+    cls = data.classes["magic_user"]
+    with pytest.raises(spells.SpellError):
+        spells.learn(e, cls, data, RuleSet(), "sleep")
+    e3 = spells.learn(e, cls, data, RuleSet(advanced_spell_books=True), "sleep")
+    assert set(e3.spellbook) == {"magic_missile", "sleep"}
+
+
+def test_learn_rejects_divine():
+    from aose.data.loader import GameData
+    from aose.engine import spells
+    data = GameData.load(DATA_DIR)
+    e = ClassEntry(class_id="druid", level=1)
+    with pytest.raises(spells.SpellError):
+        spells.learn(e, data.classes["druid"], data, RuleSet(), "faerie_fire")
+
+
+def test_forget_removes():
+    from aose.engine import spells
+    e = ClassEntry(class_id="magic_user", level=1, spellbook=["magic_missile", "sleep"])
+    e2 = spells.forget(e, "magic_missile")
+    assert e2.spellbook == ["sleep"]
+
+
+def test_prepare_respects_known_and_slot_cap():
+    from aose.data.loader import GameData
+    from aose.engine import spells
+    data = GameData.load(DATA_DIR)
+    cls = data.classes["magic_user"]
+    e = ClassEntry(class_id="magic_user", level=1, spellbook=["magic_missile"])
+    e2 = spells.prepare(e, cls, data, "magic_missile")
+    assert e2.prepared == ["magic_missile"]
+    with pytest.raises(spells.SpellError):
+        spells.prepare(e2, cls, data, "magic_missile")   # exceeds the single slot
+    with pytest.raises(spells.SpellError):
+        spells.prepare(e, cls, data, "sleep")            # not known
+
+
+def test_prepare_divine_from_full_list():
+    from aose.data.loader import GameData
+    from aose.engine import spells
+    data = GameData.load(DATA_DIR)
+    cls = data.classes["druid"]
+    e = ClassEntry(class_id="druid", level=1)
+    e2 = spells.prepare(e, cls, data, "faerie_fire")
+    assert e2.prepared == ["faerie_fire"]
+
+
+def test_unprepare_removes_one_instance():
+    from aose.engine import spells
+    e = ClassEntry(class_id="druid", level=1, prepared=["faerie_fire", "faerie_fire"])
+    e2 = spells.unprepare(e, "faerie_fire")
+    assert e2.prepared == ["faerie_fire"]

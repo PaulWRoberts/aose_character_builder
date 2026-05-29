@@ -120,3 +120,73 @@ def beginning_spell_count(entry: ClassEntry, cls: CharClass, int_score: int,
     if ruleset.advanced_spell_books:
         return beginning_spells_for_int(int_score)
     return sum(memorizable_slots(entry, cls).values())
+
+
+# ── Mutators (return a new ClassEntry; raise SpellError on violation) ───────
+
+def _require_spell(data: GameData, spell_id: str) -> Spell:
+    spell = data.spells.get(spell_id)
+    if spell is None:
+        raise SpellError(f"Unknown spell {spell_id!r}")
+    return spell
+
+
+def learn(entry: ClassEntry, cls: CharClass, data: GameData, ruleset: RuleSet,
+          spell_id: str) -> ClassEntry:
+    """Add a spell to an arcane caster's spellbook.
+
+    Enforces: arcane only; spell on a class list and at an accessible level;
+    not already known; and (standard rules) the per-level spellbook cap."""
+    if caster_type_of(cls, data) != "arcane":
+        raise SpellError(f"{cls.id!r} is not an arcane caster; nothing to learn")
+    spell = _require_spell(data, spell_id)
+    if not _on_class_lists(spell, cls):
+        raise SpellError(f"{spell_id!r} is not on {cls.id!r}'s spell list")
+    if spell.level not in accessible_levels(entry, cls):
+        raise SpellError(f"{spell_id!r} (level {spell.level}) is not castable yet")
+    if spell_id in entry.spellbook:
+        raise SpellError(f"{spell_id!r} is already known")
+    if not ruleset.advanced_spell_books:
+        cap = memorizable_slots(entry, cls).get(spell.level, 0)
+        have = sum(1 for s in entry.spellbook
+                   if s in data.spells and data.spells[s].level == spell.level)
+        if have >= cap:
+            raise SpellError(
+                f"Standard spell-book rules: only {cap} level-{spell.level} "
+                f"spell(s) may be known at this level"
+            )
+    return entry.model_copy(update={"spellbook": [*entry.spellbook, spell_id]})
+
+
+def forget(entry: ClassEntry, spell_id: str) -> ClassEntry:
+    if spell_id not in entry.spellbook:
+        raise SpellError(f"{spell_id!r} is not in the spell book")
+    book = list(entry.spellbook)
+    book.remove(spell_id)
+    return entry.model_copy(update={"spellbook": book})
+
+
+def prepare(entry: ClassEntry, cls: CharClass, data: GameData,
+            spell_id: str) -> ClassEntry:
+    """Add a spell to the daily prepared loadout.
+
+    Enforces: spell is known (arcane spellbook / divine full list) and a free
+    slot exists at its level (hard cap)."""
+    spell = _require_spell(data, spell_id)
+    known_ids = {s.id for s in known_spells(entry, cls, data)}
+    if spell_id not in known_ids:
+        raise SpellError(f"{spell_id!r} is not known and cannot be prepared")
+    cap = memorizable_slots(entry, cls).get(spell.level, 0)
+    used = sum(1 for s in entry.prepared
+               if s in data.spells and data.spells[s].level == spell.level)
+    if used >= cap:
+        raise SpellError(f"No free level-{spell.level} slot (cap {cap})")
+    return entry.model_copy(update={"prepared": [*entry.prepared, spell_id]})
+
+
+def unprepare(entry: ClassEntry, spell_id: str) -> ClassEntry:
+    if spell_id not in entry.prepared:
+        raise SpellError(f"{spell_id!r} is not prepared")
+    prep = list(entry.prepared)
+    prep.remove(spell_id)
+    return entry.model_copy(update={"prepared": prep})
