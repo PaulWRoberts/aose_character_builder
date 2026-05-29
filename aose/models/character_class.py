@@ -51,5 +51,8 @@ class CharClass(BaseModel):
     proficiency: ProficiencyConfig | None = None
     progression: dict[int, ClassLevelData] = Field(default_factory=dict)
     features: list[ClassFeature] = Field(default_factory=list)
+    # Spell-list IDs this class casts from (e.g. ["magic_user"]). Empty = non-caster.
+    # How-many-slots lives in progression[].spell_slots; this is which-pool.
+    spell_lists: list[str] = Field(default_factory=list)
     # When set, this entry is a race-as-class option (e.g., classic OSE Dwarf).
     race_locked: str | None = None
