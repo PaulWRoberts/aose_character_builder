@@ -25,8 +25,9 @@ unused `ClassEntry.chosen_spells` field. There is currently **no spell data**
 AOSE separates two layers, and the builder models both faithfully:
 
 - **Known** — what a caster can potentially prepare.
-  - *Arcane* (magic-user, elf, illusionist): a **spellbook** — a limited,
-    selected set. Grows via leveling, scrolls, and research.
+  - *Arcane* (magic-user, elf, illusionist): a **spellbook** — a *selected* set.
+    Its size is governed by the spellbook rules (standard: exactly the memorizable
+    count; advanced: INT-determined beginning spells, then unbounded growth).
   - *Divine* (cleric, druid): the **entire** class list at accessible levels, known
     automatically. Nothing to select.
 - **Prepared** — the daily memorised loadout, chosen from known spells, **hard-capped**
@@ -44,12 +45,15 @@ behavior from the list(s) it references.
 |---|---|
 | Model | Faithful known-vs-prepared, both layers tracked |
 | Prepared cap | Hard cap by `spell_slots` per spell level |
-| Read Magic | Optional rule `free_read_magic`, wired end-to-end like other rules |
+| Spellbook rules | Standard (default) vs Advanced — Advanced is optional rule `advanced_spell_books` |
 | Wizard vs sheet | Wizard sets *known*; sheet manages *both* known and prepared |
 | Caster type home | On the spell list (a new `SpellList` registry), not the class |
-| Seed data | `read_magic` + a few L1 magic-user and druid spells |
-| Starting spellbook (RAW) | Read Magic + one 1st-level spell of choice (choose-count = L1 slot total) |
+| Seed data | A few L1 magic-user spells (incl. `read_magic` as an ordinary spell) and L1 druid spells |
 | Wizard step placement | After HP, before Equipment |
+
+There is **no special Read Magic rule** in OSE Advanced (the only such rule is the
+Carcass Crawler #5 cantrip treatment, which is out of scope). Read Magic is a
+normal magic-user spell chosen like any other.
 
 ## Architecture
 
@@ -108,45 +112,75 @@ Query / derivation:
   **Rejects** a class whose lists mix arcane and divine (`ValueError`).
 - `accessible_levels(entry, cls) -> set[int]` — spell levels with ≥1 slot at the
   entry's level (from `progression[level].spell_slots`).
-- `slot_counts(entry, cls) -> dict[int, int]` — spell-level → slot count at the
-  entry's level.
-- `known_spells(entry, cls, data, ruleset) -> list[Spell]`:
-  - *arcane*: resolve `entry.spellbook` to `Spell`s, plus `read_magic` if
-    `free_read_magic` is on, that spell exists in data, and it is on one of the
-    class's lists (no-ops gracefully if absent).
+- `memorizable_slots(entry, cls) -> dict[int, int]` — spell-level → slot count at
+  the entry's level. This is the per-level prepared cap **and** (under standard
+  rules) the per-level spellbook size.
+- `known_spells(entry, cls, data) -> list[Spell]`:
+  - *arcane*: resolve `entry.spellbook` to `Spell`s.
   - *divine*: every spell whose `spell_lists` intersect `cls.spell_lists` and whose
     `level` is in `accessible_levels`.
 - `learnable_spells(entry, cls, data) -> list[Spell]` — *arcane only*:
   accessible-level spells on the class's lists not already in the spellbook.
-- `starting_spellbook_size(entry, cls) -> int` — RAW: the class's L1 slot total
-  (1 for a magic-user). Used by the wizard to enforce the exact choose-count.
+- `beginning_spell_count(entry, cls, abilities, ruleset) -> int` — the number of
+  spells an arcane caster starts with, used by the wizard to enforce the exact
+  choose-count:
+  - *standard* (`advanced_spell_books` off): total memorizable at the entry's level
+    (sum of `memorizable_slots`) — 1 for an L1 magic-user.
+  - *advanced* (`advanced_spell_books` on): INT-table lookup (see table below).
+  At level 1 every beginning spell is necessarily 1st-level (the only accessible
+  level), so the count is the number of 1st-level spells to choose.
 
 Mutators (return new lists, raise `ValueError` on violation):
-- `learn(entry, cls, data, spell_id)` — arcane only; spell must be on a class list
-  and at an accessible level; not already known.
+- `learn(entry, cls, data, ruleset, spell_id)` — arcane only; spell must be on a
+  class list and at an accessible level; not already known. Under **standard**
+  rules the per-level spellbook size is capped at `memorizable_slots[L]`; under
+  **advanced** rules the spellbook is uncapped.
 - `forget(entry, spell_id)` — arcane only; removes a spellbook entry.
-- `prepare(entry, cls, data, ruleset, spell_id)` — spell must be **known**; a free
-  slot must exist at its level (hard cap); appends to `prepared`.
+- `prepare(entry, cls, data, spell_id)` — spell must be **known**; a free slot must
+  exist at its level (hard cap via `memorizable_slots`); appends to `prepared`.
 - `unprepare(entry, spell_id)` — removes one matching entry from `prepared`.
 
 **Access rule** ("would have access"): a spell is accessible to a class when it is
 on one of the class's `spell_lists` **and** its `level` is in `accessible_levels`
 (i.e. the class has a slot of that level at its current level). Learning and
 preparing both enforce this; preparing additionally enforces known-membership and
-the per-level slot cap.
+the per-level slot cap; learning under standard rules additionally enforces the
+per-level spellbook cap.
 
-### 4. Optional rule — `free_read_magic`
+### 4. Optional rule — `advanced_spell_books`
 
-`RuleSet.free_read_magic: bool = False`, wired through the full methodology:
-- `RULE_LABELS["free_read_magic"] = "Free Read Magic"`
-- a new **"Magic"** group in `RULE_GROUPS` with a one-line description
+OSE Advanced presents two spellbook rule sets (Player's Tome p112). The standard
+set is the default; the **Advanced Spell Book Rules** are the optional rule.
+
+`RuleSet.advanced_spell_books: bool = False`, wired through the full methodology:
+- `RULE_LABELS["advanced_spell_books"] = "Advanced Spell Books"`
+- a new **"Magic"** group in `RULE_GROUPS`, described as: "Arcane spellbooks have no
+  size limit and beginning spells are determined by Intelligence (instead of the
+  standard rule, where the book holds exactly the spells the caster can memorize)."
 - added to `IMPLEMENTED_RULES`
-- consumed by `known_spells` (auto-grants `read_magic` to arcane casters)
+- consumed by `beginning_spell_count` (INT-table vs memorizable count) and `learn`
+  (uncapped vs per-level cap).
 
-The rule governs only whether Read Magic is **auto-known**. It does not make Read
-Magic slot-free when prepared — that stays an ordinary slotted spell.
+The rule is arcane-only; divine casting is unaffected (divine casters never use a
+spellbook).
 
-A regression test asserts `free_read_magic` is in `IMPLEMENTED_RULES` (the
+**INT → Beginning Spells table** (advanced rule; Player's Tome p112). Copying
+chances are listed for reference but copying/research rolls are out of scope (see
+below):
+
+| INT | Beginning spells |
+|---|---|
+| 3 | 1 |
+| 4–5 | 1 |
+| 6–7 | 2 |
+| 8–9 | 2 |
+| 10–12 | 3 |
+| 13–14 | 3 |
+| 15–16 | 4 |
+| 17 | 4 |
+| 18 | 5 |
+
+A regression test asserts `advanced_spell_books` is in `IMPLEMENTED_RULES` (the
 existing "no pending badge on the settings page" guard).
 
 ### 5. Wizard step — `spells` (selects *known* only)
@@ -157,9 +191,10 @@ existing "no pending badge on the settings page" guard).
   `draft["spellcasting"]` boolean (true when any picked class casts at L1). It is
   cleared by the existing downstream-clear helpers (`_clear_after_*`) the same way
   `class_ids` is. The `spells` step is included only when `draft["spellcasting"]`.
-- **Arcane:** choose exactly `starting_spellbook_size` spells from the accessible
-  list; Read Magic shown as an auto-known badge when `free_read_magic` is on.
-  Exact-count validation, like the proficiencies step.
+- **Arcane:** choose exactly `beginning_spell_count` spells from the accessible
+  (level-1) list — that count is the memorizable total under standard rules, or the
+  INT-table value under `advanced_spell_books`. Exact-count validation, like the
+  proficiencies step. (The step shows which rule/count is in effect.)
 - **Divine:** read-only — "You know all level-1 <list> spells", list shown; the
   step auto-completes (nothing to submit).
 - `_draft_to_spec` carries `spellbook` into each `ClassEntry`; `prepared` starts
@@ -177,7 +212,10 @@ Each block:
 - **Prepared** list grouped by spell level with usage counts (e.g. "Level 1 — 1/1"),
   each with an Unprepare button.
 - *Arcane only:* a **Learn** control (from `learnable_spells`) and a **Forget**
-  control. Divine has neither (knows all).
+  control. Divine has neither (knows all). Learning is a GM-grant style add (no
+  copying/research dice in V1, mirroring the magic-items "add-only" approach);
+  under standard rules it is capped at the per-level memorizable count, under
+  `advanced_spell_books` it is uncapped.
 
 New view models on `CharacterSheet` (e.g. `SpellEntryView`, `SpellLevelGroup`,
 `SpellClassView`). `build_sheet` calls `spells_view`.
@@ -215,20 +253,25 @@ shape to the existing magic-item routes.
 
 ## Testing
 
-- **Engine:** access rules (on-list + accessible-level), slot caps (hard),
-  `free_read_magic` on/off, `learn`/`forget`/`prepare`/`unprepare` happy + error
-  paths, mixed-list class rejection, divine full-list derivation.
+- **Engine:** access rules (on-list + accessible-level), prepared slot caps (hard),
+  `beginning_spell_count` for standard (memorizable) vs advanced (INT-table, across
+  the table's INT bands), `learn` cap under standard vs uncapped under advanced,
+  `learn`/`forget`/`prepare`/`unprepare` happy + error paths, mixed-list class
+  rejection, divine full-list derivation.
 - **Wizard:** step gating (non-caster omits step; arcane vs divine behavior),
-  exact-count validation, `_draft_to_spec` spellbook round-trip, `spellcasting`
-  flag cleared on upstream changes.
+  exact-count validation under both spellbook rules, `_draft_to_spec` spellbook
+  round-trip, `spellcasting` flag cleared on upstream changes.
 - **Sheet:** `spells_view` shape for arcane vs divine; route happy/error paths.
-- **Settings regression:** `free_read_magic` in `IMPLEMENTED_RULES`.
+- **Settings regression:** `advanced_spell_books` in `IMPLEMENTED_RULES`.
 - **Loader:** `spell_lists.yaml` parsed; absent file → empty dict.
 - **Validator:** unresolved `spell_lists` reference fails.
 
 ## Out of scope (V1)
 
 - Spell drag-and-drop (buttons/forms only, like magic items V1).
+- Copying/research success rolls for adding spellbook spells (the INT copying-chance
+  column, magical research). Adds are GM-grant style.
+- The Carcass Crawler #5 "Read Magic as a cantrip" treatment.
 - Spontaneous / spell-point casters (a third mode beyond arcane/divine).
 - Spellcasting that begins above level 1 in the wizard (builder is L1-only; later
   levels are gained on the sheet, where prepared/known management already applies).
