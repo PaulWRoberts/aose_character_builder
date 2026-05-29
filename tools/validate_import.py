@@ -141,7 +141,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--type", dest="type_", help="validate all units of a type")
     args = parser.parse_args(argv)
 
-    manifest = load_manifest()
+    manifest = load_manifest(MANIFEST_PATH)
     only_incomplete = args.unit is None and args.type_ is None
     units = list(iter_units(
         manifest, unit=args.unit, type_=args.type_, only_incomplete=only_incomplete,

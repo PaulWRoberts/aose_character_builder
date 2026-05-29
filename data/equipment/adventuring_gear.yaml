@@ -71,19 +71,6 @@
   cost_gp: 1
   weight_cn: 50
 
-- id: sack_small
-  item_type: gear
-  name: Sack, Small
-  category: adventuring_gear
-  cost_gp: 1
-  weight_cn: 2
-
-- id: sack_large
-  item_type: gear
-  name: Sack, Large
-  category: adventuring_gear
-  cost_gp: 2
-  weight_cn: 5
 
 - id: stakes_and_mallet
   item_type: gear

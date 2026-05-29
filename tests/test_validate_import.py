@@ -10,6 +10,7 @@ from tools.validate_import import (
     iter_units,
     load_manifest,
     mark_validated,
+    main,
 )
 
 
@@ -137,3 +138,33 @@ def test_mark_validated_round_trips(tmp_path):
     reloaded = load_manifest(mpath)
     fighter = next(u for u in reloaded if u["unit"] == "class/fighter")
     assert fighter["validated"] is True
+
+
+# ---------------------------------------------------------------------------
+# Slice 4: CLI main()
+# ---------------------------------------------------------------------------
+
+def test_main_passes_on_clean_repo():
+    # Bare run against the real (clean) repo manifest + data.
+    assert main([]) == 0
+
+
+def test_main_reports_bad_unit(tmp_path, monkeypatch, capsys):
+    import tools.validate_import as vi
+
+    bad = tmp_path / "bad.yaml"
+    bad.write_text("id: x\nname: X\n", encoding="utf-8")  # missing required class fields
+    manifest = tmp_path / "manifest.yaml"
+    manifest.write_text(
+        f"- unit: class/x\n  type: class\n  yaml: {bad.as_posix()}\n  validated: false\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(vi, "MANIFEST_PATH", manifest)
+    monkeypatch.setattr(vi, "load_game_data", lambda *a, **k: [])
+    monkeypatch.setattr(vi, "all_duplicate_ids", lambda *a, **k: [])
+
+    rc = main(["--unit", "class/x"])
+    out = capsys.readouterr().out
+    assert rc == 1
+    assert "FAIL" in out
+    assert "class/x" in out
