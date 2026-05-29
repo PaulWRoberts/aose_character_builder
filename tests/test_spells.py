@@ -257,3 +257,43 @@ def test_unprepare_removes_one_instance():
     e = ClassEntry(class_id="druid", level=1, prepared=["faerie_fire", "faerie_fire"])
     e2 = spells.unprepare(e, "faerie_fire")
     assert e2.prepared == ["faerie_fire"]
+
+
+def test_spells_view_arcane_shape():
+    from aose.data.loader import GameData
+    from aose.sheet.view import build_sheet
+    data = GameData.load(DATA_DIR)
+    spec = _spec("magic_user", spellbook=["magic_missile"], prepared=["magic_missile"])
+    sheet = build_sheet(spec, data)
+    assert len(sheet.spells) == 1
+    block = sheet.spells[0]
+    assert block.caster_type == "arcane"
+    assert block.can_learn is True
+    assert [s.id for s in block.known] == ["magic_missile"]
+    grp = block.prepared_groups[0]
+    assert grp.level == 1 and grp.slots == 1
+    assert [s.id for s in grp.prepared] == ["magic_missile"]
+    assert any(s.id == "read_magic" for s in block.learnable)
+
+
+def test_spells_view_divine_shape():
+    from aose.data.loader import GameData
+    from aose.sheet.view import build_sheet
+    data = GameData.load(DATA_DIR)
+    spec = _spec("druid", abilities={"STR": 10, "INT": 10, "WIS": 13,
+                                     "DEX": 10, "CON": 10, "CHA": 10})
+    sheet = build_sheet(spec, data)
+    block = sheet.spells[0]
+    assert block.caster_type == "divine"
+    assert block.can_learn is False
+    assert block.learnable == []
+    assert {s.id for s in block.known} >= {"faerie_fire", "entangle"}
+
+
+def test_spells_view_empty_for_noncaster():
+    from aose.data.loader import GameData
+    from aose.sheet.view import build_sheet
+    data = GameData.load(DATA_DIR)
+    spec = _spec("fighter")
+    sheet = build_sheet(spec, data)
+    assert sheet.spells == []

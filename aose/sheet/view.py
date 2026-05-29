@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 
 from aose.data.loader import GameData
-from aose.engine import ability_mods, armor_class, attack_bonus, hp, saves
+from aose.engine import ability_mods, armor_class, attack_bonus, hp, saves, spells as spell_engine
 from aose.engine.attacks import AttackProfile, attack_profiles
 from aose.engine.encumbrance import (
     EncumbranceTable,
@@ -94,6 +94,30 @@ class MagicItemView(BaseModel):
     modifier_summary: list[str]
 
 
+class SpellEntryView(BaseModel):
+    id: str
+    name: str
+    level: int
+    description: str
+    reversible: bool
+
+
+class SpellLevelGroup(BaseModel):
+    level: int
+    slots: int
+    prepared: list[SpellEntryView]
+
+
+class SpellClassView(BaseModel):
+    class_id: str
+    class_name: str
+    caster_type: str            # "arcane" | "divine"
+    can_learn: bool             # arcane only
+    known: list[SpellEntryView]
+    prepared_groups: list[SpellLevelGroup]
+    learnable: list[SpellEntryView]
+
+
 class CharacterSheet(BaseModel):
     name: str
     race_name: str
@@ -138,6 +162,7 @@ class CharacterSheet(BaseModel):
     weapon_proficiency_active: bool
 
     magic_items: list[MagicItemView]
+    spells: list["SpellClassView"]
 
     enabled_optional_rules: list[str]
     encumbrance_mode: str
@@ -371,6 +396,45 @@ def _is_race_as_class(spec: CharacterSpec, data: GameData) -> bool:
     return cls.race_locked == spec.race_id
 
 
+def _spell_entry(spell) -> SpellEntryView:
+    return SpellEntryView(
+        id=spell.id, name=spell.name, level=spell.level,
+        description=spell.description, reversible=spell.reversible,
+    )
+
+
+def spells_view(spec: CharacterSpec, data: GameData) -> list["SpellClassView"]:
+    """One block per casting class entry; shared by the live sheet and the
+    wizard review.  Arcane blocks expose learnable spells; divine know their
+    whole accessible list."""
+    out: list[SpellClassView] = []
+    for entry in spec.classes:
+        cls = data.classes[entry.class_id]
+        ctype = spell_engine.caster_type_of(cls, data)
+        if ctype is None:
+            continue
+        known = spell_engine.known_spells(entry, cls, data)
+        slots = spell_engine.memorizable_slots(entry, cls)
+        groups: list[SpellLevelGroup] = []
+        for level in sorted(slots):
+            prepared_here = [
+                _spell_entry(data.spells[s]) for s in entry.prepared
+                if s in data.spells and data.spells[s].level == level
+            ]
+            groups.append(SpellLevelGroup(level=level, slots=slots[level],
+                                          prepared=prepared_here))
+        out.append(SpellClassView(
+            class_id=entry.class_id,
+            class_name=cls.name,
+            caster_type=ctype,
+            can_learn=(ctype == "arcane"),
+            known=[_spell_entry(s) for s in known],
+            prepared_groups=groups,
+            learnable=[_spell_entry(s) for s in spell_engine.learnable_spells(entry, cls, data)],
+        ))
+    return out
+
+
 def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
     race = data.races[spec.race_id]
 
@@ -438,6 +502,7 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
         proficiencies=_proficiency_display(spec, data),
         weapon_proficiency_active=spec.ruleset.weapon_proficiency,
         magic_items=_magic_items(spec, data),
+        spells=spells_view(spec, data),
         enabled_optional_rules=_enabled_optional_rules(spec.ruleset),
         encumbrance_mode=spec.ruleset.encumbrance,
         encumbrance_description=ENCUMBRANCE_DESCRIPTIONS.get(
