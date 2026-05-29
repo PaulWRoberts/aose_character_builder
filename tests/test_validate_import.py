@@ -3,7 +3,14 @@ from pathlib import Path
 
 import pytest
 
-from tools.validate_import import validate_file, duplicate_ids_in_dir, load_game_data
+from tools.validate_import import (
+    validate_file,
+    duplicate_ids_in_dir,
+    load_game_data,
+    iter_units,
+    load_manifest,
+    mark_validated,
+)
 
 
 def _write(path: Path, text: str) -> Path:
@@ -86,3 +93,47 @@ def test_duplicate_ids_clean(tmp_path):
 def test_load_game_data_real_dir():
     # The shipped data/ must load cleanly.
     assert load_game_data() == []
+
+
+# ---------------------------------------------------------------------------
+# Slice 3: manifest read/write + unit iteration
+# ---------------------------------------------------------------------------
+
+_MANIFEST_TEXT = """
+- unit: class/fighter
+  type: class
+  yaml: data/classes/fighter.yaml
+  validated: false
+- unit: spell/ose-advanced-arcane
+  type: spell
+  yaml: data/spells/ose_advanced_spells.yaml
+  validated: true
+"""
+
+
+def test_load_and_filter_units(tmp_path):
+    mpath = tmp_path / "manifest.yaml"
+    mpath.write_text(_MANIFEST_TEXT, encoding="utf-8")
+    manifest = load_manifest(mpath)
+
+    assert [u["unit"] for u in iter_units(manifest)] == [
+        "class/fighter", "spell/ose-advanced-arcane",
+    ]
+    assert [u["unit"] for u in iter_units(manifest, only_incomplete=True)] == [
+        "class/fighter",
+    ]
+    assert [u["unit"] for u in iter_units(manifest, type_="spell")] == [
+        "spell/ose-advanced-arcane",
+    ]
+    assert [u["unit"] for u in iter_units(manifest, unit="class/fighter")] == [
+        "class/fighter",
+    ]
+
+
+def test_mark_validated_round_trips(tmp_path):
+    mpath = tmp_path / "manifest.yaml"
+    mpath.write_text(_MANIFEST_TEXT, encoding="utf-8")
+    mark_validated(mpath, "class/fighter")
+    reloaded = load_manifest(mpath)
+    fighter = next(u for u in reloaded if u["unit"] == "class/fighter")
+    assert fighter["validated"] is True
