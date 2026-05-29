@@ -66,10 +66,10 @@ def test_seed_spells_loaded_and_tagged():
     data = GameData.load(DATA_DIR)
     rm = data.spells["read_magic"]
     assert rm.level == 1
-    assert "magic_user" in rm.spell_lists
-    # detect_magic is shared by both lists
-    dm = data.spells["detect_magic"]
-    assert {"magic_user", "druid"} <= set(dm.spell_lists)
+    assert rm.spell_lists == ["magic_user"]
+    # Druid L1 spells are tagged for the druid list only (RAW: no L1 spell is
+    # shared between the magic-user and druid lists).
+    assert data.spells["faerie_fire"].spell_lists == ["druid"]
 
 
 def test_magic_user_class_tags_its_list():

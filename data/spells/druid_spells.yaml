@@ -3,10 +3,13 @@
   level: 1
   spell_lists: [druid]
   source: ose-advanced
-  range: "80'"
+  range: "60'"
   duration: 1 turn
   description: >-
-    Outlines targets in pale glowing light, granting attackers +2 to hit them.
+    Selected objects or creatures in range are outlined with a lambent green
+    fire. Harmless in itself, the glow counters invisibility and concealment
+    and makes the targets easier to strike. The number/size of targets grows
+    with caster level.
 - id: entangle
   name: Entangle
   level: 1
@@ -15,13 +18,16 @@
   range: "80'"
   duration: 1 turn
   description: >-
-    Plants in the area of effect entangle and hold creatures that fail a save
-    versus spells.
+    All plants in a 20' radius within range twist and entangle creatures in the
+    area. A creature that fails a save versus spells cannot move; one that
+    succeeds moves through at half rate.
 - id: predict_weather
   name: Predict Weather
   level: 1
   spell_lists: [druid]
   source: ose-advanced
-  range: "0 (caster)"
-  duration: 12 hours
-  description: The caster learns the weather for the coming 12 hours within 1 mile.
+  range: 1 mile diameter per level
+  duration: instant
+  description: >-
+    The caster gains accurate knowledge of the weather within range over the
+    next 12 hours.

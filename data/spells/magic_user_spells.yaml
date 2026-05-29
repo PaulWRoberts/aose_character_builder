@@ -3,29 +3,35 @@
   level: 1
   spell_lists: [magic_user]
   source: ose-advanced
-  range: "0 (caster)"
+  range: The caster
   duration: 1 turn
   description: >-
-    The caster can read magical writing (e.g. spell books, scrolls). The spell
-    does not activate the magic in writing, but reveals what it is.
+    The caster can decipher magical inscriptions or runes: the script of an
+    arcane scroll (which may then be activated later), another caster's spell
+    book, or runes inscribed on an object. Once read, that particular writing
+    can thereafter be read without the spell.
 - id: detect_magic
   name: Detect Magic
   level: 1
-  spell_lists: [magic_user, druid]
+  spell_lists: [magic_user]
   source: ose-advanced
   range: "60'"
   duration: 2 turns
-  description: Magical items, places, or auras within range glow when viewed by the caster.
+  description: >-
+    Enchanted objects, areas, or creatures are caused to glow. Both permanent
+    and temporary enchantments are revealed.
 - id: magic_missile
   name: Magic Missile
   level: 1
   spell_lists: [magic_user]
   source: ose-advanced
   range: "150'"
-  duration: instant
+  duration: 1 turn
   description: >-
-    A glowing dart speeds toward a target and strikes unerringly for 1d6+1
-    damage. +1 missile at levels 6, 11, and 16.
+    Conjures a glowing dart of energy that strikes a visible target unerringly
+    (no attack roll or save) for 1d6+1 damage. Two additional missiles are
+    conjured per five levels of the caster (three missiles at 6th-10th, five at
+    11th-15th, etc.); multiple missiles may target one creature.
 - id: sleep
   name: Sleep
   level: 1
@@ -34,15 +40,18 @@
   range: "240'"
   duration: 4d4 turns
   description: >-
-    Puts 2d8 Hit Dice of living creatures into an enchanted slumber. Affects the
-    lowest-HD creatures first. Creatures of 4+1 HD or more are unaffected.
+    Causes a magical slumber (the undead are immune). Targets either a single
+    creature of 4+1 HD, or a total of 2d8 HD of creatures of 4 HD or less each
+    (weakest first; excess rolled HD is wasted).
 - id: charm_person
   name: Charm Person
   level: 1
   spell_lists: [magic_user]
   source: ose-advanced
   range: "120'"
-  duration: until dispelled
+  duration: One or more days
   description: >-
-    One humanoid creature of up to 4+1 HD must save versus spells or regard the
-    caster as a trusted friend and ally.
+    A single human, demihuman, or human-like monster of up to 4+1 HD must save
+    versus spells or regard the caster as a trusted friend and ally, obeying
+    commands they share a language for (never suicidal or clearly harmful ones).
+    Undead and human-like monsters above 4+1 HD are unaffected.
