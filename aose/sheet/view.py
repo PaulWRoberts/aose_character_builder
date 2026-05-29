@@ -162,7 +162,7 @@ class CharacterSheet(BaseModel):
     weapon_proficiency_active: bool
 
     magic_items: list[MagicItemView]
-    spells: list["SpellClassView"]
+    spells: list[SpellClassView]
 
     enabled_optional_rules: list[str]
     encumbrance_mode: str
@@ -403,7 +403,7 @@ def _spell_entry(spell) -> SpellEntryView:
     )
 
 
-def spells_view(spec: CharacterSpec, data: GameData) -> list["SpellClassView"]:
+def spells_view(spec: CharacterSpec, data: GameData) -> list[SpellClassView]:
     """One block per casting class entry; shared by the live sheet and the
     wizard review.  Arcane blocks expose learnable spells; divine know their
     whole accessible list."""
