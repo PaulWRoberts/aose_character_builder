@@ -58,3 +58,4 @@ def test_thorin_example_loads():
     raw = json.loads((PROJECT_ROOT / "examples" / "thorin.json").read_text(encoding="utf-8"))
     spec = CharacterSpec.model_validate(raw)
     assert spec.classes[0].spellbook == []
+    assert spec.classes[0].prepared == []
