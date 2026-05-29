@@ -80,3 +80,68 @@ def test_sheet_renders_spells_section(client):
     r = client.get("/character/mu")
     assert r.status_code == 200
     assert "Magic Missile" in r.text
+
+
+def _start_caster_draft(client, class_id, int_score=13, advanced=False):
+    """Drive the wizard to just-before the spells step for a single caster."""
+    r = client.get("/wizard/new")
+    draft_id = r.headers["location"].rsplit("/", 2)[1]
+    draft = load_draft(draft_id, client._drafts_dir)
+    draft["abilities"] = {"STR": 10, "INT": int_score, "WIS": 13,
+                          "DEX": 10, "CON": 10, "CHA": 10}
+    draft["ruleset"]["advanced_spell_books"] = advanced
+    save_draft(draft_id, draft, client._drafts_dir)
+    client.post(f"/wizard/{draft_id}/abilities", data={"name": "Caster"})
+    client.post(f"/wizard/{draft_id}/race", data={"race_id": "human"})
+    client.post(f"/wizard/{draft_id}/class", data={"class_id": class_id})
+    client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "neutral"})
+    client.post(f"/wizard/{draft_id}/hp/roll")
+    client.post(f"/wizard/{draft_id}/hp")
+    return draft_id
+
+
+def test_wizard_skips_spells_for_noncaster(client):
+    r = client.get("/wizard/new")
+    draft_id = r.headers["location"].rsplit("/", 2)[1]
+    client.post(f"/wizard/{draft_id}/abilities", data={"name": "Grog"})
+    client.post(f"/wizard/{draft_id}/race", data={"race_id": "human"})
+    client.post(f"/wizard/{draft_id}/class", data={"class_id": "fighter"})
+    client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "law"})
+    client.post(f"/wizard/{draft_id}/hp/roll")
+    r = client.post(f"/wizard/{draft_id}/hp")
+    assert r.headers["location"].endswith("/equipment")
+
+
+def test_wizard_arcane_requires_exact_count(client):
+    draft_id = _start_caster_draft(client, "magic_user")  # standard -> 1 spell
+    r = client.get(f"/wizard/{draft_id}/spells")
+    assert r.status_code == 200 and "Magic Missile" in r.text
+    bad = client.post(f"/wizard/{draft_id}/spells",
+                      data={"class_id": "magic_user",
+                            "spell_id": ["magic_missile", "sleep"]})
+    assert bad.status_code == 400
+    ok = client.post(f"/wizard/{draft_id}/spells",
+                     data={"class_id": "magic_user", "spell_id": ["magic_missile"]})
+    assert ok.status_code == 303
+    draft = load_draft(draft_id, client._drafts_dir)
+    assert draft["spellbooks"]["magic_user"] == ["magic_missile"]
+
+
+def test_wizard_divine_autocompletes(client):
+    draft_id = _start_caster_draft(client, "druid", int_score=10)
+    r = client.get(f"/wizard/{draft_id}/spells")
+    assert r.status_code == 200 and "know" in r.text.lower()
+    r = client.post(f"/wizard/{draft_id}/spells", data={"class_id": "druid"})
+    assert r.headers["location"].endswith("/equipment")
+
+
+def test_wizard_finalize_persists_spellbook(client):
+    draft_id = _start_caster_draft(client, "magic_user")
+    client.post(f"/wizard/{draft_id}/spells",
+                data={"class_id": "magic_user", "spell_id": ["magic_missile"]})
+    client.get(f"/wizard/{draft_id}/equipment")
+    client.post(f"/wizard/{draft_id}/equipment")
+    r = client.post(f"/wizard/{draft_id}/finalize")
+    char_id = r.headers["location"].rsplit("/", 1)[1]
+    spec = load_character(char_id, client._characters_dir)
+    assert spec.classes[0].spellbook == ["magic_missile"]

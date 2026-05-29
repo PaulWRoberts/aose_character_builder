@@ -17,6 +17,7 @@ from aose.characters import (
     unique_character_id,
 )
 from aose.engine.ability_mods import ability_modifier
+from aose.engine import spells as spell_engine
 from aose.engine.dice import roll_3d6_in_order, roll_4d6_drop_lowest_in_order, roll_hp
 from aose.engine.equip import equip as _equip, unequip as _unequip
 from aose.engine.magic import (
@@ -84,6 +85,7 @@ STEP_LABELS = {
     "skill": "Secondary Skill",
     "proficiencies": "Proficiencies",
     "hp": "Hit Points",
+    "spells": "Spells",
     "equipment": "Equipment",
     "review": "Review",
 }
@@ -109,7 +111,10 @@ def _wizard_steps(draft: dict[str, Any]) -> list[str]:
         steps.append("skill")
     if rs.weapon_proficiency:
         steps.append("proficiencies")
-    steps += ["hp", "equipment", "review"]
+    steps.append("hp")
+    if draft.get("spellcasting"):
+        steps.append("spells")
+    steps += ["equipment", "review"]
     return steps
 ABILITY_ORDER = [Ability.STR, Ability.INT, Ability.WIS, Ability.DEX, Ability.CON, Ability.CHA]
 ALIGNMENT_LABELS = {"law": "Lawful", "neutral": "Neutral", "chaos": "Chaotic"}
@@ -147,22 +152,30 @@ def _class_ids(draft: dict[str, Any]) -> list[str]:
     return []
 
 
+def _casts_at_level_1(cls) -> bool:
+    """True if the class has a spell list and at least one spell slot at L1."""
+    row = cls.progression.get(1)
+    return bool(cls.spell_lists) and bool(row and row.spell_slots)
+
+
 # ── Downstream-clear helpers (used when the user navigates back and changes
 # an earlier choice — keeps the draft from carrying stale data) ───────────
 
 def _clear_after_abilities(draft: dict[str, Any]) -> None:
     for k in ("race_id", "class_id", "class_ids", "hp_roll", "hp_rolls",
-             "proficiencies"):
+             "proficiencies", "spellcasting", "spellbooks", "spells_done"):
         draft.pop(k, None)
 
 
 def _clear_after_race(draft: dict[str, Any]) -> None:
-    for k in ("class_id", "class_ids", "hp_roll", "hp_rolls", "proficiencies"):
+    for k in ("class_id", "class_ids", "hp_roll", "hp_rolls", "proficiencies",
+              "spellcasting", "spellbooks", "spells_done"):
         draft.pop(k, None)
 
 
 def _clear_after_class(draft: dict[str, Any]) -> None:
-    for k in ("hp_roll", "hp_rolls", "proficiencies"):
+    for k in ("hp_roll", "hp_rolls", "proficiencies",
+              "spellcasting", "spellbooks", "spells_done"):
         draft.pop(k, None)
 
 
@@ -188,6 +201,8 @@ def _next_incomplete_step(draft: dict[str, Any]) -> str:
         return "proficiencies"
     if not _has_hp(draft):
         return "hp"
+    if draft.get("spellcasting") and not draft.get("spells_done"):
+        return "spells"
     if "gold" not in draft:
         return "equipment"
     return "review"
@@ -574,6 +589,14 @@ async def get_class(request: Request, draft_id: str):
     return templates.TemplateResponse(request, "wizard.html", ctx)
 
 
+def _set_spellcasting_flag(draft: dict[str, Any], data) -> None:
+    """Cache whether any picked class casts at L1 so the draft-only step
+    helpers (_wizard_steps / _next_incomplete_step) can gate the spells step."""
+    draft["spellcasting"] = any(
+        _casts_at_level_1(data.classes[cid]) for cid in _class_ids(draft)
+    )
+
+
 @router.post("/{draft_id}/class")
 async def post_class(request: Request, draft_id: str, class_id: str = Form(...)):
     """Accept either a single class id (``"fighter"``) or a comma-joined combo
@@ -619,6 +642,7 @@ async def post_class(request: Request, draft_id: str, class_id: str = Form(...))
             _clear_after_class(draft)
         draft.pop("class_ids", None)
         draft["class_id"] = cid
+        _set_spellcasting_flag(draft, data)
         save_draft(draft_id, draft, _drafts_dir(request))
         return _redirect(f"/wizard/{draft_id}/{_next_incomplete_step(draft)}")
 
@@ -654,6 +678,7 @@ async def post_class(request: Request, draft_id: str, class_id: str = Form(...))
         _clear_after_class(draft)
     draft.pop("class_id", None)
     draft["class_ids"] = ids
+    _set_spellcasting_flag(draft, data)
     save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/{_next_incomplete_step(draft)}")
 
@@ -910,6 +935,93 @@ async def post_hp(request: Request, draft_id: str):
     draft = _load(request, draft_id)
     if not _has_hp(draft):
         raise HTTPException(400, "Roll HP first")
+    return _redirect(f"/wizard/{draft_id}/{_next_incomplete_step(draft)}")
+
+
+# ── Spells (optional step; only when a picked class casts at L1) ───────────
+
+def _caster_entries(draft: dict[str, Any], data) -> list[dict]:
+    """Per-casting-class rendering rows for the spells step."""
+    abilities = draft["abilities"]
+    ruleset = _ruleset_of(draft)
+    int_score = abilities.get("INT", 10)
+    books = draft.get("spellbooks", {})
+    rows: list[dict] = []
+    for cid in _class_ids(draft):
+        cls = data.classes[cid]
+        if not _casts_at_level_1(cls):
+            continue
+        entry = ClassEntry(class_id=cid, level=1, spellbook=books.get(cid, []))
+        ctype = spell_engine.caster_type_of(cls, data)
+        candidates = sorted(
+            (s for s in data.spells.values()
+             if set(s.spell_lists) & set(cls.spell_lists)
+             and s.level in spell_engine.accessible_levels(entry, cls)),
+            key=lambda s: (s.level, s.name),
+        )
+        rows.append({
+            "class_id": cid,
+            "class_name": cls.name,
+            "caster_type": ctype,
+            "required": (spell_engine.beginning_spell_count(entry, cls, int_score, ruleset)
+                         if ctype == "arcane" else 0),
+            "advanced": ruleset.advanced_spell_books,
+            "candidates": [{"id": s.id, "name": s.name, "level": s.level,
+                            "description": s.description,
+                            "selected": s.id in books.get(cid, [])}
+                           for s in candidates],
+        })
+    return rows
+
+
+@router.get("/{draft_id}/spells", response_class=HTMLResponse)
+async def get_spells(request: Request, draft_id: str):
+    draft = _load(request, draft_id)
+    redirect = _gate(draft, "spells", draft_id)
+    if redirect:
+        return redirect
+    ctx = _base_context(request, draft_id, draft, "spells")
+    ctx["caster_classes"] = _caster_entries(draft, request.app.state.game_data)
+    return templates.TemplateResponse(request, "wizard.html", ctx)
+
+
+@router.post("/{draft_id}/spells")
+async def post_spells(request: Request, draft_id: str):
+    draft = _load(request, draft_id)
+    data = request.app.state.game_data
+    form = await request.form()
+    int_score = draft["abilities"].get("INT", 10)
+    ruleset = _ruleset_of(draft)
+    books: dict[str, list[str]] = dict(draft.get("spellbooks", {}))
+
+    for cid in _class_ids(draft):
+        cls = data.classes[cid]
+        if not _casts_at_level_1(cls):
+            continue
+        entry = ClassEntry(class_id=cid, level=1)
+        ctype = spell_engine.caster_type_of(cls, data)
+        if ctype != "arcane":
+            books[cid] = []
+            continue
+        chosen = form.getlist(f"spell_{cid}") or form.getlist("spell_id")
+        chosen = list(dict.fromkeys(chosen))
+        required = spell_engine.beginning_spell_count(entry, cls, int_score, ruleset)
+        if len(chosen) != required:
+            raise HTTPException(
+                400, f"{cls.name} must choose exactly {required} starting spell(s); "
+                     f"got {len(chosen)}."
+            )
+        accessible = spell_engine.accessible_levels(entry, cls)
+        for sid in chosen:
+            spell = data.spells.get(sid)
+            if spell is None or not (set(spell.spell_lists) & set(cls.spell_lists)) \
+                    or spell.level not in accessible:
+                raise HTTPException(400, f"{sid!r} is not a valid {cls.name} starting spell.")
+        books[cid] = chosen
+
+    draft["spellbooks"] = books
+    draft["spells_done"] = True
+    save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/{_next_incomplete_step(draft)}")
 
 
@@ -1363,8 +1475,10 @@ def _draft_to_spec(draft: dict[str, Any]) -> CharacterSpec:
             f"Draft inconsistency: {len(ids)} class(es) vs {len(hp_rolls)} HP roll(s)"
         )
 
+    books = draft.get("spellbooks", {})
     classes = [
-        ClassEntry(class_id=cid, level=1, hp_rolls=[hp_rolls[i]])
+        ClassEntry(class_id=cid, level=1, hp_rolls=[hp_rolls[i]],
+                   spellbook=list(books.get(cid, [])))
         for i, cid in enumerate(ids)
     ]
     return CharacterSpec(

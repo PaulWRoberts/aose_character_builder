@@ -1,0 +1,42 @@
+<h2>Spells</h2>
+
+{% for c in caster_classes %}
+<div class="spell-class">
+    <h3>{{ c.class_name }}</h3>
+
+    {% if c.caster_type == "divine" %}
+    <p>{{ c.class_name }} casters know <strong>every spell</strong> on their list
+       that they are high enough level to cast. Nothing to choose here &mdash; you'll
+       pick which spells to prepare each day on the character sheet.</p>
+    <ul>
+        {% for s in c.candidates %}
+        <li><strong>{{ s.name }}</strong> <span class="small muted">(L{{ s.level }})</span></li>
+        {% endfor %}
+    </ul>
+    <form method="post" action="/wizard/{{ draft_id }}/spells" class="step-form">
+        <input type="hidden" name="class_id" value="{{ c.class_id }}">
+        <button type="submit" class="primary">Next: Equipment &rarr;</button>
+    </form>
+
+    {% else %}
+    <p>Choose <strong>{{ c.required }}</strong> starting spell(s) for your spell
+       book{% if c.advanced %} (Advanced Spell Book rules: determined by Intelligence){% else %} (the spells you can memorise at this level){% endif %}.</p>
+    <form method="post" action="/wizard/{{ draft_id }}/spells" class="step-form"
+          data-required="{{ c.required }}">
+        <input type="hidden" name="class_id" value="{{ c.class_id }}">
+        <div class="card-grid">
+            {% for s in c.candidates %}
+            <label class="card {% if s.selected %}selected{% endif %}">
+                <input type="checkbox" name="spell_{{ c.class_id }}" value="{{ s.id }}"
+                       class="spell-checkbox" {% if s.selected %}checked{% endif %}>
+                <div class="card-name">{{ s.name }}</div>
+                <div class="card-detail small">{{ s.description }}</div>
+            </label>
+            {% endfor %}
+        </div>
+        <p class="muted spell-counter">Pick exactly {{ c.required }}.</p>
+        <button type="submit" class="primary">Next: Equipment &rarr;</button>
+    </form>
+    {% endif %}
+</div>
+{% endfor %}
