@@ -5,6 +5,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 
 from aose.characters.storage import list_character_ids, load_character, save_character
+from aose.engine import spells as spell_engine
 from aose.engine.equip import equip as _equip, unequip as _unequip
 from aose.engine.leveling import level_up as _level_up
 from aose.engine.magic import (
@@ -501,6 +502,73 @@ async def equipment_magic_note(request: Request, character_id: str,
     spec = _load_spec_or_404(request, character_id)
     try:
         spec.magic_items = _set_magic_note(spec.magic_items, instance_id, note)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+# ── Spell management on the live sheet ─────────────────────────────────────
+
+def _find_class_entry(spec, class_id: str) -> int:
+    for i, e in enumerate(spec.classes):
+        if e.class_id == class_id:
+            return i
+    raise HTTPException(400, f"Character has no class {class_id!r}")
+
+
+@router.post("/character/{character_id}/spells/learn")
+async def sheet_spell_learn(request: Request, character_id: str,
+                            class_id: str = Form(...), spell_id: str = Form(...)):
+    spec = _load_spec_or_404(request, character_id)
+    data = request.app.state.game_data
+    idx = _find_class_entry(spec, class_id)
+    try:
+        spec.classes[idx] = spell_engine.learn(
+            spec.classes[idx], data.classes[class_id], data, spec.ruleset, spell_id,
+        )
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/spells/forget")
+async def sheet_spell_forget(request: Request, character_id: str,
+                             class_id: str = Form(...), spell_id: str = Form(...)):
+    spec = _load_spec_or_404(request, character_id)
+    idx = _find_class_entry(spec, class_id)
+    try:
+        spec.classes[idx] = spell_engine.forget(spec.classes[idx], spell_id)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/spells/prepare")
+async def sheet_spell_prepare(request: Request, character_id: str,
+                              class_id: str = Form(...), spell_id: str = Form(...)):
+    spec = _load_spec_or_404(request, character_id)
+    data = request.app.state.game_data
+    idx = _find_class_entry(spec, class_id)
+    try:
+        spec.classes[idx] = spell_engine.prepare(
+            spec.classes[idx], data.classes[class_id], data, spell_id,
+        )
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/spells/unprepare")
+async def sheet_spell_unprepare(request: Request, character_id: str,
+                                class_id: str = Form(...), spell_id: str = Form(...)):
+    spec = _load_spec_or_404(request, character_id)
+    idx = _find_class_entry(spec, class_id)
+    try:
+        spec.classes[idx] = spell_engine.unprepare(spec.classes[idx], spell_id)
     except ValueError as e:
         raise HTTPException(400, str(e))
     save_character(character_id, spec, request.app.state.characters_dir)
