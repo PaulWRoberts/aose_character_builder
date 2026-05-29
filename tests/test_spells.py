@@ -211,11 +211,21 @@ def test_learn_rejects_divine():
         spells.learn(e, data.classes["druid"], data, RuleSet(), "faerie_fire")
 
 
+def test_learn_rejects_noncaster():
+    from aose.data.loader import GameData
+    from aose.engine import spells
+    data = GameData.load(DATA_DIR)
+    e = ClassEntry(class_id="fighter", level=1)
+    with pytest.raises(spells.SpellError):
+        spells.learn(e, data.classes["fighter"], data, RuleSet(), "magic_missile")
+
+
 def test_forget_removes():
     from aose.engine import spells
     e = ClassEntry(class_id="magic_user", level=1, spellbook=["magic_missile", "sleep"])
     e2 = spells.forget(e, "magic_missile")
     assert e2.spellbook == ["sleep"]
+    assert e.spellbook == ["magic_missile", "sleep"]  # original untouched
 
 
 def test_prepare_respects_known_and_slot_cap():
