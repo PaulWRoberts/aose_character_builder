@@ -188,8 +188,12 @@ so the file is self-contained and pasteable into ChatGPT. A crib
    concrete target.
 3. **Type-specific rules** — the judgment calls:
    - *class:* read the XP/THAC0/saves progression table into the `progression`
-     map; split prose into `features[]`; set `spell_lists[]` for casters (e.g.
-     `[magic_user]`) and `progression[].spell_slots`.
+     map; split prose into `features[]`. For casters, set `spell_lists[]` (e.g.
+     `[magic_user]`) AND read the **separate spell-progression grid** (character
+     level × spell level) into each row's `spell_slots: {spell_level: count}`.
+     Leave `spell_slots` unset on levels before casting begins (e.g. a cleric's
+     level-1 row) and on every row for non-casters. `spell_lists` = which pool;
+     `spell_slots` = how many and from what level.
    - *race-as-class:* set `race_locked`; mirror ability requirements; set
      `spell_lists[]` to the borrowed list (elf → `[magic_user]`, gnome →
      `[illusionist]`).
