@@ -34,3 +34,44 @@ def test_fighter_loaded(data):
     assert fighter.progression[1].thac0 == 19
     assert fighter.progression[1].saves["death"] == 12
     assert fighter.progression[4].thac0 == 17
+
+
+def test_spell_model_fields():
+    from aose.models import Spell
+
+    s = Spell(
+        id="magic_missile",
+        name="Magic Missile",
+        level=1,
+        spell_lists=["magic_user"],
+        source="ose-advanced",
+        range="150'",
+        duration="instant",
+        description="A glowing dart strikes unerringly for 1d6+1 damage.",
+    )
+    assert s.spell_lists == ["magic_user"]
+    assert s.source == "ose-advanced"
+    assert not hasattr(s, "classes")
+
+
+def test_charclass_spell_lists_field():
+    from aose.models import CharClass
+
+    caster = CharClass(
+        id="magic_user",
+        name="Magic-User",
+        prime_requisites=["INT"],
+        hit_die="1d4",
+        weapons_allowed=["dagger"],
+        armor_allowed=[],
+        shields_allowed=False,
+        spell_lists=["magic_user"],
+    )
+    assert caster.spell_lists == ["magic_user"]
+
+    fighter = CharClass(
+        id="fighter", name="Fighter", prime_requisites=["STR"],
+        hit_die="1d8", weapons_allowed="all", armor_allowed="all",
+        shields_allowed=True,
+    )
+    assert fighter.spell_lists == []

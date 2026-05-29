@@ -7,7 +7,12 @@ class Spell(BaseModel):
     id: str
     name: str
     level: int
-    classes: list[str] = Field(default_factory=list)
+    # Spell-list IDs this spell belongs to (e.g. ["magic_user"], ["cleric",
+    # "druid"]). The list ID is decoupled from class ID, so race-as-class
+    # entries can reuse a list (elf -> magic_user) without re-tagging spells.
+    spell_lists: list[str] = Field(default_factory=list)
+    # Book of origin, for a future selector to group/filter/toggle by source.
+    source: str | None = None
     range: str
     duration: str
     description: str
