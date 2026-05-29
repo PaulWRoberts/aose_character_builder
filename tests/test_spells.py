@@ -89,3 +89,81 @@ def test_advanced_spell_books_is_wired():
     assert "advanced_spell_books" in RULE_LABELS
     all_group_fields = {f for _, fields in RULE_GROUPS for f, _ in fields}
     assert "advanced_spell_books" in all_group_fields
+
+
+from aose.models import CharacterSpec, ClassEntry, RuleSet
+
+
+def _spec(class_id, level=1, abilities=None, spellbook=None, prepared=None, advanced=False):
+    ab = abilities or {"STR": 10, "INT": 13, "WIS": 13, "DEX": 10, "CON": 10, "CHA": 10}
+    return CharacterSpec(
+        name="T", abilities=ab, race_id="human",
+        classes=[ClassEntry(class_id=class_id, level=level, hp_rolls=[3],
+                            spellbook=spellbook or [], prepared=prepared or [])],
+        alignment="neutral",
+        ruleset=RuleSet(advanced_spell_books=advanced),
+    )
+
+
+def test_caster_type_of():
+    from aose.data.loader import GameData
+    from aose.engine import spells
+    data = GameData.load(DATA_DIR)
+    assert spells.caster_type_of(data.classes["magic_user"], data) == "arcane"
+    assert spells.caster_type_of(data.classes["druid"], data) == "divine"
+    assert spells.caster_type_of(data.classes["fighter"], data) is None
+
+
+def test_accessible_levels_and_slots():
+    from aose.data.loader import GameData
+    from aose.engine import spells
+    data = GameData.load(DATA_DIR)
+    e = ClassEntry(class_id="magic_user", level=1)
+    cls = data.classes["magic_user"]
+    assert spells.accessible_levels(e, cls) == {1}
+    assert spells.memorizable_slots(e, cls) == {1: 1}
+
+
+def test_divine_known_is_full_accessible_list():
+    from aose.data.loader import GameData
+    from aose.engine import spells
+    data = GameData.load(DATA_DIR)
+    e = ClassEntry(class_id="druid", level=1)
+    cls = data.classes["druid"]
+    known_ids = {s.id for s in spells.known_spells(e, cls, data)}
+    assert {"faerie_fire", "entangle", "predict_weather"} <= known_ids
+    assert "detect_magic" not in known_ids   # magic-user/cleric, not druid
+
+
+def test_arcane_known_is_just_the_spellbook():
+    from aose.data.loader import GameData
+    from aose.engine import spells
+    data = GameData.load(DATA_DIR)
+    e = ClassEntry(class_id="magic_user", level=1, spellbook=["magic_missile"])
+    cls = data.classes["magic_user"]
+    assert [s.id for s in spells.known_spells(e, cls, data)] == ["magic_missile"]
+
+
+def test_learnable_excludes_known_and_off_level():
+    from aose.data.loader import GameData
+    from aose.engine import spells
+    data = GameData.load(DATA_DIR)
+    e = ClassEntry(class_id="magic_user", level=1, spellbook=["magic_missile"])
+    cls = data.classes["magic_user"]
+    ids = {s.id for s in spells.learnable_spells(e, cls, data)}
+    assert "magic_missile" not in ids
+    assert "read_magic" in ids
+    assert all(s.level == 1 for s in spells.learnable_spells(e, cls, data))
+
+
+def test_beginning_spell_count_standard_vs_advanced():
+    from aose.data.loader import GameData
+    from aose.engine import spells
+    data = GameData.load(DATA_DIR)
+    e = ClassEntry(class_id="magic_user", level=1)
+    cls = data.classes["magic_user"]
+    assert spells.beginning_spell_count(e, cls, 13, RuleSet()) == 1
+    adv = RuleSet(advanced_spell_books=True)
+    assert spells.beginning_spell_count(e, cls, 13, adv) == 3
+    assert spells.beginning_spell_count(e, cls, 9, adv) == 2
+    assert spells.beginning_spell_count(e, cls, 18, adv) == 5
