@@ -1,0 +1,8 @@
+- id: magic_user
+  name: Magic-User
+  caster_type: arcane
+  description: Arcane spells learned through study and recorded in a spell book.
+- id: druid
+  name: Druid
+  caster_type: divine
+  description: Divine spells granted by nature; the whole list is known.

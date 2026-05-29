@@ -10,6 +10,7 @@ from aose.models import (
     Item,
     Race,
     Spell,
+    SpellList,
 )
 
 T = TypeVar("T", bound=BaseModel)
@@ -74,11 +75,32 @@ def _load_secondary_skills(data_dir: Path) -> list[str]:
     return unique
 
 
+def _load_spell_lists(data_dir: Path) -> dict[str, SpellList]:
+    """Read ``spell_lists.yaml`` (a list of mappings) into an id-keyed dict.
+
+    Returns an empty dict when the file is absent so minimal test fixtures
+    (a bare data dir) still load.
+    """
+    path = data_dir / "spell_lists.yaml"
+    if not path.exists():
+        return {}
+    with path.open("r", encoding="utf-8") as f:
+        raw = yaml.safe_load(f) or []
+    if not isinstance(raw, list):
+        raise ValueError("spell_lists.yaml must be a YAML list of mappings")
+    result: dict[str, SpellList] = {}
+    for obj in raw:
+        parsed = SpellList.model_validate(obj)
+        result[parsed.id] = parsed
+    return result
+
+
 @dataclass
 class GameData:
     races: dict[str, Race] = field(default_factory=dict)
     classes: dict[str, CharClass] = field(default_factory=dict)
     spells: dict[str, Spell] = field(default_factory=dict)
+    spell_lists: dict[str, SpellList] = field(default_factory=dict)
     items: dict[str, Item] = field(default_factory=dict)
     secondary_skills: list[str] = field(default_factory=list)
 
@@ -88,6 +110,7 @@ class GameData:
             races=_load_models(data_dir / "races", Race),
             classes=_load_models(data_dir / "classes", CharClass),
             spells=_load_models(data_dir / "spells", Spell),
+            spell_lists=_load_spell_lists(data_dir),
             items=_load_items(data_dir / "equipment"),
             secondary_skills=_load_secondary_skills(data_dir),
         )
