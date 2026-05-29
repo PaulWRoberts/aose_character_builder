@@ -59,3 +59,20 @@ def test_thorin_example_loads():
     spec = CharacterSpec.model_validate(raw)
     assert spec.classes[0].spellbook == []
     assert spec.classes[0].prepared == []
+
+
+def test_seed_spells_loaded_and_tagged():
+    from aose.data.loader import GameData
+    data = GameData.load(DATA_DIR)
+    rm = data.spells["read_magic"]
+    assert rm.level == 1
+    assert "magic_user" in rm.spell_lists
+    # detect_magic is shared by both lists
+    dm = data.spells["detect_magic"]
+    assert {"magic_user", "druid"} <= set(dm.spell_lists)
+
+
+def test_magic_user_class_tags_its_list():
+    from aose.data.loader import GameData
+    data = GameData.load(DATA_DIR)
+    assert data.classes["magic_user"].spell_lists == ["magic_user"]

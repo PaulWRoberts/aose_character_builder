@@ -1,0 +1,48 @@
+- id: read_magic
+  name: Read Magic
+  level: 1
+  spell_lists: [magic_user]
+  source: ose-advanced
+  range: "0 (caster)"
+  duration: 1 turn
+  description: >-
+    The caster can read magical writing (e.g. spell books, scrolls). The spell
+    does not activate the magic in writing, but reveals what it is.
+- id: detect_magic
+  name: Detect Magic
+  level: 1
+  spell_lists: [magic_user, druid]
+  source: ose-advanced
+  range: "60'"
+  duration: 2 turns
+  description: Magical items, places, or auras within range glow when viewed by the caster.
+- id: magic_missile
+  name: Magic Missile
+  level: 1
+  spell_lists: [magic_user]
+  source: ose-advanced
+  range: "150'"
+  duration: instant
+  description: >-
+    A glowing dart speeds toward a target and strikes unerringly for 1d6+1
+    damage. +1 missile at levels 6, 11, and 16.
+- id: sleep
+  name: Sleep
+  level: 1
+  spell_lists: [magic_user]
+  source: ose-advanced
+  range: "240'"
+  duration: 4d4 turns
+  description: >-
+    Puts 2d8 Hit Dice of living creatures into an enchanted slumber. Affects the
+    lowest-HD creatures first. Creatures of 4+1 HD or more are unaffected.
+- id: charm_person
+  name: Charm Person
+  level: 1
+  spell_lists: [magic_user]
+  source: ose-advanced
+  range: "120'"
+  duration: until dispelled
+  description: >-
+    One humanoid creature of up to 4+1 HD must save versus spells or regard the
+    caster as a trusted friend and ally.

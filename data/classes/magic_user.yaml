@@ -10,6 +10,7 @@ weapons_allowed:
   - dagger
 armor_allowed: []
 shields_allowed: false
+spell_lists: [magic_user]
 progression:
   1:
     xp_required: 0

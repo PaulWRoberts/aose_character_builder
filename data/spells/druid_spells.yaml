@@ -1,0 +1,27 @@
+- id: faerie_fire
+  name: Faerie Fire
+  level: 1
+  spell_lists: [druid]
+  source: ose-advanced
+  range: "80'"
+  duration: 1 turn
+  description: >-
+    Outlines targets in pale glowing light, granting attackers +2 to hit them.
+- id: entangle
+  name: Entangle
+  level: 1
+  spell_lists: [druid]
+  source: ose-advanced
+  range: "80'"
+  duration: 1 turn
+  description: >-
+    Plants in the area of effect entangle and hold creatures that fail a save
+    versus spells.
+- id: predict_weather
+  name: Predict Weather
+  level: 1
+  spell_lists: [druid]
+  source: ose-advanced
+  range: "0 (caster)"
+  duration: 12 hours
+  description: The caster learns the weather for the coming 12 hours within 1 mile.
