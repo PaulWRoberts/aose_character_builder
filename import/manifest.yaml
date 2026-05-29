@@ -1,12 +1,18 @@
-# Machine-managed status fields: md / yaml / validated are written by the
-# pipeline and tools/validate_import.py. Avoid YAML comments inside list rows
-# (the validator rewrites this file with yaml.safe_dump).
 - unit: class/fighter
-  type: class            # class | race | race-as-class | spell | item | magic-item
+  type: class
   source: ose-advanced
   pdf: ose-advanced.pdf
-  pages: "24-25"
-  md: null               # -> import/markdown/classes/fighter.md when Phase 1 done
-  yaml: null             # -> data/classes/fighter.yaml when Phase 2 done
+  pages: 24-25
+  md: null
+  yaml: null
   validated: false
-  notes: ""
+  notes: ''
+- unit: class/druid
+  type: class
+  source: ose-advanced
+  pdf: Old-School Essentials Advanced Fantasy Player's Tome [v1.0].pdf
+  pages: 42-43
+  md: import/markdown/classes/druid.md
+  yaml: data/classes/druid.yaml
+  validated: true
+  notes: Book pages 40-41 = PDF pages 42-43. Dogfood of import pipeline.
