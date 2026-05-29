@@ -44,11 +44,45 @@ across sessions via committed markdown + a manifest.
   selector UI). Building the selector is out of scope here; the data design must
   not block it.
 
-## Schema change (in scope)
+## Schema changes (in scope)
 
-Add `source: str | None = None` to the `Spell` model
-(`aose/models/spell.py`). Lets a future spell selector group/filter/toggle by
-book of origin. The pipeline populates it per unit. No other model changes.
+1. **`Spell.source: str | None = None`** (`aose/models/spell.py`). Lets a future
+   spell selector group/filter/toggle by book of origin. The pipeline populates
+   it per unit.
+
+2. **Spell lists as their own identifier.** Today the only spell↔class link is
+   `Spell.classes: list[str]`, which conflates "class" with "list" and breaks
+   when a class reuses another's list. Replace it with an explicit spell-list
+   join key, linked from both sides:
+   - **Rename `Spell.classes` → `Spell.spell_lists: list[str]`** — which list(s)
+     a spell belongs to (IDs like `magic_user`, `illusionist`, `cleric`,
+     `druid`, `kineticist`). Plural: some spells sit on two lists (cleric +
+     druid).
+   - **Add `CharClass.spell_lists: list[str] = []`** — which list(s) a class
+     casts from. Empty = non-caster.
+
+   Both fields are currently unused (no data, no consumers), so the rename + add
+   are additive and non-breaking. The list ID is decoupled from class ID, which
+   is what makes list reuse work without cross-file re-tagging.
+
+   Slots vs. pool stay separate: `progression[level].spell_slots` is *how many*
+   slots a class gets; `spell_lists` is *which pool* it chooses from.
+
+   | Class/entry | `spell_lists` | Draws from |
+   |---|---|---|
+   | magic_user | `[magic_user]` | magic-user pool |
+   | illusionist | `[illusionist]` | illusionist pool |
+   | elf (race-as-class) | `[magic_user]` | reuses magic-user pool |
+   | gnome (race-as-class) | `[illusionist]` | reuses illusionist pool |
+   | kineticist (CC#1) | `[kineticist]` | new pool |
+
+   A later book (e.g. CC#4) that expands the magic-user list just adds spells
+   tagged `spell_lists: [magic_user]` in a new file; the loader merges them and
+   the pool grows for everyone referencing that list (magic_user *and* elf),
+   automatically.
+
+No other model changes. A spell-list metadata registry (arcane/divine, max
+level) is deliberately deferred — see Out of scope.
 
 ## Directory layout
 
@@ -154,9 +188,12 @@ so the file is self-contained and pasteable into ChatGPT. A crib
    concrete target.
 3. **Type-specific rules** — the judgment calls:
    - *class:* read the XP/THAC0/saves progression table into the `progression`
-     map; split prose into `features[]`.
-   - *race-as-class:* set `race_locked`; mirror ability requirements.
-   - *spell:* set `classes[]`, `level`, `source`; detect `reversible` /
+     map; split prose into `features[]`; set `spell_lists[]` for casters (e.g.
+     `[magic_user]`) and `progression[].spell_slots`.
+   - *race-as-class:* set `race_locked`; mirror ability requirements; set
+     `spell_lists[]` to the borrowed list (elf → `[magic_user]`, gnome →
+     `[illusionist]`).
+   - *spell:* set `spell_lists[]`, `level`, `source`; detect `reversible` /
      `reverse_name`.
    - *item:* pick the right `item_type` variant; transcribe cost/weight/damage.
    - *magic item:* choose native `weapon`/`armor` with `magic_bonus` vs. `magic`
@@ -209,7 +246,12 @@ identically in CC-on-Haiku or pasted into ChatGPT.
 
 ## Out of scope
 
-- The spell selector UI / wizard spell step (future work).
+- The spell selector UI / wizard spell step (future work). The data model
+  supports it via `Spell.spell_lists` + `CharClass.spell_lists`, but no
+  selection logic is built here.
+- A spell-list metadata registry (`SpellList` model / `data/spell_lists.yaml`
+  with arcane/divine, max level). Deferred — additive and non-breaking to add
+  when the selector needs it. List IDs stay plain strings for now.
 - Any rules-correctness automation beyond loadability + consistency.
 - Scripted API orchestration (explicitly rejected — removes the ChatGPT
   fallback and needs a key).
