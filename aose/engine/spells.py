@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import Literal
 
 from aose.data.loader import GameData
-from aose.models import CharClass, ClassEntry, RuleSet, Spell
+from aose.models import CharClass, ClassEntry, ClassLevelData, RuleSet, Spell
 
 CasterType = Literal["arcane", "divine"]
 
@@ -40,7 +40,7 @@ def caster_type_of(cls: CharClass, data: GameData) -> CasterType | None:
     return next(iter(types))
 
 
-def _level_row(entry: ClassEntry, cls: CharClass):
+def _level_row(entry: ClassEntry, cls: CharClass) -> ClassLevelData | None:
     return cls.progression.get(entry.level)
 
 
