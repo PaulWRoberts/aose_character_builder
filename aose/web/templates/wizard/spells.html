@@ -21,10 +21,9 @@
     {% else %}
     <p>Choose <strong>{{ c.required }}</strong> starting spell(s) for your spell
        book{% if c.advanced %} (Advanced Spell Book rules: determined by Intelligence){% else %} (the spells you can memorise at this level){% endif %}.</p>
-    <form method="post" action="/wizard/{{ draft_id }}/spells" class="step-form"
-          data-required="{{ c.required }}">
+    <form method="post" action="/wizard/{{ draft_id }}/spells" class="step-form">
         <input type="hidden" name="class_id" value="{{ c.class_id }}">
-        <div class="card-grid">
+        <div class="card-grid" data-required="{{ c.required }}">
             {% for s in c.candidates %}
             <label class="card {% if s.selected %}selected{% endif %}">
                 <input type="checkbox" name="spell_{{ c.class_id }}" value="{{ s.id }}"

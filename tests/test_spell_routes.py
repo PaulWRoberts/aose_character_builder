@@ -118,10 +118,10 @@ def test_wizard_arcane_requires_exact_count(client):
     assert r.status_code == 200 and "Magic Missile" in r.text
     bad = client.post(f"/wizard/{draft_id}/spells",
                       data={"class_id": "magic_user",
-                            "spell_id": ["magic_missile", "sleep"]})
+                            "spell_magic_user": ["magic_missile", "sleep"]})
     assert bad.status_code == 400
     ok = client.post(f"/wizard/{draft_id}/spells",
-                     data={"class_id": "magic_user", "spell_id": ["magic_missile"]})
+                     data={"class_id": "magic_user", "spell_magic_user": ["magic_missile"]})
     assert ok.status_code == 303
     draft = load_draft(draft_id, client._drafts_dir)
     assert draft["spellbooks"]["magic_user"] == ["magic_missile"]
@@ -138,7 +138,7 @@ def test_wizard_divine_autocompletes(client):
 def test_wizard_finalize_persists_spellbook(client):
     draft_id = _start_caster_draft(client, "magic_user")
     client.post(f"/wizard/{draft_id}/spells",
-                data={"class_id": "magic_user", "spell_id": ["magic_missile"]})
+                data={"class_id": "magic_user", "spell_magic_user": ["magic_missile"]})
     client.get(f"/wizard/{draft_id}/equipment")
     client.post(f"/wizard/{draft_id}/equipment")
     r = client.post(f"/wizard/{draft_id}/finalize")

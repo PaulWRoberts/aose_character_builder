@@ -1001,9 +1001,11 @@ async def post_spells(request: Request, draft_id: str):
         entry = ClassEntry(class_id=cid, level=1)
         ctype = spell_engine.caster_type_of(cls, data)
         if ctype != "arcane":
+            # Divine casters know their whole list; there is no spellbook to
+            # build, so nothing is chosen here.
             books[cid] = []
             continue
-        chosen = form.getlist(f"spell_{cid}") or form.getlist("spell_id")
+        chosen = form.getlist(f"spell_{cid}")
         chosen = list(dict.fromkeys(chosen))
         required = spell_engine.beginning_spell_count(entry, cls, int_score, ruleset)
         if len(chosen) != required:
