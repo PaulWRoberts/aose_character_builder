@@ -61,10 +61,10 @@ override. Changing a rule mid-wizard applies targeted downstream clears
 Every flag in `RuleSet` is integrated end-to-end. The settings page never
 renders a "pending" badge — a regression test guards this.
 
-## Current state (2026-05-28)
+## Current state (2026-05-29)
 
-Magic items just landed (18-task plan, all on `main`). Tree is clean;
-all 524 tests pass.
+Spell selection just landed (11-task plan) on `feature/spell-selection`.
+All 577 tests pass. Magic items landed before it (18-task plan, on `main`).
 
 Key concepts now live:
 
@@ -127,5 +127,28 @@ Key concepts now live:
   still DnD as plain inventory ids). Escape hatch: free-text `note` +
   homebrew `extra_modifiers`. Spec/plan:
   `docs/superpowers/{specs,plans}/2026-05-28-magic-items*`.
+- **Spells** — data-driven, faithful known-vs-prepared. A `SpellList` registry
+  (`aose/models/spell_list.py`, seed `data/spell_lists.yaml`: id → `caster_type`
+  arcane|divine) is the single home for the known-vs-prepared distinction; a
+  class derives its behaviour from the list(s) in `CharClass.spell_lists` (no
+  per-class flag). `ClassEntry` carries `spellbook` (known; arcane) + `prepared`
+  (daily, slot-capped; replaces the old unused `chosen_spells`).
+  `aose/engine/spells.py` is the cycle-free core (imports only models + loader):
+  `caster_type_of` (raises on mixed/unknown lists), `accessible_levels`,
+  `memorizable_slots`, `known_spells` (arcane=spellbook, divine=full accessible
+  list), `learnable_spells`, `beginning_spell_count` (standard=memorizable total,
+  advanced=INT table), and the `learn`/`forget`/`prepare`/`unprepare` mutators
+  (return a new `ClassEntry`, raise `SpellError`). The standard-vs-advanced
+  spell-book rules are the `advanced_spell_books` optional rule (off=standard:
+  book capped at memorizable; on=INT beginning spells + uncapped book). **There is
+  no special Read Magic rule** — it's an ordinary magic-user spell. Wizard
+  `spells` step (after HP, before Equipment; gated by a cached
+  `draft["spellcasting"]` flag set in `post_class`, cleared by the `_clear_after_*`
+  helpers) selects the arcane starting book (exact-count, field `spell_<class_id>`)
+  / shows the divine list read-only. Sheet `spells_view` + Spells section + routes
+  (`/spells/learn|forget|prepare|unprepare`, keyed by `class_id`) manage both
+  layers. Seed spells in `data/spells/*.yaml` (verified against the PDF). No
+  spell DnD in V1. Spec/plan:
+  `docs/superpowers/{specs,plans}/2026-05-29-spell-selection*`.
 
 See `project_aose_builder.md` for the longer architectural narrative.
