@@ -1,0 +1,78 @@
+id: halfling
+name: Halfling
+ability_requirements:
+  CON: 9
+  DEX: 9
+languages:
+- common
+- halfling
+allowed_classes:
+- druid
+- fighter
+- thief
+class_level_caps:
+  druid: 6
+  fighter: 6
+  thief: 8
+features:
+- id: ability_modifiers
+  name: Ability Modifiers
+  text: +1 DEX, –1 STR.
+  mechanical:
+    ability_modifiers:
+      DEX: 1
+      STR: -1
+- id: npc_only_classes_referee_option
+  name: NPC-Only Classes (Referee Option)
+  text: At the referee’s option, halfling druids may only exist as NPCs.
+  mechanical:
+    referee_option: true
+    npc_only_classes:
+    - druid
+- id: combat
+  name: Combat
+  text: Armour must be tailored to this race’s small size. Can only use weapons appropriate to stature, as determined by the referee. Cannot use longbows or two-handed swords.
+  mechanical:
+    armour_requires_tailoring: true
+    weapon_size_restriction: appropriate_to_stature_referee_determined
+    prohibited_weapons:
+    - longbow
+    - two_handed_sword
+- id: defensive_bonus
+  name: Defensive Bonus
+  text: Due to small size, gains a +2 bonus to Armour Class when attacked by large opponents greater than human-sized.
+  mechanical:
+    armour_class_bonus: 2
+    condition: attacked_by_large_opponents
+- id: initiative_bonus_optional_rule
+  name: Initiative Bonus (Optional Rule)
+  text: If using the optional rule for individual initiative, gains a +1 bonus to initiative rolls.
+  mechanical:
+    optional_rule: true
+    initiative_bonus: 1
+    condition: individual_initiative
+- id: listening_at_doors
+  name: Listening at Doors
+  text: Has a 2-in-6 chance of hearing noises at doors.
+  mechanical:
+    chance_in_6: 2
+- id: missile_attack_bonus
+  name: Missile Attack Bonus
+  text: Gains a +1 bonus to attack rolls with all missile weapons.
+  mechanical:
+    attack_roll_bonus: 1
+    weapon_category: missile
+- id: resilience
+  name: Resilience
+  text: 'Natural constitution and resistance to magic grants a bonus to saving throws versus poison, spells, and magic wands, rods, and staves based on CON score: 6 or lower +0; 7–10 +2; 11–14 +3; 15–17 +4; 18 +5.'
+  mechanical:
+    save_categories:
+    - poison
+    - spells
+    - magic_wands_rods_staves
+    bonus_by_CON:
+      6_or_lower: 0
+      '7_10': 2
+      '11_14': 3
+      '15_17': 4
+      '18': 5

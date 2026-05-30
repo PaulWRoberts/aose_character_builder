@@ -1,0 +1,40 @@
+id: half_elf
+name: Half-Elf
+ability_requirements:
+  CHA: 9
+  CON: 9
+infravision: 60
+languages:
+- common
+- elvish
+allowed_classes:
+- acrobat
+- assassin
+- bard
+- cleric
+- druid
+- fighter
+- knight
+- magic_user
+- paladin
+- ranger
+- thief
+class_level_caps:
+  acrobat: 12
+  assassin: 11
+  bard: 12
+  cleric: 5
+  druid: 12
+  fighter: 8
+  knight: 12
+  magic_user: 8
+  paladin: 12
+  ranger: 8
+  thief: 12
+features:
+- id: detect_secret_doors
+  name: Detect Secret Doors
+  text: When actively searching, detect hidden and secret doors with a 2-in-6 chance.
+  mechanical:
+    chance_in_6: 2
+    condition: actively_searching

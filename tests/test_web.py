@@ -36,8 +36,8 @@ def test_sheet_renders(client):
     # THAC0 (default ruleset is descending AC)
     assert "THAC0" in body
     assert "19" in body
-    # Race feature
-    assert "Detect Stonework" in body
+    # Race feature (book-accurate dwarf feature names)
+    assert "Detect Construction Tricks" in body
 
 
 def test_sheet_404_for_missing_character(client):

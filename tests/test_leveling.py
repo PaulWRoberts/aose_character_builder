@@ -90,8 +90,8 @@ def test_advancement_well_past_threshold_still_only_one_level(data):
 
 
 def test_advancement_at_class_max_blocks_further_levels(data):
-    # Fighter progression file only defines L1-L5 in our data set
-    spec = _spec(level=5, xp=99999, hp_rolls=[8, 8, 8, 8, 8])
+    # Fighter max_level is 14; a L14 character cannot advance further.
+    spec = _spec(level=14, xp=999999, hp_rolls=[8] * 14)
     adv = class_advancement(spec, data, spec.classes[0])
     assert adv.at_max is True
     assert adv.can_level is False
@@ -135,7 +135,7 @@ def test_level_up_xp_short_raises(data):
 
 
 def test_level_up_at_max_raises(data):
-    spec = _spec(level=5, xp=99999, hp_rolls=[8] * 5)
+    spec = _spec(level=14, xp=999999, hp_rolls=[8] * 14)
     with pytest.raises(ValueError, match="maximum level"):
         level_up(spec, data, "fighter")
 
@@ -241,7 +241,7 @@ def test_level_up_route_unknown_class_400s(client):
 
 
 def test_level_up_route_max_level_400s(client):
-    _seed(client, level=5, xp=99999, hp_rolls=[8] * 5)
+    _seed(client, level=14, xp=999999, hp_rolls=[8] * 14)
     r = client.post("/character/test/level-up/fighter")
     assert r.status_code == 400
 
@@ -270,7 +270,7 @@ def test_sheet_omits_level_up_button_when_short(client):
 
 
 def test_sheet_shows_max_level_label(client):
-    _seed(client, level=5, xp=99999, hp_rolls=[8] * 5)
+    _seed(client, level=14, xp=999999, hp_rolls=[8] * 14)
     r = client.get("/character/test")
     assert "max level" in r.text.lower()
 

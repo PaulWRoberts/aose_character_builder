@@ -1,0 +1,222 @@
+id: half_elf
+name: Half-Elf
+prime_requisites:
+- INT
+- STR
+ability_requirements:
+  CHA: 9
+  CON: 9
+max_level: 12
+hit_die: 1d6
+weapons_allowed: all
+armor_allowed: all
+shields_allowed: true
+race_locked: half_elf
+spell_lists:
+- magic_user
+progression:
+  1:
+    xp_required: 0
+    thac0: 19
+    hit_dice: 1d6
+    saves:
+      death: 12
+      wands: 13
+      paralysis: 13
+      breath: 15
+      spells: 15
+  2:
+    xp_required: 2500
+    thac0: 19
+    hit_dice: 2d6
+    saves:
+      death: 12
+      wands: 13
+      paralysis: 13
+      breath: 15
+      spells: 15
+    spell_slots:
+      1: 1
+  3:
+    xp_required: 5000
+    thac0: 19
+    hit_dice: 3d6
+    saves:
+      death: 12
+      wands: 13
+      paralysis: 13
+      breath: 15
+      spells: 15
+    spell_slots:
+      1: 2
+  4:
+    xp_required: 10000
+    thac0: 17
+    hit_dice: 4d6
+    saves:
+      death: 10
+      wands: 11
+      paralysis: 11
+      breath: 13
+      spells: 12
+    spell_slots:
+      1: 2
+  5:
+    xp_required: 20000
+    thac0: 17
+    hit_dice: 5d6
+    saves:
+      death: 10
+      wands: 11
+      paralysis: 11
+      breath: 13
+      spells: 12
+    spell_slots:
+      1: 2
+      2: 1
+  6:
+    xp_required: 40000
+    thac0: 17
+    hit_dice: 6d6
+    saves:
+      death: 10
+      wands: 11
+      paralysis: 11
+      breath: 13
+      spells: 12
+    spell_slots:
+      1: 2
+      2: 2
+  7:
+    xp_required: 80000
+    thac0: 14
+    hit_dice: 7d6
+    saves:
+      death: 8
+      wands: 9
+      paralysis: 9
+      breath: 10
+      spells: 10
+    spell_slots:
+      1: 2
+      2: 2
+  8:
+    xp_required: 150000
+    thac0: 14
+    hit_dice: 8d6
+    saves:
+      death: 8
+      wands: 9
+      paralysis: 9
+      breath: 10
+      spells: 10
+    spell_slots:
+      1: 2
+      2: 2
+      3: 1
+  9:
+    xp_required: 300000
+    thac0: 14
+    hit_dice: 9d6
+    saves:
+      death: 8
+      wands: 9
+      paralysis: 9
+      breath: 10
+      spells: 10
+    spell_slots:
+      1: 3
+      2: 2
+      3: 1
+  10:
+    xp_required: 450000
+    thac0: 12
+    hit_dice: 9d6+2
+    saves:
+      death: 6
+      wands: 7
+      paralysis: 8
+      breath: 8
+      spells: 8
+    spell_slots:
+      1: 3
+      2: 2
+      3: 2
+  11:
+    xp_required: 600000
+    thac0: 12
+    hit_dice: 9d6+4
+    saves:
+      death: 6
+      wands: 7
+      paralysis: 8
+      breath: 8
+      spells: 8
+    spell_slots:
+      1: 3
+      2: 2
+      3: 2
+      4: 1
+  12:
+    xp_required: 750000
+    thac0: 12
+    hit_dice: 9d6+6
+    saves:
+      death: 6
+      wands: 7
+      paralysis: 8
+      breath: 8
+      spells: 8
+    spell_slots:
+      1: 3
+      2: 3
+      3: 2
+      4: 1
+features:
+- id: prime_requisites
+  name: Prime requisites
+  text: A half-elf with at least 13 INT and STR gains a 5% bonus to experience. A half-elf with a score of 16 or higher in one prime requisite, and a 13 or higher in the other gains a 10% bonus.
+  gained_at_level: 1
+- id: arcane_magic
+  name: Arcane Magic
+  text: |-
+    See Magic, p110 for full details on arcane magic.
+
+    **Spell casting:** From 2nd level, half-elves gain the ability to cast arcane spells, owning a spell book in which the magical formulae for the spells they know are recorded. The level progression table (opposite) shows both the number of spells in the half-elf’s spell book and the number they may memorize, determined by the character’s experience level. Thus, a 2nd level half-elf has one spell in their spell book, selected by the referee (who may allow the player to choose). The list of spells available to half-elves is found on p119 (half-elves have the same spell selection as magic-users).
+
+    **Using magic items:** As spell casters, half-elves are able to use magic scrolls of spells on their spell list. They can also use items that may only be used by arcane spell casters (e.g. magic wands).
+  gained_at_level: 2
+- id: combat
+  name: Combat
+  text: |-
+    Half-elves can use all types of weapons and armour.
+  gained_at_level: 1
+- id: detect_secret_doors
+  name: Detect Secret Doors
+  text: |-
+    When searching for secret doors, half-elves have a 2-in-6 chance of success (see Dungeon Adventuring, p210).
+  gained_at_level: 1
+- id: infravision
+  name: Infravision
+  text: |-
+    Half-elves have infravision to 60’ (see Darkness under Hazards and Challenges, p208).
+  gained_at_level: 1
+- id: after_reaching_9th_level
+  name: After Reaching 9th Level
+  text: |-
+    A half-elf may strive to become a leader among humans or among elves, constructing a stronghold either in the name of a human liege or in the deep forests of the elves.
+  gained_at_level: 9
+- id: human_stronghold
+  name: Human Stronghold
+  text: |-
+    The half-elf may build a castle or stronghold and control the surrounding lands. The character may be granted a title such as Baron or Baroness. The land under the half-elf’s control is then known as a Barony.
+  gained_at_level: 1
+- id: elven_stronghold
+  name: Elven Stronghold
+  text: |-
+    The half-elf may construct a stronghold in the depths of the forest, blending in with the natural environment of a site of great beauty, for example: in the treetops, beside a serene valley, or hidden behind a waterfall. Whatever material it is made of, the construction costs as much as similar work in stone due to the exquisite quality of craftsmanship involved.
+
+    Once the construction is complete, elves will come to live under the rule of the character. Forest animals within a 5 mile radius of the completed stronghold will become friends with the elves. They may warn of intruders, carry messages and news, and so on. In exchange for this friendship, the half-elf must protect the animals from harm.
+
+    The ruler of an elven stronghold may only hire elven mercenaries. Specialists and retainers of any race may be hired.
+  gained_at_level: 1

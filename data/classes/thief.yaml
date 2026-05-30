@@ -1,0 +1,232 @@
+id: thief
+name: Thief
+prime_requisites:
+- DEX
+max_level: 14
+hit_die: 1d4
+weapons_allowed: all
+armor_allowed:
+- leather
+shields_allowed: false
+progression:
+  1:
+    xp_required: 0
+    thac0: 19
+    hit_dice: 1d4
+    saves:
+      death: 13
+      wands: 14
+      paralysis: 13
+      breath: 16
+      spells: 15
+  2:
+    xp_required: 1200
+    thac0: 19
+    hit_dice: 2d4
+    saves:
+      death: 13
+      wands: 14
+      paralysis: 13
+      breath: 16
+      spells: 15
+  3:
+    xp_required: 2400
+    thac0: 19
+    hit_dice: 3d4
+    saves:
+      death: 13
+      wands: 14
+      paralysis: 13
+      breath: 16
+      spells: 15
+  4:
+    xp_required: 4800
+    thac0: 19
+    hit_dice: 4d4
+    saves:
+      death: 13
+      wands: 14
+      paralysis: 13
+      breath: 16
+      spells: 15
+  5:
+    xp_required: 9600
+    thac0: 17
+    hit_dice: 5d4
+    saves:
+      death: 12
+      wands: 13
+      paralysis: 11
+      breath: 14
+      spells: 13
+  6:
+    xp_required: 20000
+    thac0: 17
+    hit_dice: 6d4
+    saves:
+      death: 12
+      wands: 13
+      paralysis: 11
+      breath: 14
+      spells: 13
+  7:
+    xp_required: 40000
+    thac0: 17
+    hit_dice: 7d4
+    saves:
+      death: 12
+      wands: 13
+      paralysis: 11
+      breath: 14
+      spells: 13
+  8:
+    xp_required: 80000
+    thac0: 17
+    hit_dice: 8d4
+    saves:
+      death: 12
+      wands: 13
+      paralysis: 11
+      breath: 14
+      spells: 13
+  9:
+    xp_required: 160000
+    thac0: 14
+    hit_dice: 9d4
+    saves:
+      death: 10
+      wands: 11
+      paralysis: 9
+      breath: 12
+      spells: 10
+  10:
+    xp_required: 280000
+    thac0: 14
+    hit_dice: 9d4+2
+    saves:
+      death: 10
+      wands: 11
+      paralysis: 9
+      breath: 12
+      spells: 10
+  11:
+    xp_required: 400000
+    thac0: 14
+    hit_dice: 9d4+4
+    saves:
+      death: 10
+      wands: 11
+      paralysis: 9
+      breath: 12
+      spells: 10
+  12:
+    xp_required: 520000
+    thac0: 14
+    hit_dice: 9d4+6
+    saves:
+      death: 10
+      wands: 11
+      paralysis: 9
+      breath: 12
+      spells: 10
+  13:
+    xp_required: 640000
+    thac0: 12
+    hit_dice: 9d4+8
+    saves:
+      death: 8
+      wands: 9
+      paralysis: 7
+      breath: 10
+      spells: 8
+  14:
+    xp_required: 760000
+    thac0: 12
+    hit_dice: 9d4+10
+    saves:
+      death: 8
+      wands: 9
+      paralysis: 7
+      breath: 10
+      spells: 8
+features:
+- id: adjust_ability_scores
+  name: Adjust ability scores
+  text: In step 3 of character creation, thieves may not lower STR.
+  gained_at_level: 1
+- id: back_stab
+  name: Back-stab
+  text: |-
+    When attacking an unaware opponent from behind, a thief receives a +4 bonus to hit and doubles any damage dealt.
+  gained_at_level: 1
+- id: combat
+  name: Combat
+  text: |-
+    Because of their need for stealth and free movement, thieves cannot wear armour heavier than leather and cannot use shields. They can use any weapon.
+  gained_at_level: 1
+- id: read_languages
+  name: Read Languages
+  text: |-
+    A thief of 4th level or higher can read non-magical text in any language (including dead languages and basic codes) with 80% probability. If the roll does not succeed, the thief may not try to read that particular text again until they reach a higher level of experience.
+  gained_at_level: 4
+- id: scroll_use
+  name: Scroll Use
+  text: |-
+    A thief of 10th level or higher can cast arcane spells from scrolls. There is a 10% chance of error: the spell does not function as expected and creates an unusual or deleterious effect.
+  gained_at_level: 10
+- id: thief_skills
+  name: Thief Skills
+  text: |-
+    Thieves can use the following skills, with the chance of success shown opposite:
+
+    ▶ **Climb sheer surfaces (CS):** A roll is required for each 100’ to be climbed. If the roll fails, the thief falls at the halfway point, suffering falling damage.
+
+    ▶ **Find or remove treasure traps (TR):** A roll is required to find a treasure trap and then another to remove it. This may be attempted only once per trap.
+
+    ▶ **Hear noise (HN):** In a quiet environment (e.g. not in combat), a thief may attempt to listen at a door or to hear the sounds of something (e.g. a wandering monster) approaching.
+
+    ▶ **Hide in shadows (HS):** Requires the thief to be motionless—attacking or moving while hiding is not possible.
+
+    ▶ **Move silently (MS):** A thief may attempt to sneak past enemies unnoticed.
+
+    ▶ **Open locks (OL):** Requires thieves’ tools (see Equipment, p94). A thief can only try this skill once per lock. If the roll fails, the thief may not try the same lock again before gaining an experience level.
+
+    ▶ **Pick pockets (PP):** If the victim is above 5th level, the thief’s roll is penalised by 5% for every level above 5th. There is always at least a 1% chance of failure. A roll of more than twice the percentage required for success means that the attempted theft is noticed. The referee should determine the reaction of the victim (possibly using the reaction table under Encounters, p216).
+  gained_at_level: 1
+- id: after_reaching_9th_level
+  name: After Reaching 9th Level
+  text: |-
+    A thief can establish a thief den, attracting 2d6 apprentices of 1st level. These thieves will serve the character with some reliability; however, should any be arrested or killed, the PC will not be able to attract apprentices to replace them. A successful thief might use these followers to start a Thieves’ Guild.
+  gained_at_level: 9
+- id: thief_skills_chance_of_success
+  name: Thief Skills Chance of Success
+  text: |-
+    | Level | CS | TR | HN | HS | MS | OL | PP |
+    |---|---|---|---|---|---|---|---|
+    | 1 | 87 | 10 | 1–2 | 10 | 20 | 15 | 20 |
+    | 2 | 88 | 15 | 1–2 | 15 | 25 | 20 | 25 |
+    | 3 | 89 | 20 | 1–3 | 20 | 30 | 25 | 30 |
+    | 4 | 90 | 25 | 1–3 | 25 | 35 | 30 | 35 |
+    | 5 | 91 | 30 | 1–3 | 30 | 40 | 35 | 40 |
+    | 6 | 92 | 40 | 1–3 | 36 | 45 | 45 | 45 |
+    | 7 | 93 | 50 | 1–4 | 45 | 55 | 55 | 55 |
+    | 8 | 94 | 60 | 1–4 | 55 | 65 | 65 | 65 |
+    | 9 | 95 | 70 | 1–4 | 65 | 75 | 75 | 75 |
+    | 10 | 96 | 80 | 1–4 | 75 | 85 | 85 | 85 |
+    | 11 | 97 | 90 | 1–5 | 85 | 95 | 95 | 95 |
+    | 12 | 98 | 95 | 1–5 | 90 | 96 | 96 | 105 |
+    | 13 | 99 | 97 | 1–5 | 95 | 98 | 97 | 115 |
+    | 14 | 99 | 99 | 1–5 | 99 | 99 | 99 | 125 |
+  gained_at_level: 1
+- id: rolling_skill_checks
+  name: Rolling Skill Checks
+  text: |-
+    All skills except hear noise are rolled on d%, with a result of less than or equal to the listed percentage indicating success.
+
+    Hear noise is rolled on 1d6. If the roll is within the listed range of numbers, the skill succeeds.
+  gained_at_level: 1
+- id: player_knowledge
+  name: Player Knowledge
+  text: |-
+    The referee should roll for hear noise, hide in shadows, and move silently on the player’s behalf, as the thief does not immediately know if the attempt was successful. If a hide in shadows or move silently roll fails, the referee knows that the thief has been noticed and should determine enemies’ actions appropriately.
+  gained_at_level: 1

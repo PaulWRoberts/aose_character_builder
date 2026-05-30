@@ -1,0 +1,206 @@
+id: elf
+name: Elf
+prime_requisites:
+- INT
+- STR
+ability_requirements:
+  INT: 9
+max_level: 10
+hit_die: 1d6
+weapons_allowed: all
+armor_allowed: all
+shields_allowed: true
+race_locked: elf
+spell_lists:
+- magic_user
+progression:
+  1:
+    xp_required: 0
+    thac0: 19
+    hit_dice: 1d6
+    saves:
+      death: 12
+      wands: 13
+      paralysis: 13
+      breath: 15
+      spells: 15
+    spell_slots:
+      1: 1
+  2:
+    xp_required: 4000
+    thac0: 19
+    hit_dice: 2d6
+    saves:
+      death: 12
+      wands: 13
+      paralysis: 13
+      breath: 15
+      spells: 15
+    spell_slots:
+      1: 2
+  3:
+    xp_required: 8000
+    thac0: 19
+    hit_dice: 3d6
+    saves:
+      death: 12
+      wands: 13
+      paralysis: 13
+      breath: 15
+      spells: 15
+    spell_slots:
+      1: 2
+      2: 1
+  4:
+    xp_required: 16000
+    thac0: 17
+    hit_dice: 4d6
+    saves:
+      death: 10
+      wands: 11
+      paralysis: 11
+      breath: 13
+      spells: 12
+    spell_slots:
+      1: 2
+      2: 2
+  5:
+    xp_required: 32000
+    thac0: 17
+    hit_dice: 5d6
+    saves:
+      death: 10
+      wands: 11
+      paralysis: 11
+      breath: 13
+      spells: 12
+    spell_slots:
+      1: 2
+      2: 2
+      3: 1
+  6:
+    xp_required: 64000
+    thac0: 17
+    hit_dice: 6d6
+    saves:
+      death: 10
+      wands: 11
+      paralysis: 11
+      breath: 13
+      spells: 12
+    spell_slots:
+      1: 2
+      2: 2
+      3: 2
+  7:
+    xp_required: 120000
+    thac0: 14
+    hit_dice: 7d6
+    saves:
+      death: 8
+      wands: 9
+      paralysis: 9
+      breath: 10
+      spells: 10
+    spell_slots:
+      1: 3
+      2: 2
+      3: 2
+      4: 1
+  8:
+    xp_required: 250000
+    thac0: 14
+    hit_dice: 8d6
+    saves:
+      death: 8
+      wands: 9
+      paralysis: 9
+      breath: 10
+      spells: 10
+    spell_slots:
+      1: 3
+      2: 3
+      3: 2
+      4: 2
+  9:
+    xp_required: 400000
+    thac0: 14
+    hit_dice: 9d6
+    saves:
+      death: 8
+      wands: 9
+      paralysis: 9
+      breath: 10
+      spells: 10
+    spell_slots:
+      1: 3
+      2: 3
+      3: 3
+      4: 2
+      5: 1
+  10:
+    xp_required: 600000
+    thac0: 12
+    hit_dice: 9d6+2
+    saves:
+      death: 6
+      wands: 7
+      paralysis: 8
+      breath: 8
+      spells: 8
+    spell_slots:
+      1: 3
+      2: 3
+      3: 3
+      4: 3
+      5: 2
+features:
+- id: prime_requisites
+  name: Prime requisites
+  text: An elf with at least 13 INT and STR gains a 5% bonus to experience. An elf with an INT of at least 16 and a STR of at least 13 receives a +10% XP bonus.
+  gained_at_level: 1
+- id: arcane_magic
+  name: Arcane Magic
+  text: |-
+    See Magic, p110 for full details on arcane magic.
+
+    **Magical research:** An elf of any level may spend time and money on magical research. This allows them to add new spells to their spell book and to research other magical effects. When an elf reaches 9th level, they are also able to create magic items.
+
+    **Spell casting:** Elves carry spell books containing the formulae for arcane spells. The level progression table (opposite) shows both the number of spells in the elf’s spell book and the number they may memorize, determined by the character’s experience level. Thus, a 1st level elf has one spell in their spell book, selected by the referee (who may allow the player to choose). The list of spells available to elves is found on p119 (elves have the same spell selection as magic-users).
+
+    **Using magic items:** As spell casters, elves are able to use magic scrolls of spells on their spell list. They can also use items that may only be used by arcane spell casters (e.g. magic wands).
+  gained_at_level: 1
+- id: combat
+  name: Combat
+  text: |-
+    Elves can use all types of weapons and armour.
+  gained_at_level: 1
+- id: detect_secret_doors
+  name: Detect Secret Doors
+  text: |-
+    Elves have keen eyes that allow them, when actively searching, to detect hidden and secret doors with a 2-in-6 chance (see Dungeon Adventuring, p210).
+  gained_at_level: 1
+- id: immunity_to_ghoul_paralysis
+  name: Immunity to Ghoul Paralysis
+  text: |-
+    Elves are completely unaffected by the paralysis that ghouls can inflict.
+  gained_at_level: 1
+- id: infravision
+  name: Infravision
+  text: |-
+    Elves have infravision to 60’ (see Darkness under Hazards and Challenges, p208).
+  gained_at_level: 1
+- id: listening_at_doors
+  name: Listening at Doors
+  text: |-
+    Elves have a 2-in-6 chance of hearing noises (see Dungeon Adventuring, p210).
+  gained_at_level: 1
+- id: after_reaching_9th_level
+  name: After Reaching 9th Level
+  text: |-
+    An elf may construct a stronghold in the depths of the forest, blending in with the natural environment of a site of great beauty, for example: in the treetops, beside a serene valley, or hidden behind a waterfall. Whatever material it is made of, the construction costs as much as similar work in stone, due to the exquisite quality of craftsmanship involved.
+
+    Forest animals within a 5 mile radius of the completed stronghold will become friends with the elves. They may warn of intruders, carry messages and news, and so on. In exchange for this friendship, the elf must protect the animals from harm.
+
+    An elf ruler may only hire elven mercenaries. Specialists and retainers of any race may be hired.
+  gained_at_level: 9

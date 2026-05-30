@@ -1,0 +1,27 @@
+id: half_orc
+name: Half-Orc
+infravision: 60
+languages:
+- common
+- orcish
+allowed_classes:
+- acrobat
+- assassin
+- cleric
+- fighter
+- thief
+class_level_caps:
+  acrobat: 8
+  assassin: 8
+  cleric: 4
+  fighter: 10
+  thief: 8
+features:
+- id: ability_modifiers
+  name: Ability Modifiers
+  text: –2 CHA, +1 CON, +1 STR.
+  mechanical:
+    ability_modifiers:
+      CHA: -2
+      CON: 1
+      STR: 1

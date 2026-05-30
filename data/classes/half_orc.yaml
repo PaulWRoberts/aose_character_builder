@@ -1,0 +1,159 @@
+id: half_orc
+name: Half-Orc
+prime_requisites:
+- DEX
+- STR
+max_level: 8
+hit_die: 1d6
+weapons_allowed: all
+armor_allowed:
+- leather
+- chainmail
+shields_allowed: true
+race_locked: half_orc
+progression:
+  1:
+    xp_required: 0
+    thac0: 19
+    hit_dice: 1d6
+    saves:
+      death: 13
+      wands: 14
+      paralysis: 13
+      breath: 16
+      spells: 15
+  2:
+    xp_required: 1800
+    thac0: 19
+    hit_dice: 2d6
+    saves:
+      death: 13
+      wands: 14
+      paralysis: 13
+      breath: 16
+      spells: 15
+  3:
+    xp_required: 3600
+    thac0: 19
+    hit_dice: 3d6
+    saves:
+      death: 13
+      wands: 14
+      paralysis: 13
+      breath: 16
+      spells: 15
+  4:
+    xp_required: 7000
+    thac0: 19
+    hit_dice: 4d6
+    saves:
+      death: 13
+      wands: 14
+      paralysis: 13
+      breath: 16
+      spells: 15
+  5:
+    xp_required: 14000
+    thac0: 17
+    hit_dice: 5d6
+    saves:
+      death: 12
+      wands: 13
+      paralysis: 11
+      breath: 14
+      spells: 13
+  6:
+    xp_required: 28000
+    thac0: 17
+    hit_dice: 6d6
+    saves:
+      death: 12
+      wands: 13
+      paralysis: 11
+      breath: 14
+      spells: 13
+  7:
+    xp_required: 60000
+    thac0: 17
+    hit_dice: 7d6
+    saves:
+      death: 12
+      wands: 13
+      paralysis: 11
+      breath: 14
+      spells: 13
+  8:
+    xp_required: 120000
+    thac0: 17
+    hit_dice: 8d6
+    saves:
+      death: 12
+      wands: 13
+      paralysis: 11
+      breath: 14
+      spells: 13
+features:
+- id: prime_requisites
+  name: Prime requisites
+  text: A half-orc with at least 13 DEX and STR gains a 5% bonus to experience. A half-orc with at least 16 DEX and STR gains a 10% bonus.
+  gained_at_level: 1
+- id: back_stab
+  name: Back-stab
+  text: |-
+    When attacking an unaware opponent from behind, a half-orc receives a +4 bonus to hit and doubles any damage dealt.
+  gained_at_level: 1
+- id: combat
+  name: Combat
+  text: |-
+    Half-orcs can use all types of weapons and can use leather armour, chainmail, and shields.
+  gained_at_level: 1
+- id: infravision
+  name: Infravision
+  text: |-
+    Half-orcs have infravision to 60’ (see Darkness under Hazards and Challenges, p208).
+  gained_at_level: 1
+- id: retainers
+  name: Retainers
+  text: |-
+    Half-orcs often have difficulty gaining the trust of humans and demihumans, due to orcs’ chaotic tendencies. Retainers in a half-orc’s employ have their loyalty score reduced by one. (This does not apply to retainers who are also half-orcs.)
+  gained_at_level: 1
+- id: thieving_skills
+  name: Thieving Skills
+  text: |-
+    Half-orcs can use the following skills, with the chance of success shown opposite:
+
+    ▶ **Hide in shadows (HS):** Requires the half-orc to be motionless—attacking or moving while hiding is not possible.
+
+    ▶ **Move silently (MS):** A half-orc may attempt to sneak past enemies unnoticed.
+
+    ▶ **Pick pockets (PP):** If the victim is above 5th level, the half-orc’s roll is penalised by 5% for every level above 5th. A roll of more than twice the percentage required for success means that the attempted theft is noticed. The referee should determine the reaction of the victim (possibly using the reaction table under Encounters, p216).
+  gained_at_level: 1
+- id: after_reaching_8th_level
+  name: After Reaching 8th Level
+  text: |-
+    A half-orc can establish a bandit stronghold, attracting 2d6 apprentices—1st level fighters, thieves, or half-orcs. These apprentices will serve the character with some reliability; however, should any be arrested or killed, the PC will not be able to attract apprentices to replace them. A successful half-orc might use these followers to start a Thieves’ Guild.
+  gained_at_level: 8
+- id: half_orc_skills_chance_of_success
+  name: Half-Orc Skills Chance of Success
+  text: |-
+    | Level | HS | MS | PP |
+    |---|---|---|---|
+    | 1 | 10 | 20 | 20 |
+    | 2 | 15 | 25 | 25 |
+    | 3 | 20 | 30 | 30 |
+    | 4 | 25 | 35 | 35 |
+    | 5 | 30 | 40 | 40 |
+    | 6 | 36 | 45 | 45 |
+    | 7 | 45 | 55 | 55 |
+    | 8 | 55 | 65 | 65 |
+  gained_at_level: 1
+- id: rolling_skill_checks
+  name: Rolling Skill Checks
+  text: |-
+    All skills are rolled on d%, with a result of less than or equal to the listed percentage indicating success.
+  gained_at_level: 1
+- id: player_knowledge
+  name: Player Knowledge
+  text: |-
+    The referee should roll for hide in shadows and move silently on the player’s behalf, as the half-orc always believes the attempt to be successful. If the roll fails, the referee knows that the half-orc has been noticed and should determine enemies’ actions appropriately.
+  gained_at_level: 1

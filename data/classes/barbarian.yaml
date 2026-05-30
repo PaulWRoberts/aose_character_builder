@@ -1,0 +1,240 @@
+id: barbarian
+name: Barbarian
+prime_requisites:
+- CON
+- STR
+ability_requirements:
+  DEX: 9
+max_level: 14
+hit_die: 1d8
+weapons_allowed: all
+armor_allowed:
+- leather
+- chainmail
+shields_allowed: true
+progression:
+  1:
+    xp_required: 0
+    thac0: 19
+    hit_dice: 1d8
+    saves:
+      death: 10
+      wands: 13
+      paralysis: 12
+      breath: 15
+      spells: 16
+  2:
+    xp_required: 2500
+    thac0: 19
+    hit_dice: 2d8
+    saves:
+      death: 10
+      wands: 13
+      paralysis: 12
+      breath: 15
+      spells: 16
+  3:
+    xp_required: 5000
+    thac0: 19
+    hit_dice: 3d8
+    saves:
+      death: 10
+      wands: 13
+      paralysis: 12
+      breath: 15
+      spells: 16
+  4:
+    xp_required: 10000
+    thac0: 17
+    hit_dice: 4d8
+    saves:
+      death: 8
+      wands: 11
+      paralysis: 10
+      breath: 13
+      spells: 13
+  5:
+    xp_required: 18500
+    thac0: 17
+    hit_dice: 5d8
+    saves:
+      death: 8
+      wands: 11
+      paralysis: 10
+      breath: 13
+      spells: 13
+  6:
+    xp_required: 37000
+    thac0: 17
+    hit_dice: 6d8
+    saves:
+      death: 8
+      wands: 11
+      paralysis: 10
+      breath: 13
+      spells: 13
+  7:
+    xp_required: 85000
+    thac0: 14
+    hit_dice: 7d8
+    saves:
+      death: 6
+      wands: 9
+      paralysis: 8
+      breath: 10
+      spells: 10
+  8:
+    xp_required: 140000
+    thac0: 14
+    hit_dice: 8d8
+    saves:
+      death: 6
+      wands: 9
+      paralysis: 8
+      breath: 10
+      spells: 10
+  9:
+    xp_required: 270000
+    thac0: 14
+    hit_dice: 9d8
+    saves:
+      death: 6
+      wands: 9
+      paralysis: 8
+      breath: 10
+      spells: 10
+  10:
+    xp_required: 400000
+    thac0: 12
+    hit_dice: 9d8+3
+    saves:
+      death: 4
+      wands: 7
+      paralysis: 6
+      breath: 8
+      spells: 7
+  11:
+    xp_required: 530000
+    thac0: 12
+    hit_dice: 9d8+6
+    saves:
+      death: 4
+      wands: 7
+      paralysis: 6
+      breath: 8
+      spells: 7
+  12:
+    xp_required: 660000
+    thac0: 12
+    hit_dice: 9d8+9
+    saves:
+      death: 4
+      wands: 7
+      paralysis: 6
+      breath: 8
+      spells: 7
+  13:
+    xp_required: 790000
+    thac0: 10
+    hit_dice: 9d8+12
+    saves:
+      death: 3
+      wands: 5
+      paralysis: 4
+      breath: 5
+      spells: 5
+  14:
+    xp_required: 920000
+    thac0: 10
+    hit_dice: 9d8+15
+    saves:
+      death: 3
+      wands: 5
+      paralysis: 4
+      breath: 5
+      spells: 5
+features:
+- id: prime_requisites
+  name: Prime requisites
+  text: A barbarian with at least 13 in one prime requisite gains a 5% bonus to experience. If both STR and CON are 16 or higher, the barbarian gets a +10% bonus.
+  gained_at_level: 1
+- id: literacy
+  name: Literacy
+  text: A 1st level barbarian cannot read or write, irrespective of INT score.
+  gained_at_level: 1
+- id: agile_fighting
+  name: Agile Fighting
+  text: |-
+    Upon reaching 4th level, a barbarian gains a +1 AC bonus. This increases to +2 at 6th level, +3 at 8th level, and +4 at 10th level.
+  gained_at_level: 4
+- id: barbarian_skills
+  name: Barbarian Skills
+  text: |-
+    In the wilderness, barbarians can use the following skills with the chance of success shown opposite:
+
+    ▶ **Climb sheer surfaces (CS):** Only applies to natural surfaces (e.g. tree trunks, cliff faces). A skill roll is required for each 100’ height to be climbed. Failure indicates that the barbarian falls at the halfway point, suffering falling damage.
+
+    ▶ **Hide in undergrowth (HD):** Requires the barbarian to be motionless—attacking or moving while hiding is not possible.
+
+    ▶ **Move silently (MS):** A barbarian may attempt to sneak past enemies.
+  gained_at_level: 1
+- id: combat
+  name: Combat
+  text: |-
+    Barbarians can use all types of weapons and can use leather armour, chainmail, and shields.
+  gained_at_level: 1
+- id: cure_poison
+  name: Cure Poison
+  text: |-
+    In the wilderness, a barbarian can gather herbs to concoct an antidote to natural poisons. This takes one turn per character to be cured. Each subject may make a second save versus poison to end the effects.
+  gained_at_level: 1
+- id: fear_of_magic
+  name: Fear of Magic
+  text: |-
+    Barbarians are mistrustful of magic and will refuse to knowingly use or come under the influence of spells or magic items. Barbarians will accept divine magic associated with their tribal religion.
+  gained_at_level: 1
+- id: foraging_and_hunting
+  name: Foraging and Hunting
+  text: |-
+    A party with a barbarian succeeds at foraging with a 2-in-6 chance and finds prey when hunting with a 5-in-6 chance (see Wilderness Adventuring, p212).
+  gained_at_level: 1
+- id: strike_invulnerable_monsters
+  name: Strike Invulnerable Monsters
+  text: |-
+    A barbarian of 4th level or higher is able to hit monsters that can normally only be harmed by magic.
+  gained_at_level: 4
+- id: after_reaching_8th_level
+  name: After Reaching 8th Level
+  text: |-
+    A barbarian can call upon their native people to form a great horde of warriors, numbering 250 per level above 7th. The warriors are 1st level fighters with basic combat gear and may be mounted if customary in their culture. A horde can only be mustered for a specific purpose (e.g. attacking an enemy city, rescuing hostages, etc.). Once the purpose is achieved or abandoned, the horde disbands. Mustering a horde takes one week, and it remains for one week per level of the barbarian.
+  gained_at_level: 8
+- id: barbarian_skills_chance_of_success
+  name: Barbarian Skills Chance of Success
+  text: |-
+    | Level | CS | HD | MS |
+    |---|---|---|---|
+    | 1 | 87 | 10 | 20 |
+    | 2 | 88 | 15 | 25 |
+    | 3 | 89 | 20 | 30 |
+    | 4 | 90 | 25 | 35 |
+    | 5 | 91 | 30 | 37 |
+    | 6 | 92 | 33 | 40 |
+    | 7 | 93 | 36 | 42 |
+    | 8 | 94 | 40 | 44 |
+    | 9 | 95 | 43 | 46 |
+    | 10 | 96 | 46 | 48 |
+    | 11 | 97 | 50 | 50 |
+    | 12 | 98 | 53 | 50 |
+    | 13 | 99 | 56 | 50 |
+    | 14 | 99 | 60 | 50 |
+  gained_at_level: 1
+- id: rolling_skill_checks
+  name: Rolling Skill Checks
+  text: |-
+    All skills are rolled on d%, with a result of less than or equal to the listed percentage indicating success.
+  gained_at_level: 1
+- id: player_knowledge
+  name: Player Knowledge
+  text: |-
+    The referee should roll for hiding and moving silently on the player’s behalf, as the barbarian always believes the attempt to be successful. If the roll fails, the referee knows that the barbarian has been noticed and should determine enemies’ actions appropriately.
+  gained_at_level: 1

@@ -59,9 +59,10 @@ def test_build_sheet_saves_ordered(data):
 
 
 def test_build_sheet_movement(data):
+    # Dwarf fighter unencumbered: base_movement 120, no armour → movement 120.
     sheet = build_sheet(make_spec(), data)
-    assert sheet.movement_base == 60
-    assert sheet.movement_encounter == 20
+    assert sheet.movement_base == 120
+    assert sheet.movement_encounter == 40
 
 
 def test_build_sheet_xp_to_next(data):
@@ -74,7 +75,8 @@ def test_build_sheet_features_have_source(data):
     sheet = build_sheet(make_spec(), data)
     assert all(f.source.startswith("Race:") for f in sheet.race_features)
     assert all(f.source.startswith("Class:") for f in sheet.class_features)
-    assert any(f.name == "Detect Stonework" for f in sheet.race_features)
+    # Book-accurate dwarf features: detect construction tricks and room traps
+    assert any(f.name == "Detect Construction Tricks" for f in sheet.race_features)
 
 
 def test_build_sheet_ascending_flag_follows_ruleset(data):

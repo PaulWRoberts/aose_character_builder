@@ -137,16 +137,15 @@ def test_basic_mode_metal_drops_to_60ft(data):
     assert effective_movement(spec, data) == 60
 
 
-def test_basic_mode_dwarf_in_chain_scales_to_30(data):
-    """Dwarf base 60' is half a human's 120', so the metal+light cell
-    (60' for a human) scales to 30'.  Matches the OSE Classic dwarf
-    rates: 60' unencumbered, 30' in chain."""
+def test_basic_mode_dwarf_in_chain_scales_to_60(data):
+    """OSE Advanced dwarves have base_movement 120' (same as humans).
+    Dwarf in chain mail → metal-armour cell → 60'."""
     spec = _spec(
         race_id="dwarf", inventory=["chain_mail"],
         equipped={"armor": "chain_mail"},
         encumbrance="basic",
     )
-    assert effective_movement(spec, data) == 30
+    assert effective_movement(spec, data) == 60
 
 
 def test_basic_mode_ignores_inventory_weight(data):

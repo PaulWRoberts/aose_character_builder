@@ -1,19 +1,17 @@
-id: elf
-name: Elf
+id: drow
+name: Drow
 ability_requirements:
   INT: 9
-infravision: 60
+infravision: 90
 languages:
 - common
+- deepcommon
 - elvish
-- gnoll
-- hobgoblin
-- orcish
+- gnomish
 allowed_classes:
 - acrobat
 - assassin
 - cleric
-- druid
 - fighter
 - knight
 - magic_user
@@ -22,13 +20,12 @@ allowed_classes:
 class_level_caps:
   acrobat: 10
   assassin: 10
-  cleric: 7
-  druid: 8
+  cleric: 11
   fighter: 7
-  knight: 11
-  magic_user: 11
-  ranger: 11
-  thief: 10
+  knight: 9
+  magic_user: 9
+  ranger: 9
+  thief: 11
 features:
 - id: ability_modifiers
   name: Ability Modifiers
@@ -39,12 +36,11 @@ features:
       DEX: 1
 - id: npc_only_classes_referee_option
   name: NPC-Only Classes (Referee Option)
-  text: At the referee’s option, elven cleric and druids may only exist as NPCs.
+  text: At the referee’s option, drow clerics may only exist as NPCs.
   mechanical:
     referee_option: true
     npc_only_classes:
     - cleric
-    - druid
 - id: detect_secret_doors
   name: Detect Secret Doors
   text: When actively searching, detect hidden and secret doors with a 2-in-6 chance.
@@ -57,6 +53,28 @@ features:
   mechanical:
     immunities:
     - ghoul_paralysis
+- id: innate_magic
+  name: Innate Magic
+  text: At 2nd level, may cast darkness, the reverse of light, once per day. At 4th level, may cast detect magic once per day.
+  mechanical:
+    spells:
+    - spell: darkness
+      level_available: 2
+      frequency: once_per_day
+      notes: reverse_of_light
+    - spell: detect_magic
+      level_available: 4
+      frequency: once_per_day
+- id: light_sensitivity
+  name: Light Sensitivity
+  text: In bright light, including daylight or continual light, suffers a –2 penalty to attack rolls and a –1 penalty to Armour Class.
+  mechanical:
+    conditions:
+    - bright_light
+    - daylight
+    - continual_light
+    attack_roll_modifier: -2
+    armour_class_modifier: -1
 - id: listening_at_doors
   name: Listening at Doors
   text: Has a 2-in-6 chance of hearing noises at doors.

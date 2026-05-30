@@ -1,0 +1,158 @@
+id: svirfneblin
+name: Svirfneblin
+prime_requisites:
+- STR
+ability_requirements:
+  CON: 9
+max_level: 8
+hit_die: 1d6
+weapons_allowed:
+- any appropriate to size
+armor_allowed:
+- any appropriate to size
+shields_allowed: true
+race_locked: svirfneblin
+progression:
+  1:
+    xp_required: 0
+    thac0: 19
+    hit_dice: 1d6
+    saves:
+      death: 8
+      wands: 9
+      paralysis: 10
+      breath: 14
+      spells: 11
+  2:
+    xp_required: 2400
+    thac0: 19
+    hit_dice: 2d6
+    saves:
+      death: 8
+      wands: 9
+      paralysis: 10
+      breath: 14
+      spells: 11
+  3:
+    xp_required: 4800
+    thac0: 19
+    hit_dice: 3d6
+    saves:
+      death: 8
+      wands: 9
+      paralysis: 10
+      breath: 14
+      spells: 11
+  4:
+    xp_required: 10000
+    thac0: 17
+    hit_dice: 4d6
+    saves:
+      death: 6
+      wands: 7
+      paralysis: 8
+      breath: 11
+      spells: 9
+  5:
+    xp_required: 20000
+    thac0: 17
+    hit_dice: 5d6
+    saves:
+      death: 6
+      wands: 7
+      paralysis: 8
+      breath: 11
+      spells: 9
+  6:
+    xp_required: 40000
+    thac0: 17
+    hit_dice: 6d6
+    saves:
+      death: 6
+      wands: 7
+      paralysis: 8
+      breath: 11
+      spells: 9
+  7:
+    xp_required: 80000
+    thac0: 14
+    hit_dice: 7d6
+    saves:
+      death: 4
+      wands: 5
+      paralysis: 6
+      breath: 9
+      spells: 7
+  8:
+    xp_required: 160000
+    thac0: 14
+    hit_dice: 8d6
+    saves:
+      death: 4
+      wands: 5
+      paralysis: 6
+      breath: 9
+      spells: 7
+features:
+- id: blend_into_stone
+  name: Blend into Stone
+  text: |-
+    Svirfneblins have the uncanny ability to go unnoticed when in an environment of natural or carved stone so long as they remain silent and motionless. The chance of success is 4-in-6 in gloomy conditions or 2-in-6 in well-lit conditions.
+  gained_at_level: 1
+- id: combat
+  name: Combat
+  text: |-
+    Svirfneblins can use all types of armour. Armour must be tailored to svirfneblins’ small size. Likewise, svirfneblins can only use weapons appropriate to their stature (as determined by the referee). They cannot use longbows or two-handed swords.
+  gained_at_level: 1
+- id: defensive_bonus
+  name: Defensive Bonus
+  text: |-
+    Due to their small size, svirfneblins gain a +2 bonus to Armour Class when attacked by large opponents (greater than human-sized).
+  gained_at_level: 1
+- id: detect_construction_tricks
+  name: Detect Construction Tricks
+  text: |-
+    As expert tunnellers, svirfneblins have a 2-in-6 chance of being able to detect new construction, sliding walls, or sloping passages when searching.
+  gained_at_level: 1
+- id: illusion_resistance
+  name: Illusion Resistance
+  text: |-
+    Svirfneblins gain a +2 bonus to all saving throws against illusions.
+  gained_at_level: 1
+- id: infravision
+  name: Infravision
+  text: |-
+    Svirfneblins have infravision to 90’ (see Darkness under Hazards and Challenges, p208).
+  gained_at_level: 1
+- id: light_sensitivity
+  name: Light Sensitivity
+  text: |-
+    When in bright light (daylight, continual light), svirfneblins suffer a –2 penalty to attack rolls and a –1 penalty to AC.
+  gained_at_level: 1
+- id: speak_with_earth_elementals
+  name: Speak with Earth Elementals
+  text: |-
+    Svirfneblins can speak the grinding, growling tongue of natives of the elemental plane of earth.
+  gained_at_level: 1
+- id: stone_murmurs
+  name: Stone Murmurs
+  text: |-
+    Svirfneblins can understand the imperceptible grumblings of stone. If a svirfneblin stands quietly for one turn with their ear pressed against a stone surface, they have a 2-in-6 chance of divining one of the following pieces of information (player’s choice):
+
+    ▶ The presence of secret doors in the stone, within 10’.
+
+    ▶ The presence of gems or precious metals, up to 30’ beyond the surface.
+
+    ▶ The presence of living creatures, up to 30’ beyond the surface.
+
+    ▶ The presence of bodies of water or open spaces, up to 60’ beyond the surface.
+  gained_at_level: 1
+- id: using_magic_items
+  name: Using Magic Items
+  text: |-
+    Svirfneblins can use all magic items (except for spell scrolls) which deal with summoning or controlling earth elementals. This includes items that can normally only be used by spell casters.
+  gained_at_level: 1
+- id: after_reaching_8th_level
+  name: After Reaching 8th Level
+  text: "A svirfneblin may construct a subterranean stronghold that will attract svirfneblins from far and wide.\n\nBecause of svirfneblins’ connection with earth elementals, 1d3 16 HD earth elementals (see Conjure Elemental, p192) will live in the rocks around the stronghold and will be friendly with the svirfneblins. They may warn of intruders, carry messages and news, etc. The elementals will also protect the svirfneblins in times of grave danger. However, in exchange a svirfneblin ruler must always defend earth elementals within the svirfneblins’ territory.\n\nSvirfneblin rulers can hire members of other races in the capacity of retainers or specialists, but only soldiers of svirfneblin stock may be hired.\n\nD: Death / poison; W: Wands;  \nP: Paralysis / petrify; B: Breath attacks;  \nS: Spells / rods / staves."
+  gained_at_level: 8

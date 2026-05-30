@@ -1,12 +1,35 @@
 id: human
 name: Human
-# Humans have no ability requirements, no class restrictions, and no level
-# caps in any class — leaving the lists empty is what encodes that.
-ability_requirements: {}
-infravision: 0
-base_movement: 120
 languages:
-  - common
-allowed_classes: []        # empty = any class allowed
-class_level_caps: {}       # empty = no race-imposed cap on any class
-features: []               # no innate racial abilities
+- common
+allowed_classes: []
+features:
+- id: optional_ability_modifiers
+  name: Ability Modifiers (Optional Rule)
+  text: If using the optional rule for lifting demihuman class and level restrictions, humans gain +1 CHA and +1 CON.
+  mechanical:
+    optional_rule: true
+    ability_modifiers:
+      CHA: 1
+      CON: 1
+- id: blessed
+  name: Blessed
+  text: When rolling hit points, including at 1st level, the player of a human PC may roll twice and take the best result.
+  mechanical:
+    optional_rule: true
+    hit_point_rolls: 2
+    take: best
+- id: decisiveness
+  name: Decisiveness
+  text: When an initiative roll is tied, humans act first, as if they had won initiative. If using the optional rule for individual initiative, humans get a +1 bonus to initiative rolls.
+  mechanical:
+    optional_rule: true
+    wins_tied_initiative: true
+    individual_initiative_bonus: 1
+- id: leadership
+  name: Leadership
+  text: All of a human’s retainers and mercenaries gain a +1 bonus to loyalty and morale.
+  mechanical:
+    optional_rule: true
+    retainer_loyalty_bonus: 1
+    mercenary_morale_bonus: 1

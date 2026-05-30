@@ -1,7 +1,9 @@
-id: magic_user
-name: Magic-User
+id: illusionist
+name: Illusionist
 prime_requisites:
 - INT
+ability_requirements:
+  DEX: 9
 max_level: 14
 hit_die: 1d4
 weapons_allowed:
@@ -10,7 +12,7 @@ weapons_allowed:
 armor_allowed: []
 shields_allowed: false
 spell_lists:
-- magic_user
+- illusionist
 progression:
   1:
     xp_required: 0
@@ -226,24 +228,24 @@ features:
   text: |-
     See Magic, p110 for full details on arcane magic.
 
-    **Magical research:** A magic-user of any level may spend time and money on magical research. This allows them to add new spells to their spell book and to research other magical effects. When a magic-user reaches 9th level, they are also able to create magic items.
+    **Magical research:** An illusionist of any level may spend time and money on magical research. This allows them to add new spells to their spell book and to research other magical effects. When an illusionist reaches 9th level, they are also able to create magic items. Researched spells, effects, and magic items must be within the scope of the illusionist class, as judged by the referee.
 
-    **Spell casting:** Magic-users carry spell books containing the formulae for arcane spells. The spell casting chart (opposite) shows both the number of spells in the magic-user’s spell book and the number they may memorize, determined by the character’s experience level. Thus, a 1st level magic-user has one spell in their spell book, selected by the referee (who may allow the player to choose). The list of spells available to magic-users is found on p119.
+    **Spell casting:** Illusionists carry spell books containing the formulae for arcane spells. The level progression table (opposite) shows both the number of spells in the illusionist’s spell book and the number they may memorize, determined by the character’s experience level. Thus, a 1st level illusionist has one spell in their spell book, selected by the referee (who may allow the player to choose). The list of spells available to illusionists is found on p118.
 
-    **Using magic items:** As spell casters, magic-users are able to use magic scrolls of spells on their spell list. They can also use items that may only be used by arcane spell casters (e.g. magic wands).
+    **Using magic items:** As spell casters, illusionists are able to use magic scrolls of spells on their spell list. They can also use items that may only be used by arcane spell casters (e.g. magic wands). They are, however, not able to use magic items with effects that cause direct damage (e.g. a wand that shoots fireballs).
   gained_at_level: 1
 - id: combat
   name: Combat
   text: |-
-    Magic-users can only use daggers and are unable to use shields or wear any kind of armour. This makes them very vulnerable in combat.
+    Illusionists can only use daggers and are unable to use shields or wear any kind of armour. This makes them very vulnerable in combat.
   gained_at_level: 1
-- id: magic_users_and_staves_optional_rule
-  name: Magic-Users and Staves (Optional Rule)
+- id: illusionists_and_staves_optional_rule
+  name: Illusionists and Staves (Optional Rule)
   text: |-
-    Optionally, magic-users may be allowed to wield a staff in combat.
+    Optionally, illusionists may be allowed to wield a staff in combat.
   gained_at_level: 1
 - id: after_reaching_11th_level
   name: After Reaching 11th Level
   text: |-
-    A magic-user may build a stronghold, often a great tower. 1d6 apprentices of levels 1–3 will then arrive to study under the magic-user.
+    An illusionist may build a stronghold, often a great tower. 1d6 apprentices of levels 1–3 will then arrive to study under the illusionist.
   gained_at_level: 11

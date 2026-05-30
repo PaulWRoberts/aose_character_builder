@@ -70,8 +70,10 @@ def test_proficiency_group_lists_member_weapons():
 
 
 def test_starting_proficiency_count_fighter():
+    # Fighter has no explicit proficiency block in the book data → falls back to
+    # the default of 2 starting slots (see engine/proficiency.py).
     data = GameData.load(DATA_DIR)
-    assert starting_proficiency_count(data.classes["fighter"]) == 4
+    assert starting_proficiency_count(data.classes["fighter"]) == 2
 
 
 def test_starting_proficiency_count_defaults_to_two_when_class_has_no_config():
@@ -145,11 +147,11 @@ def test_get_proficiencies_lists_all_groups(client):
 
 
 def test_get_proficiencies_shows_required_count(client):
-    """Fighter must pick 4 slots — the count should be visible to the user."""
+    """Fighter gets 2 starting slots — the count should be visible to the user."""
     draft_id = _start_through_class(client)
     client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "law"})
     r = client.get(f"/wizard/{draft_id}/proficiencies")
-    assert "4" in r.text
+    assert "2" in r.text
 
 
 # ── POST /proficiencies ────────────────────────────────────────────────────
@@ -168,12 +170,12 @@ def test_post_with_correct_count_advances(client):
     client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "law"})
     r = client.post(
         f"/wizard/{draft_id}/proficiencies",
-        data=_proficiency_post_data("sword", "axe", "bow", "dagger"),
+        data=_proficiency_post_data("sword", "axe"),
     )
     assert r.status_code == 303
     assert r.headers["location"].endswith("/hp")
     draft = load_draft(draft_id, client._drafts_dir)
-    assert set(draft["proficiencies"]) == {"sword", "axe", "bow", "dagger"}
+    assert set(draft["proficiencies"]) == {"sword", "axe"}
 
 
 def test_post_with_too_few_rejected(client):
@@ -239,11 +241,11 @@ def test_proficiencies_persist_to_character(client):
     client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "law"})
     client.post(
         f"/wizard/{draft_id}/proficiencies",
-        data=_proficiency_post_data("sword", "axe", "bow", "dagger"),
+        data=_proficiency_post_data("sword", "axe"),
     )
     char_id = _finish_wizard(client, draft_id)
     spec = load_character(char_id, client._characters_dir)
-    assert set(spec.chosen_proficiencies) == {"sword", "axe", "bow", "dagger"}
+    assert set(spec.chosen_proficiencies) == {"sword", "axe"}
 
 
 def test_sheet_shows_proficiencies_when_rule_active(client):
@@ -275,7 +277,7 @@ def test_print_page_shows_proficiencies(client):
     client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "law"})
     client.post(
         f"/wizard/{draft_id}/proficiencies",
-        data=_proficiency_post_data("sword", "polearm", "crossbow", "sling"),
+        data=_proficiency_post_data("crossbow", "sling"),
     )
     char_id = _finish_wizard(client, draft_id)
     r = client.get(f"/character/{char_id}/print")
@@ -367,7 +369,7 @@ def test_sheet_renders_variable_damages_inline(client):
     client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "law"})
     client.post(
         f"/wizard/{draft_id}/proficiencies",
-        data=_proficiency_post_data("sword", "axe", "bow", "sling"),
+        data=_proficiency_post_data("sword", "axe"),
     )
     char_id = _finish_wizard(client, draft_id)
     r = client.get(f"/character/{char_id}")

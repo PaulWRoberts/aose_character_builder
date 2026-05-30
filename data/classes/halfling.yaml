@@ -1,0 +1,141 @@
+id: halfling
+name: Halfling
+prime_requisites:
+- DEX
+- STR
+ability_requirements:
+  CON: 9
+  DEX: 9
+max_level: 8
+hit_die: 1d6
+weapons_allowed:
+- any appropriate to size
+armor_allowed:
+- any appropriate to size
+shields_allowed: true
+race_locked: halfling
+progression:
+  1:
+    xp_required: 0
+    thac0: 19
+    hit_dice: 1d6
+    saves:
+      death: 8
+      wands: 9
+      paralysis: 10
+      breath: 13
+      spells: 12
+  2:
+    xp_required: 2000
+    thac0: 19
+    hit_dice: 2d6
+    saves:
+      death: 8
+      wands: 9
+      paralysis: 10
+      breath: 13
+      spells: 12
+  3:
+    xp_required: 4000
+    thac0: 19
+    hit_dice: 3d6
+    saves:
+      death: 8
+      wands: 9
+      paralysis: 10
+      breath: 13
+      spells: 12
+  4:
+    xp_required: 8000
+    thac0: 17
+    hit_dice: 4d6
+    saves:
+      death: 6
+      wands: 7
+      paralysis: 8
+      breath: 10
+      spells: 10
+  5:
+    xp_required: 16000
+    thac0: 17
+    hit_dice: 5d6
+    saves:
+      death: 6
+      wands: 7
+      paralysis: 8
+      breath: 10
+      spells: 10
+  6:
+    xp_required: 32000
+    thac0: 17
+    hit_dice: 6d6
+    saves:
+      death: 6
+      wands: 7
+      paralysis: 8
+      breath: 10
+      spells: 10
+  7:
+    xp_required: 64000
+    thac0: 14
+    hit_dice: 7d6
+    saves:
+      death: 4
+      wands: 5
+      paralysis: 6
+      breath: 7
+      spells: 8
+  8:
+    xp_required: 120000
+    thac0: 14
+    hit_dice: 8d6
+    saves:
+      death: 4
+      wands: 5
+      paralysis: 6
+      breath: 7
+      spells: 8
+features:
+- id: prime_requisites
+  name: Prime requisites
+  text: A halfling with at least 13 in one prime requisite gains a 5% bonus to experience. If both DEX and STR are 13 or higher, the halfling gets a +10% bonus.
+  gained_at_level: 1
+- id: combat
+  name: Combat
+  text: |-
+    Halflings can use all types of armour, but it must be tailored to their small size. Similarly, they can use any weapon appropriate to their stature (as determined by the referee). They cannot use longbows or two-handed swords.
+  gained_at_level: 1
+- id: defensive_bonus
+  name: Defensive Bonus
+  text: |-
+    Due to their small size, halflings gain a +2 bonus to AC when attacked by large opponents (greater than human-sized).
+  gained_at_level: 1
+- id: hiding
+  name: Hiding
+  text: |-
+    Halflings have an uncanny ability to disappear from sight:
+
+    ▶ In woods or undergrowth, a halfling can hide with a 90% chance of success.
+
+    ▶ In dungeons, a halfling can hide in shadows or behind other forms of cover. The chance of success is 2-in-6. Hiding requires the halfling to be motionless.
+  gained_at_level: 1
+- id: initiative_bonus_optional_rule
+  name: Initiative Bonus (Optional Rule)
+  text: |-
+    If using the optional rule for individual initiative (see Combat, p222), halflings get a bonus of +1 to initiative rolls.
+  gained_at_level: 1
+- id: listening_at_doors
+  name: Listening at Doors
+  text: |-
+    Halflings have a 2-in-6 chance of hearing noises (see Dungeon Adventuring, p210).
+  gained_at_level: 1
+- id: missile_attack_bonus
+  name: Missile Attack Bonus
+  text: |-
+    Halflings’ keen coordination grants them a +1 bonus to attack rolls with all missile weapons.
+  gained_at_level: 1
+- id: stronghold
+  name: Stronghold
+  text: |-
+    Any time a halfling wishes (and has sufficient money), they may build a stronghold, which will form the basis of a new community of halflings. Halfling communities—known as Shires—are typically located in gentle countryside of little rivers and rolling hills. The leader of the community is called the Sheriff.
+  gained_at_level: 1

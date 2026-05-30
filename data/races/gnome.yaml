@@ -1,0 +1,77 @@
+id: gnome
+name: Gnome
+ability_requirements:
+  CON: 9
+  INT: 9
+infravision: 90
+languages:
+- common
+- dwarvish
+- gnomish
+- kobold
+- secret_language_of_burrowing_mammals
+allowed_classes:
+- assassin
+- cleric
+- fighter
+- illusionist
+- thief
+class_level_caps:
+  assassin: 6
+  cleric: 7
+  fighter: 6
+  illusionist: 7
+  thief: 8
+features:
+- id: npc_only_classes_referee_option
+  name: NPC-Only Classes (Referee Option)
+  text: At the referee’s option, gnomish clerics may only exist as NPCs.
+  mechanical:
+    referee_option: true
+    npc_only_classes:
+    - cleric
+- id: combat
+  name: Combat
+  text: Armour must be tailored to this race’s small size. Can only use weapons appropriate to stature, as determined by the referee. Cannot use longbows or two-handed swords.
+  mechanical:
+    armour_requires_tailoring: true
+    weapon_size_restriction: appropriate_to_stature_referee_determined
+    prohibited_weapons:
+    - longbow
+    - two_handed_sword
+- id: defensive_bonus
+  name: Defensive Bonus
+  text: Due to small size, gains a +2 bonus to Armour Class when attacked by large opponents greater than human-sized.
+  mechanical:
+    armour_class_bonus: 2
+    condition: attacked_by_large_opponents
+- id: detect_construction_tricks
+  name: Detect Construction Tricks
+  text: When searching, has a 2-in-6 chance to detect new construction, sliding walls, or sloping passages.
+  mechanical:
+    chance_in_6: 2
+    condition: searching
+- id: listening_at_doors
+  name: Listening at Doors
+  text: Has a 2-in-6 chance of hearing noises at doors.
+  mechanical:
+    chance_in_6: 2
+- id: magic_resistance
+  name: Magic Resistance
+  text: 'Naturally resistant to magic, gaining a bonus to saving throws versus spells and magic wands, rods, and staves based on CON score: 6 or lower +0; 7–10 +2; 11–14 +3; 15–17 +4; 18 +5.'
+  mechanical:
+    save_categories:
+    - spells
+    - magic_wands_rods_staves
+    bonus_by_CON:
+      6_or_lower: 0
+      '7_10': 2
+      '11_14': 3
+      '15_17': 4
+      '18': 5
+- id: speak_with_burrowing_mammals
+  name: Speak with Burrowing Mammals
+  text: Knows the secret language of burrowing mammals such as badgers and moles.
+  mechanical:
+    languages:
+    - secret_language_of_burrowing_mammals

@@ -1,10 +1,12 @@
-id: dwarf
-name: Dwarf
+id: duergar
+name: Duergar
 ability_requirements:
   CON: 9
-infravision: 60
+  INT: 9
+infravision: 90
 languages:
 - common
+- deepcommon
 - dwarvish
 - gnomish
 - goblin
@@ -17,7 +19,7 @@ allowed_classes:
 class_level_caps:
   assassin: 9
   cleric: 8
-  fighter: 10
+  fighter: 9
   thief: 9
 features:
 - id: ability_modifiers
@@ -29,7 +31,7 @@ features:
       CON: 1
 - id: npc_only_classes_referee_option
   name: NPC-Only Classes (Referee Option)
-  text: At the referee’s option, dwarven clerics may only exist as NPCs.
+  text: At the referee’s option, duergar clerics may only exist as NPCs.
   mechanical:
     referee_option: true
     npc_only_classes:
@@ -57,6 +59,16 @@ features:
     chance_in_6: 2
     condition: searching
     trap_type: non_magical_room_traps
+- id: light_sensitivity
+  name: Light Sensitivity
+  text: In bright light, including daylight or continual light, suffers a –2 penalty to attack rolls and a –1 penalty to Armour Class.
+  mechanical:
+    conditions:
+    - bright_light
+    - daylight
+    - continual_light
+    attack_roll_modifier: -2
+    armour_class_modifier: -1
 - id: listening_at_doors
   name: Listening at Doors
   text: Has a 2-in-6 chance of hearing noises at doors.
@@ -64,9 +76,10 @@ features:
     chance_in_6: 2
 - id: resilience
   name: Resilience
-  text: 'Natural constitution and resistance to magic grants a bonus to saving throws versus poison, spells, and magic wands, rods, and staves based on CON score: 6 or lower +0; 7–10 +2; 11–14 +3; 15–17 +4; 18 +5.'
+  text: 'Natural constitution and resistance to magic grants a bonus to saving throws versus paralysis, poison, spells, and magic wands, rods, and staves based on CON score: 6 or lower +0; 7–10 +2; 11–14 +3; 15–17 +4; 18 +5.'
   mechanical:
     save_categories:
+    - paralysis
     - poison
     - spells
     - magic_wands_rods_staves
@@ -76,3 +89,10 @@ features:
       '11_14': 3
       '15_17': 4
       '18': 5
+- id: stealth
+  name: Stealth
+  text: Underground, has a 3-in-6 chance of moving silently.
+  mechanical:
+    chance_in_6: 3
+    condition: underground
+    activity: moving_silently

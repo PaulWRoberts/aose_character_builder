@@ -1,0 +1,259 @@
+id: ranger
+name: Ranger
+prime_requisites:
+- STR
+ability_requirements:
+  CON: 9
+  WIS: 9
+max_level: 14
+hit_die: 1d8
+weapons_allowed: all
+armor_allowed:
+- leather
+- chainmail
+shields_allowed: true
+spell_lists:
+- druid
+progression:
+  1:
+    xp_required: 0
+    thac0: 19
+    hit_dice: 1d8
+    saves:
+      death: 12
+      wands: 13
+      paralysis: 14
+      breath: 15
+      spells: 16
+  2:
+    xp_required: 2250
+    thac0: 19
+    hit_dice: 2d8
+    saves:
+      death: 12
+      wands: 13
+      paralysis: 14
+      breath: 15
+      spells: 16
+  3:
+    xp_required: 4500
+    thac0: 19
+    hit_dice: 3d8
+    saves:
+      death: 12
+      wands: 13
+      paralysis: 14
+      breath: 15
+      spells: 16
+  4:
+    xp_required: 10000
+    thac0: 17
+    hit_dice: 4d8
+    saves:
+      death: 10
+      wands: 11
+      paralysis: 12
+      breath: 13
+      spells: 14
+  5:
+    xp_required: 20000
+    thac0: 17
+    hit_dice: 5d8
+    saves:
+      death: 10
+      wands: 11
+      paralysis: 12
+      breath: 13
+      spells: 14
+  6:
+    xp_required: 40000
+    thac0: 17
+    hit_dice: 6d8
+    saves:
+      death: 10
+      wands: 11
+      paralysis: 12
+      breath: 13
+      spells: 14
+  7:
+    xp_required: 90000
+    thac0: 14
+    hit_dice: 7d8
+    saves:
+      death: 8
+      wands: 9
+      paralysis: 10
+      breath: 10
+      spells: 12
+  8:
+    xp_required: 150000
+    thac0: 14
+    hit_dice: 8d8
+    saves:
+      death: 8
+      wands: 9
+      paralysis: 10
+      breath: 10
+      spells: 12
+    spell_slots:
+      1: 1
+  9:
+    xp_required: 300000
+    thac0: 14
+    hit_dice: 9d8
+    saves:
+      death: 8
+      wands: 9
+      paralysis: 10
+      breath: 10
+      spells: 12
+    spell_slots:
+      1: 2
+  10:
+    xp_required: 425000
+    thac0: 12
+    hit_dice: 9d8+2
+    saves:
+      death: 6
+      wands: 7
+      paralysis: 8
+      breath: 8
+      spells: 10
+    spell_slots:
+      1: 2
+      2: 1
+  11:
+    xp_required: 550000
+    thac0: 12
+    hit_dice: 9d8+4
+    saves:
+      death: 6
+      wands: 7
+      paralysis: 8
+      breath: 8
+      spells: 10
+    spell_slots:
+      1: 2
+      2: 2
+  12:
+    xp_required: 675000
+    thac0: 12
+    hit_dice: 9d8+6
+    saves:
+      death: 6
+      wands: 7
+      paralysis: 8
+      breath: 8
+      spells: 10
+    spell_slots:
+      1: 2
+      2: 2
+      3: 1
+  13:
+    xp_required: 800000
+    thac0: 10
+    hit_dice: 9d8+8
+    saves:
+      death: 4
+      wands: 5
+      paralysis: 6
+      breath: 5
+      spells: 8
+    spell_slots:
+      1: 3
+      2: 2
+      3: 1
+  14:
+    xp_required: 925000
+    thac0: 10
+    hit_dice: 9d8+10
+    saves:
+      death: 4
+      wands: 5
+      paralysis: 6
+      breath: 5
+      spells: 8
+    spell_slots:
+      1: 3
+      2: 2
+      3: 2
+features:
+- id: alignment
+  name: Alignment
+  text: As protectors, rangers may only be lawful or neutral. If a ranger ever changes alignment to chaotic, they lose all special class abilities and become a fighter of the same level. The character may be able to regain their ranger status by performing a special quest.
+  gained_at_level: 1
+- id: awareness
+  name: Awareness
+  text: |-
+    Rangers are only surprised on a roll of 1. This may mean that a ranger is able to act in the surprise round while their companions are surprised.
+  gained_at_level: 1
+- id: combat
+  name: Combat
+  text: |-
+    Rangers can use all types of weapons and can use leather armour, chainmail, and shields. Because of their need for stealth, they cannot use plate mail.
+  gained_at_level: 1
+- id: divine_magic
+  name: Divine Magic
+  text: |-
+    See Magic, p110 for full details on divine magic.
+
+    **Spell casting:** From 8th level, due to a deep connection with nature, a ranger gains the ability to cast spells. The power and number of spells available to a ranger are determined by the character’s experience level. The list of spells available to rangers is found on p117 (rangers use the druid spell list).
+  gained_at_level: 8
+- id: foraging_and_hunting
+  name: Foraging and Hunting
+  text: |-
+    A party with a ranger succeeds at foraging with a 2-in-6 chance and finds prey when hunting with a 5-in-6 chance (see Wilderness Adventuring, p212).
+  gained_at_level: 1
+- id: limited_possessions
+  name: Limited Possessions
+  text: |-
+    A ranger may only keep wealth and possessions that can be kept on their person or mount. Excess must be donated to worthy causes (not other PCs!).
+  gained_at_level: 1
+- id: pursuit
+  name: Pursuit
+  text: |-
+    When the ranger’s party pursues an opposing group in the wilderness (see Evasion and Pursuit, p218), the chance of evasion is reduced by 10%.
+  gained_at_level: 1
+- id: surprise_attack
+  name: Surprise Attack
+  text: |-
+    In the wilderness, a ranger has a 3-in-6 chance of going unnoticed when sneaking up on a target. If the ranger goes unnoticed, the target may be surprised (see Surprise under Encounters, p216).
+  gained_at_level: 1
+- id: tracking
+  name: Tracking
+  text: |-
+    Rangers can identify and follow tracks. This skill improves as the character gains levels (see the table to the right). Success may be modified by the following factors:
+
+    ▶ **Soft/hard ground:** +20% to –50%.
+
+    ▶ **Size of group being tracked:** +2% per creature beyond the first.
+
+    ▶ **Passing through an area where other tracks mingle:** –50%.
+
+    ▶ **Age of tracks:** –5% per 12 hours.
+
+    ▶ **Rainfall:** –25% per hour.
+
+    ▶ **Efforts made to hide tracks:** –25%.
+  gained_at_level: 1
+- id: after_reaching_10th_level
+  name: After Reaching 10th Level
+  text: |-
+    2d12 beings will join the ranger as followers. The nature of these followers is up to the referee—they may include human or demihuman adventurers, animals, fantastic mounts, sylvan creatures, or special monsters. If any of the followers die, they are not replaced.
+  gained_at_level: 10
+- id: ranger_tracking_chance_of_success
+  name: Ranger Tracking Chance of Success
+  text: |-
+    | Level | Tracking |
+    |---|---|
+    | 1 | 20% |
+    | 2 | 30% |
+    | 3 | 40% |
+    | 4 | 50% |
+    | 5 | 60% |
+    | 6 | 70% |
+    | 7 | 80% |
+    | 8 | 90% |
+    | 9 | 100% |
+    | 10+ | 110% |
+  gained_at_level: 1

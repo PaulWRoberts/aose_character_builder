@@ -1,0 +1,92 @@
+id: svirfneblin
+name: Svirfneblin
+ability_requirements:
+  CON: 9
+infravision: 90
+languages:
+- common
+- deepcommon
+- gnomish
+- dwarvish
+- kobold
+- language_of_earth_elementals
+allowed_classes:
+- assassin
+- cleric
+- fighter
+- illusionist
+- thief
+class_level_caps:
+  assassin: 8
+  cleric: 7
+  fighter: 6
+  illusionist: 7
+  thief: 8
+features:
+- id: npc_only_classes_referee_option
+  name: NPC-Only Classes (Referee Option)
+  text: At the referee’s option, svirfneblin clerics may only exist as NPCs.
+  mechanical:
+    referee_option: true
+    npc_only_classes:
+    - cleric
+- id: blend_into_stone
+  name: Blend into Stone
+  text: Can go unnoticed in natural or carved stone so long as silent and motionless. Chance of success is 4-in-6 in gloomy conditions or 2-in-6 in well-lit conditions.
+  mechanical:
+    conditions:
+    - natural_stone
+    - carved_stone
+    - silent
+    - motionless
+    chance_in_6_by_lighting:
+      gloomy: 4
+      well_lit: 2
+- id: combat
+  name: Combat
+  text: Armour must be tailored to this race’s small size. Can only use weapons appropriate to stature, as determined by the referee. Cannot use longbows or two-handed swords.
+  mechanical:
+    armour_requires_tailoring: true
+    weapon_size_restriction: appropriate_to_stature_referee_determined
+    prohibited_weapons:
+    - longbow
+    - two_handed_sword
+- id: defensive_bonus
+  name: Defensive Bonus
+  text: Due to small size, gains a +2 bonus to Armour Class when attacked by large opponents greater than human-sized.
+  mechanical:
+    armour_class_bonus: 2
+    condition: attacked_by_large_opponents
+- id: detect_construction_tricks
+  name: Detect Construction Tricks
+  text: When searching, has a 2-in-6 chance to detect new construction, sliding walls, or sloping passages.
+  mechanical:
+    chance_in_6: 2
+    condition: searching
+- id: light_sensitivity
+  name: Light Sensitivity
+  text: In bright light, including daylight or continual light, suffers a –2 penalty to attack rolls and a –1 penalty to Armour Class.
+  mechanical:
+    conditions:
+    - bright_light
+    - daylight
+    - continual_light
+    attack_roll_modifier: -2
+    armour_class_modifier: -1
+- id: listening_at_doors
+  name: Listening at Doors
+  text: Has a 2-in-6 chance of hearing noises at doors.
+  mechanical:
+    chance_in_6: 2
+- id: illusion_resistance
+  name: Illusion Resistance
+  text: Gains a +2 bonus to all saving throws against illusions.
+  mechanical:
+    save_bonus: 2
+    save_category: illusions
+- id: speak_with_earth_elementals
+  name: Speak With Earth Elementals
+  text: Can speak with natives of the plane of elemental earth.
+  mechanical:
+    languages:
+    - language_of_earth_elementals

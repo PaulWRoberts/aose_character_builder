@@ -1,0 +1,178 @@
+id: duergar
+name: Duergar
+prime_requisites:
+- STR
+ability_requirements:
+  CON: 9
+  INT: 9
+max_level: 10
+hit_die: 1d6
+weapons_allowed:
+- small or normal sized
+armor_allowed: all
+shields_allowed: true
+race_locked: duergar
+progression:
+  1:
+    xp_required: 0
+    thac0: 19
+    hit_dice: 1d6
+    saves:
+      death: 8
+      wands: 9
+      paralysis: 10
+      breath: 13
+      spells: 12
+  2:
+    xp_required: 2800
+    thac0: 19
+    hit_dice: 2d6
+    saves:
+      death: 8
+      wands: 9
+      paralysis: 10
+      breath: 13
+      spells: 12
+  3:
+    xp_required: 5600
+    thac0: 19
+    hit_dice: 3d6
+    saves:
+      death: 8
+      wands: 9
+      paralysis: 10
+      breath: 13
+      spells: 12
+  4:
+    xp_required: 11200
+    thac0: 17
+    hit_dice: 4d6
+    saves:
+      death: 6
+      wands: 7
+      paralysis: 8
+      breath: 10
+      spells: 10
+  5:
+    xp_required: 23000
+    thac0: 17
+    hit_dice: 5d6
+    saves:
+      death: 6
+      wands: 7
+      paralysis: 8
+      breath: 10
+      spells: 10
+  6:
+    xp_required: 46000
+    thac0: 17
+    hit_dice: 6d6
+    saves:
+      death: 6
+      wands: 7
+      paralysis: 8
+      breath: 10
+      spells: 10
+  7:
+    xp_required: 100000
+    thac0: 14
+    hit_dice: 7d6
+    saves:
+      death: 4
+      wands: 5
+      paralysis: 6
+      breath: 7
+      spells: 8
+  8:
+    xp_required: 200000
+    thac0: 14
+    hit_dice: 8d6
+    saves:
+      death: 4
+      wands: 5
+      paralysis: 6
+      breath: 7
+      spells: 8
+  9:
+    xp_required: 300000
+    thac0: 14
+    hit_dice: 9d6
+    saves:
+      death: 4
+      wands: 5
+      paralysis: 6
+      breath: 7
+      spells: 8
+  10:
+    xp_required: 400000
+    thac0: 12
+    hit_dice: 9d6+3
+    saves:
+      death: 2
+      wands: 3
+      paralysis: 4
+      breath: 4
+      spells: 6
+features:
+- id: combat
+  name: Combat
+  text: |-
+    Duergars can use all types of armour. Due to their short height, duergars can only use small or normal sized weapons. They cannot use longbows or two-handed swords.
+  gained_at_level: 1
+- id: detect_construction_tricks
+  name: Detect Construction Tricks
+  text: |-
+    As expert miners, duergars have a 2-in-6 chance of being able to detect new construction, sliding walls, or sloping passages when searching.
+  gained_at_level: 1
+- id: detect_room_traps
+  name: Detect Room Traps
+  text: |-
+    Due to their expertise with construction, duergars have a 2-in-6 chance of detecting non-magical room traps when searching (see Dungeon Adventuring, p210).
+  gained_at_level: 1
+- id: infravision
+  name: Infravision
+  text: |-
+    Duergars have infravision to 90’ (see Darkness under Hazards and Challenges, p208).
+  gained_at_level: 1
+- id: light_sensitivity
+  name: Light Sensitivity
+  text: |-
+    When in bright light (daylight, continual light), duergars suffer a –2 penalty to attack rolls and a –1 penalty to AC.
+  gained_at_level: 1
+- id: listening_at_doors
+  name: Listening at Doors
+  text: |-
+    Duergars have a 2-in-6 chance of hearing noises (see Dungeon Adventuring, p210).
+  gained_at_level: 1
+- id: mental_powers
+  name: Mental Powers
+  text: |-
+    Once per day per level, a duergar may activate one of the following mental powers:
+
+    ▶ **Enlargement:** The duergar’s body, clothing, and armour (but not other equipment) double in size for 1d4 rounds. While enlarged, the duergar’s melee attacks inflict double damage.
+
+    ▶ **Invisibility:** The duergar disappears from the sight of one or more creatures (selected when the power is activated) for one turn. Up to 1HD of creatures per level of the duergar are affected. In combat, affected creatures may attack the duergar with a –4 penalty after the first round.
+
+    ▶ **Shrinking:** The duergar and all equipment shrinks to 6” tall for up to one turn per level. While shrunk, the duergar can slip through narrow spaces and, when remaining motionless, has a 90% chance of going unnoticed. A shrunk duergar cannot harm creatures larger than 1’ tall.
+
+    ▶ **Heat:** A creature or object within sight is subjected to a scorching heat. Paper or cloth ignite, liquids boil, and metals glow. The heat lasts for one round per level of the duergar. Applied to flesh or to metal in contact with a creature (e.g. armour), the heat inflicts 1d4 damage per round.
+  gained_at_level: 1
+- id: activating_mental_powers
+  name: Activating Mental Powers
+  text: |-
+    A duergar must spend a round concentrating in order to activate a mental power. While concentrating, the duergar may not move, attack, or perform any other actions.
+
+    **In combat:** Like spell casting, activating a mental power can be disrupted in combat (see Spell Casting under Combat, p222). The player must declare the use of a mental power before initiative is rolled.
+  gained_at_level: 1
+- id: stealth
+  name: Stealth
+  text: |-
+    Underground, duergars have a 3-in-6 chance of moving silently.
+  gained_at_level: 1
+- id: after_reaching_9th_level
+  name: After Reaching 9th Level
+  text: |-
+    A duergar has the option of creating an underground stronghold that will attract duergars from far and wide. Duergars usually live in clans, so duergars of the character’s clan will be attracted to live under their roof. Duergars from other clans will generally be friendly and may collaborate in times of war or disaster.
+
+    A duergar ruler may only hire duergar mercenaries. Specialists and retainers of any race may be hired.
+  gained_at_level: 9

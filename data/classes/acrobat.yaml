@@ -1,0 +1,237 @@
+id: acrobat
+name: Acrobat
+prime_requisites:
+- DEX
+max_level: 14
+hit_die: 1d4
+weapons_allowed:
+- missile weapons
+- dagger
+- sword
+- short sword
+- polearm
+- spear
+- staff
+armor_allowed:
+- leather
+shields_allowed: false
+progression:
+  1:
+    xp_required: 0
+    thac0: 19
+    hit_dice: 1d4
+    saves:
+      death: 13
+      wands: 14
+      paralysis: 13
+      breath: 16
+      spells: 15
+  2:
+    xp_required: 1200
+    thac0: 19
+    hit_dice: 2d4
+    saves:
+      death: 13
+      wands: 14
+      paralysis: 13
+      breath: 16
+      spells: 15
+  3:
+    xp_required: 2400
+    thac0: 19
+    hit_dice: 3d4
+    saves:
+      death: 13
+      wands: 14
+      paralysis: 13
+      breath: 16
+      spells: 15
+  4:
+    xp_required: 4800
+    thac0: 19
+    hit_dice: 4d4
+    saves:
+      death: 13
+      wands: 14
+      paralysis: 13
+      breath: 16
+      spells: 15
+  5:
+    xp_required: 9600
+    thac0: 17
+    hit_dice: 5d4
+    saves:
+      death: 12
+      wands: 13
+      paralysis: 11
+      breath: 14
+      spells: 13
+  6:
+    xp_required: 20000
+    thac0: 17
+    hit_dice: 6d4
+    saves:
+      death: 12
+      wands: 13
+      paralysis: 11
+      breath: 14
+      spells: 13
+  7:
+    xp_required: 40000
+    thac0: 17
+    hit_dice: 7d4
+    saves:
+      death: 12
+      wands: 13
+      paralysis: 11
+      breath: 14
+      spells: 13
+  8:
+    xp_required: 80000
+    thac0: 17
+    hit_dice: 8d4
+    saves:
+      death: 12
+      wands: 13
+      paralysis: 11
+      breath: 14
+      spells: 13
+  9:
+    xp_required: 160000
+    thac0: 14
+    hit_dice: 9d4
+    saves:
+      death: 10
+      wands: 11
+      paralysis: 9
+      breath: 12
+      spells: 10
+  10:
+    xp_required: 280000
+    thac0: 14
+    hit_dice: 9d4+2
+    saves:
+      death: 10
+      wands: 11
+      paralysis: 9
+      breath: 12
+      spells: 10
+  11:
+    xp_required: 400000
+    thac0: 14
+    hit_dice: 9d4+4
+    saves:
+      death: 10
+      wands: 11
+      paralysis: 9
+      breath: 12
+      spells: 10
+  12:
+    xp_required: 520000
+    thac0: 14
+    hit_dice: 9d4+6
+    saves:
+      death: 10
+      wands: 11
+      paralysis: 9
+      breath: 12
+      spells: 10
+  13:
+    xp_required: 640000
+    thac0: 12
+    hit_dice: 9d4+8
+    saves:
+      death: 8
+      wands: 9
+      paralysis: 7
+      breath: 10
+      spells: 8
+  14:
+    xp_required: 760000
+    thac0: 12
+    hit_dice: 9d4+10
+    saves:
+      death: 8
+      wands: 9
+      paralysis: 7
+      breath: 10
+      spells: 8
+features:
+- id: adjust_ability_scores
+  name: Adjust ability scores
+  text: In step 3 of character creation, acrobats may not lower STR.
+  gained_at_level: 1
+- id: encumbrance
+  name: Encumbrance
+  text: Evasion, falling, jumping, and tightrope walking cannot be performed if encumbrance reduces the acrobat’s movement rate to less than 90’ (30’) (see Encumbrance, p203).
+  gained_at_level: 1
+- id: acrobat_skills
+  name: Acrobat Skills
+  text: |-
+    Acrobats can use the following skills with the chance of success shown opposite.
+
+    ▶ **Climb sheer surfaces (CS):** A roll is required for each 100’ to be climbed. If the roll fails, the acrobat falls at the halfway point, suffering falling damage.
+
+    ▶ **Falling (FA):** When able to tumble, acrobats suffer no damage from the first 10’ of any fall. Damage due to falling from a greater height is reduced by the listed percentage (rounding fractions down).
+
+    ▶ **Hide in shadows (HS):** The acrobat must be motionless—attacking or moving while hiding is not possible.
+
+    ▶ **Move silently (MS):** An acrobat may attempt to sneak past enemies unnoticed.
+
+    ▶ **Tightrope walking (TW):** Acrobats can walk along tightropes, narrow beams, and ledges at up to half their normal movement rate. A roll is required every 60’. Failure indicates that the acrobat falls and suffers falling damage. Windy conditions may reduce the chance of success by up to 20%. Holding a balance pole increases the chance of success by 10%.
+  gained_at_level: 1
+- id: combat
+  name: Combat
+  text: |-
+    Acrobats cannot wear armour bulkier than leather and cannot use shields. They are able to use all missile weapons. Their use of melee weapons is restricted to light blades and staff weapons.
+  gained_at_level: 1
+- id: evasion
+  name: Evasion
+  text: |-
+    When retreating from melee, an acrobat’s ability to tumble negates the opponent’s usual +2 bonus to hit (see p222).
+  gained_at_level: 1
+- id: jumping
+  name: Jumping
+  text: |-
+    With a 20’ run-up, an acrobat can jump across a 10’ wide pit or chasm (or 20’ wide when aided by the use of a pole). Also when using a pole, an acrobat can jump over a 10’ high wall or onto a 10’ high ledge. Suitable poles for jumping include: 10’ poles, polearms, spears, staves.
+  gained_at_level: 1
+- id: tumbling_attack
+  name: Tumbling Attack
+  text: |-
+    Using the falling or jumping abilities, an acrobat can make a tumbling melee attack. The attack inflicts double damage if successful. Against an unaware opponent, the acrobat also gains a +4 bonus to hit.
+  gained_at_level: 1
+- id: after_reaching_9th_level
+  name: After Reaching 9th Level
+  text: |-
+    An acrobat can establish a training school, attracting 2d6 apprentices of 1st level. The apprentices will serve the character with some reliability; however, should any be arrested or killed, the character will not be able to attract apprentices to replace them. A successful acrobat burglar might use these followers to start a Thieves’ Guild.
+  gained_at_level: 9
+- id: rolling_skill_checks
+  name: Rolling Skill Checks
+  text: |-
+    All skills except falling are rolled on d%, with a result of less than or equal to the listed percentage indicating success.
+  gained_at_level: 1
+- id: player_knowledge
+  name: Player Knowledge
+  text: |-
+    The referee should roll for hide in shadows and move silently on the player’s behalf, as the acrobat always believes the attempt to be successful. If the roll fails, the referee knows that the acrobat has been noticed and should determine enemies’ actions appropriately.
+  gained_at_level: 1
+- id: acrobat_skills_chance_of_success
+  name: Acrobat Skills Chance of Success
+  text: |-
+    | Level | CS | FA | HS | MS | TW |
+    |---|---|---|---|---|---|
+    | 1 | 87 | 25 | 10 | 20 | 60 |
+    | 2 | 88 | 25 | 15 | 25 | 65 |
+    | 3 | 89 | 25 | 20 | 30 | 70 |
+    | 4 | 90 | 33 | 25 | 35 | 75 |
+    | 5 | 91 | 33 | 30 | 40 | 80 |
+    | 6 | 92 | 33 | 33 | 43 | 85 |
+    | 7 | 93 | 33 | 36 | 46 | 90 |
+    | 8 | 94 | 50 | 40 | 50 | 95 |
+    | 9 | 95 | 50 | 43 | 53 | 99 |
+    | 10 | 96 | 50 | 46 | 56 | 99 |
+    | 11 | 97 | 50 | 50 | 60 | 99 |
+    | 12 | 98 | 66 | 53 | 63 | 99 |
+    | 13 | 99 | 66 | 56 | 66 | 99 |
+    | 14 | 99 | 75 | 60 | 70 | 99 |
+  gained_at_level: 1

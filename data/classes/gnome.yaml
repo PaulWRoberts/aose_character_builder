@@ -1,0 +1,185 @@
+id: gnome
+name: Gnome
+prime_requisites:
+- DEX
+- INT
+ability_requirements:
+  CON: 9
+max_level: 8
+hit_die: 1d4
+weapons_allowed:
+- any appropriate to size
+armor_allowed:
+- leather
+shields_allowed: true
+race_locked: gnome
+spell_lists:
+- illusionist
+progression:
+  1:
+    xp_required: 0
+    thac0: 19
+    hit_dice: 1d4
+    saves:
+      death: 8
+      wands: 9
+      paralysis: 10
+      breath: 14
+      spells: 11
+    spell_slots:
+      1: 1
+  2:
+    xp_required: 3000
+    thac0: 19
+    hit_dice: 2d4
+    saves:
+      death: 8
+      wands: 9
+      paralysis: 10
+      breath: 14
+      spells: 11
+    spell_slots:
+      1: 2
+  3:
+    xp_required: 6000
+    thac0: 19
+    hit_dice: 3d4
+    saves:
+      death: 8
+      wands: 9
+      paralysis: 10
+      breath: 14
+      spells: 11
+    spell_slots:
+      1: 2
+      2: 1
+  4:
+    xp_required: 12000
+    thac0: 19
+    hit_dice: 4d4
+    saves:
+      death: 8
+      wands: 9
+      paralysis: 10
+      breath: 14
+      spells: 11
+    spell_slots:
+      1: 2
+      2: 2
+  5:
+    xp_required: 30000
+    thac0: 19
+    hit_dice: 5d4
+    saves:
+      death: 8
+      wands: 9
+      paralysis: 10
+      breath: 14
+      spells: 11
+    spell_slots:
+      1: 2
+      2: 2
+      3: 1
+  6:
+    xp_required: 60000
+    thac0: 17
+    hit_dice: 6d4
+    saves:
+      death: 6
+      wands: 7
+      paralysis: 8
+      breath: 11
+      spells: 9
+    spell_slots:
+      1: 2
+      2: 2
+      3: 2
+  7:
+    xp_required: 120000
+    thac0: 17
+    hit_dice: 7d4
+    saves:
+      death: 6
+      wands: 7
+      paralysis: 8
+      breath: 11
+      spells: 9
+    spell_slots:
+      1: 3
+      2: 2
+      3: 2
+      4: 1
+  8:
+    xp_required: 240000
+    thac0: 17
+    hit_dice: 8d4
+    saves:
+      death: 6
+      wands: 7
+      paralysis: 8
+      breath: 11
+      spells: 9
+    spell_slots:
+      1: 3
+      2: 3
+      3: 2
+      4: 2
+features:
+- id: prime_requisites
+  name: Prime requisites
+  text: A gnome with at least 13 DEX and INT gains a 5% bonus to experience. A gnome with at least 13 DEX and at least 16 INT gains a 10% bonus.
+  gained_at_level: 1
+- id: arcane_magic
+  name: Arcane Magic
+  text: |-
+    See Magic, p110 for full details on arcane magic.
+
+    **Magical research:** A gnome of any level may spend time and money on magical research. This allows them to add new spells to their spell book and to research other magical effects. When a gnome reaches 8th level, they are also able to create magic items.
+
+    **Spell casting:** Gnomes carry spell books containing the formulae for arcane spells. The level progression table (opposite) shows both the number of spells in the gnome’s spell book and the number they may memorize, determined by the character’s experience level. Thus, a 1st level gnome has one spell in their spell book, selected by the referee (who may allow the player to choose). The list of spells available to gnomes is found on p118 (gnomes have the same spell selection as illusionists).
+
+    **Using magic items:** As spell casters, gnomes are able to use magic scrolls of spells on their spell list. They can also use items that may only be used by arcane spell casters (e.g. magic wands).
+  gained_at_level: 1
+- id: combat
+  name: Combat
+  text: |-
+    Gnomes can use leather armour and shields. Armour must be tailored to gnomes’ small size. Similarly, they can use any weapon appropriate to their stature (as determined by the referee). They cannot use longbows or two-handed swords.
+  gained_at_level: 1
+- id: defensive_bonus
+  name: Defensive Bonus
+  text: |-
+    Due to their small size, gnomes gain a +2 bonus to Armour Class when attacked by large opponents (greater than human-sized).
+  gained_at_level: 1
+- id: detect_construction_tricks
+  name: Detect Construction Tricks
+  text: |-
+    As expert tunnellers, gnomes have a 2-in-6 chance of being able to detect new construction, sliding walls, or sloping passages when searching.
+  gained_at_level: 1
+- id: hiding
+  name: Hiding
+  text: |-
+    Gnomes have an uncanny ability to disappear from sight:
+
+    ▶ In woodland cover, a gnome can hide with a 90% chance of success.
+
+    ▶ In dungeons, a gnome can hide in shadows or behind other forms of cover. The chance of success is 2-in-6. Hiding requires the gnome to be motionless.
+  gained_at_level: 1
+- id: infravision
+  name: Infravision
+  text: |-
+    Gnomes have infravision to 90’ (see Darkness under Hazards and Challenges, p208).
+  gained_at_level: 1
+- id: listening_at_doors
+  name: Listening at Doors
+  text: |-
+    Gnomes have a 2-in-6 chance of hearing noises (see Dungeon Adventuring, p210).
+  gained_at_level: 1
+- id: speak_with_burrowing_mammals
+  name: Speak with Burrowing Mammals
+  text: |-
+    Gnomes often keep burrowing mammals such as badgers and moles as pets. They know the secret language of such creatures.
+  gained_at_level: 1
+- id: after_reaching_8th_level
+  name: After Reaching 8th Level
+  text: "A gnome has the option of creating an underground stronghold that will attract gnomes from far and wide.\n\nBecause of gnomes’ connection with burrowing mammals, all such creatures within 5 miles of the stronghold will become friends with the gnomes. They may warn of intruders, carry messages and news, and so on. In exchange for this friendship, the gnome must protect the animals from harm.\n\nGnome rulers can hire members of other races in the capacity of retainers or specialists, but only soldiers of gnomish stock may be hired.\n\nD: Death / poison; W: Wands;  \nP: Paralysis / petrify; B: Breath attacks;  \nS: Spells / rods / staves."
+  gained_at_level: 8

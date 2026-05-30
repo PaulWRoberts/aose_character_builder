@@ -17,10 +17,11 @@ def test_dwarf_loaded(data):
     dwarf = data.races["dwarf"]
     assert dwarf.name == "Dwarf"
     assert dwarf.infravision == 60
-    assert dwarf.base_movement == 60
+    # OSE Advanced dwarves move at the same base rate as humans (120').
+    assert dwarf.base_movement == 120
     assert dwarf.ability_requirements[Ability.CON] == 9
     assert "fighter" in dwarf.allowed_classes
-    assert dwarf.class_level_caps["fighter"] == 9
+    assert dwarf.class_level_caps["fighter"] == 10
 
 
 def test_fighter_loaded(data):

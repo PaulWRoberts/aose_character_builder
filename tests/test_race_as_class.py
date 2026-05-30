@@ -49,9 +49,9 @@ def _make_client(tmp_path, ruleset):
 
 # ── Data ───────────────────────────────────────────────────────────────────
 
-def test_dwarf_class_loads_with_race_locked():
+def test_dwarf_loads_with_race_locked():
     data = GameData.load(DATA_DIR)
-    cls = data.classes["dwarf_class"]
+    cls = data.classes["dwarf"]
     assert cls.name == "Dwarf"
     assert cls.race_locked == "dwarf"
     assert cls.max_level == 12
@@ -108,7 +108,7 @@ def test_split_mode_class_step_hides_race_locked_entries(split_client):
     split_client.post(f"/wizard/{draft_id}/race", data={"race_id": "dwarf"})
     r = split_client.get(f"/wizard/{draft_id}/class")
     # Dwarf-as-class entry must not appear as a pickable class
-    assert 'value="dwarf_class"' not in r.text
+    assert 'value="dwarf"' not in r.text
     # But the regular fighter class is present
     assert 'value="fighter"' in r.text
 
@@ -117,7 +117,7 @@ def test_rac_mode_class_step_shows_all_classes(rac_client):
     draft_id = _start(rac_client)
     rac_client.post(f"/wizard/{draft_id}/abilities", data={"name": "X"})
     r = rac_client.get(f"/wizard/{draft_id}/class")
-    assert 'value="dwarf_class"' in r.text
+    assert 'value="dwarf"' in r.text
     assert 'value="fighter"' in r.text
 
 
@@ -133,11 +133,11 @@ def test_rac_mode_class_step_shows_demihuman_badge(rac_client):
 def test_rac_mode_picking_race_locked_assigns_race(rac_client):
     draft_id = _start(rac_client)
     rac_client.post(f"/wizard/{draft_id}/abilities", data={"name": "Thorin"})
-    r = rac_client.post(f"/wizard/{draft_id}/class", data={"class_id": "dwarf_class"})
+    r = rac_client.post(f"/wizard/{draft_id}/class", data={"class_id": "dwarf"})
     assert r.status_code == 303
     draft = load_draft(draft_id, rac_client._drafts_dir)
     assert draft["race_id"] == "dwarf"
-    assert draft["class_id"] == "dwarf_class"
+    assert draft["class_id"] == "dwarf"
 
 
 def test_rac_mode_picking_human_class_defaults_to_human_race(rac_client):
@@ -150,15 +150,15 @@ def test_rac_mode_picking_human_class_defaults_to_human_race(rac_client):
 
 
 def test_split_mode_rejects_race_locked_class_via_post(split_client):
-    """Defence-in-depth: a forged POST of dwarf_class in split mode must 400."""
+    """Defence-in-depth: a forged POST of dwarf in split mode must 400."""
     draft_id = _start(split_client)
     split_client.post(f"/wizard/{draft_id}/abilities", data={"name": "X"})
     split_client.post(f"/wizard/{draft_id}/race", data={"race_id": "dwarf"})
-    r = split_client.post(f"/wizard/{draft_id}/class", data={"class_id": "dwarf_class"})
+    r = split_client.post(f"/wizard/{draft_id}/class", data={"class_id": "dwarf"})
     assert r.status_code == 400
 
 
-def test_rac_mode_low_con_still_rejects_dwarf_class(rac_client):
+def test_rac_mode_low_con_still_rejects_dwarf(rac_client):
     """Dwarf class requires CON 9 — abilities should still gate it."""
     r = rac_client.get("/wizard/new")
     draft_id = r.headers["location"].split("/")[2]
@@ -166,18 +166,18 @@ def test_rac_mode_low_con_still_rejects_dwarf_class(rac_client):
     draft["abilities"] = {"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 5, "CHA": 10}
     save_draft(draft_id, draft, rac_client._drafts_dir)
     rac_client.post(f"/wizard/{draft_id}/abilities", data={"name": "Weakling"})
-    r = rac_client.post(f"/wizard/{draft_id}/class", data={"class_id": "dwarf_class"})
+    r = rac_client.post(f"/wizard/{draft_id}/class", data={"class_id": "dwarf"})
     assert r.status_code == 400
 
 
 # ── Sheet rendering ───────────────────────────────────────────────────────
 
-def _dwarf_class_spec() -> CharacterSpec:
+def _dwarf_spec() -> CharacterSpec:
     return CharacterSpec(
         name="Thorin",
         abilities={"STR": 15, "INT": 11, "WIS": 12, "DEX": 13, "CON": 14, "CHA": 10},
         race_id="dwarf",
-        classes=[ClassEntry(class_id="dwarf_class", level=1, hp_rolls=[8])],
+        classes=[ClassEntry(class_id="dwarf", level=1, hp_rolls=[8])],
         alignment="law",
         ruleset=RuleSet(separate_race_class=False),
     )
@@ -185,7 +185,7 @@ def _dwarf_class_spec() -> CharacterSpec:
 
 def test_race_as_class_flag_true_for_dwarf_as_class():
     data = GameData.load(DATA_DIR)
-    assert _is_race_as_class(_dwarf_class_spec(), data) is True
+    assert _is_race_as_class(_dwarf_spec(), data) is True
 
 
 def test_race_as_class_flag_false_for_split_dwarf_fighter():
@@ -203,7 +203,7 @@ def test_race_as_class_flag_false_for_split_dwarf_fighter():
 
 def test_sheet_class_summary_for_dwarf_as_class():
     data = GameData.load(DATA_DIR)
-    sheet = build_sheet(_dwarf_class_spec(), data)
+    sheet = build_sheet(_dwarf_spec(), data)
     assert sheet.class_summary == "Dwarf 1"
     assert sheet.race_name == "Dwarf"
     assert sheet.race_as_class is True
@@ -212,7 +212,7 @@ def test_sheet_class_summary_for_dwarf_as_class():
 def test_sheet_subtitle_omits_race_for_race_as_class(rac_client):
     draft_id = _start(rac_client)
     rac_client.post(f"/wizard/{draft_id}/abilities", data={"name": "Thorin"})
-    rac_client.post(f"/wizard/{draft_id}/class", data={"class_id": "dwarf_class"})
+    rac_client.post(f"/wizard/{draft_id}/class", data={"class_id": "dwarf"})
     rac_client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "law"})
     rac_client.post(f"/wizard/{draft_id}/hp/roll")
     rac_client.post(f"/wizard/{draft_id}/hp")
@@ -247,7 +247,7 @@ def test_sheet_subtitle_keeps_race_in_split_mode(split_client):
 def test_full_race_as_class_flow_creates_character(rac_client):
     draft_id = _start(rac_client)
     rac_client.post(f"/wizard/{draft_id}/abilities", data={"name": "Thorin"})
-    r = rac_client.post(f"/wizard/{draft_id}/class", data={"class_id": "dwarf_class"})
+    r = rac_client.post(f"/wizard/{draft_id}/class", data={"class_id": "dwarf"})
     assert r.status_code == 303
     rac_client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "law"})
     rac_client.post(f"/wizard/{draft_id}/hp/roll")
@@ -256,5 +256,5 @@ def test_full_race_as_class_flow_creates_character(rac_client):
     char_id = r.headers["location"].split("/")[-1]
     spec = load_character(char_id, rac_client._characters_dir)
     assert spec.race_id == "dwarf"
-    assert spec.classes[0].class_id == "dwarf_class"
+    assert spec.classes[0].class_id == "dwarf"
     assert spec.ruleset.separate_race_class is False

@@ -1,0 +1,256 @@
+id: paladin
+name: Paladin
+prime_requisites:
+- STR
+- WIS
+ability_requirements:
+  CHA: 9
+max_level: 14
+hit_die: 1d8
+weapons_allowed: all
+armor_allowed: all
+shields_allowed: true
+spell_lists:
+- cleric
+progression:
+  1:
+    xp_required: 0
+    thac0: 19
+    hit_dice: 1d8
+    saves:
+      death: 10
+      wands: 11
+      paralysis: 12
+      breath: 13
+      spells: 14
+  2:
+    xp_required: 2750
+    thac0: 19
+    hit_dice: 2d8
+    saves:
+      death: 10
+      wands: 11
+      paralysis: 12
+      breath: 13
+      spells: 14
+  3:
+    xp_required: 5500
+    thac0: 19
+    hit_dice: 3d8
+    saves:
+      death: 10
+      wands: 11
+      paralysis: 12
+      breath: 13
+      spells: 14
+  4:
+    xp_required: 12000
+    thac0: 17
+    hit_dice: 4d8
+    saves:
+      death: 8
+      wands: 9
+      paralysis: 10
+      breath: 11
+      spells: 12
+  5:
+    xp_required: 24000
+    thac0: 17
+    hit_dice: 5d8
+    saves:
+      death: 8
+      wands: 9
+      paralysis: 10
+      breath: 11
+      spells: 12
+  6:
+    xp_required: 45000
+    thac0: 17
+    hit_dice: 6d8
+    saves:
+      death: 8
+      wands: 9
+      paralysis: 10
+      breath: 11
+      spells: 12
+  7:
+    xp_required: 95000
+    thac0: 14
+    hit_dice: 7d8
+    saves:
+      death: 6
+      wands: 7
+      paralysis: 8
+      breath: 8
+      spells: 10
+  8:
+    xp_required: 175000
+    thac0: 14
+    hit_dice: 8d8
+    saves:
+      death: 6
+      wands: 7
+      paralysis: 8
+      breath: 8
+      spells: 10
+  9:
+    xp_required: 350000
+    thac0: 14
+    hit_dice: 9d8
+    saves:
+      death: 6
+      wands: 7
+      paralysis: 8
+      breath: 8
+      spells: 10
+    spell_slots:
+      1: 1
+  10:
+    xp_required: 500000
+    thac0: 12
+    hit_dice: 9d8+2
+    saves:
+      death: 4
+      wands: 5
+      paralysis: 6
+      breath: 6
+      spells: 8
+    spell_slots:
+      1: 2
+  11:
+    xp_required: 650000
+    thac0: 12
+    hit_dice: 9d8+4
+    saves:
+      death: 4
+      wands: 5
+      paralysis: 6
+      breath: 6
+      spells: 8
+    spell_slots:
+      1: 2
+      2: 1
+  12:
+    xp_required: 800000
+    thac0: 12
+    hit_dice: 9d8+6
+    saves:
+      death: 4
+      wands: 5
+      paralysis: 6
+      breath: 6
+      spells: 8
+    spell_slots:
+      1: 2
+      2: 2
+  13:
+    xp_required: 950000
+    thac0: 10
+    hit_dice: 9d8+8
+    saves:
+      death: 2
+      wands: 3
+      paralysis: 4
+      breath: 3
+      spells: 6
+    spell_slots:
+      1: 2
+      2: 2
+      3: 1
+  14:
+    xp_required: 1100000
+    thac0: 10
+    hit_dice: 9d8+10
+    saves:
+      death: 2
+      wands: 3
+      paralysis: 4
+      breath: 3
+      spells: 6
+    spell_slots:
+      1: 3
+      2: 2
+      3: 1
+features:
+- id: alignment
+  name: Alignment
+  text: A paladin must be lawful. If the character’s alignment ever changes (for any reason), they lose all class abilities and become a fighter of the same level. The referee may allow the character to perform a quest of atonement in order to regain their status as a paladin.
+  gained_at_level: 1
+- id: prime_requisites
+  name: Prime requisites
+  text: A paladin with at least 13 in one prime requisite gets +5% to experience. If both STR and WIS are 16 or higher, the paladin gets a +10% bonus.
+  gained_at_level: 1
+- id: combat
+  name: Combat
+  text: |-
+    Paladins can use all types of weapons and armour.
+  gained_at_level: 1
+- id: divine_magic
+  name: Divine Magic
+  text: |-
+    See Magic, p110 for full details on divine magic.
+
+    **Holy symbol:** A paladin must carry a holy symbol (see the equipment list).
+
+    **Deity disfavour:** Paladins must be faithful to the tenets of their alignment and religion. Paladins who fall from favour with their deity may incur penalties.
+
+    **Spell casting:** From 9th level, a paladin may pray to receive spells. The power and number of spells available to a paladin are determined by the character’s experience level. The list of spells available to paladins is found on p116 (paladins have the same spell selection as clerics).
+  gained_at_level: 9
+- id: holy_resistance
+  name: Holy Resistance
+  text: |-
+    Paladins are immune to all disease.
+  gained_at_level: 1
+- id: laying_on_hands
+  name: Laying on Hands
+  text: |-
+    Once per day, a paladin can heal 2 hit points per level by laying their hands on wounded characters. Additionally, a paladin of 5th level or higher may cure disease once per week by laying on hands.
+  gained_at_level: 5
+- id: turning_the_undead
+  name: Turning the Undead
+  text: |-
+    Paladins of 3rd level and higher can invoke the power of their deity to repel undead monsters encountered. To turn the undead, the player rolls 2d6. The referee then consults the table opposite, comparing the roll against the Hit Dice of the undead monsters targeted.
+  gained_at_level: 1
+- id: successful_turning
+  name: Successful Turning
+  text: |-
+    If the turning attempt succeeds, the player must roll 2d6 again to determine the number of HD affected (turned or destroyed).
+
+    **Turned undead:** Will leave the area, if possible, and will not harm or make contact with the paladin.
+
+    **Destroyed undead:** Are instantly and permanently annihilated.
+
+    **Excess:** Rolled Hit Dice that are not sufficient to affect a creature are wasted. However, at least one undead creature will always be affected on a successful turning.
+
+    **Mixed groups:** If turn undead is used against a mixed group of undead monsters of different types, those with the lowest HD are affected first.
+  gained_at_level: 1
+- id: after_reaching_9th_level
+  name: After Reaching 9th Level
+  text: |-
+    With the permission of their holy order, a paladin can build a castle or stronghold and control the surrounding lands. The paladin may be granted a title such as Baron or Baroness. The land under their control is then known as a Barony.
+  gained_at_level: 9
+- id: vow_of_humility
+  name: Vow of Humility
+  text: |-
+    A paladin may keep only a total of one suit of magical armour, one magical shield, and one magical melee weapon. They must also donate 10% of all income to a Lawful religious institution.
+  gained_at_level: 1
+- id: warhorse
+  name: Warhorse
+  text: |-
+    A paladin of 4th level or higher may summon a holy charger—a warhorse with AC 5 [14], 5+5 HD, and a movement rate of 180’ (60’). If the horse dies, another may not be summoned for 10 years.
+  gained_at_level: 4
+- id: turning_table_results
+  name: Turning Table Results
+  text: |-
+    –: The turning fails.
+
+    Number: If the 2d6 turning roll is higher or equal, the turning attempt succeeds.
+
+    T: The turning succeeds.
+
+    D: The turning succeeds; the monsters are destroyed, not simply caused to flee.
+  gained_at_level: 1
+- id: paladin_turning_the_undead
+  name: Paladin Turning the Undead
+  text: "Monster Hit Dice†\n\n| Level | 1 | 2 | 2* | 3 | 4 | 5 | 6 | 7-9 |\n|---|---|---|---|---|---|---|---|---|\n| 3 | 7 | 9 | 11 | – | – | – | – | – |\n| 4 | T | 7 | 9 | 11 | – | – | – | – |\n| 5 | T | T | 7 | 9 | 11 | – | – | – |\n| 6 | D | T | T | 7 | 9 | 11 | – | – |\n| 7 | D | D | T | T | 7 | 9 | 11 | – |\n| 8 | D | D | D | T | T | 7 | 9 | 11 |\n| 9 | D | D | D | D | T | T | 7 | 9 |\n| 10 | D | D | D | D | D | T | T | 7 |\n| 11 | D | D | D | D | D | D | T | T |\n| 12 | D | D | D | D | D | D | D | T |\n| 13+ | D | D | D | D | D | D | D | D |\n\n* 2 HD monsters with a special ability (i.e. with an asterisk next to their HD rating, in the monster description).  \n† At the referee’s option, the table may be expanded to include more powerful types of undead monsters."
+  gained_at_level: 1

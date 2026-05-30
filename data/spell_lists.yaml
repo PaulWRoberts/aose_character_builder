@@ -6,3 +6,11 @@
   name: Druid
   caster_type: divine
   description: Divine spells granted by nature; the whole list is known.
+- id: cleric
+  name: Cleric
+  caster_type: divine
+  description: Divine spells granted through prayer; the whole list is known.
+- id: illusionist
+  name: Illusionist
+  caster_type: arcane
+  description: Arcane illusion spells learned through study and recorded in a spell book.

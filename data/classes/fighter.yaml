@@ -1,42 +1,166 @@
 id: fighter
 name: Fighter
-prime_requisites: [STR]
+prime_requisites:
+- STR
 max_level: 14
 hit_die: 1d8
 weapons_allowed: all
 armor_allowed: all
 shields_allowed: true
-proficiency:
-  starting_slots: 4
-  new_slot_every_levels: 3
 progression:
   1:
     xp_required: 0
     thac0: 19
     hit_dice: 1d8
-    saves: { death: 12, wands: 13, paralysis: 14, breath: 15, spells: 16 }
+    saves:
+      death: 12
+      wands: 13
+      paralysis: 14
+      breath: 15
+      spells: 16
   2:
     xp_required: 2000
     thac0: 19
     hit_dice: 2d8
-    saves: { death: 12, wands: 13, paralysis: 14, breath: 15, spells: 16 }
+    saves:
+      death: 12
+      wands: 13
+      paralysis: 14
+      breath: 15
+      spells: 16
   3:
     xp_required: 4000
     thac0: 19
     hit_dice: 3d8
-    saves: { death: 12, wands: 13, paralysis: 14, breath: 15, spells: 16 }
+    saves:
+      death: 12
+      wands: 13
+      paralysis: 14
+      breath: 15
+      spells: 16
   4:
     xp_required: 8000
     thac0: 17
     hit_dice: 4d8
-    saves: { death: 10, wands: 11, paralysis: 12, breath: 13, spells: 14 }
+    saves:
+      death: 10
+      wands: 11
+      paralysis: 12
+      breath: 13
+      spells: 14
   5:
     xp_required: 16000
     thac0: 17
     hit_dice: 5d8
-    saves: { death: 10, wands: 11, paralysis: 12, breath: 13, spells: 14 }
+    saves:
+      death: 10
+      wands: 11
+      paralysis: 12
+      breath: 13
+      spells: 14
+  6:
+    xp_required: 32000
+    thac0: 17
+    hit_dice: 6d8
+    saves:
+      death: 10
+      wands: 11
+      paralysis: 12
+      breath: 13
+      spells: 14
+  7:
+    xp_required: 64000
+    thac0: 14
+    hit_dice: 7d8
+    saves:
+      death: 8
+      wands: 9
+      paralysis: 10
+      breath: 10
+      spells: 12
+  8:
+    xp_required: 120000
+    thac0: 14
+    hit_dice: 8d8
+    saves:
+      death: 8
+      wands: 9
+      paralysis: 10
+      breath: 10
+      spells: 12
+  9:
+    xp_required: 240000
+    thac0: 14
+    hit_dice: 9d8
+    saves:
+      death: 8
+      wands: 9
+      paralysis: 10
+      breath: 10
+      spells: 12
+  10:
+    xp_required: 360000
+    thac0: 12
+    hit_dice: 9d8+2
+    saves:
+      death: 6
+      wands: 7
+      paralysis: 8
+      breath: 8
+      spells: 10
+  11:
+    xp_required: 480000
+    thac0: 12
+    hit_dice: 9d8+4
+    saves:
+      death: 6
+      wands: 7
+      paralysis: 8
+      breath: 8
+      spells: 10
+  12:
+    xp_required: 600000
+    thac0: 12
+    hit_dice: 9d8+6
+    saves:
+      death: 6
+      wands: 7
+      paralysis: 8
+      breath: 8
+      spells: 10
+  13:
+    xp_required: 720000
+    thac0: 10
+    hit_dice: 9d8+8
+    saves:
+      death: 4
+      wands: 5
+      paralysis: 6
+      breath: 5
+      spells: 8
+  14:
+    xp_required: 840000
+    thac0: 10
+    hit_dice: 9d8+10
+    saves:
+      death: 4
+      wands: 5
+      paralysis: 6
+      breath: 5
+      spells: 8
 features:
-  - id: combat_focus
-    name: Combat Focus
-    text: "Fighters have unrestricted use of weapons, armor, and shields."
-    gained_at_level: 1
+- id: combat
+  name: Combat
+  text: |-
+    Fighters can use all types of weapons and armour.
+  gained_at_level: 1
+- id: stronghold
+  name: Stronghold
+  text: |-
+    Any time a fighter wishes (and has sufficient money), they can build a castle or stronghold and control the surrounding lands.
+  gained_at_level: 1
+- id: after_reaching_9th_level
+  name: After Reaching 9th Level
+  text: |-
+    A fighter may be granted a title such as Baron or Baroness. The land under the fighter’s control is then known as a Barony.
+  gained_at_level: 9
