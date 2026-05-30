@@ -46,10 +46,15 @@ def test_class_entry_has_spellbook_and_prepared():
     assert e.prepared == []
 
 
-def test_class_entry_rejects_old_chosen_spells_field():
+def test_class_entry_migrates_legacy_chosen_spells():
+    # Old saved characters carried an (always-empty) chosen_spells field. Under
+    # extra="forbid" that would fail to load; a before-validator strips it so
+    # legacy saves survive rather than silently vanishing from the index.
     from aose.models import ClassEntry
-    with pytest.raises(ValueError):
-        ClassEntry(class_id="magic_user", chosen_spells=["x"])
+    e = ClassEntry(class_id="magic_user", chosen_spells=[])
+    assert not hasattr(e, "chosen_spells")
+    assert e.spellbook == []
+    assert e.prepared == []
 
 
 def test_thorin_example_loads():

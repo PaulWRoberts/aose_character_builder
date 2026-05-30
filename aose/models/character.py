@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .ability import Ability
 from .modifier import Modifier
@@ -52,6 +52,17 @@ class ClassEntry(BaseModel):
     # Daily prepared / memorised loadout; duplicates allowed (memorise a spell
     # twice with two slots).  Hard-capped per spell level by spell_slots.
     prepared: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _migrate_legacy_chosen_spells(cls, data):
+        """Drop the pre-spell-feature ``chosen_spells`` field if a character was
+        saved with it.  It was always unused/empty, so nothing of value is lost;
+        this keeps old saved characters loadable under ``extra="forbid"`` rather
+        than silently vanishing from the index."""
+        if isinstance(data, dict) and "chosen_spells" in data:
+            data = {k: v for k, v in data.items() if k != "chosen_spells"}
+        return data
 
 
 class CharacterSpec(BaseModel):
