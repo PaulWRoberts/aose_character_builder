@@ -168,3 +168,23 @@ def test_main_reports_bad_unit(tmp_path, monkeypatch, capsys):
     assert rc == 1
     assert "FAIL" in out
     assert "class/x" in out
+
+
+def test_unresolved_spell_list_refs_flags_bad_reference(tmp_path):
+    from tools.validate_import import unresolved_spell_list_refs
+    (tmp_path / "spell_lists.yaml").write_text(
+        "- {id: magic_user, name: Magic-User, caster_type: arcane}\n", encoding="utf-8")
+    (tmp_path / "classes").mkdir()
+    (tmp_path / "classes" / "bard.yaml").write_text(
+        "id: bard\nname: Bard\nprime_requisites: [CHA]\nhit_die: 1d6\n"
+        "weapons_allowed: all\narmor_allowed: []\nshields_allowed: false\n"
+        "spell_lists: [made_up_list]\n", encoding="utf-8")
+    errors = unresolved_spell_list_refs(tmp_path)
+    assert any("made_up_list" in e for e in errors)
+
+
+def test_unresolved_spell_list_refs_passes_real_data():
+    from pathlib import Path
+    from tools.validate_import import unresolved_spell_list_refs
+    data_dir = Path(__file__).parent.parent / "data"
+    assert unresolved_spell_list_refs(data_dir) == []

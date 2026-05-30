@@ -14,7 +14,7 @@ from pathlib import Path
 import yaml
 from pydantic import TypeAdapter, ValidationError
 
-from aose.models import CharClass, Item, Race, Spell
+from aose.models import CharClass, Item, Race, Spell, SpellList
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "data"
@@ -97,6 +97,41 @@ def all_duplicate_ids(data_dir: Path = DATA_DIR) -> list[str]:
     return errors
 
 
+def _known_spell_list_ids(data_dir: Path) -> set[str]:
+    path = data_dir / "spell_lists.yaml"
+    if not path.exists():
+        return set()
+    raw = yaml.safe_load(path.read_text(encoding="utf-8")) or []
+    ids: set[str] = set()
+    for obj in raw if isinstance(raw, list) else []:
+        try:
+            ids.add(SpellList.model_validate(obj).id)
+        except ValidationError:
+            continue
+    return ids
+
+
+def unresolved_spell_list_refs(data_dir: Path = DATA_DIR) -> list[str]:
+    """Every spell_lists id used by a class or spell must resolve to a defined
+    SpellList in spell_lists.yaml."""
+    known = _known_spell_list_ids(data_dir)
+    errors: list[str] = []
+    for sub in ("classes", "spells"):
+        directory = data_dir / sub
+        if not directory.exists():
+            continue
+        for path in sorted(directory.glob("*.yaml")):
+            for obj in _read_objects(path):
+                if not isinstance(obj, dict):
+                    continue
+                for ref in obj.get("spell_lists", []) or []:
+                    if ref not in known:
+                        errors.append(
+                            f"{sub}/{path.name}: unknown spell list {ref!r}"
+                        )
+    return errors
+
+
 def load_manifest(path: Path = MANIFEST_PATH) -> list[dict]:
     if not path.exists():
         return []
@@ -170,7 +205,7 @@ def main(argv: list[str] | None = None) -> int:
             print(f"OK   {name}")
 
     # Repo-wide checks always run.
-    for e in load_game_data() + all_duplicate_ids():
+    for e in load_game_data() + all_duplicate_ids() + unresolved_spell_list_refs():
         failed = True
         print(f"FAIL repo: {e}")
 

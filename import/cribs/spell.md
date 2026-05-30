@@ -9,7 +9,7 @@ One book's spells go in ONE list file: `data/spells/<book>_spells.yaml`.
 | id | str | yes | snake_case, unique across ALL spell files |
 | name | str | yes | |
 | level | int | yes | spell level |
-| spell_lists | list[str] | no | pool IDs: magic_user, cleric, druid, illusionist, kineticist… |
+| spell_lists | list[str] | no | pool IDs; each MUST be defined in `data/spell_lists.yaml`: magic_user, cleric, druid, illusionist… |
 | source | str | no | book of origin, e.g. ose-advanced, carcass-crawler-1 |
 | range | str | yes | e.g. "150'", "Touch", "0 (caster)" |
 | duration | str | yes | e.g. "instant", "6 turns", "1 turn/level" |

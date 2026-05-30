@@ -19,7 +19,7 @@ Target model: `CharClass` (`aose/models/character_class.py`). `extra="forbid"`
 | progression | map int->ClassLevelData | no | one entry per character level |
 | features | list[ClassFeature] | no | |
 | race_locked | str \| null | no | race id, for race-as-class entries |
-| spell_lists | list[str] | no | which pool(s) this class casts from; `[]` = non-caster |
+| spell_lists | list[str] | no | which pool(s) this class casts from; each id MUST be defined in `data/spell_lists.yaml` (define it first if new). `[]` = non-caster. The arcane/divine behaviour comes from the list, not the class. |
 
 `ClassLevelData`: `{xp_required:int, thac0:int, hit_dice:str,
 saves:{death,wands,paralysis,breath,spells (ints)}, spell_slots: map int->int | null}`
@@ -68,6 +68,8 @@ progression:
     saves: { death: 13, wands: 14, paralysis: 13, breath: 16, spells: 15 }
     spell_slots: { 1: 2, 2: 1 }
 ```
+- The class's known-vs-prepared behaviour is NOT set here — it comes from the
+  referenced list's `caster_type` (see `import/cribs/spell-list.md`).
 - Casting that begins later (e.g. cleric at level 2) means the level-1 row has
   NO `spell_slots`; the level-2 row is the first with one.
 - Non-casters: omit `spell_lists` and every `spell_slots`.
