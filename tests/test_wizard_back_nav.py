@@ -174,7 +174,7 @@ def test_changing_class_clears_hp_and_proficiencies(tmp_path):
     client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "law"})
     client.post(
         f"/wizard/{draft_id}/proficiencies",
-        data={"proficiency_group": ["sword", "axe"]},
+        data={"weapon": ["sword", "spear", "mace", "hand_axe"]},
     )
     client.post(f"/wizard/{draft_id}/hp/roll")
     draft = load_draft(draft_id, client._drafts_dir)

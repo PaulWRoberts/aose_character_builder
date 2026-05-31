@@ -30,11 +30,13 @@ from aose.engine.magic import (
     unequip_magic as _unequip_magic,
     use_charge as _use_charge,
 )
-from aose.engine.proficiency import proficiency_groups, starting_proficiency_count
 from aose.engine.proficiency import (
     allowed_armor_ids,
     allowed_weapon_ids,
+    category_for_classes,
     shields_allowed,
+    specialisation_allowed,
+    total_proficiency_slots,
 )
 from aose.engine.shop import (
     InsufficientGold,
@@ -750,18 +752,42 @@ async def post_skill(request: Request, draft_id: str, secondary_skill: str = For
 
 # ── Weapon proficiencies (optional, gated by ruleset.weapon_proficiency) ──
 
-def _proficiency_slots_for(draft: dict[str, Any], data) -> tuple[int, str]:
-    """Slot count + a class-name label for the proficiency step.
-
-    For multi-class characters, AOSE Advanced grants the highest slot count
-    among the picked classes (not the sum)."""
+def _proficiency_context(draft: dict[str, Any], data) -> dict:
+    """Slots, weapon options (filtered to class allowances), and specialise
+    flag for the proficiency step."""
     ids = _class_ids(draft)
-    classes = [data.classes[cid] for cid in ids]
-    if len(classes) == 1:
-        return starting_proficiency_count(classes[0]), classes[0].name
-    best = max(starting_proficiency_count(c) for c in classes)
-    label = " / ".join(c.name for c in classes)
-    return best, label
+    classes = [data.classes[cid] for cid in ids if cid in data.classes]
+    pairs = [(c, 1) for c in classes]                 # creation = level 1
+    required = total_proficiency_slots(pairs)
+    allow_special = specialisation_allowed(classes)
+    allowed = allowed_weapon_ids(classes, data)
+    from aose.models import Weapon
+    weapons = sorted(
+        (i for i in data.items.values() if isinstance(i, Weapon)),
+        key=lambda w: w.name,
+    )
+    if allowed != "all":
+        weapons = [w for w in weapons if w.id in allowed]
+    label = " / ".join(c.name for c in classes) if classes else ""
+    chosen = draft.get("proficiencies", {}) or {}
+    chosen_weapons = set(chosen.get("weapons", []))
+    chosen_special = set(chosen.get("specialisations", []))
+    rows = [
+        {
+            "id": w.id,
+            "name": w.name,
+            "qualities": ", ".join(w.qualities),
+            "selected": w.id in chosen_weapons,
+            "specialised": w.id in chosen_special,
+        }
+        for w in weapons
+    ]
+    return {
+        "class_name": label,
+        "required": required,
+        "weapons": rows,
+        "allow_specialise": allow_special,
+    }
 
 
 @router.get("/{draft_id}/proficiencies", response_class=HTMLResponse)
@@ -771,50 +797,50 @@ async def get_proficiencies(request: Request, draft_id: str):
     if redirect:
         return redirect
     data = request.app.state.game_data
-    required, class_name = _proficiency_slots_for(draft, data)
-    chosen = set(draft.get("proficiencies", []))
-    groups = proficiency_groups(data)
-    # NOTE: proficiency_groups() is a stub (returns []) during the
-    # weapon-proficiency migration (Tasks 3–11).  The 500-guard is bypassed
-    # until Task 4 re-implements the catalog.
-    rendered_groups = [
-        {**g, "selected": g["id"] in chosen} for g in groups
-    ]
     ctx = _base_context(request, draft_id, draft, "proficiencies")
-    ctx.update({
-        "class_name": class_name,
-        "required": required,
-        "groups": rendered_groups,
-        "currently_chosen": sorted(chosen),
-    })
+    ctx.update(_proficiency_context(draft, data))
+    if not ctx["weapons"]:
+        raise HTTPException(
+            500,
+            "Weapon Proficiency rule is active but the class has no usable "
+            "weapons in the data set.",
+        )
     return templates.TemplateResponse(request, "wizard.html", ctx)
 
 
 @router.post("/{draft_id}/proficiencies")
 async def post_proficiencies(request: Request, draft_id: str):
     draft = _load(request, draft_id)
-    form = await request.form()
-    selected = form.getlist("proficiency_group")
-
     data = request.app.state.game_data
-    required, class_name = _proficiency_slots_for(draft, data)
-    valid_ids = {g["id"] for g in proficiency_groups(data)}
+    form = await request.form()
+    weapons = list(dict.fromkeys(form.getlist("weapon")))
+    specialisations = list(dict.fromkeys(form.getlist("specialise")))
 
-    # When the catalog is empty (stub period during weapon-proficiency migration)
-    # skip id validation so existing wizard flows are not broken.
-    if valid_ids:
-        unknown = [s for s in selected if s not in valid_ids]
-        if unknown:
-            raise HTTPException(400, f"Unknown proficiency group(s): {unknown}")
-    unique = list(dict.fromkeys(selected))
-    if len(unique) != required:
+    ids = _class_ids(draft)
+    classes = [data.classes[cid] for cid in ids if cid in data.classes]
+    pairs = [(c, 1) for c in classes]
+    required = total_proficiency_slots(pairs)
+    allowed = allowed_weapon_ids(classes, data)
+    allow_special = specialisation_allowed(classes)
+
+    if allowed != "all":
+        bad = [w for w in weapons if w not in allowed]
+        if bad:
+            raise HTTPException(400, f"Weapon(s) not allowed for this class: {bad}")
+    if specialisations and not allow_special:
+        raise HTTPException(400, "This class cannot specialise.")
+    if any(s not in weapons for s in specialisations):
+        raise HTTPException(400, "Can only specialise a weapon you are proficient with.")
+
+    spent = len(weapons) + len(specialisations)
+    if spent != required:
         raise HTTPException(
             400,
-            f"{class_name} must pick exactly {required} proficiency groups; "
-            f"got {len(unique)}.",
+            f"Must spend exactly {required} proficiency slot(s) at creation; "
+            f"spent {spent} (each weapon = 1, each specialisation = +1).",
         )
 
-    draft["proficiencies"] = unique
+    draft["proficiencies"] = {"weapons": weapons, "specialisations": specialisations}
     save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/hp")
 
@@ -1473,7 +1499,8 @@ def _draft_to_spec(draft: dict[str, Any]) -> CharacterSpec:
         classes=classes,
         alignment=draft["alignment"],
         secondary_skill=draft.get("secondary_skill"),
-        chosen_proficiencies=list(draft.get("proficiencies", [])),
+        weapon_proficiencies=list((draft.get("proficiencies") or {}).get("weapons", [])),
+        weapon_specialisations=list((draft.get("proficiencies") or {}).get("specialisations", [])),
         gold=draft.get("gold", 0),
         inventory=list(draft.get("inventory", [])),
         stashed=list(draft.get("stashed", [])),

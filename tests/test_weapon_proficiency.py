@@ -140,3 +140,129 @@ def test_total_proficiency_slots_is_max_over_classes(data):
     fighter = data.classes["fighter"]        # 4 @ L1
     magic_user = data.classes["magic_user"]  # 1 @ L1
     assert total_proficiency_slots([(fighter, 1), (magic_user, 1)]) == 4
+
+
+# ---------------------------------------------------------------------------
+# Task 10: wizard per-weapon proficiency picker
+# ---------------------------------------------------------------------------
+from fastapi.testclient import TestClient
+
+from aose.characters import load_character, load_draft, save_draft, save_settings
+from aose.web.app import create_app
+
+
+@pytest.fixture
+def client(tmp_path):
+    characters_dir = tmp_path / "characters"
+    drafts_dir = tmp_path / "drafts"
+    examples_dir = tmp_path / "examples"
+    examples_dir.mkdir()
+    settings_path = tmp_path / "settings.json"
+    save_settings(settings_path, RuleSet(weapon_proficiency=True))
+    app = create_app(
+        data_dir=DATA_DIR,
+        characters_dir=characters_dir,
+        drafts_dir=drafts_dir,
+        examples_dir=examples_dir,
+        settings_path=settings_path,
+    )
+    c = TestClient(app, follow_redirects=False)
+    c._settings_path = settings_path
+    c._drafts_dir = drafts_dir
+    c._characters_dir = characters_dir
+    return c
+
+
+def _start_fighter(client):
+    r = client.get("/wizard/new")
+    draft_id = r.headers["location"].split("/")[2]
+    draft = load_draft(draft_id, client._drafts_dir)
+    draft["abilities"] = {"STR": 15, "INT": 11, "WIS": 12, "DEX": 13, "CON": 14, "CHA": 10}
+    save_draft(draft_id, draft, client._drafts_dir)
+    client.post(f"/wizard/{draft_id}/abilities", data={"name": "Thorin"})
+    client.post(f"/wizard/{draft_id}/race", data={"race_id": "dwarf"})
+    client.post(f"/wizard/{draft_id}/class", data={"class_id": "fighter"})
+    client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "law"})
+    return draft_id
+
+
+def _start_magic_user(client):
+    r = client.get("/wizard/new")
+    draft_id = r.headers["location"].split("/")[2]
+    draft = load_draft(draft_id, client._drafts_dir)
+    draft["abilities"] = {"STR": 10, "INT": 15, "WIS": 11, "DEX": 13, "CON": 12, "CHA": 10}
+    save_draft(draft_id, draft, client._drafts_dir)
+    client.post(f"/wizard/{draft_id}/abilities", data={"name": "Raistlin"})
+    client.post(f"/wizard/{draft_id}/race", data={"race_id": "human"})
+    client.post(f"/wizard/{draft_id}/class", data={"class_id": "magic_user"})
+    client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "neutral"})
+    return draft_id
+
+
+def test_fighter_picker_shows_four_slots_and_weapons(client):
+    draft_id = _start_fighter(client)
+    r = client.get(f"/wizard/{draft_id}/proficiencies")
+    assert r.status_code == 200
+    assert "4" in r.text
+    assert "Sword" in r.text
+    assert "Specialise" in r.text
+
+
+def test_magic_user_picker_shows_one_slot_filtered(client):
+    draft_id = _start_magic_user(client)
+    r = client.get(f"/wizard/{draft_id}/proficiencies")
+    assert r.status_code == 200
+    assert "Dagger" in r.text
+    assert "Staff" in r.text
+    assert "Sword" not in r.text
+    assert "Specialise" not in r.text
+
+
+def test_magic_user_post_one_weapon_advances(client):
+    draft_id = _start_magic_user(client)
+    r = client.post(f"/wizard/{draft_id}/proficiencies", data={"weapon": ["dagger"]})
+    assert r.status_code == 303
+    assert r.headers["location"].endswith("/hp")
+    draft = load_draft(draft_id, client._drafts_dir)
+    assert draft["proficiencies"]["weapons"] == ["dagger"]
+
+
+def test_post_wrong_count_rejected(client):
+    draft_id = _start_magic_user(client)
+    r = client.post(f"/wizard/{draft_id}/proficiencies", data={"weapon": ["dagger", "staff"]})
+    assert r.status_code == 400
+
+
+def test_post_disallowed_weapon_rejected(client):
+    draft_id = _start_magic_user(client)
+    r = client.post(f"/wizard/{draft_id}/proficiencies", data={"weapon": ["sword"]})
+    assert r.status_code == 400
+
+
+def test_fighter_specialise_costs_two_slots(client):
+    draft_id = _start_fighter(client)
+    r = client.post(f"/wizard/{draft_id}/proficiencies",
+                    data={"weapon": ["sword", "spear", "mace"], "specialise": ["sword"]})
+    assert r.status_code == 303
+    draft = load_draft(draft_id, client._drafts_dir)
+    assert draft["proficiencies"]["weapons"] == ["sword", "spear", "mace"]
+    assert draft["proficiencies"]["specialisations"] == ["sword"]
+
+
+def test_specialise_for_non_martial_rejected(client):
+    draft_id = _start_magic_user(client)
+    r = client.post(f"/wizard/{draft_id}/proficiencies",
+                    data={"weapon": ["dagger"], "specialise": ["dagger"]})
+    assert r.status_code == 400
+
+
+def test_proficiencies_persist_to_character(client):
+    draft_id = _start_fighter(client)
+    client.post(f"/wizard/{draft_id}/proficiencies",
+                data={"weapon": ["sword", "spear", "mace", "hand_axe"]})
+    client.post(f"/wizard/{draft_id}/hp/roll")
+    client.post(f"/wizard/{draft_id}/hp")
+    r = client.post(f"/wizard/{draft_id}/finalize")
+    char_id = r.headers["location"].split("/")[-1]
+    spec = load_character(char_id, client._characters_dir)
+    assert set(spec.weapon_proficiencies) == {"sword", "spear", "mace", "hand_axe"}

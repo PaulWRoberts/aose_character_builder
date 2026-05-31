@@ -343,43 +343,15 @@ def _enabled_optional_rules(rs: RuleSet) -> list[str]:
 
 
 def _proficiency_display(spec: CharacterSpec, data: GameData) -> list[ProficiencyDisplay]:
-    """Build the rich per-group proficiency display for the character sheet.
+    """Build the rich per-weapon proficiency display for the character sheet.
 
-    Each entry lists the weapons in that group with the damage value the
-    character would deal under the active rules: the variable per-weapon damage
-    if Variable Weapon Damage is on, otherwise the default 1d6.  Returns an
-    empty list when the Weapon Proficiency rule is off or no groups were picked.
+    Returns an empty list when the Weapon Proficiency rule is off or no weapons
+    have been chosen.  Full per-weapon rendering is implemented in Task 11.
     """
-    from aose.engine.proficiency import proficiency_groups
-    from aose.models import Weapon
-
-    if not spec.ruleset.weapon_proficiency or not spec.chosen_proficiencies:
+    # NOTE: Task 11 will replace this stub with the per-weapon sheet view.
+    if not spec.ruleset.weapon_proficiency or not spec.weapon_proficiencies:
         return []
-
-    use_variable = spec.ruleset.variable_weapon_damage
-    id_to_group = {g["id"]: g for g in proficiency_groups(data)}
-
-    # Pre-index weapons by their proficiency group id for one pass.
-    # NOTE: proficiency_group field removed in Task 3; stub returns [] until
-    # Task 4 re-implements category/quality-based grouping.
-    weapons_by_group: dict[str, list[Weapon]] = {}
-
-    result: list[ProficiencyDisplay] = []
-    for gid in spec.chosen_proficiencies:
-        group_meta = id_to_group.get(gid)
-        group_name = group_meta["name"] if group_meta else gid.replace("_", " ").title()
-        weapons = sorted(weapons_by_group.get(gid, []), key=lambda w: w.name)
-        result.append(ProficiencyDisplay(
-            name=group_name,
-            weapons=[
-                WeaponDisplay(
-                    name=w.name,
-                    damage=(w.damage.variable if use_variable else w.damage.default),
-                )
-                for w in weapons
-            ],
-        ))
-    return result
+    return []
 
 
 def _is_race_as_class(spec: CharacterSpec, data: GameData) -> bool:

@@ -189,17 +189,3 @@ def allowed_armor_ids(classes: list[CharClass], data) -> "set[str] | str":
 def shields_allowed(classes: list[CharClass]) -> bool:
     return any(cls.shields_allowed for cls in classes)
 
-
-# ── Stubs retained for wizard.py compatibility during Task 10 migration ──────
-
-def starting_proficiency_count(cls: CharClass) -> int:
-    """Base slot count for the given class.  Thin shim; wizard.py will be
-    rewritten in Task 10 to use ``proficiency_slots`` directly."""
-    return base_slot_count(combat_category(cls))
-
-
-def proficiency_groups(data) -> list:  # type: ignore[return]
-    """Returns an empty list during the per-weapon migration (Tasks 3–11).
-    The wizard proficiency step displays nothing while the new per-weapon
-    picker (Task 10) is not yet wired."""
-    return []

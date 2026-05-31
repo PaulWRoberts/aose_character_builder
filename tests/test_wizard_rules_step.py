@@ -233,7 +233,7 @@ def test_toggling_weapon_proficiency_clears_only_proficiencies(client):
     client.post(f"/wizard/{draft_id}/class", data={"class_id": "fighter"})
     client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "law"})
     client.post(f"/wizard/{draft_id}/proficiencies", data={
-        "proficiency_group": ["sword", "axe"],
+        "weapon": ["sword", "spear", "mace", "hand_axe"],
     })
     assert load_draft(draft_id, client._drafts_dir).get("proficiencies")
 

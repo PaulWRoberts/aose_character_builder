@@ -1,47 +1,62 @@
 <h2>Weapon Proficiencies</h2>
-<p>{{ class_name }} starts with <strong>{{ required }}</strong> weapon proficiencies.
-   Each covers an entire weapon group &mdash; pick the ones your character has trained with.
-   Non-proficient attacks suffer <strong>&minus;2 to hit</strong>.</p>
+<p>{{ class_name }} starts with <strong>{{ required }}</strong> weapon
+   proficiency slot{{ "s" if required != 1 else "" }}. Proficiency is chosen
+   per individual weapon. Non-proficient attacks suffer a to-hit penalty by
+   class.{% if allow_specialise %} A martial character may
+   <strong>specialise</strong> in a weapon (costs 2 slots) for +1 to hit and
+   +1 damage.{% endif %}</p>
 
 <form method="post" action="/wizard/{{ draft_id }}/proficiencies" class="step-form">
+    <table class="prof-table" data-required="{{ required }}"
+           data-specialise="{{ 1 if allow_specialise else 0 }}">
+        <thead>
+            <tr>
+                <th>Proficient</th><th>Weapon</th><th>Qualities</th>
+                {% if allow_specialise %}<th>Specialise (2)</th>{% endif %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for w in weapons %}
+            <tr>
+                <td><input type="checkbox" name="weapon" value="{{ w.id }}"
+                           class="prof-weapon" {% if w.selected %}checked{% endif %}></td>
+                <td>{{ w.name }}</td>
+                <td class="muted small">{{ w.qualities }}</td>
+                {% if allow_specialise %}
+                <td><input type="checkbox" name="specialise" value="{{ w.id }}"
+                           class="prof-special" {% if w.specialised %}checked{% endif %}></td>
+                {% endif %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 
-    <div class="card-grid"
-         data-required="{{ required }}">
-        {% for g in groups %}
-        <label class="card {% if g.selected %}selected{% endif %}">
-            <input type="checkbox" name="proficiency_group" value="{{ g.id }}"
-                   class="prof-checkbox"
-                   {% if g.selected %}checked{% endif %}>
-            <div class="card-name">{{ g.name }}</div>
-            <div class="card-detail">{{ g.weapons | join(", ") }}</div>
-        </label>
-        {% endfor %}
-    </div>
-
-    <p class="muted" id="prof-counter">Pick exactly {{ required }}.</p>
-
+    <p class="muted" id="prof-counter">Spend exactly {{ required }} slot{{ "s" if required != 1 else "" }}.</p>
     <button type="submit" class="primary">Next: Hit Points &rarr;</button>
 </form>
 
 <script>
-    // Lightweight client-side helper: highlight the card on toggle and warn
-    // when the user has picked the wrong number.  Submission validation
-    // still lives on the server.
     (function () {
         const required = {{ required }};
-        const grid = document.querySelector('.card-grid');
+        const table = document.querySelector('.prof-table');
         const counter = document.getElementById('prof-counter');
-        const boxes = grid.querySelectorAll('.prof-checkbox');
-
-        function refresh() {
-            const checked = grid.querySelectorAll('.prof-checkbox:checked');
-            counter.textContent = `Picked ${checked.length} of ${required}.`;
-            counter.className = (checked.length === required) ? '' : 'muted';
-            boxes.forEach(box => {
-                box.closest('.card').classList.toggle('selected', box.checked);
-            });
+        function rowOf(el) { return el.closest('tr'); }
+        function spent() {
+            let n = 0;
+            table.querySelectorAll('.prof-weapon:checked').forEach(() => n += 1);
+            table.querySelectorAll('.prof-special:checked').forEach(() => n += 1);
+            return n;
         }
-        boxes.forEach(box => box.addEventListener('change', refresh));
+        function refresh() {
+            table.querySelectorAll('.prof-special:checked').forEach(s => {
+                const w = rowOf(s).querySelector('.prof-weapon');
+                if (w && !w.checked) { w.checked = true; }
+            });
+            const n = spent();
+            counter.textContent = `Spent ${n} of ${required}.`;
+            counter.className = (n === required) ? '' : 'muted';
+        }
+        table.addEventListener('change', refresh);
         refresh();
     })();
 </script>
