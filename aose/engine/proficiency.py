@@ -71,3 +71,41 @@ def improvements_through_level(cls: CharClass, level: int) -> int:
 def proficiency_slots(cls: CharClass, level: int) -> int:
     """Total proficiency slots for a single class at ``level`` = base + gained."""
     return base_slot_count(combat_category(cls)) + improvements_through_level(cls, level)
+
+
+# ── Per-character accounting ────────────────────────────────────────────────
+
+def is_proficient(weapon_id: str, spec: CharacterSpec) -> bool:
+    return weapon_id in spec.weapon_proficiencies
+
+
+def is_specialised(weapon_id: str, spec: CharacterSpec) -> bool:
+    return weapon_id in spec.weapon_specialisations
+
+
+def slots_spent(spec: CharacterSpec) -> int:
+    """Each proficiency costs 1 slot; each specialisation costs 1 extra."""
+    return len(spec.weapon_proficiencies) + len(spec.weapon_specialisations)
+
+
+# ── Multi-class resolution (book is silent; most-martial wins) ──────────────
+
+def category_for_classes(classes: list[CharClass]) -> Category:
+    """The most martial category among the classes (smallest penalty)."""
+    return min((combat_category(c) for c in classes),
+               key=lambda cat: _MARTIALNESS[cat], default="non_martial")
+
+
+def penalty_for_classes(classes: list[CharClass]) -> int:
+    return nonproficiency_penalty(category_for_classes(classes))
+
+
+def specialisation_allowed(classes: list[CharClass]) -> bool:
+    """Specialisation is offered when any class is martial."""
+    return any(combat_category(c) == "martial" for c in classes)
+
+
+def total_proficiency_slots(pairs: list[tuple[CharClass, int]]) -> int:
+    """Total slots for a (possibly multi-class) character: the max over classes
+    of that class's slot count at its level."""
+    return max((proficiency_slots(c, lvl) for c, lvl in pairs), default=0)

@@ -1,6 +1,8 @@
 """Weapon Proficiency optional rule — engine."""
 from pathlib import Path
 
+import pytest
+
 from aose.data.loader import GameData
 from aose.engine.proficiency import (
     base_slot_count,
@@ -12,6 +14,11 @@ from aose.engine.proficiency import (
 
 PROJECT_ROOT = Path(__file__).parent.parent
 DATA_DIR = PROJECT_ROOT / "data"
+
+
+@pytest.fixture
+def data():
+    return GameData.load(DATA_DIR)
 
 
 def test_combat_category_derivation():
@@ -90,3 +97,46 @@ def test_proficiency_config_removed():
     assert not hasattr(m, "ProficiencyConfig")
     from aose.models import CharClass
     assert "proficiency" not in CharClass.model_fields
+
+
+from aose.engine.proficiency import (
+    category_for_classes,
+    is_proficient,
+    is_specialised,
+    penalty_for_classes,
+    slots_spent,
+    specialisation_allowed,
+    total_proficiency_slots,
+)
+
+
+def test_is_proficient_and_specialised():
+    spec = _base_spec(weapon_proficiencies=["sword", "spear"],
+                      weapon_specialisations=["sword"])
+    assert is_proficient("sword", spec) is True
+    assert is_proficient("spear", spec) is True
+    assert is_proficient("club", spec) is False
+    assert is_specialised("sword", spec) is True
+    assert is_specialised("spear", spec) is False
+
+
+def test_slots_spent_counts_specialisation_extra():
+    spec = _base_spec(weapon_proficiencies=["sword", "spear"],
+                      weapon_specialisations=["sword"])
+    # 2 proficiencies + 1 specialisation extra = 3 slots
+    assert slots_spent(spec) == 3
+
+
+def test_multiclass_category_and_penalty_most_martial(data):
+    fighter = data.classes["fighter"]        # martial
+    magic_user = data.classes["magic_user"]  # non_martial
+    assert category_for_classes([fighter, magic_user]) == "martial"
+    assert penalty_for_classes([fighter, magic_user]) == -2
+    assert specialisation_allowed([fighter, magic_user]) is True
+    assert specialisation_allowed([magic_user]) is False
+
+
+def test_total_proficiency_slots_is_max_over_classes(data):
+    fighter = data.classes["fighter"]        # 4 @ L1
+    magic_user = data.classes["magic_user"]  # 1 @ L1
+    assert total_proficiency_slots([(fighter, 1), (magic_user, 1)]) == 4
