@@ -83,3 +83,38 @@ def test_freeform_armor_still_fails_open(data):
     # "any appropriate to size" must remain unresolvable → unrestricted.
     halfling = allowed_armor_ids([data.classes["halfling"]], data)
     assert halfling == "all"
+
+
+# ── equip() enforcement tests ──────────────────────────────────────────────
+
+from aose.engine.equip import equip
+
+
+def test_equip_rejects_disallowed_weapon(data):
+    # cleric: weapons limited; a sword is not allowed.
+    allowed = allowed_weapon_ids([data.classes["cleric"]], data)
+    with pytest.raises(ValueError, match="cannot use"):
+        equip(["sword"], {}, [], "sword", data, allowed_weapons=allowed)
+
+
+def test_equip_allows_allowed_weapon(data):
+    allowed = allowed_weapon_ids([data.classes["cleric"]], data)
+    _eq, weapons = equip(["mace"], {}, [], "mace", data, allowed_weapons=allowed)
+    assert weapons == ["mace"]
+
+
+def test_equip_rejects_disallowed_armor(data):
+    allowed = allowed_armor_ids([data.classes["thief"]], data)  # leather only
+    with pytest.raises(ValueError, match="cannot use"):
+        equip(["plate_mail"], {}, [], "plate_mail", data, allowed_armor=allowed)
+
+
+def test_equip_rejects_shield_when_not_allowed(data):
+    with pytest.raises(ValueError, match="shield"):
+        equip(["shield"], {}, [], "shield", data, allow_shields=False)
+
+
+def test_equip_unrestricted_by_default(data):
+    # No allowance args → no enforcement (backward compatible).
+    _eq, weapons = equip(["sword"], {}, [], "sword", data)
+    assert weapons == ["sword"]

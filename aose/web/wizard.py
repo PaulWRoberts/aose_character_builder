@@ -31,6 +31,11 @@ from aose.engine.magic import (
     use_charge as _use_charge,
 )
 from aose.engine.proficiency import proficiency_groups, starting_proficiency_count
+from aose.engine.proficiency import (
+    allowed_armor_ids,
+    allowed_weapon_ids,
+    shields_allowed,
+)
 from aose.engine.shop import (
     InsufficientGold,
     REMOVE_MODES,
@@ -1118,12 +1123,16 @@ async def post_equipment_add(request: Request, draft_id: str, item_id: str = For
 async def post_equipment_equip(request: Request, draft_id: str, item_id: str = Form(...)):
     draft = _load(request, draft_id)
     data = request.app.state.game_data
+    classes = [data.classes[cid] for cid in _class_ids(draft) if cid in data.classes]
     try:
         new_eq, new_weapons = _equip(
             draft.get("inventory", []),
             draft.get("equipped", {}),
             draft.get("equipped_weapons", []),
             item_id, data,
+            allowed_weapons=allowed_weapon_ids(classes, data),
+            allowed_armor=allowed_armor_ids(classes, data),
+            allow_shields=shields_allowed(classes),
         )
     except ValueError as e:
         raise HTTPException(400, str(e))

@@ -41,6 +41,11 @@ from aose.engine.shop import (
     unstash as shop_unstash,
     unstash_container as shop_unstash_container,
 )
+from aose.engine.proficiency import (
+    allowed_armor_ids,
+    allowed_weapon_ids,
+    shields_allowed,
+)
 from aose.sheet.view import build_sheet
 from aose.web.move_dispatch import dispatch_move
 
@@ -263,10 +268,15 @@ async def equipment_add(request: Request, character_id: str,
 async def equipment_equip(request: Request, character_id: str,
                           item_id: str = Form(...)):
     spec = _load_spec_or_404(request, character_id)
+    data = request.app.state.game_data
+    classes = [data.classes[e.class_id] for e in spec.classes if e.class_id in data.classes]
     try:
         spec.equipped, spec.equipped_weapons = _equip(
             spec.inventory, spec.equipped, spec.equipped_weapons,
-            item_id, request.app.state.game_data,
+            item_id, data,
+            allowed_weapons=allowed_weapon_ids(classes, data),
+            allowed_armor=allowed_armor_ids(classes, data),
+            allow_shields=shields_allowed(classes),
         )
     except ValueError as e:
         raise HTTPException(400, str(e))

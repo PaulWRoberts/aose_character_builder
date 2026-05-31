@@ -34,11 +34,22 @@ def can_equip(item, slot: str | None = None) -> bool:
 
 def equip(inventory: list[str], equipped: dict[str, str],
           equipped_weapons: list[str], item_id: str,
-          data: GameData) -> tuple[dict[str, str], list[str]]:
+          data: GameData,
+          allowed_weapons: "set[str] | str" = "all",
+          allowed_armor: "set[str] | str" = "all",
+          allow_shields: bool = True) -> tuple[dict[str, str], list[str]]:
     """Equip one copy of ``item_id`` from ``inventory``.  Returns new
     (equipped, equipped_weapons).  Raises ValueError if the item isn't owned
     or isn't equippable, or if a copy is already equipped that would push us
-    past the inventory count."""
+    past the inventory count.
+
+    Optional allowance args enforce class restrictions:
+      * ``allowed_weapons`` — set of permitted weapon ids, or ``"all"``
+      * ``allowed_armor``   — set of permitted armour ids, or ``"all"``
+      * ``allow_shields``   — False to forbid shield equipping
+
+    Defaults leave all three unrestricted (backward-compatible).
+    """
     if item_id not in data.items:
         raise ValueError(f"Unknown item {item_id!r}")
     item = data.items[item_id]
@@ -50,12 +61,20 @@ def equip(inventory: list[str], equipped: dict[str, str],
     new_weapons = list(equipped_weapons)
 
     if isinstance(item, Armor):
+        if item.is_shield:
+            if not allow_shields:
+                raise ValueError("This class cannot use a shield")
+        else:
+            if allowed_armor != "all" and item_id not in allowed_armor:
+                raise ValueError(f"This class cannot use {item.name!r}")
         slot = "shield" if item.is_shield else "armor"
         # Single-slot gear: replace whatever is currently in that slot.
         new_eq[slot] = item_id
         return new_eq, new_weapons
 
     if isinstance(item, Weapon):
+        if allowed_weapons != "all" and item_id not in allowed_weapons:
+            raise ValueError(f"This class cannot use {item.name!r}")
         already_equipped = _count(equipped_weapons, item_id)
         if already_equipped >= owned:
             raise ValueError(
