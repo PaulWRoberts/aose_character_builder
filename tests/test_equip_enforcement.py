@@ -54,3 +54,32 @@ def test_multiclass_union_unrestricted_wins(data):
     cleric = data.classes["cleric"]      # weapon list
     fighter = data.classes["fighter"]    # all
     assert allowed_weapon_ids([cleric, fighter], data) == "all"
+
+
+def test_leather_shorthand_resolves_not_failopen(data):
+    # Every class that lists "leather" must resolve it, NOT fail open to "all".
+    for cls_id in ("thief", "assassin", "acrobat", "druid", "gnome"):
+        armor = allowed_armor_ids([data.classes[cls_id]], data)
+        assert armor != "all", f"{cls_id} wrongly fails open"
+        assert "leather_armor" in armor
+
+
+def test_chainmail_and_plate_shorthand_resolve(data):
+    barbarian = allowed_armor_ids([data.classes["barbarian"]], data)
+    assert barbarian != "all"
+    assert {"leather_armor", "chain_mail"}.issubset(barbarian)
+    knight = allowed_armor_ids([data.classes["knight"]], data)
+    assert knight != "all"
+    assert "plate_mail" in knight
+
+
+def test_war_hammer_still_resolves(data):
+    cleric = allowed_weapon_ids([data.classes["cleric"]], data)
+    assert cleric != "all"
+    assert "war_hammer" in cleric
+
+
+def test_freeform_armor_still_fails_open(data):
+    # "any appropriate to size" must remain unresolvable → unrestricted.
+    halfling = allowed_armor_ids([data.classes["halfling"]], data)
+    assert halfling == "all"

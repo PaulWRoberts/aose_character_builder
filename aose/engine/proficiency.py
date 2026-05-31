@@ -114,16 +114,36 @@ def total_proficiency_slots(pairs: list[tuple[CharClass, int]]) -> int:
 # ── Class allowance resolver ────────────────────────────────────────────────
 
 def _normalize(text: str) -> str:
-    return text.strip().lower().replace(" ", "_").replace("-", "_")
+    """Lowercase and strip every non-alphanumeric character so that prose like
+    ``war hammer`` / ``chainmail`` / ``plate mail`` all collapse onto the same
+    key as the catalog id/name (``war_hammer`` / ``chain_mail`` / ``plate_mail``)."""
+    return "".join(ch for ch in text.lower() if ch.isalnum())
 
 
 def _resolve_entries(entries: list[str], candidates) -> "set[str] | str":
     """Resolve prose allowance entries to item ids by matching normalised ids
-    and names.  Any entry that resolves to nothing → ``"all"`` (fail-open)."""
+    and names, plus unique first-word-of-name aliases (so ``leather`` →
+    ``leather_armor``).  Any entry that resolves to nothing → ``"all"``
+    (fail-open)."""
     by_key: dict[str, str] = {}
     for item in candidates:
         by_key[_normalize(item.id)] = item.id
         by_key[_normalize(item.name)] = item.id
+    # Unique first-word-of-name aliases (e.g. "Leather Armour" → "leather").
+    first_word_counts: dict[str, int] = {}
+    first_word_id: dict[str, str] = {}
+    for item in candidates:
+        words = item.name.split()
+        if not words:
+            continue
+        fw = _normalize(words[0])
+        if not fw:
+            continue
+        first_word_counts[fw] = first_word_counts.get(fw, 0) + 1
+        first_word_id[fw] = item.id
+    for fw, count in first_word_counts.items():
+        if count == 1 and fw not in by_key:
+            by_key[fw] = first_word_id[fw]
     resolved: set[str] = set()
     for entry in entries:
         match = by_key.get(_normalize(entry))
