@@ -21,7 +21,8 @@
   "inventory": [],
   "equipped": {},
   "secondary_skill": null,
-  "chosen_proficiencies": [],
+  "weapon_proficiencies": [],
+  "weapon_specialisations": [],
   "ruleset": {
     "ascending_ac": false,
     "secondary_skills": false,
