@@ -4,7 +4,9 @@ Per OSE Advanced, melee attacks get STR modifier to both the attack roll and
 damage; ranged attacks get DEX modifier to the attack roll and no STR
 modifier to damage (except thrown weapons — those are a niche we don't model
 yet).  When ``weapon_proficiency`` is in effect and the character lacks the
-relevant proficiency group, a flat -2 penalty applies to the attack roll.
+relevant weapon proficiency, the class-derived penalty applies to the
+attack roll (e.g. -2 for martial classes).  Weapon specialisation adds
++1 to hit and +1 to damage.
 
 Damage uses ``damage.variable`` when the Variable Weapon Damage rule is on,
 otherwise ``damage.default`` (1d6 for everything under the standard rule).
@@ -28,7 +30,7 @@ from aose.data.loader import GameData
 from aose.engine.ability_mods import ability_modifier
 from aose.engine.attack_bonus import thac0
 from aose.engine.magic import active_modifiers, effective_abilities
-from aose.engine.proficiency import is_proficient_with
+from aose.engine.proficiency import is_proficient, is_specialised, penalty_for_classes
 from aose.models import Ability, CharacterSpec, Weapon
 
 UNARMED_DAMAGE = "1d2"
@@ -49,6 +51,7 @@ class AttackProfile(BaseModel):
     melee: bool
     ranged: bool
     proficient: bool          # always True when the rule is off
+    specialised: bool = False # weapon-specialisation +1/+1 active
     to_hit_thac0: int         # final THAC0 after mods (lower = better)
     to_hit_ascending: int     # final attack-bonus (higher = better; +0 baseline)
     damage: str               # e.g. "1d8+1" or "1d6"
@@ -87,13 +90,18 @@ def _profile_for(weapon: Weapon, spec: CharacterSpec, data: GameData,
         atk_mod = dex_mod
         dmg_mod = 0
 
-    # Proficiency penalty applies only when the rule is on AND we lack the group.
+    # Proficiency penalty applies only when the rule is on AND we lack the weapon.
     proficient = True
     prof_pen = 0
+    specialised = False
     if spec.ruleset.weapon_proficiency:
-        proficient = is_proficient_with(weapon, spec.chosen_proficiencies)
+        classes = [data.classes[e.class_id] for e in spec.classes if e.class_id in data.classes]
+        proficient = is_proficient(weapon.id, spec)
         if not proficient:
-            prof_pen = -2
+            prof_pen = penalty_for_classes(classes)
+        specialised = is_specialised(weapon.id, spec)
+    spec_hit = 1 if specialised else 0
+    spec_dmg = 1 if specialised else 0
 
     use_variable = spec.ruleset.variable_weapon_damage
     base_damage = weapon.damage.variable if use_variable else weapon.damage.default
@@ -103,13 +111,13 @@ def _profile_for(weapon: Weapon, spec: CharacterSpec, data: GameData,
         rng = (weapon.range_short, weapon.range_medium or 0, weapon.range_long or 0)
 
     def hit_thac0(extra: int) -> int:
-        return base_thac0 - atk_mod - prof_pen - extra - g_atk
+        return base_thac0 - atk_mod - prof_pen - spec_hit - extra - g_atk
 
     def hit_asc(extra: int) -> int:
-        return base_attack + atk_mod + prof_pen + extra + g_atk
+        return base_attack + atk_mod + prof_pen + spec_hit + extra + g_atk
 
     def dmg(extra: int) -> str:
-        return _format_damage(base_damage, dmg_mod + g_dmg + extra)
+        return _format_damage(base_damage, dmg_mod + g_dmg + spec_dmg + extra)
 
     conditional = None
     if weapon.conditional_bonus is not None:
@@ -128,6 +136,7 @@ def _profile_for(weapon: Weapon, spec: CharacterSpec, data: GameData,
         melee=weapon.melee,
         ranged=weapon.ranged,
         proficient=proficient,
+        specialised=specialised,
         to_hit_thac0=hit_thac0(weapon.magic_bonus),
         to_hit_ascending=hit_asc(weapon.magic_bonus),
         damage=dmg(weapon.magic_bonus),

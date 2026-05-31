@@ -46,7 +46,7 @@ def client(tmp_path):
 
 
 def _spec(abilities=None, inventory=None, equipped=None, equipped_weapons=None,
-          ruleset=None, chosen_proficiencies=None):
+          ruleset=None, weapon_proficiencies=None, weapon_specialisations=None):
     return CharacterSpec(
         name="Thorin",
         abilities=abilities or {"STR": 16, "INT": 10, "WIS": 11, "DEX": 12, "CON": 14, "CHA": 9},
@@ -56,7 +56,8 @@ def _spec(abilities=None, inventory=None, equipped=None, equipped_weapons=None,
         inventory=list(inventory or []),
         equipped=dict(equipped or {}),
         equipped_weapons=list(equipped_weapons or []),
-        chosen_proficiencies=list(chosen_proficiencies or []),
+        weapon_proficiencies=list(weapon_proficiencies or []),
+        weapon_specialisations=list(weapon_specialisations or []),
         ruleset=ruleset or RuleSet(),
     )
 
@@ -88,8 +89,8 @@ def test_equip_armor_replaces_existing_armor(data):
 
 
 def test_equip_weapon_appends_to_list(data):
-    _, weapons = equip(["long_sword"], {}, [], "long_sword", data)
-    assert weapons == ["long_sword"]
+    _, weapons = equip(["sword"], {}, [], "sword", data)
+    assert weapons == ["sword"]
 
 
 def test_equip_weapon_twice_when_owned_twice(data):
@@ -104,7 +105,7 @@ def test_equip_blocks_past_inventory_count(data):
 
 def test_equip_rejects_unowned(data):
     with pytest.raises(ValueError, match="not in inventory"):
-        equip([], {}, [], "long_sword", data)
+        equip([], {}, [], "sword", data)
 
 
 def test_equip_rejects_unequippable(data):
@@ -124,21 +125,21 @@ def test_unequip_one_weapon_instance(data):
 
 def test_unequip_unowned_raises(data):
     with pytest.raises(ValueError, match="not equipped"):
-        unequip({}, [], "long_sword", data)
+        unequip({}, [], "sword", data)
 
 
 def test_equipped_count_aggregates_across_slots():
     assert equipped_count({"armor": "leather_armor"}, ["dagger", "dagger"], "dagger") == 2
     assert equipped_count({"armor": "leather_armor"}, [], "leather_armor") == 1
-    assert equipped_count({}, [], "long_sword") == 0
+    assert equipped_count({}, [], "sword") == 0
 
 
 # ── Inventory rows carry equippable + equipped_count ──────────────────────
 
 def test_inventory_rows_marks_weapons_as_equippable(data):
-    rows = inventory_rows(["long_sword", "torch"], data, {}, [])
+    rows = inventory_rows(["sword", "torch"], data, {}, [])
     by_id = {r.id: r for r in rows}
-    assert by_id["long_sword"].equippable is True
+    assert by_id["sword"].equippable is True
     assert by_id["torch"].equippable is False
 
 
@@ -164,13 +165,13 @@ def test_no_weapons_yields_empty_profile_list(data):
 def test_melee_weapon_adds_str_mod_to_to_hit_and_damage(data):
     # STR 16 → +2 mod, Fighter L1 THAC0 = 19
     all_profiles = attack_profiles(
-        _spec(inventory=["long_sword"], equipped_weapons=["long_sword"]),
+        _spec(inventory=["sword"], equipped_weapons=["sword"]),
         data,
     )
     weapons = [p for p in all_profiles if not p.unarmed]
     assert len(weapons) == 1
     p = weapons[0]
-    assert p.name == "Long Sword"
+    assert p.name == "Sword"
     assert p.melee is True
     assert p.to_hit_thac0 == 17        # 19 - 2 (STR)
     assert p.to_hit_ascending == 2     # 0 + 2 (STR)
@@ -207,40 +208,54 @@ def test_ranged_weapon_with_high_dex(data):
 
 def test_variable_damage_rule_swaps_damage_die(data):
     all_profiles = attack_profiles(
-        _spec(inventory=["long_sword"], equipped_weapons=["long_sword"],
+        _spec(inventory=["sword"], equipped_weapons=["sword"],
               ruleset=RuleSet(variable_weapon_damage=True)),
         data,
     )
-    # Long Sword variable damage is 1d8, plus STR +2
-    sword = next(p for p in all_profiles if p.weapon_id == "long_sword")
+    # Sword variable damage is 1d8, plus STR +2
+    sword = next(p for p in all_profiles if p.weapon_id == "sword")
     assert sword.damage == "1d8+2"
 
 
-def test_non_proficiency_applies_minus_two(data):
+def test_non_proficiency_applies_martial_penalty(data):
     all_profiles = attack_profiles(
-        _spec(inventory=["long_sword"], equipped_weapons=["long_sword"],
+        _spec(inventory=["sword"], equipped_weapons=["sword"],
               ruleset=RuleSet(weapon_proficiency=True),
-              chosen_proficiencies=["axe"]),  # not "sword"
+              weapon_proficiencies=["hand_axe"]),  # not "sword"
         data,
     )
-    sword = next(p for p in all_profiles if p.weapon_id == "long_sword")
+    sword = next(p for p in all_profiles if p.weapon_id == "sword")
     assert sword.proficient is False
-    # Base 19, STR +2, prof -2 → THAC0 = 19 - 2 - (-2) = 19 ... wait
-    # to_hit_thac0 = base_thac0 - atk_mod - prof_pen
-    # = 19 - 2 - (-2) = 19
+    # base 19, STR +2, martial penalty -2 → 19 - 2 - (-2) = 19
     assert sword.to_hit_thac0 == 19
 
 
 def test_proficient_user_takes_no_penalty(data):
     all_profiles = attack_profiles(
-        _spec(inventory=["long_sword"], equipped_weapons=["long_sword"],
+        _spec(inventory=["sword"], equipped_weapons=["sword"],
               ruleset=RuleSet(weapon_proficiency=True),
-              chosen_proficiencies=["sword"]),
+              weapon_proficiencies=["sword"]),
         data,
     )
-    sword = next(p for p in all_profiles if p.weapon_id == "long_sword")
+    sword = next(p for p in all_profiles if p.weapon_id == "sword")
     assert sword.proficient is True
-    assert sword.to_hit_thac0 == 17  # STR mod applied, no -2 penalty
+    assert sword.to_hit_thac0 == 17  # STR mod applied, no penalty
+
+
+def test_specialisation_adds_plus_one_to_hit_and_damage(data):
+    all_profiles = attack_profiles(
+        _spec(inventory=["sword"], equipped_weapons=["sword"],
+              ruleset=RuleSet(weapon_proficiency=True, variable_weapon_damage=True),
+              weapon_proficiencies=["sword"],
+              weapon_specialisations=["sword"]),
+        data,
+    )
+    sword = next(p for p in all_profiles if p.weapon_id == "sword")
+    assert sword.specialised is True
+    # base 19, STR +2, spec +1 → 19 - 2 - 1 = 16
+    assert sword.to_hit_thac0 == 16
+    # sword variable 1d8, STR +2, spec +1 → 1d8+3
+    assert sword.damage == "1d8+3"
 
 
 def test_multiple_identical_weapons_collapse_to_count(data):
@@ -283,18 +298,18 @@ def test_sheet_unequip_armor(client):
 
 
 def test_sheet_equip_weapon_appends(client):
-    _seed(client, inventory=["long_sword"])
-    r = client.post("/character/test/equipment/equip", data={"item_id": "long_sword"})
+    _seed(client, inventory=["sword"])
+    r = client.post("/character/test/equipment/equip", data={"item_id": "sword"})
     assert r.status_code == 303
     spec = load_character("test", client._characters_dir)
-    assert spec.equipped_weapons == ["long_sword"]
+    assert spec.equipped_weapons == ["sword"]
 
 
 def test_sheet_attack_profiles_appear_when_weapon_equipped(client):
-    _seed(client, inventory=["long_sword"], equipped_weapons=["long_sword"])
+    _seed(client, inventory=["sword"], equipped_weapons=["sword"])
     r = client.get("/character/test")
     assert "Attacks" in r.text
-    assert "Long Sword" in r.text
+    assert "Sword" in r.text
     # STR 16 → +2 mod; THAC0 19 - 2 = 17
     assert "17" in r.text
 
@@ -302,7 +317,7 @@ def test_sheet_attack_profiles_appear_when_weapon_equipped(client):
 def test_sheet_shows_unarmed_when_no_weapons_equipped(client):
     # Unarmed is always the first profile; even with no equipped weapons the
     # Attacks section renders with "Unarmed" rather than a "No weapons" message.
-    _seed(client, inventory=["long_sword"])  # owned but not equipped
+    _seed(client, inventory=["sword"])  # owned but not equipped
     r = client.get("/character/test")
     assert "Unarmed" in r.text
 
@@ -312,7 +327,7 @@ def test_sheet_inventory_shows_equipped_section(client):
     of the inventory table — the new three-state split (equipped / carried /
     stashed) replaces the old per-row badge.  The unequip form is the
     actionable signal."""
-    _seed(client, inventory=["long_sword"], equipped_weapons=["long_sword"])
+    _seed(client, inventory=["sword"], equipped_weapons=["sword"])
     r = client.get("/character/test")
     assert 'class="inv-section-head"' in r.text and ">Equipped" in r.text
     assert 'action="/character/test/equipment/unequip"' in r.text
@@ -320,7 +335,7 @@ def test_sheet_inventory_shows_equipped_section(client):
 
 def test_sheet_equip_rejects_unowned_item(client):
     _seed(client, inventory=[])
-    r = client.post("/character/test/equipment/equip", data={"item_id": "long_sword"})
+    r = client.post("/character/test/equipment/equip", data={"item_id": "sword"})
     assert r.status_code == 400
 
 
@@ -331,8 +346,8 @@ def test_sheet_equip_rejects_non_equippable(client):
 
 
 def test_sheet_unequip_rejects_unequipped(client):
-    _seed(client, inventory=["long_sword"])
-    r = client.post("/character/test/equipment/unequip", data={"item_id": "long_sword"})
+    _seed(client, inventory=["sword"])
+    r = client.post("/character/test/equipment/unequip", data={"item_id": "sword"})
     assert r.status_code == 400
 
 
@@ -385,23 +400,23 @@ def test_wizard_equip_and_unequip(tmp_path):
     draft = load_draft(draft_id, tmp_path / "drafts")
     draft["gold"] = 200
     save_draft(draft_id, draft, tmp_path / "drafts")
-    client.post(f"/wizard/{draft_id}/equipment/buy", data={"item_id": "long_sword"})
+    client.post(f"/wizard/{draft_id}/equipment/buy", data={"item_id": "sword"})
 
     # Equip it
-    r = client.post(f"/wizard/{draft_id}/equipment/equip", data={"item_id": "long_sword"})
+    r = client.post(f"/wizard/{draft_id}/equipment/equip", data={"item_id": "sword"})
     assert r.status_code == 303
     draft = load_draft(draft_id, tmp_path / "drafts")
-    assert draft["equipped_weapons"] == ["long_sword"]
+    assert draft["equipped_weapons"] == ["sword"]
 
     # Unequip it
-    r = client.post(f"/wizard/{draft_id}/equipment/unequip", data={"item_id": "long_sword"})
+    r = client.post(f"/wizard/{draft_id}/equipment/unequip", data={"item_id": "sword"})
     draft = load_draft(draft_id, tmp_path / "drafts")
     assert draft.get("equipped_weapons", []) == []
 
     # Finalize — equipped state should make it into the spec
-    client.post(f"/wizard/{draft_id}/equipment/equip", data={"item_id": "long_sword"})
+    client.post(f"/wizard/{draft_id}/equipment/equip", data={"item_id": "sword"})
     client.post(f"/wizard/{draft_id}/equipment")
     r = client.post(f"/wizard/{draft_id}/finalize")
     char_id = r.headers["location"].split("/")[-1]
     spec = load_character(char_id, tmp_path / "characters")
-    assert spec.equipped_weapons == ["long_sword"]
+    assert spec.equipped_weapons == ["sword"]
