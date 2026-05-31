@@ -9,6 +9,7 @@ from .character_class import (
 )
 from .spell import Spell
 from .spell_list import SpellList
+from .weapon_quality import WeaponQuality
 from .item import (
     Item,
     ItemBase,
@@ -35,6 +36,7 @@ __all__ = [
     "ProficiencyConfig",
     "Spell",
     "SpellList",
+    "WeaponQuality",
     "Item",
     "ItemBase",
     "Weapon",
