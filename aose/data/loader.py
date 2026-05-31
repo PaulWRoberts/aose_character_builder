@@ -11,18 +11,23 @@ from aose.models import (
     Race,
     Spell,
     SpellList,
+    WeaponQuality,
 )
 
 T = TypeVar("T", bound=BaseModel)
 
 
-def _read_yaml_objects(directory: Path) -> list[dict]:
+def _read_yaml_objects(directory: Path, exclude_names: set[str] | None = None) -> list[dict]:
     """Read every *.yaml in a directory, yielding each top-level object.
-    A file may contain a single mapping or a list of mappings."""
+    A file may contain a single mapping or a list of mappings.
+    Filenames in ``exclude_names`` are skipped."""
     objs: list[dict] = []
     if not directory.exists():
         return objs
+    exclude = exclude_names or set()
     for path in sorted(directory.glob("*.yaml")):
+        if path.name in exclude:
+            continue
         with path.open("r", encoding="utf-8") as f:
             raw = yaml.safe_load(f)
         if raw is None:
@@ -45,7 +50,7 @@ def _load_models(directory: Path, model: type[T]) -> dict[str, T]:
 def _load_items(directory: Path) -> dict[str, Item]:
     adapter = TypeAdapter(Item)
     result: dict[str, Item] = {}
-    for obj in _read_yaml_objects(directory):
+    for obj in _read_yaml_objects(directory, exclude_names={"weapon_qualities.yaml"}):
         parsed = adapter.validate_python(obj)
         result[parsed.id] = parsed
     return result
@@ -95,6 +100,23 @@ def _load_spell_lists(data_dir: Path) -> dict[str, SpellList]:
     return result
 
 
+def _load_weapon_qualities(data_dir: Path) -> dict[str, WeaponQuality]:
+    """Read ``equipment/weapon_qualities.yaml`` (a list of mappings) into an
+    id-keyed dict.  Returns an empty dict when absent (minimal fixtures)."""
+    path = data_dir / "equipment" / "weapon_qualities.yaml"
+    if not path.exists():
+        return {}
+    with path.open("r", encoding="utf-8") as f:
+        raw = yaml.safe_load(f) or []
+    if not isinstance(raw, list):
+        raise ValueError("weapon_qualities.yaml must be a YAML list of mappings")
+    result: dict[str, WeaponQuality] = {}
+    for obj in raw:
+        parsed = WeaponQuality.model_validate(obj)
+        result[parsed.id] = parsed
+    return result
+
+
 @dataclass
 class GameData:
     races: dict[str, Race] = field(default_factory=dict)
@@ -102,6 +124,7 @@ class GameData:
     spells: dict[str, Spell] = field(default_factory=dict)
     spell_lists: dict[str, SpellList] = field(default_factory=dict)
     items: dict[str, Item] = field(default_factory=dict)
+    qualities: dict[str, WeaponQuality] = field(default_factory=dict)
     secondary_skills: list[str] = field(default_factory=list)
 
     @classmethod
@@ -112,5 +135,6 @@ class GameData:
             spells=_load_models(data_dir / "spells", Spell),
             spell_lists=_load_spell_lists(data_dir),
             items=_load_items(data_dir / "equipment"),
+            qualities=_load_weapon_qualities(data_dir),
             secondary_skills=_load_secondary_skills(data_dir),
         )

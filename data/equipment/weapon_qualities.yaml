@@ -1,0 +1,39 @@
+# Weapon quality definitions (AOSE).  Referenced by id from each weapon's
+# `qualities` list.  Loaded into GameData.qualities — NOT items.
+- id: blunt
+  name: Blunt
+  description: May be used by clerics.
+- id: brace
+  name: Brace
+  description: >-
+    May be set against a charge. If it hits a charging opponent, it inflicts
+    double damage.
+- id: charge
+  name: Charge
+  description: >-
+    When used while mounted and charging, the weapon inflicts double damage on
+    a hit.
+- id: melee
+  name: Melee
+  description: May be used to attack adjacent opponents (within 5 feet).
+- id: missile
+  name: Missile
+  description: May be used to make ranged attacks, using the listed ranges.
+- id: reload
+  name: Reload
+  description: >-
+    Loading the weapon takes time: the wielder may only fire it every other
+    round.
+- id: slow
+  name: Slow
+  description: The character always acts last in a combat round (ignoring initiative).
+- id: splash_weapon
+  name: Splash weapon
+  description: >-
+    Thrown to shatter on impact, affecting an area. A miss may scatter to a
+    nearby location.
+- id: two_handed
+  name: Two-handed
+  description: >-
+    Requires both hands to use; a shield may not be employed. The wielder always
+    acts last in a combat round.
