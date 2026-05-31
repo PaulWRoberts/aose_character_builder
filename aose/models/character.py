@@ -91,8 +91,21 @@ class CharacterSpec(BaseModel):
     containers: list[ContainerInstance] = Field(default_factory=list)
     magic_items: list[MagicItemInstance] = Field(default_factory=list)
     secondary_skill: str | None = None
-    chosen_proficiencies: list[str] = Field(default_factory=list)
+    # Weapon Proficiency optional rule (per-weapon).  Specialised weapons must
+    # also appear in weapon_proficiencies; specialisation costs a 2nd slot.
+    weapon_proficiencies: list[str] = Field(default_factory=list)
+    weapon_specialisations: list[str] = Field(default_factory=list)
     ruleset: RuleSet = Field(default_factory=RuleSet)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _drop_legacy_chosen_proficiencies(cls, data):
+        """Drop the pre-per-weapon ``chosen_proficiencies`` field (group ids,
+        meaningless now).  Affected characters re-pick.  Keeps old saves
+        loadable under ``extra='forbid'``."""
+        if isinstance(data, dict) and "chosen_proficiencies" in data:
+            data = {k: v for k, v in data.items() if k != "chosen_proficiencies"}
+        return data
 
     @model_validator(mode="before")
     @classmethod

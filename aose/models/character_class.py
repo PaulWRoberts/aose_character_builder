@@ -16,13 +16,6 @@ class ClassLevelData(BaseModel):
     spell_slots: dict[int, int] | None = None
 
 
-class ProficiencyConfig(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    starting_slots: int
-    new_slot_every_levels: int
-
-
 class ClassFeature(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -48,7 +41,6 @@ class CharClass(BaseModel):
     weapons_allowed: AllowedList
     armor_allowed: AllowedList
     shields_allowed: bool
-    proficiency: ProficiencyConfig | None = None
     progression: dict[int, ClassLevelData] = Field(default_factory=dict)
     features: list[ClassFeature] = Field(default_factory=list)
     # Spell-list IDs this class casts from (e.g. ["magic_user"]). Empty = non-caster.

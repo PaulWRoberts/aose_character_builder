@@ -5,7 +5,6 @@ from .character_class import (
     CharClass,
     ClassLevelData,
     ClassFeature,
-    ProficiencyConfig,
 )
 from .spell import Spell
 from .spell_list import SpellList
@@ -33,7 +32,6 @@ __all__ = [
     "CharClass",
     "ClassLevelData",
     "ClassFeature",
-    "ProficiencyConfig",
     "Spell",
     "SpellList",
     "WeaponQuality",
