@@ -246,7 +246,6 @@ def test_toggling_weapon_proficiency_clears_only_proficiencies(client):
 
 # ── Cascading clears: turning multiclassing off drops the combo ───────────
 
-@pytest.mark.skip(reason="multiclass combo allowlist removed from Race; UI being redesigned")
 def test_turning_multiclassing_off_drops_combo(client):
     draft_id = _start(client)
     client.post(f"/wizard/{draft_id}/rules", data=_rules_form(multiclassing="on"))

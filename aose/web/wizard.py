@@ -119,6 +119,9 @@ def _wizard_steps(draft: dict[str, Any]) -> list[str]:
 ABILITY_ORDER = [Ability.STR, Ability.INT, Ability.WIS, Ability.DEX, Ability.CON, Ability.CHA]
 ALIGNMENT_LABELS = {"law": "Lawful", "neutral": "Neutral", "chaos": "Chaotic"}
 
+# Multiple Classes optional rule: a character may be of up to three classes.
+MAX_CLASSES = 3
+
 
 def _drafts_dir(request: Request) -> Path:
     return request.app.state.drafts_dir
@@ -554,36 +557,19 @@ async def get_class(request: Request, draft_id: str):
             "allowed_by_race": allowed_by_race,
             "meets_abilities": meets_abilities,
             "available": allowed_by_race and meets_abilities,
-            "selected": _class_ids(draft) == [cls.id],
+            "selected": cls.id in _class_ids(draft),
         })
 
-    # Multi-class combos (only in split mode + multiclassing rule on +
-    # race actually has declared combos).
-    combos: list[dict] = []
-    if (ruleset.multiclassing
-            and ruleset.separate_race_class
-            and race is not None
-            and race.allowed_multiclass_combos):
-        chosen = _class_ids(draft)
-        for combo in race.allowed_multiclass_combos:
-            combo_classes = [data.classes.get(cid) for cid in combo]
-            if any(c is None for c in combo_classes):
-                continue  # combo references a class not present in data
-            meets_all = all(
-                _meets_ability_requirements(c.ability_requirements, abilities)
-                for c in combo_classes
-            )
-            combos.append({
-                "id": ",".join(combo),  # form value carries the combo
-                "name": " / ".join(c.name for c in combo_classes),
-                "class_names": [c.name for c in combo_classes],
-                "available": meets_all,
-                "selected": sorted(chosen) == sorted(combo),
-            })
+    # Free-form multi-classing: when the rule is on (split mode only) the user
+    # may pick up to MAX_CLASSES classes, each subject to the same ability /
+    # race gating as a single pick.
+    multiclass_enabled = ruleset.multiclassing and ruleset.separate_race_class
 
     ctx = _base_context(request, draft_id, draft, "class")
     ctx["classes"] = classes
-    ctx["combos"] = combos
+    ctx["multiclass_enabled"] = multiclass_enabled
+    ctx["max_classes"] = MAX_CLASSES
+    ctx["selected_count"] = len(_class_ids(draft))
     ctx["race_name"] = race_name
     ctx["race_as_class_mode"] = not ruleset.separate_race_class
     return templates.TemplateResponse(request, "wizard.html", ctx)
@@ -598,26 +584,43 @@ def _set_spellcasting_flag(draft: dict[str, Any], data) -> None:
 
 
 @router.post("/{draft_id}/class")
-async def post_class(request: Request, draft_id: str, class_id: str = Form(...)):
-    """Accept either a single class id (``"fighter"``) or a comma-joined combo
-    (``"fighter,magic_user"``).  Combos require the Multiclassing rule and a
-    matching entry in the race's allowed_multiclass_combos."""
+async def post_class(request: Request, draft_id: str):
+    """Accept one class, or — with the Multiclassing rule on — up to
+    ``MAX_CLASSES`` classes (free-form).  The class id(s) arrive as one or more
+    ``class_id`` form fields; a single field may also be comma-joined
+    (``"fighter,magic_user"``) for convenience.  Each picked class must meet its
+    own ability requirements and the race's class allowance."""
     draft = _load(request, draft_id)
     data = request.app.state.game_data
     ruleset = _ruleset_of(draft)
 
-    ids = [x.strip() for x in class_id.split(",") if x.strip()]
+    form = await request.form()
+    ids: list[str] = []
+    for raw in form.getlist("class_id"):
+        ids.extend(x.strip() for x in str(raw).split(",") if x.strip())
+    ids = list(dict.fromkeys(ids))  # dedupe, preserve order
+
     if not ids:
         raise HTTPException(400, "No class selected")
     for cid in ids:
         if cid not in data.classes:
             raise HTTPException(400, f"Unknown class '{cid}'")
 
-    # ── Single-class branch (the common case) ───────────────────────────
-    if len(ids) == 1:
-        cid = ids[0]
-        cls = data.classes[cid]
+    is_multi = len(ids) > 1
+    if is_multi:
+        if not ruleset.multiclassing:
+            raise HTTPException(400, "Multi-class picks require the Multiclassing rule.")
+        if not ruleset.separate_race_class:
+            # Race-as-class + multi-class isn't modelled; reject defensively.
+            raise HTTPException(
+                400, "Multi-class with Race-as-Class is not supported in this build.",
+            )
+        if len(ids) > MAX_CLASSES:
+            raise HTTPException(400, f"A character may have at most {MAX_CLASSES} classes.")
 
+    # Per-class gating (ability requirements + race allowance / race-as-class).
+    for cid in ids:
+        cls = data.classes[cid]
         if not _meets_ability_requirements(cls.ability_requirements, draft["abilities"]):
             raise HTTPException(400, f"Abilities do not meet {cls.name} requirements")
 
@@ -631,53 +634,24 @@ async def post_class(request: Request, draft_id: str, class_id: str = Form(...))
             race = data.races[draft["race_id"]]
             if not _class_allowed_for_race(cid, race, ruleset):
                 raise HTTPException(400, f"{race.name} cannot be a {cls.name}")
-        else:
-            derived_race_id = cls.race_locked or "human"
-            if derived_race_id not in data.races:
-                raise HTTPException(500, f"Race '{derived_race_id}' missing from data/races/.")
-            draft["race_id"] = derived_race_id
 
-        # Swap storage from multi → single if the user changed their mind.
-        if _class_ids(draft) != [cid]:
-            _clear_after_class(draft)
-        draft.pop("class_ids", None)
-        draft["class_id"] = cid
-        _set_spellcasting_flag(draft, data)
-        save_draft(draft_id, draft, _drafts_dir(request))
-        return _redirect(f"/wizard/{draft_id}/{_next_incomplete_step(draft)}")
-
-    # ── Multi-class branch ──────────────────────────────────────────────
-    if not ruleset.multiclassing:
-        raise HTTPException(400, "Multi-class picks require the Multiclassing rule.")
+    # Race-as-class (single only): derive the race from the picked class.
     if not ruleset.separate_race_class:
-        # The race-as-class + multi-class interaction (e.g. dual-classing within
-        # a single race entry) isn't modelled yet; reject defensively.
-        raise HTTPException(
-            400,
-            "Multi-class with Race-as-Class is not supported in this build.",
-        )
+        cls = data.classes[ids[0]]
+        derived_race_id = cls.race_locked or "human"
+        if derived_race_id not in data.races:
+            raise HTTPException(500, f"Race '{derived_race_id}' missing from data/races/.")
+        draft["race_id"] = derived_race_id
 
-    race = data.races[draft["race_id"]]
-    allowed_sorted = [sorted(c) for c in race.allowed_multiclass_combos]
-    if sorted(ids) not in allowed_sorted:
-        raise HTTPException(
-            400,
-            f"Combination {ids} is not allowed for {race.name}.",
-        )
-    for cid in ids:
-        cls = data.classes[cid]
-        if cls.race_locked:
-            raise HTTPException(
-                400,
-                f"Race-locked class {cls.name!r} cannot appear in a multi-class combo.",
-            )
-        if not _meets_ability_requirements(cls.ability_requirements, draft["abilities"]):
-            raise HTTPException(400, f"Abilities do not meet {cls.name} requirements")
-
+    # Clear downstream choices if the class set changed.
     if _class_ids(draft) != ids:
         _clear_after_class(draft)
-    draft.pop("class_id", None)
-    draft["class_ids"] = ids
+    if is_multi:
+        draft.pop("class_id", None)
+        draft["class_ids"] = ids
+    else:
+        draft.pop("class_ids", None)
+        draft["class_id"] = ids[0]
     _set_spellcasting_flag(draft, data)
     save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/{_next_incomplete_step(draft)}")

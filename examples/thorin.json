@@ -13,11 +13,11 @@
     {
       "class_id": "fighter",
       "level": 1,
+      "xp": 0,
       "hp_rolls": [7]
     }
   ],
   "alignment": "law",
-  "xp": 0,
   "inventory": [],
   "equipped": {},
   "secondary_skill": null,

@@ -150,5 +150,24 @@ Key concepts now live:
   layers. Seed spells in `data/spells/*.yaml` (verified against the PDF). No
   spell DnD in V1. Spec/plan:
   `docs/superpowers/{specs,plans}/2026-05-29-spell-selection*`.
+- **Multi-classing** — the Multiple Classes optional rule, free-form (no combo
+  allowlist; `Race.allowed_multiclass_combos` was removed). The wizard class
+  step offers up to 3 classes when `multiclassing` + `separate_race_class` are
+  on; each pick is gated individually by ability requirements + the
+  `demihuman_class_restrictions` rule. **XP is per class** — `ClassEntry.xp`
+  replaces the old global `CharacterSpec.xp` (a `model_validator` migrates old
+  saves). `aose/engine/leveling.py`: `grant_xp(spec, data, amount)` splits an
+  award evenly, scales each share by that class's prime-requisite multiplier
+  (lowest score among multi-prime classes), floors, and clamps ≥ 0; clawbacks
+  (negative) split evenly without the multiplier. This wires the prime-req XP
+  adjustment in for single-class characters too. **HP** (`aose/engine/hp.py`)
+  recomputes from raw rolls + *effective* CON at display: per gain-event
+  `max(1, event_roll_sum / N + CON_mod)` summed as exact `Fraction`s, floored
+  once (order-independent; N=1 reduces to the old single-class formula).
+  Creation = one event summing all N first rolls; each later level-up = its own
+  event. `hp_remainder` exposes the leftover fraction. Saves/THAC0 already take
+  the best across classes. Spec/plan:
+  `docs/superpowers/{specs,plans}/2026-05-29-spell-selection*` (this work shares
+  the multi-class plan file `quiet-soaring-hedgehog`).
 
 See `project_aose_builder.md` for the longer architectural narrative.

@@ -30,5 +30,4 @@ class Race(BaseModel):
     allowed_classes: list[str] = Field(default_factory=list)
     # Per-class level caps. Missing entry = no cap.
     class_level_caps: dict[str, int] = Field(default_factory=dict)
-    allowed_multiclass_combos: list[list[str]] = Field(default_factory=list)
     features: list[RaceFeature] = Field(default_factory=list)

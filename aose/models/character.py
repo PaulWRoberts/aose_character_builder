@@ -45,6 +45,11 @@ class ClassEntry(BaseModel):
 
     class_id: str
     level: int = 1
+    # This class's own experience-point count.  Multi-class characters track XP
+    # separately per class (XP earned is split evenly, then each class's
+    # prime-requisite adjustment is applied to its share); single-class
+    # characters keep the whole award here.  See aose/engine/leveling.py.
+    xp: int = 0
     hp_rolls: list[int] = Field(default_factory=list)
     # Known spells (arcane spellbook).  Empty for divine casters, who know
     # their whole list automatically; see aose/engine/spells.py.
@@ -73,7 +78,6 @@ class CharacterSpec(BaseModel):
     race_id: str
     classes: list[ClassEntry] = Field(min_length=1)
     alignment: Literal["law", "neutral", "chaos"]
-    xp: int = 0
     gold: int = 0
     # Items on the character's person — equipped items live here too.  Weight
     # in this list contributes to encumbrance.
@@ -89,3 +93,24 @@ class CharacterSpec(BaseModel):
     secondary_skill: str | None = None
     chosen_proficiencies: list[str] = Field(default_factory=list)
     ruleset: RuleSet = Field(default_factory=RuleSet)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _migrate_legacy_global_xp(cls, data):
+        """Migrate the pre-multiclass global ``xp`` field into per-class
+        ``ClassEntry.xp``.  XP used to live as a single total on the spec and was
+        split evenly at read time (``xp_share``); it now lives per class.  We
+        preserve old totals: single-class gets all of it, multi-class splits it
+        evenly (matching the former share).  Dropping the key keeps old saved
+        characters loadable under ``extra="forbid"``."""
+        if isinstance(data, dict) and "xp" in data:
+            legacy = data.get("xp") or 0
+            classes = data.get("classes") or []
+            n = len(classes)
+            if n:
+                share = legacy // n
+                for c in classes:
+                    if isinstance(c, dict) and "xp" not in c:
+                        c["xp"] = share
+            data = {k: v for k, v in data.items() if k != "xp"}
+        return data

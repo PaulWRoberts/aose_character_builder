@@ -15,7 +15,6 @@ Target model: `Race` (`aose/models/race.py`). `extra="forbid"`.
 | languages | list[str] | no | |
 | allowed_classes | list[str] | no | `[]` = ANY class (the human case) |
 | class_level_caps | map str->int | no | per-class level cap; missing = no cap |
-| allowed_multiclass_combos | list[list[str]] | no | only under the Multiclassing rule |
 | features | list[RaceFeature] | no | |
 
 `RaceFeature`: `{id:str, name:str, text:str, mechanical: map | null}`
@@ -31,8 +30,6 @@ base_movement: 120
 languages: [common, elvish, gnoll, hobgoblin, orcish]
 allowed_classes: [fighter, magic_user]
 class_level_caps: { fighter: 10, magic_user: 10 }
-allowed_multiclass_combos:
-  - [fighter, magic_user]
 features:
   - id: detect_secret_doors
     name: Detect Secret Doors

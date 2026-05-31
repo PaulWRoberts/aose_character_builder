@@ -1,33 +1,62 @@
-"""Leveling-up engine: XP shares, per-class advancement state, and the
+"""Leveling-up engine: per-class XP grants, per-class advancement state, and the
 level-up mutation that bumps a class and rolls fresh hit points.
 
-XP splitting follows the AOSE Advanced multi-class rule: total XP is divided
-evenly between classes (integer division).  Level-up rules (max-HP-at-L1,
-re-roll 1s & 2s at L1) intentionally do NOT apply at higher levels — those
-toggles are L1-only by name.
+XP is tracked separately per class (``ClassEntry.xp``).  When XP is awarded, the
+total is split evenly between the classes (integer division) and each class's
+*prime-requisite XP adjustment* is applied to its share before it lands on that
+class's count — faithful to the AOSE Advanced Multiple Classes rule.  This also
+wires the prime-requisite adjustment in for single-class characters, which the
+builder previously ignored.
+
+Level-up rules (max-HP-at-L1, re-roll 1s & 2s at L1) intentionally do NOT apply
+at higher levels — those toggles are L1-only by name.
 """
 from __future__ import annotations
 
+import math
 import random
 from typing import Optional
 
 from pydantic import BaseModel
 
 from aose.data.loader import GameData
+from aose.engine.ability_mods import prime_requisite_xp_multiplier
 from aose.engine.dice import roll_hp
 from aose.models import CharacterSpec, ClassEntry
 
 
-def xp_share(spec: CharacterSpec) -> int:
-    """XP each class effectively has.
+def _prime_req_multiplier(cls, abilities: dict) -> float:
+    """The class's prime-requisite XP multiplier.
 
-    Single-class characters get the full ``spec.xp``.  Multi-class characters
-    split it evenly via integer division; the remainder isn't lost forever —
-    it shows up as soon as more XP is awarded and the share crosses the
-    integer boundary.
+    Classes with a single prime requisite use that score.  For classes with
+    multiple prime requisites we use the *lowest* of them (a conservative,
+    uniform rule — the per-class multi-prime tables in the book vary, so this is
+    a deliberate simplification).  No prime requisites → no adjustment.
+    """
+    if not cls.prime_requisites:
+        return 1.0
+    score = min(abilities[ab] for ab in cls.prime_requisites)
+    return prime_requisite_xp_multiplier(score)
+
+
+def grant_xp(spec: CharacterSpec, data: GameData, amount: int) -> None:
+    """Award (or remove) XP, mutating ``spec`` in place.
+
+    The amount is split evenly across the character's classes (integer
+    division).  For awards (positive amount) each class's share is scaled by
+    that class's prime-requisite multiplier before being added.  Removals
+    (negative amount, a GM clawback) are split evenly without the multiplier.
+    Each class's XP is clamped at zero — leveling down is not modelled.
     """
     n = len(spec.classes)
-    return spec.xp if n == 1 else spec.xp // n
+    share = amount // n
+    for entry in spec.classes:
+        if share >= 0:
+            mult = _prime_req_multiplier(data.classes[entry.class_id], spec.abilities)
+            delta = math.floor(share * mult + 1e-9)
+        else:
+            delta = share
+        entry.xp = max(0, entry.xp + delta)
 
 
 def _effective_max_level(spec: CharacterSpec, data: GameData, entry: ClassEntry) -> int:
@@ -46,8 +75,8 @@ class ClassAdvancement(BaseModel):
     name: str
     current_level: int
     next_level: int | None
-    next_threshold: int | None  # XP needed in the class's *share* scale
-    current_xp: int             # the class's own XP share
+    next_threshold: int | None  # XP the class needs for its next level
+    current_xp: int             # the class's own XP count
     can_level: bool
     at_max: bool
 
@@ -57,7 +86,7 @@ def class_advancement(spec: CharacterSpec, data: GameData,
     cls = data.classes[entry.class_id]
     next_level = entry.level + 1
     eff_max = _effective_max_level(spec, data, entry)
-    current = xp_share(spec)
+    current = entry.xp
 
     if next_level > eff_max or next_level not in cls.progression:
         return ClassAdvancement(

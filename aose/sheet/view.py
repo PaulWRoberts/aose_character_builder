@@ -13,7 +13,7 @@ from aose.engine.encumbrance import (
     encumbrance_table,
     weight_band,
 )
-from aose.engine.leveling import ClassAdvancement, all_advancement, xp_share
+from aose.engine.leveling import ClassAdvancement, all_advancement
 from aose.engine.magic import effective_abilities
 from aose.models import Ability, CharacterSpec, MagicItem, MagicItemInstance, RuleSet
 
@@ -124,11 +124,10 @@ class CharacterSheet(BaseModel):
     race_as_class: bool  # true → omit race from subtitle (avoids "Dwarf · Dwarf 1")
     class_summary: str
     alignment: str
-    xp: int
+    xp: int                                  # total XP across all classes
     next_level: int | None
     xp_to_next: int | None
-    xp_share: int                            # per-class share (== xp for single-class)
-    advancement: list[ClassAdvancement]      # one entry per class
+    advancement: list[ClassAdvancement]      # one entry per class (own XP/level)
 
     abilities: list[AbilityRow]
 
@@ -466,10 +465,9 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
         race_as_class=_is_race_as_class(spec, data),
         class_summary=_class_summary(spec, data),
         alignment=ALIGNMENT_LABELS[spec.alignment],
-        xp=spec.xp,
+        xp=sum(e.xp for e in spec.classes),
         next_level=next_level,
         xp_to_next=xp_to_next,
-        xp_share=xp_share(spec),
         advancement=advancement_rows,
         abilities=abilities,
         max_hp=hp.max_hp(spec, data),

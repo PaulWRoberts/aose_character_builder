@@ -181,7 +181,7 @@
                 <h2>Advancement</h2>
                 <div class="stat-row"><span>Total XP</span><span class="stat-big">{{ sheet.xp }}</span></div>
                 {% if sheet.advancement | length > 1 %}
-                <div class="stat-row muted small"><span>Per-class share</span><span>{{ sheet.xp_share }}</span></div>
+                <div class="stat-row muted small"><span>XP is tracked separately per class</span><span></span></div>
                 {% endif %}
 
                 {% for adv in sheet.advancement %}

@@ -7,7 +7,7 @@ from fastapi.templating import Jinja2Templates
 from aose.characters.storage import list_character_ids, load_character, save_character
 from aose.engine import spells as spell_engine
 from aose.engine.equip import equip as _equip, unequip as _unequip
-from aose.engine.leveling import level_up as _level_up
+from aose.engine.leveling import grant_xp as _grant_xp, level_up as _level_up
 from aose.engine.magic import (
     NoCharges,
     NotEquippable,
@@ -184,7 +184,7 @@ async def grant_xp(request: Request, character_id: str, amount: int = Form(...))
     not modelled, so reducing XP below a class's threshold doesn't strip the
     level (the user can edit the JSON if they really need to)."""
     spec = _load_spec_or_404(request, character_id)
-    spec.xp = max(0, spec.xp + amount)
+    _grant_xp(spec, request.app.state.game_data, amount)
     save_character(character_id, spec, request.app.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 

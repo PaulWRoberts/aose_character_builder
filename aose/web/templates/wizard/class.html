@@ -6,11 +6,19 @@
 <p class="muted">Filtered by your race ({{ race_name }}) and ability scores.</p>
 {% endif %}
 
+{% if multiclass_enabled %}
+<p class="hint">Multi-classing is on: pick up to {{ max_classes }} classes. The character
+   tracks XP and level separately per class and uses the best benefits of each.
+   Picking a single class is still fine.</p>
+{% endif %}
+
 <form method="post" action="/wizard/{{ draft_id }}/class" class="step-form">
     <div class="card-grid">
     {% for cls in classes %}
         <label class="card {% if not cls.available %}disabled{% endif %} {% if cls.selected %}selected{% endif %}">
-            <input type="radio" name="class_id" value="{{ cls.id }}" required
+            <input type="{% if multiclass_enabled %}checkbox{% else %}radio{% endif %}"
+                   name="class_id" value="{{ cls.id }}"
+                   {% if not multiclass_enabled %}required{% endif %}
                    {% if not cls.available %}disabled{% endif %}
                    {% if cls.selected %}checked{% endif %}>
             <div class="card-name">
@@ -32,29 +40,6 @@
         </label>
     {% endfor %}
     </div>
-
-    {% if combos %}
-    <h3 class="subhead">Multi-class Combinations</h3>
-    <p class="muted small">XP is split evenly between classes.
-       HP at L1 is the average roll across class hit dice (+ CON mod).</p>
-    <div class="card-grid">
-    {% for combo in combos %}
-        <label class="card {% if not combo.available %}disabled{% endif %} {% if combo.selected %}selected{% endif %}">
-            <input type="radio" name="class_id" value="{{ combo.id }}"
-                   {% if not combo.available %}disabled{% endif %}
-                   {% if combo.selected %}checked{% endif %}>
-            <div class="card-name">
-                {{ combo.name }}
-                <span class="rule-pending" title="Multi-class combination.">multi</span>
-            </div>
-            <div class="card-detail">{{ combo.class_names | join(" + ") }}</div>
-            {% if not combo.available %}
-            <div class="card-detail warn">Abilities don&rsquo;t meet every class&rsquo;s requirements</div>
-            {% endif %}
-        </label>
-    {% endfor %}
-    </div>
-    {% endif %}
 
     <button type="submit" class="primary">Next: Alignment &rarr;</button>
 </form>

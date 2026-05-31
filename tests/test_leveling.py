@@ -12,8 +12,8 @@ from aose.data.loader import GameData
 from aose.engine.leveling import (
     all_advancement,
     class_advancement,
+    grant_xp,
     level_up,
-    xp_share,
 )
 from aose.models import CharacterSpec, ClassEntry, RuleSet
 from aose.web.app import create_app
@@ -21,24 +21,31 @@ from aose.web.app import create_app
 PROJECT_ROOT = Path(__file__).parent.parent
 DATA_DIR = PROJECT_ROOT / "data"
 
+# All prime-requisite scores sit in the 9–12 band → 1.00× XP multiplier, so XP
+# awards land unscaled and the class XP thresholds read cleanly.  Tests that
+# care about prime-req scaling set their own abilities.
+_NEUTRAL_ABILITIES = {"STR": 12, "INT": 12, "WIS": 12, "DEX": 12, "CON": 14, "CHA": 10}
 
-def _spec(level=1, xp=0, hp_rolls=None, multi=False, ruleset=None):
+
+def _spec(level=1, xp=0, hp_rolls=None, multi=False, ruleset=None, abilities=None):
     if ruleset is None:
-        ruleset = RuleSet()
+        ruleset = RuleSet(multiclassing=True) if multi else RuleSet()
+    n = 2 if multi else 1
+    share = xp // n  # each class starts with its own per-class XP
     if multi:
         classes = [
-            ClassEntry(class_id="fighter", level=level, hp_rolls=hp_rolls or [8]),
-            ClassEntry(class_id="magic_user", level=level, hp_rolls=hp_rolls or [4]),
+            ClassEntry(class_id="fighter", level=level, xp=share, hp_rolls=hp_rolls or [8]),
+            ClassEntry(class_id="magic_user", level=level, xp=share, hp_rolls=hp_rolls or [4]),
         ]
     else:
-        classes = [ClassEntry(class_id="fighter", level=level, hp_rolls=hp_rolls or [8])]
+        classes = [ClassEntry(class_id="fighter", level=level, xp=share,
+                              hp_rolls=hp_rolls or [8])]
     return CharacterSpec(
         name="Test",
-        abilities={"STR": 13, "INT": 13, "WIS": 11, "DEX": 12, "CON": 14, "CHA": 10},
+        abilities=abilities or dict(_NEUTRAL_ABILITIES),
         race_id="dwarf" if not multi else "elf",
         classes=classes,
         alignment="law",
-        xp=xp,
         ruleset=ruleset,
     )
 
@@ -48,25 +55,44 @@ def data():
     return GameData.load(DATA_DIR)
 
 
-# ── xp_share ───────────────────────────────────────────────────────────────
+# ── grant_xp ────────────────────────────────────────────────────────────────
 
-def test_xp_share_single_class_returns_total():
-    assert xp_share(_spec(xp=1500)) == 1500
-
-
-def test_xp_share_multi_class_splits_evenly():
-    assert xp_share(_spec(xp=1000, multi=True)) == 500
+def test_grant_xp_single_class_adds_to_the_one_class(data):
+    spec = _spec(xp=500)
+    grant_xp(spec, data, 1500)
+    assert spec.classes[0].xp == 2000
 
 
-def test_xp_share_multi_class_integer_truncates():
-    # 999 / 2 = 499 remainder 1
-    assert xp_share(_spec(xp=999, multi=True)) == 499
+def test_grant_xp_multi_splits_evenly(data):
+    spec = _spec(xp=0, multi=True)
+    grant_xp(spec, data, 1000)
+    assert [e.xp for e in spec.classes] == [500, 500]
+
+
+def test_grant_xp_multi_integer_truncates(data):
+    spec = _spec(xp=0, multi=True)
+    grant_xp(spec, data, 999)  # 999 // 2 = 499 per class
+    assert [e.xp for e in spec.classes] == [499, 499]
+
+
+def test_grant_xp_applies_prime_requisite_multiplier(data):
+    # Fighter prime req STR 16 → +10% XP; award 1000 → +1100.
+    spec = _spec(xp=0, abilities={**_NEUTRAL_ABILITIES, "STR": 16})
+    grant_xp(spec, data, 1000)
+    assert spec.classes[0].xp == 1100
+
+
+def test_grant_xp_negative_clamps_at_zero_without_multiplier(data):
+    spec = _spec(xp=100, abilities={**_NEUTRAL_ABILITIES, "STR": 16})
+    grant_xp(spec, data, -9999)
+    assert spec.classes[0].xp == 0
 
 
 # ── class_advancement ──────────────────────────────────────────────────────
 
 def test_advancement_l1_below_threshold(data):
-    adv = class_advancement(_spec(level=1, xp=0), data, _spec(level=1).classes[0])
+    spec = _spec(level=1, xp=0)
+    adv = class_advancement(spec, data, spec.classes[0])
     assert adv.current_level == 1
     assert adv.next_level == 2
     assert adv.next_threshold == 2000
@@ -148,15 +174,15 @@ def test_level_up_unknown_class_raises(data):
 
 def test_level_up_multi_advances_one_class_only(data):
     """Multi-class fighter/magic-user: levelling fighter shouldn't touch MU."""
-    spec = _spec(level=1, xp=4000, multi=True)  # share = 2000 → fighter ready, MU not (needs 2500)
+    spec = _spec(level=1, xp=4000, multi=True)  # each class has 2000 → fighter ready, MU not (2500)
     level_up(spec, data, "fighter")
     levels = {e.class_id: e.level for e in spec.classes}
     assert levels == {"fighter": 2, "magic_user": 1}
 
 
-def test_level_up_multi_xp_share_blocks_when_class_threshold_higher(data):
-    """MU threshold is 2500; with share=2000 the MU can't level even though
-    fighter just did."""
+def test_level_up_multi_blocks_when_class_threshold_higher(data):
+    """MU threshold is 2500; with per-class XP 2000 the MU can't level even
+    though fighter just did."""
     spec = _spec(level=1, xp=4000, multi=True)
     level_up(spec, data, "fighter")
     with pytest.raises(ValueError, match="Need 2500"):
@@ -204,13 +230,13 @@ def test_grant_xp_adds(client):
     r = client.post("/character/test/xp", data={"amount": "1500"})
     assert r.status_code == 303
     assert r.headers["location"] == "/character/test"
-    assert load_character("test", client._characters_dir).xp == 2000
+    assert load_character("test", client._characters_dir).classes[0].xp == 2000
 
 
 def test_grant_xp_negative_clamps_at_zero(client):
     _seed(client, xp=100)
     client.post("/character/test/xp", data={"amount": "-9999"})
-    assert load_character("test", client._characters_dir).xp == 0
+    assert load_character("test", client._characters_dir).classes[0].xp == 0
 
 
 def test_grant_xp_missing_character_404s(client):
