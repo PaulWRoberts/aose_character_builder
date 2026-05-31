@@ -1,4 +1,4 @@
-"""Tests for the equipment shop: gold rolls, buy/remove, wizard step,
+﻿"""Tests for the equipment shop: gold rolls, buy/remove, wizard step,
 sheet integration."""
 import random
 from pathlib import Path
@@ -55,9 +55,9 @@ def client(tmp_path):
     return _make_client(tmp_path)
 
 
-# ════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # Engine helpers (pure functions, no FastAPI)
-# ════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 def test_roll_starting_gold_in_range():
     rng = random.Random(0)
@@ -70,7 +70,7 @@ def test_roll_starting_gold_in_range():
 def test_shop_categories_is_data_driven(data):
     cats = shop_categories(data)
     ids = {c.id for c in cats}
-    # Categories are read from items' category field — adding a new YAML
+    # Categories are read from items' category field â€” adding a new YAML
     # category should appear here automatically.
     assert "weapons" in ids
     assert "armor" in ids
@@ -91,14 +91,14 @@ def test_shop_items_sorted_by_cost_within_category(data):
 
 
 def test_inventory_rows_groups_duplicates(data):
-    rows = inventory_rows(["torch", "torch", "long_sword", "torch"], data)
+    rows = inventory_rows(["torch", "torch", "sword", "torch"], data)
     by_id = {r.id: r for r in rows}
     assert by_id["torch"].count == 3
-    assert by_id["long_sword"].count == 1
+    assert by_id["sword"].count == 1
 
 
 def test_inventory_rows_carry_sell_value(data):
-    rows = inventory_rows(["long_sword"], data)
+    rows = inventory_rows(["sword"], data)
     sword = rows[0]
     assert sword.cost_gp == 10
     assert sword.sell_gp == 5  # 50% of 10
@@ -111,11 +111,11 @@ def test_inventory_rows_handles_stale_id(data):
     assert rows[0].cost_gp == 0
 
 
-# ── buy ────────────────────────────────────────────────────────────────────
+# â”€â”€ buy â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def test_buy_appends_and_deducts(data):
-    inv, gold = buy([], 50, "long_sword", data)
-    assert inv == ["long_sword"]
+    inv, gold = buy([], 50, "sword", data)
+    assert inv == ["sword"]
     assert gold == 40  # 50 - 10
 
 
@@ -135,22 +135,22 @@ def test_buy_rejects_unknown_item(data):
         buy([], 100, "imaginary_thing", data)
 
 
-# ── remove ────────────────────────────────────────────────────────────────
+# â”€â”€ remove â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def test_remove_drop_no_refund(data):
-    inv, gold, _eq, _wp = remove(["long_sword"], 0, "long_sword", "drop", data)
+    inv, gold, _eq, _wp = remove(["sword"], 0, "sword", "drop", data)
     assert inv == []
     assert gold == 0
 
 
 def test_remove_sell_half_refund(data):
-    inv, gold, _eq, _wp = remove(["long_sword"], 0, "long_sword", "sell", data)
+    inv, gold, _eq, _wp = remove(["sword"], 0, "sword", "sell", data)
     assert inv == []
     assert gold == 5
 
 
 def test_remove_refund_full(data):
-    inv, gold, _eq, _wp = remove(["long_sword"], 0, "long_sword", "refund", data)
+    inv, gold, _eq, _wp = remove(["sword"], 0, "sword", "refund", data)
     assert inv == []
     assert gold == 10
 
@@ -170,9 +170,9 @@ def test_remove_rejects_bad_mode(data):
         remove(["torch"], 0, "torch", "burn", data)
 
 
-# ════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # Wizard equipment step
-# ════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 def _walk_to_equipment(client):
     """Walk a draft up through the HP step so the next step is equipment."""
@@ -198,7 +198,7 @@ def _walk_to_equipment(client):
 
 
 def test_hp_post_redirects_to_equipment(client):
-    """Confirms the new step order — HP now flows to /equipment, not /review."""
+    """Confirms the new step order â€” HP now flows to /equipment, not /review."""
     draft_id = _walk_to_equipment(client)
     # The above already POSTed /hp; the draft is now sitting on equipment
     draft = load_draft(draft_id, client._drafts_dir)
@@ -283,7 +283,7 @@ def test_remove_modes_via_wizard(client):
     assert draft["inventory"].count("torch") == 2
     gold_after_drop = draft["gold"]
 
-    # Sell next (half refund — torch costs 1, sell value 0 due to floor)
+    # Sell next (half refund â€” torch costs 1, sell value 0 due to floor)
     client.post(f"/wizard/{draft_id}/equipment/remove",
                 data={"item_id": "torch", "mode": "sell"})
     # And refund the last (full price)
@@ -309,21 +309,21 @@ def test_inventory_persists_to_saved_character(client):
     draft = load_draft(draft_id, client._drafts_dir)
     draft["gold"] = 200
     save_draft(draft_id, draft, client._drafts_dir)
-    client.post(f"/wizard/{draft_id}/equipment/buy", data={"item_id": "long_sword"})
+    client.post(f"/wizard/{draft_id}/equipment/buy", data={"item_id": "sword"})
     client.post(f"/wizard/{draft_id}/equipment/buy", data={"item_id": "chain_mail"})
     client.post(f"/wizard/{draft_id}/equipment")
     r = client.post(f"/wizard/{draft_id}/finalize")
     assert r.status_code == 303
     char_id = r.headers["location"].split("/")[-1]
     spec = load_character(char_id, client._characters_dir)
-    assert set(spec.inventory) == {"long_sword", "chain_mail"}
+    assert set(spec.inventory) == {"sword", "chain_mail"}
     # 200 - 10 (long sword) - 40 (chain mail) = 150
     assert spec.gold == 150
 
 
-# ════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # Sheet-side equipment management
-# ════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 def _seed_character(client, gold=100, inventory=None) -> str:
     spec = CharacterSpec(
@@ -346,17 +346,17 @@ def test_sheet_shows_gold_and_shop(client):
     assert r.status_code == 200
     assert "75 gp" in r.text
     assert "Shop" in r.text
-    assert "Long Sword" in r.text
+    assert "Sword" in r.text
 
 
 def test_sheet_buy_deducts_gold_and_adds_inventory(client):
     _seed_character(client, gold=50)
-    r = client.post("/character/test/equipment/buy", data={"item_id": "long_sword"})
+    r = client.post("/character/test/equipment/buy", data={"item_id": "sword"})
     assert r.status_code == 303
     assert r.headers["location"] == "/character/test"
     spec = load_character("test", client._characters_dir)
     assert spec.gold == 40
-    assert spec.inventory == ["long_sword"]
+    assert spec.inventory == ["sword"]
 
 
 def test_sheet_buy_rejects_when_short(client):
@@ -366,10 +366,10 @@ def test_sheet_buy_rejects_when_short(client):
 
 
 def test_sheet_remove_modes(client):
-    _seed_character(client, gold=0, inventory=["long_sword"])
+    _seed_character(client, gold=0, inventory=["sword"])
     # Refund returns full price
     r = client.post("/character/test/equipment/remove",
-                    data={"item_id": "long_sword", "mode": "refund"})
+                    data={"item_id": "sword", "mode": "refund"})
     assert r.status_code == 303
     spec = load_character("test", client._characters_dir)
     assert spec.gold == 10
@@ -384,14 +384,14 @@ def test_sheet_does_not_offer_reroll_button(client):
     assert 'action="/character/test/equipment/reroll-gold"' not in r.text
 
 
-# ── Add (free) button ─────────────────────────────────────────────────────
+# â”€â”€ Add (free) button â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def test_sheet_add_route_grants_item_without_spending_gold(client):
     _seed_character(client, gold=5)
-    r = client.post("/character/test/equipment/add", data={"item_id": "long_sword"})
+    r = client.post("/character/test/equipment/add", data={"item_id": "sword"})
     assert r.status_code == 303
     spec = load_character("test", client._characters_dir)
-    assert spec.inventory == ["long_sword"]
+    assert spec.inventory == ["sword"]
     assert spec.gold == 5  # unchanged
 
 
@@ -423,7 +423,7 @@ def test_wizard_add_route_does_not_lock_gold(client):
     assert r.status_code == 303
 
 
-# ── Shop search box ───────────────────────────────────────────────────────
+# â”€â”€ Shop search box â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def test_sheet_shop_has_search_input(client):
     _seed_character(client, gold=50)
@@ -435,11 +435,11 @@ def test_sheet_shop_rows_carry_search_metadata(client):
     """Each shop row needs data-shop-name so the client-side filter works."""
     _seed_character(client, gold=50)
     r = client.get("/character/test")
-    # weapons.yaml has Long Sword → row should expose 'long sword' as name
-    assert 'data-shop-name="long sword"' in r.text
+    # weapons.yaml has Sword → row should expose 'sword' as name
+    assert 'data-shop-name="sword"' in r.text
 
 
-# ── Gold-grant form on the sheet ──────────────────────────────────────────
+# â”€â”€ Gold-grant form on the sheet â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def test_sheet_grant_gold_form_present(client):
     _seed_character(client, gold=10)

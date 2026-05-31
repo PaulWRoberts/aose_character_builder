@@ -42,7 +42,6 @@ class Weapon(ItemBase):
     range_medium: int | None = None
     range_long: int | None = None
     qualities: list[str] = Field(default_factory=list)
-    proficiency_group: str | None = None
     magic_bonus: int = 0
     conditional_bonus: ConditionalBonus | None = None
 

@@ -32,3 +32,43 @@ def test_weapon_qualities_load_into_game_data():
 def test_qualities_not_loaded_as_items():
     data = GameData.load(DATA_DIR)
     assert "blunt" not in data.items
+
+
+def test_weapons_match_book_table():
+    data = GameData.load(DATA_DIR)
+    # Renames applied.
+    assert "long_sword" not in data.items
+    assert "light_crossbow" not in data.items
+    assert "sword" in data.items
+    assert "crossbow" in data.items
+    # New ids present.
+    for new_id in ("javelin", "lance", "staff", "silver_dagger"):
+        assert new_id in data.items, f"missing {new_id}"
+
+    sword = data.items["sword"]
+    assert sword.name == "Sword"
+    assert sword.cost_gp == 10
+    assert sword.weight_cn == 60
+    assert sword.damage.variable == "1d8"
+    assert sword.qualities == ["melee"]
+
+    crossbow = data.items["crossbow"]
+    assert crossbow.cost_gp == 30
+    assert crossbow.melee is False
+    assert crossbow.ranged is True
+    assert (crossbow.range_short, crossbow.range_medium, crossbow.range_long) == (80, 160, 240)
+    assert set(crossbow.qualities) == {"missile", "reload", "slow", "two_handed"}
+
+
+def test_every_weapon_quality_is_defined():
+    data = GameData.load(DATA_DIR)
+    from aose.models import Weapon
+    for item in data.items.values():
+        if isinstance(item, Weapon):
+            for q in item.qualities:
+                assert q in data.qualities, f"{item.id} references unknown quality {q!r}"
+
+
+def test_proficiency_group_field_removed():
+    from aose.models import Weapon
+    assert "proficiency_group" not in Weapon.model_fields

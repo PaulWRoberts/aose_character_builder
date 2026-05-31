@@ -769,12 +769,9 @@ async def get_proficiencies(request: Request, draft_id: str):
     required, class_name = _proficiency_slots_for(draft, data)
     chosen = set(draft.get("proficiencies", []))
     groups = proficiency_groups(data)
-    if not groups:
-        raise HTTPException(
-            500,
-            "Weapon Proficiency rule is active but no weapons with "
-            "proficiency_group set are in the data set.",
-        )
+    # NOTE: proficiency_groups() is a stub (returns []) during the
+    # weapon-proficiency migration (Tasks 3–11).  The 500-guard is bypassed
+    # until Task 4 re-implements the catalog.
     rendered_groups = [
         {**g, "selected": g["id"] in chosen} for g in groups
     ]
@@ -798,9 +795,12 @@ async def post_proficiencies(request: Request, draft_id: str):
     required, class_name = _proficiency_slots_for(draft, data)
     valid_ids = {g["id"] for g in proficiency_groups(data)}
 
-    unknown = [s for s in selected if s not in valid_ids]
-    if unknown:
-        raise HTTPException(400, f"Unknown proficiency group(s): {unknown}")
+    # When the catalog is empty (stub period during weapon-proficiency migration)
+    # skip id validation so existing wizard flows are not broken.
+    if valid_ids:
+        unknown = [s for s in selected if s not in valid_ids]
+        if unknown:
+            raise HTTPException(400, f"Unknown proficiency group(s): {unknown}")
     unique = list(dict.fromkeys(selected))
     if len(unique) != required:
         raise HTTPException(

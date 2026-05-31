@@ -1,49 +1,6 @@
-# Weapons.  `damage.default` is the 1d6 used under the standard rule;
-# `damage.variable` is used when the Variable Weapon Damage optional rule
-# is in effect.  `proficiency_group` ties related weapons together for the
-# Weapon Proficiency optional rule.
-
-# ── Bludgeons ──────────────────────────────────────────────
-- id: club
-  item_type: weapon
-  name: Club
-  category: weapons
-  cost_gp: 3
-  weight_cn: 50
-  damage: { default: "1d6", variable: "1d4" }
-  hands: 1
-  proficiency_group: bludgeon
-
-- id: mace
-  item_type: weapon
-  name: Mace
-  category: weapons
-  cost_gp: 5
-  weight_cn: 30
-  damage: { default: "1d6", variable: "1d6" }
-  hands: 1
-  proficiency_group: bludgeon
-
-- id: war_hammer
-  item_type: weapon
-  name: War Hammer
-  category: weapons
-  cost_gp: 5
-  weight_cn: 30
-  damage: { default: "1d6", variable: "1d6" }
-  hands: 1
-  proficiency_group: bludgeon
-
-# ── Axes ───────────────────────────────────────────────────
-- id: hand_axe
-  item_type: weapon
-  name: Hand Axe
-  category: weapons
-  cost_gp: 4
-  weight_cn: 30
-  damage: { default: "1d6", variable: "1d6" }
-  hands: 1
-  proficiency_group: axe
+# Weapons (AOSE, book-accurate).  `damage.default` is the 1d6 used under the
+# standard rule; `damage.variable` is used when the Variable Weapon Damage
+# optional rule is in effect.  `qualities` reference weapon_qualities.yaml.
 
 - id: battle_axe
   item_type: weapon
@@ -53,40 +10,33 @@
   weight_cn: 50
   damage: { default: "1d6", variable: "1d8" }
   hands: 2
-  proficiency_group: axe
+  qualities: [melee, slow, two_handed]
 
-# ── Swords ─────────────────────────────────────────────────
-- id: short_sword
+- id: club
   item_type: weapon
-  name: Short Sword
+  name: Club
   category: weapons
-  cost_gp: 7
-  weight_cn: 30
+  cost_gp: 3
+  weight_cn: 50
+  damage: { default: "1d6", variable: "1d4" }
+  hands: 1
+  qualities: [blunt, melee]
+
+- id: crossbow
+  item_type: weapon
+  name: Crossbow
+  category: weapons
+  cost_gp: 30
+  weight_cn: 50
   damage: { default: "1d6", variable: "1d6" }
-  hands: 1
-  proficiency_group: sword
-
-- id: long_sword
-  item_type: weapon
-  name: Long Sword
-  category: weapons
-  cost_gp: 10
-  weight_cn: 60
-  damage: { default: "1d6", variable: "1d8" }
-  hands: 1
-  proficiency_group: sword
-
-- id: two_handed_sword
-  item_type: weapon
-  name: Two-Handed Sword
-  category: weapons
-  cost_gp: 15
-  weight_cn: 100
-  damage: { default: "1d6", variable: "1d10" }
   hands: 2
-  proficiency_group: sword
+  melee: false
+  ranged: true
+  range_short: 80
+  range_medium: 160
+  range_long: 240
+  qualities: [missile, reload, slow, two_handed]
 
-# ── Daggers ────────────────────────────────────────────────
 - id: dagger
   item_type: weapon
   name: Dagger
@@ -99,49 +49,46 @@
   range_short: 10
   range_medium: 20
   range_long: 30
-  proficiency_group: dagger
+  qualities: [melee, missile]
 
-# ── Pole-arms ──────────────────────────────────────────────
-- id: spear
+- id: hand_axe
   item_type: weapon
-  name: Spear
+  name: Hand Axe
   category: weapons
   cost_gp: 4
   weight_cn: 30
   damage: { default: "1d6", variable: "1d6" }
   hands: 1
-  versatile: true
   ranged: true
-  range_short: 20
-  range_medium: 40
-  range_long: 60
-  proficiency_group: polearm
+  range_short: 10
+  range_medium: 20
+  range_long: 30
+  qualities: [melee, missile]
 
-- id: polearm
+- id: javelin
   item_type: weapon
-  name: Pole-arm
+  name: Javelin
   category: weapons
-  cost_gp: 7
-  weight_cn: 150
-  damage: { default: "1d6", variable: "1d10" }
-  hands: 2
-  proficiency_group: polearm
-
-# ── Bows ───────────────────────────────────────────────────
-- id: short_bow
-  item_type: weapon
-  name: Short Bow
-  category: weapons
-  cost_gp: 25
-  weight_cn: 30
-  damage: { default: "1d6", variable: "1d6" }
-  hands: 2
+  cost_gp: 1
+  weight_cn: 20
+  damage: { default: "1d6", variable: "1d4" }
+  hands: 1
   melee: false
   ranged: true
-  range_short: 50
-  range_medium: 100
-  range_long: 150
-  proficiency_group: bow
+  range_short: 30
+  range_medium: 60
+  range_long: 90
+  qualities: [missile]
+
+- id: lance
+  item_type: weapon
+  name: Lance
+  category: weapons
+  cost_gp: 5
+  weight_cn: 120
+  damage: { default: "1d6", variable: "1d6" }
+  hands: 1
+  qualities: [charge, melee]
 
 - id: long_bow
   item_type: weapon
@@ -156,25 +103,67 @@
   range_short: 70
   range_medium: 140
   range_long: 210
-  proficiency_group: bow
+  qualities: [missile, two_handed]
 
-# ── Crossbows ──────────────────────────────────────────────
-- id: light_crossbow
+- id: mace
   item_type: weapon
-  name: Light Crossbow
+  name: Mace
   category: weapons
-  cost_gp: 16
-  weight_cn: 50
+  cost_gp: 5
+  weight_cn: 30
+  damage: { default: "1d6", variable: "1d6" }
+  hands: 1
+  qualities: [blunt, melee]
+
+- id: polearm
+  item_type: weapon
+  name: Pole-arm
+  category: weapons
+  cost_gp: 7
+  weight_cn: 150
+  damage: { default: "1d6", variable: "1d10" }
+  hands: 2
+  qualities: [brace, melee, slow, two_handed]
+
+- id: short_bow
+  item_type: weapon
+  name: Short Bow
+  category: weapons
+  cost_gp: 25
+  weight_cn: 30
   damage: { default: "1d6", variable: "1d6" }
   hands: 2
   melee: false
   ranged: true
-  range_short: 60
-  range_medium: 120
-  range_long: 180
-  proficiency_group: crossbow
+  range_short: 50
+  range_medium: 100
+  range_long: 150
+  qualities: [missile, two_handed]
 
-# ── Slings ─────────────────────────────────────────────────
+- id: short_sword
+  item_type: weapon
+  name: Short Sword
+  category: weapons
+  cost_gp: 7
+  weight_cn: 30
+  damage: { default: "1d6", variable: "1d6" }
+  hands: 1
+  qualities: [melee]
+
+- id: silver_dagger
+  item_type: weapon
+  name: Silver Dagger
+  category: weapons
+  cost_gp: 30
+  weight_cn: 10
+  damage: { default: "1d6", variable: "1d4" }
+  hands: 1
+  ranged: true
+  range_short: 10
+  range_medium: 20
+  range_long: 30
+  qualities: [melee, missile]
+
 - id: sling
   item_type: weapon
   name: Sling
@@ -188,4 +177,59 @@
   range_short: 40
   range_medium: 80
   range_long: 160
-  proficiency_group: sling
+  qualities: [blunt, missile]
+
+- id: spear
+  item_type: weapon
+  name: Spear
+  category: weapons
+  cost_gp: 4
+  weight_cn: 30
+  damage: { default: "1d6", variable: "1d6" }
+  hands: 1
+  versatile: true
+  ranged: true
+  range_short: 20
+  range_medium: 40
+  range_long: 60
+  qualities: [brace, melee, missile]
+
+- id: staff
+  item_type: weapon
+  name: Staff
+  category: weapons
+  cost_gp: 2
+  weight_cn: 40
+  damage: { default: "1d6", variable: "1d4" }
+  hands: 2
+  qualities: [blunt, melee, slow, two_handed]
+
+- id: sword
+  item_type: weapon
+  name: Sword
+  category: weapons
+  cost_gp: 10
+  weight_cn: 60
+  damage: { default: "1d6", variable: "1d8" }
+  hands: 1
+  qualities: [melee]
+
+- id: two_handed_sword
+  item_type: weapon
+  name: Two-Handed Sword
+  category: weapons
+  cost_gp: 15
+  weight_cn: 150
+  damage: { default: "1d6", variable: "1d10" }
+  hands: 2
+  qualities: [melee, slow, two_handed]
+
+- id: war_hammer
+  item_type: weapon
+  name: War Hammer
+  category: weapons
+  cost_gp: 5
+  weight_cn: 30
+  damage: { default: "1d6", variable: "1d6" }
+  hands: 1
+  qualities: [blunt, melee]

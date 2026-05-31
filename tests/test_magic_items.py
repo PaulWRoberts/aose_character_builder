@@ -1,4 +1,4 @@
-"""Tests for magic items: Modifier value type, MagicItem catalog variant,
+﻿"""Tests for magic items: Modifier value type, MagicItem catalog variant,
 magic Weapon/Armor enchantment fields, MagicItemInstance runtime model, the
 magic engine (active_modifiers / effective_abilities / charge helpers), the
 derivation hooks (AC / saves / THAC0 / attacks / encumbrance), acquisition
@@ -78,7 +78,6 @@ def test_weapon_magic_fields_default_off():
     w = Weapon(
         id="dagger", name="Dagger", category="weapons", item_type="weapon",
         cost_gp=3, weight_cn=10, damage=WeaponDamage(default="1d6", variable="1d4"),
-        proficiency_group="dagger",
     )
     assert w.magic_bonus == 0
     assert w.conditional_bonus is None
@@ -89,7 +88,7 @@ def test_magic_weapon_with_conditional():
         id="sword_plus_1_vs_undead", name="Sword +1, +3 vs Undead",
         category="magic_swords", item_type="weapon", cost_gp=0, weight_cn=60,
         damage=WeaponDamage(default="1d6", variable="1d8"),
-        proficiency_group="sword", magic=True, magic_bonus=1,
+        magic=True, magic_bonus=1,
         conditional_bonus=ConditionalBonus(vs="undead", bonus=2),
     )
     assert w.magic_bonus == 1
@@ -405,13 +404,13 @@ def _with_magic(data):
         id="sword_plus_1", name="Sword +1", category="magic_swords",
         item_type="weapon", cost_gp=0, weight_cn=60,
         damage=WeaponDamage(default="1d6", variable="1d8"), melee=True,
-        proficiency_group="sword", magic=True, magic_bonus=1,
+        magic=True, magic_bonus=1,
     )
     d.items["sword_plus_1_vs_undead"] = Weapon(
         id="sword_plus_1_vs_undead", name="Sword +1, +3 vs Undead",
         category="magic_swords", item_type="weapon", cost_gp=0, weight_cn=60,
         damage=WeaponDamage(default="1d6", variable="1d8"), melee=True,
-        proficiency_group="sword", magic=True, magic_bonus=1,
+        magic=True, magic_bonus=1,
         conditional_bonus=ConditionalBonus(vs="undead", bonus=2),
     )
     return d

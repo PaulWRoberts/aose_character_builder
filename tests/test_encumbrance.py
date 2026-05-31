@@ -1,4 +1,4 @@
-"""Tests for the encumbrance engine and its effect on the sheet.
+﻿"""Tests for the encumbrance engine and its effect on the sheet.
 
 Three modes: ``none`` ignores everything, ``basic`` reads armour type only,
 ``detailed`` walks the full OSE Advanced load table.
@@ -44,7 +44,7 @@ def _spec(race_id="human", inventory=None, equipped=None, equipped_weapons=None,
     )
 
 
-# ── carried_weight_cn ──────────────────────────────────────────────────────
+# â”€â”€ carried_weight_cn â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def test_empty_character_weighs_zero(data):
     assert carried_weight_cn(_spec(), data) == 0
@@ -52,7 +52,7 @@ def test_empty_character_weighs_zero(data):
 
 def test_weight_sums_inventory(data):
     # Torch is 20 cn, Long Sword is 60 cn
-    spec = _spec(inventory=["torch", "torch", "long_sword"])
+    spec = _spec(inventory=["torch", "torch", "sword"])
     assert carried_weight_cn(spec, data) == 20 + 20 + 60
 
 
@@ -67,7 +67,7 @@ def test_weight_does_not_double_count_equipped_armor(data):
 def test_weight_does_not_double_count_equipped_weapons(data):
     """Same rule as for armour: an equipped weapon is just a flag on an
     inventory item, not a separate copy."""
-    spec = _spec(inventory=["long_sword"], equipped_weapons=["long_sword"])
+    spec = _spec(inventory=["sword"], equipped_weapons=["sword"])
     assert carried_weight_cn(spec, data) == 60
 
 
@@ -76,7 +76,7 @@ def test_unknown_item_id_contributes_zero(data):
     assert carried_weight_cn(spec, data) == 0
 
 
-# ── armor_movement_class ───────────────────────────────────────────────────
+# â”€â”€ armor_movement_class â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def test_no_armor_is_none(data):
     assert armor_movement_class(_spec(), data) == "none"
@@ -97,12 +97,12 @@ def test_shield_alone_does_not_count_as_armor(data):
     assert armor_movement_class(spec, data) == "none"
 
 
-# ── effective_movement: NONE mode ──────────────────────────────────────────
+# â”€â”€ effective_movement: NONE mode â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def test_none_mode_ignores_armor_and_weight(data):
     spec = _spec(
         race_id="human",
-        inventory=["chain_mail"] + ["long_sword"] * 30,  # very heavy
+        inventory=["chain_mail"] + ["sword"] * 30,  # very heavy
         equipped={"armor": "chain_mail"},
         encumbrance="none",
     )
@@ -110,7 +110,7 @@ def test_none_mode_ignores_armor_and_weight(data):
     assert effective_movement(spec, data) == 120
 
 
-# ── effective_movement: BASIC mode ─────────────────────────────────────────
+# â”€â”€ effective_movement: BASIC mode â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def test_basic_mode_unarmored_human_unchanged(data):
     spec = _spec(race_id="human", encumbrance="basic")
@@ -139,7 +139,7 @@ def test_basic_mode_metal_drops_to_60ft(data):
 
 def test_basic_mode_dwarf_in_chain_scales_to_60(data):
     """OSE Advanced dwarves have base_movement 120' (same as humans).
-    Dwarf in chain mail → metal-armour cell → 60'."""
+    Dwarf in chain mail â†’ metal-armour cell â†’ 60'."""
     spec = _spec(
         race_id="dwarf", inventory=["chain_mail"],
         equipped={"armor": "chain_mail"},
@@ -149,7 +149,7 @@ def test_basic_mode_dwarf_in_chain_scales_to_60(data):
 
 
 def test_basic_mode_ignores_inventory_weight(data):
-    """Basic mode doesn't track item-by-item — overloading torches is free."""
+    """Basic mode doesn't track item-by-item â€” overloading torches is free."""
     spec = _spec(
         race_id="human",
         inventory=["torch"] * 200,  # 4000 cn
@@ -158,10 +158,10 @@ def test_basic_mode_ignores_inventory_weight(data):
     assert effective_movement(spec, data) == 120
 
 
-# ── effective_movement: DETAILED mode ──────────────────────────────────────
+# â”€â”€ effective_movement: DETAILED mode â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def test_detailed_light_load_no_penalty(data):
-    # 5 torches = 100 cn — well under 400
+    # 5 torches = 100 cn â€” well under 400
     spec = _spec(
         race_id="human",
         inventory=["torch"] * 5,
@@ -175,48 +175,48 @@ def test_detailed_load_band_1_drops_30(data):
     # 8 long swords = 480 cn
     spec = _spec(
         race_id="human",
-        inventory=["long_sword"] * 8,
+        inventory=["sword"] * 8,
         encumbrance="detailed",
     )
     assert effective_movement(spec, data) == 90
 
 
 def test_detailed_load_band_2_drops_60(data):
-    # 15 long swords = 900 cn → 801-1200 band
+    # 15 long swords = 900 cn â†’ 801-1200 band
     spec = _spec(
         race_id="human",
-        inventory=["long_sword"] * 15,
+        inventory=["sword"] * 15,
         encumbrance="detailed",
     )
     assert effective_movement(spec, data) == 60
 
 
 def test_detailed_load_band_3_drops_90(data):
-    # 25 long swords = 1500 cn → 1201-1600 band
+    # 25 long swords = 1500 cn â†’ 1201-1600 band
     spec = _spec(
         race_id="human",
-        inventory=["long_sword"] * 25,
+        inventory=["sword"] * 25,
         encumbrance="detailed",
     )
     assert effective_movement(spec, data) == 30
 
 
 def test_detailed_over_encumbered_returns_zero(data):
-    # 30 long swords = 1800 cn → over the 1600 cap
+    # 30 long swords = 1800 cn â†’ over the 1600 cap
     spec = _spec(
         race_id="human",
-        inventory=["long_sword"] * 30,
+        inventory=["sword"] * 30,
         encumbrance="detailed",
     )
     assert effective_movement(spec, data) == 0
 
 
 def test_detailed_armor_and_load_via_table_lookup(data):
-    """Armour and load combine through the OSE Advanced table — armour
-    picks the column, load picks the row.  Chain mail + 500 cn total →
-    metal column, 401-800 band → 45'."""
-    # chain mail = 400 cn; 5 torches = 100 cn; total = 500 cn → band 1
-    # (401-800).  metal × band 1 = 45'.
+    """Armour and load combine through the OSE Advanced table â€” armour
+    picks the column, load picks the row.  Chain mail + 500 cn total â†’
+    metal column, 401-800 band â†’ 45'."""
+    # chain mail = 400 cn; 5 torches = 100 cn; total = 500 cn â†’ band 1
+    # (401-800).  metal Ã— band 1 = 45'.
     spec = _spec(
         race_id="human",
         inventory=["chain_mail"] + ["torch"] * 5,
@@ -226,7 +226,7 @@ def test_detailed_armor_and_load_via_table_lookup(data):
     assert effective_movement(spec, data) == 45
 
 
-# ── Sheet integration ─────────────────────────────────────────────────────
+# â”€â”€ Sheet integration â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def test_sheet_shows_unencumbered_only_when_encumbered(data):
     """If movement_base != movement_unencumbered, that fact is exposed."""
@@ -260,7 +260,7 @@ def test_sheet_encounter_move_follows_exploration_third(data):
     assert sheet.movement_encounter == sheet.movement_base // 3
 
 
-# ── HTTP sheet rendering ──────────────────────────────────────────────────
+# â”€â”€ HTTP sheet rendering â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def _make_client(tmp_path, ruleset):
     characters_dir = tmp_path / "characters"
@@ -300,7 +300,7 @@ def test_sheet_html_hides_carried_weight_in_none(tmp_path):
 
 def test_sheet_html_warns_when_over_encumbered(tmp_path):
     client = _make_client(tmp_path, RuleSet(encumbrance="detailed"))
-    spec = _spec(encumbrance="detailed", inventory=["long_sword"] * 30)
+    spec = _spec(encumbrance="detailed", inventory=["sword"] * 30)
     save_character("test", spec, client._characters_dir)
     r = client.get("/character/test")
     assert "Over-encumbered" in r.text

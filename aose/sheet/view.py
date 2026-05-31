@@ -360,10 +360,9 @@ def _proficiency_display(spec: CharacterSpec, data: GameData) -> list[Proficienc
     id_to_group = {g["id"]: g for g in proficiency_groups(data)}
 
     # Pre-index weapons by their proficiency group id for one pass.
+    # NOTE: proficiency_group field removed in Task 3; stub returns [] until
+    # Task 4 re-implements category/quality-based grouping.
     weapons_by_group: dict[str, list[Weapon]] = {}
-    for item in data.items.values():
-        if isinstance(item, Weapon) and item.proficiency_group:
-            weapons_by_group.setdefault(item.proficiency_group, []).append(item)
 
     result: list[ProficiencyDisplay] = []
     for gid in spec.chosen_proficiencies:

@@ -67,7 +67,7 @@
   weight_cn: 60
   damage: {default: "1d6", variable: "1d8"}
   melee: true
-  proficiency_group: sword
+  qualities: [melee]
   magic_bonus: 1
 
 - id: sword_plus_2
@@ -79,7 +79,7 @@
   weight_cn: 60
   damage: {default: "1d6", variable: "1d8"}
   melee: true
-  proficiency_group: sword
+  qualities: [melee]
   magic_bonus: 2
 
 - id: sword_plus_3
@@ -91,7 +91,7 @@
   weight_cn: 60
   damage: {default: "1d6", variable: "1d8"}
   melee: true
-  proficiency_group: sword
+  qualities: [melee]
   magic_bonus: 3
 
 - id: sword_plus_1_vs_undead
@@ -103,7 +103,7 @@
   weight_cn: 60
   damage: {default: "1d6", variable: "1d8"}
   melee: true
-  proficiency_group: sword
+  qualities: [melee]
   magic_bonus: 1
   conditional_bonus: {vs: "undead", bonus: 2}
 

@@ -1,4 +1,4 @@
-"""Tests for container items: catalog model, runtime instances, shop helpers,
+﻿"""Tests for container items: catalog model, runtime instances, shop helpers,
 weight calculations, HTTP routes."""
 from pathlib import Path
 
@@ -95,7 +95,7 @@ from aose.models import Container
 
 def _fake_container_data():
     """Build a tiny GameData stand-in with one container catalog item and
-    one regular item.  Lets the helper tests stay self-contained — real YAML
+    one regular item.  Lets the helper tests stay self-contained â€” real YAML
     loading is exercised later (Task 12)."""
     from aose.data.loader import GameData
     from aose.models import AdventuringGear
@@ -171,7 +171,7 @@ def _weapon_for_tests(item_id: str, name: str, weight_cn: int, cost_gp: int):
         id=item_id, name=name, category="weapons", item_type="weapon",
         cost_gp=cost_gp, weight_cn=weight_cn,
         damage=WeaponDamage(default="1d6", variable="1d8"),
-        hands=1, melee=True, ranged=False, proficiency_group="sword",
+        hands=1, melee=True, ranged=False,
     )
 
 
@@ -205,13 +205,13 @@ def test_stow_rejects_item_not_in_inventory():
 
 def test_stow_rejects_equipped_item():
     fake = _fake_container_data()
-    fake.items["long_sword"] = _weapon_for_tests("long_sword", "Long Sword", 60, 10)
+    fake.items["sword"] = _weapon_for_tests("sword", "Long Sword", 60, 10)
     bp = _carried_backpack(fake)
     with pytest.raises(ValueError, match="equipped"):
         stow(
-            inventory=["long_sword"], stashed=[], containers=[bp],
-            equipped={}, equipped_weapons=["long_sword"],
-            instance_id=bp.instance_id, item_id="long_sword", data=fake,
+            inventory=["sword"], stashed=[], containers=[bp],
+            equipped={}, equipped_weapons=["sword"],
+            instance_id=bp.instance_id, item_id="sword", data=fake,
         )
 
 
@@ -410,7 +410,7 @@ def test_inventory_view_stashed_container_zero_effective_weight():
     assert cv.effective_weight_cn == 0
 
 
-# ── carried_weight_cn includes containers ─────────────────────────────────
+# â”€â”€ carried_weight_cn includes containers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_carried_weight_includes_carried_container_own_weight(data):
@@ -513,7 +513,7 @@ def test_shop_categories_includes_containers_and_magic(data):
     assert "miscellaneous_magic_items" in cats
 
 
-# ── HTTP routes: /buy and /add for container catalog items ────────────────
+# â”€â”€ HTTP routes: /buy and /add for container catalog items â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 from fastapi.testclient import TestClient
 
@@ -578,14 +578,14 @@ def test_sheet_buy_regular_item_still_uses_inventory(tmp_path):
     """Non-container Buy is unchanged."""
     client = _make_client(tmp_path)
     _seed_character(client, gold=20)
-    r = client.post("/character/test/equipment/buy", data={"item_id": "long_sword"})
+    r = client.post("/character/test/equipment/buy", data={"item_id": "sword"})
     assert r.status_code == 303
     spec = load_character("test", client._characters_dir)
-    assert spec.inventory == ["long_sword"]
+    assert spec.inventory == ["sword"]
     assert spec.containers == []
 
 
-# ── Wizard /buy and /add for container catalog items ─────────────────────────
+# â”€â”€ Wizard /buy and /add for container catalog items â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 from aose.characters import load_draft, save_draft
 
@@ -808,7 +808,7 @@ def test_sheet_remove_container_sell_empty_refunds_half(tmp_path):
     assert spec.gold == 2  # 5 // 2
 
 
-# ── Wizard container routes: stash-container, remove-container ───────────────
+# â”€â”€ Wizard container routes: stash-container, remove-container â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def test_wizard_stash_container_endpoint(tmp_path):
     client = _make_client(tmp_path)
@@ -845,23 +845,23 @@ def test_wizard_remove_container_drop_clears_contents(tmp_path):
 
 def test_move_carried_to_equipped_equips(tmp_path):
     client = _make_client(tmp_path)
-    _seed_character(client, inventory=["long_sword"])
+    _seed_character(client, inventory=["sword"])
     r = client.post("/character/test/equipment/move", data={
         "source": "carried", "target": "equipped",
-        "item_id": "long_sword",
+        "item_id": "sword",
     })
     assert r.status_code == 303
     spec = load_character("test", client._characters_dir)
-    assert spec.equipped_weapons == ["long_sword"]
+    assert spec.equipped_weapons == ["sword"]
 
 
 def test_move_equipped_to_carried_unequips(tmp_path):
     client = _make_client(tmp_path)
-    _seed_character(client, inventory=["long_sword"])
-    client.post("/character/test/equipment/equip", data={"item_id": "long_sword"})
+    _seed_character(client, inventory=["sword"])
+    client.post("/character/test/equipment/equip", data={"item_id": "sword"})
     r = client.post("/character/test/equipment/move", data={
         "source": "equipped", "target": "carried",
-        "item_id": "long_sword",
+        "item_id": "sword",
     })
     assert r.status_code == 303
     spec = load_character("test", client._characters_dir)
@@ -1000,10 +1000,10 @@ def test_sheet_includes_dnd_script_tag(tmp_path):
 
 def test_sheet_inventory_rows_carry_dnd_attributes(tmp_path):
     client = _make_client(tmp_path)
-    _seed_character(client, inventory=["long_sword"])
+    _seed_character(client, inventory=["sword"])
     r = client.get("/character/test")
     assert 'data-source="carried"' in r.text
-    assert 'data-item-id="long_sword"' in r.text
+    assert 'data-item-id="sword"' in r.text
 
 
 def test_sheet_container_row_collapse_button_present(tmp_path):
