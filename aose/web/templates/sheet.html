@@ -80,9 +80,12 @@
                     {% for atk in sheet.attacks %}
                         <tr class="{% if atk.unarmed %}unarmed-row{% endif %}">
                             <td>
-                                {{ atk.name }}{% if atk.count > 1 %} &times;{{ atk.count }}{% endif %}
+                                    {{ atk.name }}{% if atk.count > 1 %} &times;{{ atk.count }}{% endif %}
                                 {% if not atk.proficient %}
-                                <span class="muted small" title="Non-proficient: -2 to hit applied">(non-prof)</span>
+                                <span class="muted small" title="Non-proficient: penalty applied">(non-prof)</span>
+                                {% endif %}
+                                {% if atk.specialised %}
+                                <span class="small" title="Weapon specialisation: +1 hit / +1 damage">(spec.)</span>
                                 {% endif %}
                             </td>
                             <td class="num">
@@ -256,23 +259,40 @@
             {% if sheet.weapon_proficiency_active %}
             <section class="section">
                 <h2>Weapon Proficiencies</h2>
-                {% if sheet.proficiencies %}
+                {% if sheet.proficiencies and sheet.proficiencies.weapons %}
+                <p class="small muted">
+                    {{ sheet.proficiencies.category | replace("_", "-") | title }} &mdash;
+                    non-proficient attacks: &minus;{{ -sheet.proficiencies.penalty }} to hit
+                    ({{ sheet.proficiencies.slots_spent }}/{{ sheet.proficiencies.slots_total }} slots used)
+                </p>
                 <ul>
-                    {% for p in sheet.proficiencies %}
+                    {% for w in sheet.proficiencies.weapons %}
                     <li>
-                        <strong>{{ p.name }}</strong>
-                        {% if p.weapons %}
-                        <span class="muted small">&mdash;
-                            {% for w in p.weapons %}{{ w.name }} ({{ w.damage }}){% if not loop.last %}, {% endif %}{% endfor %}
-                        </span>
+                        <strong>{{ w.name }}</strong>
+                        <span class="muted small">({{ w.damage }})</span>
+                        {% if w.specialised %}
+                        <span class="small">&mdash; specialised (+1 hit / +1 dmg)</span>
                         {% endif %}
                     </li>
                     {% endfor %}
                 </ul>
                 {% else %}
                 <p class="muted">None</p>
+                {% if sheet.proficiencies %}
+                <p class="small muted">Non-proficient attacks: &minus;{{ -sheet.proficiencies.penalty }} to hit.</p>
                 {% endif %}
-                <p class="small muted">Non-proficient attacks: &minus;2 to hit.</p>
+                {% endif %}
+
+                {% if sheet.weapon_qualities_reference %}
+                <details class="qualities-ref">
+                    <summary>Weapon Qualities</summary>
+                    <ul>
+                        {% for q in sheet.weapon_qualities_reference %}
+                        <li><strong>{{ q.name }}</strong> &mdash; {{ q.description }}</li>
+                        {% endfor %}
+                    </ul>
+                </details>
+                {% endif %}
             </section>
             {% endif %}
 

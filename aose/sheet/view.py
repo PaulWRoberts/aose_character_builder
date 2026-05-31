@@ -71,14 +71,25 @@ class EquippedRow(BaseModel):
     item_name: str
 
 
-class WeaponDisplay(BaseModel):
+class ProficientWeaponView(BaseModel):
+    id: str
     name: str
     damage: str
+    specialised: bool = False
 
 
-class ProficiencyDisplay(BaseModel):
-    name: str                       # group label, e.g. "Sword"
-    weapons: list[WeaponDisplay]    # weapons in that group with their damage
+class ProficiencyView(BaseModel):
+    category: str
+    penalty: int
+    slots_total: int
+    slots_spent: int
+    weapons: list[ProficientWeaponView]
+
+
+class WeaponQualityRef(BaseModel):
+    id: str
+    name: str
+    description: str
 
 
 class MagicItemView(BaseModel):
@@ -157,8 +168,9 @@ class CharacterSheet(BaseModel):
     attacks: list[AttackProfile]
 
     secondary_skill: str | None
-    proficiencies: list["ProficiencyDisplay"]  # rich per-group display; empty when rule off
+    proficiencies: ProficiencyView | None
     weapon_proficiency_active: bool
+    weapon_qualities_reference: list[WeaponQualityRef]
 
     magic_items: list[MagicItemView]
     spells: list[SpellClassView]
@@ -342,16 +354,60 @@ def _enabled_optional_rules(rs: RuleSet) -> list[str]:
     return [label for field, label in OPTIONAL_RULE_LABELS.items() if getattr(rs, field)]
 
 
-def _proficiency_display(spec: CharacterSpec, data: GameData) -> list[ProficiencyDisplay]:
-    """Build the rich per-weapon proficiency display for the character sheet.
+def _proficiency_view(spec: CharacterSpec, data: GameData) -> "ProficiencyView | None":
+    """Per-weapon proficiency view for the sheet.  None when the rule is off."""
+    from aose.engine.proficiency import (
+        category_for_classes,
+        penalty_for_classes,
+        slots_spent,
+        total_proficiency_slots,
+    )
+    from aose.models import Weapon
 
-    Returns an empty list when the Weapon Proficiency rule is off or no weapons
-    have been chosen.  Full per-weapon rendering is implemented in Task 11.
-    """
-    # NOTE: Task 11 will replace this stub with the per-weapon sheet view.
-    if not spec.ruleset.weapon_proficiency or not spec.weapon_proficiencies:
-        return []
-    return []
+    if not spec.ruleset.weapon_proficiency:
+        return None
+
+    classes = [data.classes[e.class_id] for e in spec.classes if e.class_id in data.classes]
+    pairs = [(data.classes[e.class_id], e.level) for e in spec.classes
+             if e.class_id in data.classes]
+    use_variable = spec.ruleset.variable_weapon_damage
+    weapons: list[ProficientWeaponView] = []
+    for wid in spec.weapon_proficiencies:
+        item = data.items.get(wid)
+        if not isinstance(item, Weapon):
+            continue
+        weapons.append(ProficientWeaponView(
+            id=item.id,
+            name=item.name,
+            damage=(item.damage.variable if use_variable else item.damage.default),
+            specialised=wid in spec.weapon_specialisations,
+        ))
+    weapons.sort(key=lambda w: w.name)
+    return ProficiencyView(
+        category=category_for_classes(classes) if classes else "non_martial",
+        penalty=penalty_for_classes(classes) if classes else -5,
+        slots_total=total_proficiency_slots(pairs),
+        slots_spent=slots_spent(spec),
+        weapons=weapons,
+    )
+
+
+def _weapon_qualities_reference(spec: CharacterSpec, data: GameData) -> list[WeaponQualityRef]:
+    """Quality definitions for qualities present on the character's equipped or
+    owned weapons — for the in-game reference block."""
+    from aose.models import Weapon
+
+    present: set[str] = set()
+    for wid in set(spec.inventory) | set(spec.equipped_weapons):
+        item = data.items.get(wid)
+        if isinstance(item, Weapon):
+            present.update(item.qualities)
+    refs = [
+        WeaponQualityRef(id=q.id, name=q.name, description=q.description)
+        for qid in sorted(present)
+        if (q := data.qualities.get(qid)) is not None
+    ]
+    return refs
 
 
 def _is_race_as_class(spec: CharacterSpec, data: GameData) -> bool:
@@ -468,8 +524,9 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
         inventory=_inventory(spec, data),
         attacks=attack_profiles(spec, data),
         secondary_skill=spec.secondary_skill,
-        proficiencies=_proficiency_display(spec, data),
+        proficiencies=_proficiency_view(spec, data),
         weapon_proficiency_active=spec.ruleset.weapon_proficiency,
+        weapon_qualities_reference=_weapon_qualities_reference(spec, data),
         magic_items=_magic_items(spec, data),
         spells=spells_view(spec, data),
         enabled_optional_rules=_enabled_optional_rules(spec.ruleset),

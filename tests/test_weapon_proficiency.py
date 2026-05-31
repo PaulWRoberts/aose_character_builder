@@ -266,3 +266,59 @@ def test_proficiencies_persist_to_character(client):
     char_id = r.headers["location"].split("/")[-1]
     spec = load_character(char_id, client._characters_dir)
     assert set(spec.weapon_proficiencies) == {"sword", "spear", "mace", "hand_axe"}
+
+
+# ---------------------------------------------------------------------------
+# Task 11: sheet per-weapon proficiency view + weapon qualities reference
+# ---------------------------------------------------------------------------
+from aose.sheet.view import build_sheet
+
+
+def test_sheet_proficiency_view_per_weapon(data):
+    spec = _base_spec(
+        weapon_proficiencies=["sword", "spear"],
+        weapon_specialisations=["sword"],
+        ruleset=RuleSet(weapon_proficiency=True),
+    )
+    sheet = build_sheet(spec, data)
+    view = sheet.proficiencies
+    names = {p.name for p in view.weapons}
+    assert names == {"Sword", "Spear"}
+    sword = next(p for p in view.weapons if p.name == "Sword")
+    assert sword.specialised is True
+    assert view.category == "martial"
+    assert view.penalty == -2
+
+
+def test_sheet_proficiency_view_empty_when_rule_off(data):
+    spec = _base_spec(weapon_proficiencies=["sword"],
+                      ruleset=RuleSet(weapon_proficiency=False))
+    sheet = build_sheet(spec, data)
+    assert sheet.proficiencies is None
+    assert sheet.weapon_proficiency_active is False
+
+
+def test_sheet_lists_qualities_reference_for_equipped_weapons(data):
+    spec = _base_spec(
+        inventory=["sword"],
+        equipped_weapons=["sword"],
+        ruleset=RuleSet(weapon_proficiency=True),
+        weapon_proficiencies=["sword"],
+    )
+    sheet = build_sheet(spec, data)
+    ref_ids = {q.id for q in sheet.weapon_qualities_reference}
+    assert "melee" in ref_ids
+
+
+def test_sheet_html_renders_per_weapon_section(client):
+    draft_id = _start_fighter(client)
+    client.post(f"/wizard/{draft_id}/proficiencies",
+                data={"weapon": ["sword", "spear", "mace", "hand_axe"]})
+    client.post(f"/wizard/{draft_id}/hp/roll")
+    client.post(f"/wizard/{draft_id}/hp")
+    r = client.post(f"/wizard/{draft_id}/finalize")
+    char_id = r.headers["location"].split("/")[-1]
+    r = client.get(f"/character/{char_id}")
+    assert "Weapon Proficiencies" in r.text
+    assert "Sword" in r.text
+    assert "&minus;2" in r.text

@@ -114,25 +114,22 @@
     {% endif %}
 
     {% if sheet.weapon_proficiency_active %}
-    <section class="section">
-        <h2>Weapon Proficiencies</h2>
-        {% if sheet.proficiencies %}
+    <div class="prof-block">
+        <strong>Weapon Proficiencies</strong>
+        {% if sheet.proficiencies and sheet.proficiencies.weapons %}
+        <span class="muted small">
+            ({{ sheet.proficiencies.category | replace("_", "-") | title }};
+            non-prof &minus;{{ -sheet.proficiencies.penalty }})
+        </span>
         <ul>
-            {% for p in sheet.proficiencies %}
-            <li>
-                <strong>{{ p.name }}</strong>
-                {% if p.weapons %}
-                &mdash;
-                {% for w in p.weapons %}{{ w.name }} ({{ w.damage }}){% if not loop.last %}, {% endif %}{% endfor %}
-                {% endif %}
-            </li>
+            {% for w in sheet.proficiencies.weapons %}
+            <li>{{ w.name }} ({{ w.damage }}){% if w.specialised %} &mdash; spec.{% endif %}</li>
             {% endfor %}
         </ul>
         {% else %}
-        <p class="muted" style="font-size:8.5pt; margin:2pt 0;">None</p>
+        <p class="muted small" style="margin:3pt 0 0 0;">None</p>
         {% endif %}
-        <p class="muted small" style="margin:3pt 0 0 0;">Non-proficient attacks: &minus;2 to hit.</p>
-    </section>
+    </div>
     {% endif %}
 
 </td>
