@@ -118,3 +118,48 @@ def test_equip_unrestricted_by_default(data):
     # No allowance args → no enforcement (backward compatible).
     _eq, weapons = equip(["sword"], {}, [], "sword", data)
     assert weapons == ["sword"]
+
+
+# ── drag-and-drop dispatcher enforcement ────────────────────────────────────
+
+from aose.web.move_dispatch import dispatch_move
+
+
+class _MoveState:
+    def __init__(self, inventory):
+        self.inventory = list(inventory)
+        self.stashed = []
+        self.equipped = {}
+        self.equipped_weapons = []
+        self.containers = []
+
+
+def test_dispatch_move_enforces_weapon_allowance(data):
+    # A magic-user dragging a sword to Equipped must be rejected.
+    classes = [data.classes["magic_user"]]
+    state = _MoveState(["sword"])
+    with pytest.raises(ValueError, match="cannot use"):
+        dispatch_move(
+            state, "carried", "equipped", "sword", "", data,
+            allowed_weapons=allowed_weapon_ids(classes, data),
+            allowed_armor=allowed_armor_ids(classes, data),
+            allow_shields=shields_allowed(classes),
+        )
+
+
+def test_dispatch_move_allows_permitted_weapon(data):
+    classes = [data.classes["magic_user"]]
+    state = _MoveState(["dagger"])
+    dispatch_move(
+        state, "carried", "equipped", "dagger", "", data,
+        allowed_weapons=allowed_weapon_ids(classes, data),
+        allowed_armor=allowed_armor_ids(classes, data),
+        allow_shields=shields_allowed(classes),
+    )
+    assert state.equipped_weapons == ["dagger"]
+
+
+def test_dispatch_move_unrestricted_by_default(data):
+    state = _MoveState(["sword"])
+    dispatch_move(state, "carried", "equipped", "sword", "", data)
+    assert state.equipped_weapons == ["sword"]

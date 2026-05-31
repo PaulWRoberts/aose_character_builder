@@ -23,11 +23,18 @@ from aose.engine.shop import (
 
 
 def dispatch_move(state, source: str, target: str, item_id: str,
-                  instance_id: str, game_data) -> None:
+                  instance_id: str, game_data,
+                  allowed_weapons="all", allowed_armor="all",
+                  allow_shields: bool = True) -> None:
     """Mutate ``state`` per the source/target combination.
 
     Raises ``ValueError`` for invalid combinations.  Engine helpers may raise
     their own ValueErrors (ContainerFull, etc.); those propagate.
+
+    ``allowed_weapons`` / ``allowed_armor`` (either the sentinel ``"all"`` or a
+    set of permitted ids) and ``allow_shields`` gate the equip transition the
+    same way the explicit equip routes do; defaults are unrestricted so callers
+    that don't enforce stay unaffected.
     """
     # Container-row drag = stash/unstash the whole bag
     if source.startswith("container_row:"):
@@ -109,6 +116,9 @@ def dispatch_move(state, source: str, target: str, item_id: str,
         state.equipped, state.equipped_weapons = _equip(
             state.inventory, state.equipped, state.equipped_weapons,
             item_id, game_data,
+            allowed_weapons=allowed_weapons,
+            allowed_armor=allowed_armor,
+            allow_shields=allow_shields,
         )
     elif action == "unequip":
         state.equipped, state.equipped_weapons = _unequip(

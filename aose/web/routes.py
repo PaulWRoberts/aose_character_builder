@@ -432,8 +432,13 @@ async def equipment_move(request: Request, character_id: str,
                          instance_id: str = Form("")):
     spec = _load_spec_or_404(request, character_id)
     game_data = request.app.state.game_data
+    classes = [game_data.classes[e.class_id] for e in spec.classes
+               if e.class_id in game_data.classes]
     try:
-        dispatch_move(spec, source, target, item_id, instance_id, game_data)
+        dispatch_move(spec, source, target, item_id, instance_id, game_data,
+                      allowed_weapons=allowed_weapon_ids(classes, game_data),
+                      allowed_armor=allowed_armor_ids(classes, game_data),
+                      allow_shields=shields_allowed(classes))
     except ValueError as e:
         raise HTTPException(400, str(e))
     save_character(character_id, spec, request.app.state.characters_dir)

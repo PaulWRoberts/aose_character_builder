@@ -1418,8 +1418,13 @@ async def equipment_move(request: Request, draft_id: str,
     shim.equipped_weapons = draft.get("equipped_weapons", [])
     shim.containers = [ContainerInstance.model_validate(c)
                        for c in draft.get("containers", [])]
+    classes = [game_data.classes[cid] for cid in _class_ids(draft)
+               if cid in game_data.classes]
     try:
-        dispatch_move(shim, source, target, item_id, instance_id, game_data)
+        dispatch_move(shim, source, target, item_id, instance_id, game_data,
+                      allowed_weapons=allowed_weapon_ids(classes, game_data),
+                      allowed_armor=allowed_armor_ids(classes, game_data),
+                      allow_shields=shields_allowed(classes))
     except ValueError as e:
         raise HTTPException(400, str(e))
     draft["inventory"] = shim.inventory
