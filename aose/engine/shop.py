@@ -43,6 +43,7 @@ class InventoryRow(BaseModel):
     cost_gp: float = 0          # unit price; refund amount equals this
     sell_gp: float = 0          # 50% of cost, rounded down
     equippable: bool = False     # weapon / armour / shield → True
+    class_allowed: bool = True   # False when the character's class can't use it
     equipped_count: int = 0     # how many copies currently equipped (legacy flat view)
 
 
@@ -105,7 +106,23 @@ def shop_categories(data: GameData) -> list[ShopCategory]:
     return out
 
 
-def _build_row(item_id: str, count: int, data: GameData) -> InventoryRow:
+def _class_allows(item, allowed_weapons, allowed_armor, allow_shields) -> bool:
+    """Whether the character's class may equip ``item`` given the allowance
+    sets (or the ``"all"`` sentinel).  Non-equippable items are always True."""
+    from aose.models import Armor, Weapon  # local to avoid circular import
+    if isinstance(item, Weapon):
+        return allowed_weapons == "all" or item.id in allowed_weapons
+    if isinstance(item, Armor):
+        if item.is_shield:
+            return allow_shields
+        return allowed_armor == "all" or item.id in allowed_armor
+    return True
+
+
+def _build_row(item_id: str, count: int, data: GameData,
+               allowed_weapons: "set[str] | str" = "all",
+               allowed_armor: "set[str] | str" = "all",
+               allow_shields: bool = True) -> InventoryRow:
     from aose.models import Armor, Weapon  # local to avoid circular import
     item = data.items.get(item_id)
     if item is None:
@@ -120,20 +137,33 @@ def _build_row(item_id: str, count: int, data: GameData) -> InventoryRow:
         cost_gp=item.cost_gp,
         sell_gp=int(item.cost_gp // 2),
         equippable=isinstance(item, (Weapon, Armor)),
+        class_allowed=_class_allows(item, allowed_weapons, allowed_armor, allow_shields),
     )
 
 
 def inventory_view(inventory: list[str], stashed: list[str],
                    equipped: dict[str, str], equipped_weapons: list[str],
                    containers: list[ContainerInstance] | None = None,
-                   data: GameData = None) -> InventoryView:
+                   data: GameData = None,
+                   allowed_weapons: "set[str] | str" = "all",
+                   allowed_armor: "set[str] | str" = "all",
+                   allow_shields: bool = True) -> InventoryView:
     """Three-section split of the character's loose items, plus a parallel
     ``containers`` list with each instance's contents already grouped.
 
     Items inside container ``contents`` are not surfaced in equipped/carried/
     stashed — they live only inside the container view.
+
+    The optional allowance args mirror :func:`aose.engine.equip.equip`; each
+    loose-item row gets a ``class_allowed`` flag so the UI can hide the Equip
+    action for gear the character's class can't use.  Defaults leave every
+    item allowed (backward-compatible).
     """
     containers = containers or []
+
+    def row(item_id: str, n: int) -> InventoryRow:
+        return _build_row(item_id, n, data,
+                          allowed_weapons, allowed_armor, allow_shields)
 
     equipped_count: Counter[str] = Counter()
     for v in equipped.values():
@@ -150,11 +180,11 @@ def inventory_view(inventory: list[str], stashed: list[str],
         eq_n = min(equipped_count[item_id], total)
         carried_n = total - eq_n
         if eq_n:
-            eq_rows.append(_build_row(item_id, eq_n, data))
+            eq_rows.append(row(item_id, eq_n))
         if carried_n:
-            carried_rows.append(_build_row(item_id, carried_n, data))
+            carried_rows.append(row(item_id, carried_n))
 
-    stashed_rows = [_build_row(i, n, data) for i, n in stash_count.items()]
+    stashed_rows = [row(i, n) for i, n in stash_count.items()]
 
     container_views: list[ContainerView] = []
     for c in containers:

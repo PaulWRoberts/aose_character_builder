@@ -39,11 +39,13 @@
         <input type="hidden" name="item_id" value="{{ row.id }}">
         <button type="submit">Unequip</button>
     </form>
-    {% elif state == "carried" and row.equippable %}
+    {% elif state == "carried" and row.equippable and row.class_allowed %}
     <form method="post" action="{{ target_url_prefix }}/equip" class="inline-form">
         <input type="hidden" name="item_id" value="{{ row.id }}">
         <button type="submit">Equip</button>
     </form>
+    {% elif state == "carried" and row.equippable and not row.class_allowed %}
+    <span class="muted small" title="Your class cannot use this item">Not usable</span>
     {% elif state == "stashed" %}
     <form method="post" action="{{ target_url_prefix }}/unstash" class="inline-form">
         <input type="hidden" name="item_id" value="{{ row.id }}">

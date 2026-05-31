@@ -91,6 +91,8 @@ async def character_sheet(request: Request, character_id: str):
         raise HTTPException(status_code=404, detail=f"Character '{character_id}' not found")
     game_data = request.app.state.game_data
     sheet = build_sheet(spec, game_data)
+    classes = [game_data.classes[e.class_id] for e in spec.classes
+               if e.class_id in game_data.classes]
     return templates.TemplateResponse(
         request, "sheet.html", {
             "sheet": sheet,
@@ -101,6 +103,9 @@ async def character_sheet(request: Request, character_id: str):
             "inventory_view": shop_inventory_view(
                 spec.inventory, spec.stashed, spec.equipped, spec.equipped_weapons,
                 spec.containers, game_data,
+                allowed_weapons=allowed_weapon_ids(classes, game_data),
+                allowed_armor=allowed_armor_ids(classes, game_data),
+                allow_shields=shields_allowed(classes),
             ),
             "magic_items_view": sheet.magic_items,
             "shop": shop_categories(game_data),

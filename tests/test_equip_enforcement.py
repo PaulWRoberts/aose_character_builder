@@ -163,3 +163,30 @@ def test_dispatch_move_unrestricted_by_default(data):
     state = _MoveState(["sword"])
     dispatch_move(state, "carried", "equipped", "sword", "", data)
     assert state.equipped_weapons == ["sword"]
+
+
+# ── inventory_view class_allowed flag (drives the UI Equip button) ──────────
+
+from aose.engine.shop import inventory_view
+
+
+def _carried_row(view, item_id):
+    return next(r for r in view.carried if r.id == item_id)
+
+
+def test_inventory_view_flags_disallowed_armor_for_magic_user(data):
+    classes = [data.classes["magic_user"]]
+    view = inventory_view(
+        ["chain_mail", "dagger"], [], {}, [], None, data,
+        allowed_weapons=allowed_weapon_ids(classes, data),
+        allowed_armor=allowed_armor_ids(classes, data),
+        allow_shields=shields_allowed(classes),
+    )
+    assert _carried_row(view, "chain_mail").class_allowed is False
+    assert _carried_row(view, "dagger").class_allowed is True
+
+
+def test_inventory_view_allowed_by_default(data):
+    # No allowance args → everything allowed (backward compatible).
+    view = inventory_view(["chain_mail"], [], {}, [], None, data)
+    assert _carried_row(view, "chain_mail").class_allowed is True

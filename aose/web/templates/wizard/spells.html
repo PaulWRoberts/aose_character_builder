@@ -39,3 +39,37 @@
     {% endif %}
 </div>
 {% endfor %}
+
+<script>
+    // Enforce the exact-count rule client-side so the user can't submit the
+    // wrong number of starting spells (the server still validates).  Each
+    // arcane caster's grid carries data-required; once that many boxes are
+    // checked we disable the rest, and the Next button stays disabled until
+    // the count matches exactly.
+    (function () {
+        document.querySelectorAll('.card-grid[data-required]').forEach(function (grid) {
+            const required = parseInt(grid.dataset.required, 10);
+            const boxes = Array.from(grid.querySelectorAll('.spell-checkbox'));
+            const form = grid.closest('form');
+            const counter = form ? form.querySelector('.spell-counter') : null;
+            const submit = form ? form.querySelector('button[type="submit"]') : null;
+
+            function update() {
+                const checked = boxes.filter(b => b.checked).length;
+                boxes.forEach(function (b) {
+                    b.disabled = !b.checked && checked >= required;
+                    b.closest('.card').classList.toggle('selected', b.checked);
+                });
+                if (counter) {
+                    counter.textContent = 'Picked ' + checked + ' of ' + required + '.';
+                }
+                if (submit) {
+                    submit.disabled = checked !== required;
+                }
+            }
+
+            boxes.forEach(b => b.addEventListener('change', update));
+            update();
+        });
+    })();
+</script>

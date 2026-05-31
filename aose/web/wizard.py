@@ -1048,11 +1048,16 @@ def _equipment_context(draft: dict[str, Any], game_data) -> dict:
     containers = [
         ContainerInstance.model_validate(c) for c in draft.get("containers", [])
     ]
+    classes = [game_data.classes[cid] for cid in _class_ids(draft)
+               if cid in game_data.classes]
     return {
         "gold": draft.get("gold", 0),
         "gold_locked": draft.get("gold_locked", False),
         "inventory_view": inventory_view(
             inventory, stashed, equipped, equipped_weapons, containers, game_data,
+            allowed_weapons=allowed_weapon_ids(classes, game_data),
+            allowed_armor=allowed_armor_ids(classes, game_data),
+            allow_shields=shields_allowed(classes),
         ),
         "magic_items_view": magic_items_view(
             _draft_magic(draft), list(inventory), game_data,
