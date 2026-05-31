@@ -1,0 +1,538 @@
+- id: "cleric_cure_light_wounds"
+  name: "Cure Light Wounds"
+  level: 1
+  spell_lists: [cleric]
+  source: "ose-advanced-fantasy"
+  range: "The caster or a creature touched"
+  duration: "instant"
+  description: |-
+    This spell has two uses
+    
+    1. **Healing a living subject:** Restores 1d6+1 hit points of damage. This cannot grant more hit points than the subject’s normal maximum.
+    2. **Curing paralysis:** Paralysing effects are negated.
+    
+    #### Reversed: Cause Light Wounds
+    
+    Inflicts 1d6+1 hit points of damage to a touched creature. In combat, a melee attack roll is required.
+  reversible: true
+  reverse_name: "Cause Light Wounds"
+- id: "detect_evil"
+  name: "Detect Evil"
+  level: 1
+  spell_lists: [cleric]
+  source: "ose-advanced-fantasy"
+  range: "120’"
+  duration: "6 turns"
+  description: |-
+    Objects enchanted for evil purposes or living beings with evil intentions are caused to magically glow.
+    
+    ▶ **Intent only:** This spell does not grant the ability to read minds, but only grants a general sense of evil intent.
+    
+    ▶ **Definition of evil:** The referee must decide what is “evil”. Some things that are potentially harmful, like traps, are not “evil.”
+- id: "cleric_detect_magic"
+  name: "Detect Magic"
+  level: 1
+  spell_lists: [cleric]
+  source: "ose-advanced-fantasy"
+  range: "60’"
+  duration: "2 turns"
+  description: |-
+    Enchanted objects, areas, or creatures are caused to glow. Both permanent and temporary enchantments are revealed.
+- id: "cleric_light"
+  name: "Light"
+  level: 1
+  spell_lists: [cleric]
+  source: "ose-advanced-fantasy"
+  range: "120’"
+  duration: "12 turns"
+  description: |-
+    This spell has three usages:
+    
+    1. **Conjuring light:** In a 15’ radius. The magical light is sufficient for reading, but is not as bright as daylight. The spell may be cast upon an object, in which case the light moves with the object.
+    2. **Blinding a creature:** By casting the spell upon its eyes. If the target fails a saving throw versus spells, it is blinded for the duration. A blind creature cannot attack.
+    3. **Cancelling darkness:** *Light* may cancel a *darkness* spell (see below).
+    
+    #### Reversed: Darkness
+    
+    Creates a 15’ radius area of magical blackness, preventing normal sight (but not infravision). Like *light*, it may alternatively be used to blind creatures or to dispel a *light* spell.
+  reversible: true
+  reverse_name: "Darkness"
+- id: "protection_from_evil"
+  name: "Protection from Evil"
+  level: 1
+  spell_lists: [cleric]
+  source: "ose-advanced-fantasy"
+  range: "The caster"
+  duration: "12 turns"
+  description: |-
+    This spell wards the caster from attacks by creatures of another alignment, as follows:
+    
+    ▶ **Bonuses:** The caster gains a +1 bonus to saving throws against attacks or special abilities of affected creatures.
+    
+    ▶ **Affected creatures’ attacks:** Against the caster are penalised by –1.
+    
+    ▶ **Enchanted, constructed, or summoned creatures:** The spell additionally prevents such creatures from attacking the caster in melee, though they may still make ranged attacks. If the caster engages such a creature in melee, this protection is broken (the caster still gains the save and attack bonuses mentioned above).
+- id: "purify_food_and_water"
+  name: "Purify Food and Water"
+  level: 1
+  spell_lists: [cleric]
+  source: "ose-advanced-fantasy"
+  range: "10’"
+  duration: "permanent"
+  description: |-
+    This spell makes spoiled, rotten, poisonous, or otherwise contaminated food and water pure and suitable for eating and drinking. One of the following may be affected:
+    
+    ▶ **Drink:** 6 quarts.
+    
+    ▶ **Rations:** One trail ration (iron or standard).
+    
+    ▶ **Unpreserved food:** A quantity sufficient for 12 human-sized beings.
+- id: "remove_fear"
+  name: "Remove Fear"
+  level: 1
+  spell_lists: [cleric]
+  source: "ose-advanced-fantasy"
+  range: "The caster or a creature touched"
+  duration: "2 turns"
+  description: |-
+    The creature touched is calmed and purged of fear. Magically induced fear may be dispelled, but this requires the subject to make a saving throw versus spells. The save is modified by +1 per level of the caster.
+    
+    #### Reversed: Cause Fear
+    
+    Will cause a target within 120’ to flee for the duration unless it saves versus spells.
+  reversible: true
+  reverse_name: "Cause Fear"
+- id: "resist_cold"
+  name: "Resist Cold"
+  level: 1
+  spell_lists: [cleric]
+  source: "ose-advanced-fantasy"
+  range: "30’"
+  duration: "6 turns"
+  description: |-
+    All creatures within range are protected from cold, as follows:
+    
+    ▶ **Normal cold:** Unharmed by non-magical freezing temperatures.
+    
+    ▶ **Save bonus:** Gain a +2 bonus to all saving throws versus cold-based magical or breath attacks.
+    
+    ▶ **Cold-based damage:** Is reduced by 1 point per damage die rolled. (Each die inflicts a minimum of 1 hit point damage.)
+- id: "bless"
+  name: "Bless"
+  level: 2
+  spell_lists: [cleric]
+  source: "ose-advanced-fantasy"
+  range: "60’"
+  duration: "6 turns"
+  description: |-
+    May be used in one of two situations:
+    
+    1. **Battle:** Allies within a 20’ square area who are not yet in melee gain a +1 bonus to attack and damage rolls and a +1 bonus to morale.
+    2. **Ritual:** Casting *bless* may also form part of rituals of purification or consecration, at the referee’s discretion.
+    
+    #### Reversed: Blight
+    
+    Incurs a –1 penalty to morale checks, attack rolls, and damage rolls of enemies within a 20’ square area. A save versus spells is allowed to resist the *blight*.
+  reversible: true
+  reverse_name: "Blight"
+- id: "find_traps"
+  name: "Find Traps"
+  level: 2
+  spell_lists: [cleric]
+  source: "ose-advanced-fantasy"
+  range: "30’"
+  duration: "2 turns"
+  description: |-
+    Trapped objects or areas within range of the caster glow with a magical blue light.
+    
+    ▶ **Magical and mechanical traps:** Are both detected.
+    
+    ▶ **No knowledge:** About the nature of the trap or how to deactivate it is granted.
+- id: "hold_person"
+  name: "Hold Person"
+  level: 2
+  spell_lists: [cleric]
+  source: "ose-advanced-fantasy"
+  range: "180’"
+  duration: "9 turns"
+  description: |-
+    This spell causes one or more humans, demihumans, or human-like monsters to be paralysed if they fail a saving throw versus spells. It may be cast in two ways:
+    
+    1. **Against an individual:** The target’s saving throw is penalised by –2.
+    2. **Against a group:** 1d4 individuals in the group are targeted.
+    
+    **Restrictions:** Human-like monsters of greater than 4+1 HD and undead are not affected.
+- id: "know_alignment"
+  name: "Know Alignment"
+  level: 2
+  spell_lists: [cleric]
+  source: "ose-advanced-fantasy"
+  range: "10’"
+  duration: "1 round"
+  description: |-
+    The caster gains immediate knowledge of the alignment of one character, monster, object, or location within range. (Most objects or locations do not have an alignment, but magic items or holy places might.)
+- id: "resist_fire"
+  name: "Resist Fire"
+  level: 2
+  spell_lists: [cleric]
+  source: "ose-advanced-fantasy"
+  range: "30’"
+  duration: "2 turns"
+  description: |-
+    A single creature is bestowed with supernatural resistance to fire, as follows:
+    
+    ▶ **Normal heat:** Unharmed by non-magical heat or fire.
+    
+    ▶ **Save bonus:** Gain a +2 bonus to all saving throws versus fire-based magical or breath attacks.
+    
+    ▶ **Fire-based damage:** Is reduced by 1 point per damage die rolled. (Each die inflicts a minimum of 1 hit point damage.)
+- id: "silence_15_radius"
+  name: "Silence 15’ Radius"
+  level: 2
+  spell_lists: [cleric]
+  source: "ose-advanced-fantasy"
+  range: "180’"
+  duration: "12 turns"
+  description: |-
+    A 15’ radius area is rendered utterly silent.
+    
+    ▶ **Within the area:** All sound is stopped. Conversation and spell casting are impossible.
+    
+    ▶ **Noise from outside the area:** Can be heard by those within it.
+    
+    ▶ **Casting upon a creature:** *Silence* may be cast upon a creature, which must save versus spells. If the save fails, the 15’ radius area of silence moves with the creature. If the save succeeds, the spell’s effect remains stationary—the targeted creature may move out of it.
+- id: "snake_charm"
+  name: "Snake Charm"
+  level: 2
+  spell_lists: [cleric]
+  source: "ose-advanced-fantasy"
+  range: "60’"
+  duration: "1d4+1 rounds or turns"
+  description: |-
+    One or more snakes are rendered non-hostile, rearing up and swaying to and fro but not attacking.
+    
+    ▶ **HD affected:** The spell affects snakes whose total Hit Dice do not exceed the caster’s level. For example, a 7th level caster can affect 7 HD of snakes, which can equal seven 1 HD snakes, or two 3 HD snakes and one 1 HD snake, or any other combination.
+    
+    ▶ **Duration:** When cast on snakes that are already attacking, the spell lasts for 1d4+1 rounds. Otherwise, it lasts for 1d4+1 turns.
+- id: "cleric_speak_with_animals"
+  name: "Speak with Animals"
+  level: 2
+  spell_lists: [cleric]
+  source: "ose-advanced-fantasy"
+  range: "30’"
+  duration: "6 turns"
+  description: |-
+    The caster can communicate with one type of animal within range when the spell is cast.
+    
+    ▶ **Type of animal:** Ordinary animals or giant versions of ordinary animals may be targeted.
+    
+    ▶ **Questions:** The caster can ask questions of and receive answers from animals of the chosen kind, although the spell doesn’t make animals any more friendly or cooperative than normal (a reaction roll may be required).
+    
+    ▶ **Services:** If an animal is friendly toward the caster, it may perform some favour or service.
+- id: "continual_light"
+  name: "Continual Light"
+  level: 3
+  spell_lists: [cleric]
+  source: "ose-advanced-fantasy"
+  range: "120’"
+  duration: "permanent"
+  description: |-
+    This spell has three usages:
+    
+    1. **Conjuring light:** In a 30’ radius. The magical light is as bright as full daylight (creatures that suffer attack penalties in daylight are affected). The spell may be cast upon an object, in which case, the light moves with the object.
+    2. **Blinding a creature:** By casting the spell upon its eyes. If the target fails a saving throw versus spells, it is blinded. A blind creature cannot attack.
+    3. **Cancelling darkness:** *Continual light* may cancel a *continual darkness* spell (see below).
+    
+    #### Reversed: Continual Darkness
+    
+    Creates a 30’ radius area of magical blackness, preventing both normal sight and infravision. Light sources brought within the area of darkness do not illuminate it. Like *continual light*, it may alternatively be used to blind creatures or to dispel a *continual light* spell.
+  reversible: true
+  reverse_name: "Continual Darkness"
+- id: "cure_disease"
+  name: "Cure Disease"
+  level: 3
+  spell_lists: [cleric]
+  source: "ose-advanced-fantasy"
+  range: "30’"
+  duration: "instant"
+  description: |-
+    This spell has two uses:
+    
+    1. **Cure a subject of any disease:** Including those of magical origin.
+    2. **Kill green slime:** This monster is killed instantly.
+    
+    #### Reversed: Cause Disease
+    
+    Inflicts a terrible, withering disease on a victim, if a saving throw versus spells is failed. The disease has the following effects:
+    
+    ▶ **Death:** Within 2d12 days.
+    
+    ▶ **Attack penalty:** –2 to attack rolls.
+    
+    ▶ **Natural healing:** Takes twice the usual amount of time.
+    
+    ▶ **Magical healing:** Is utterly ineffective.
+    
+    ▶ **Curing:** This disease can be cured with a casting of *cure disease*.
+  reversible: true
+  reverse_name: "Cause Disease"
+- id: "growth_of_animal"
+  name: "Growth of Animal"
+  level: 3
+  spell_lists: [cleric]
+  source: "ose-advanced-fantasy"
+  range: "120’"
+  duration: "12 turns"
+  description: |-
+    One non-magical, normal animal is doubled in size and strength when this spell is cast upon it.
+    
+    ▶ **Damage:** The damage inflicted by the animal’s attacks is doubled.
+    
+    ▶ **Load:** The amount of weight the animal can carry is doubled.
+    
+    **Restrictions:** This spell may be used on giant versions of normal animals, but intelligent animals and fantastic monsters are unaffected.
+- id: "locate_object"
+  name: "Locate Object"
+  level: 3
+  spell_lists: [cleric]
+  source: "ose-advanced-fantasy"
+  range: "120’"
+  duration: "6 turns"
+  description: |-
+    The caster can sense the direction (but not distance) of an object. One of two types of objects may be located:
+    
+    1. **General class:** An object of a general class (e.g. a stairway, an altar, etc.). In this case, the nearest object of that type is located.
+    2. **Specific object:** A specific object which the caster can clearly visualise in all aspects.
+    
+    **Restrictions:** This spell cannot be used to locate creatures.
+- id: "remove_curse"
+  name: "Remove Curse"
+  level: 3
+  spell_lists: [cleric]
+  source: "ose-advanced-fantasy"
+  range: "The caster or a creature touched"
+  duration: "instant / Permanent (curse)"
+  description: |-
+    *Remove curse* instantaneously removes one curse from a creature. It may allow a character to discard a cursed magic item.
+    
+    #### Reversed: Curse
+    
+    Places a deleterious effect upon a creature, if it fails a save versus spells.
+    
+    ▶ **Effects:** The exact form and effects of the curse are determined by the caster.
+    
+    ▶ **Maximum possible effects include:** A –2 penalty to saving throws, a –4 penalty to hit, reducing an ability score by 50%.
+    
+    ▶ **Multiple curses:** May afflict a creature, as long as each has a different effect.
+    
+    ▶ **Referee judgement:** The referee should judge the effects of this spell and may turn overly powerful curses back onto the caster!
+  reversible: true
+  reverse_name: "Curse"
+- id: "striking"
+  name: "Striking"
+  level: 3
+  spell_lists: [cleric]
+  source: "ose-advanced-fantasy"
+  range: "30’"
+  duration: "1 turn"
+  description: |-
+    A single weapon is enchanted:
+    
+    ▶ **Damage:** It deals an additional 1d6 damage.
+    
+    ▶ **Treated as magical:** It is able to harm monsters which are normally only harmed by magical weapons.
+- id: "cleric_create_water"
+  name: "Create Water"
+  level: 4
+  spell_lists: [cleric]
+  source: "ose-advanced-fantasy"
+  range: "Touch"
+  duration: "permanent"
+  description: |-
+    This spell causes a magical fount to spring forth from the ground or a wall.
+    
+    ▶ **Volume:** The fount produces approximately 50 gallons of water—enough to sustain twelve humans and twelve mounts for one day.
+    
+    ▶ **Higher level casters:** If the caster is higher than 8th level, water sufficient for an additional twelve humans and mounts is produced for each level beyond 8th.
+- id: "cleric_cure_serious_wounds"
+  name: "Cure Serious Wounds"
+  level: 4
+  spell_lists: [cleric]
+  source: "ose-advanced-fantasy"
+  range: "The caster or a creature touched"
+  duration: "instant"
+  description: |-
+    The caster’s touch heals 2d6+2 hit points of damage in one living subject. This cannot grant more hit points than the subject’s normal maximum.
+    
+    #### Reversed: Cause Serious Wounds
+    
+    Inflicts 2d6+2 hit points of damage to a touched creature. In combat, a melee attack roll is required.
+  reversible: true
+  reverse_name: "Cause Serious Wounds"
+- id: "neutralize_poison"
+  name: "Neutralize Poison"
+  level: 4
+  spell_lists: [cleric]
+  source: "ose-advanced-fantasy"
+  range: "The caster or a creature or object touched"
+  duration: "instant"
+  description: |-
+    This spell has two uses:
+    
+    1. **Characters:** Neutralize the effects of poison on a character. A character who has died from poisoning can be revived, if *neutralize poison* is cast within ten rounds.
+    2. **Items:** Remove poison from an item.
+- id: "protection_from_evil_10_radius"
+  name: "Protection from Evil 10’ Radius"
+  level: 4
+  spell_lists: [cleric]
+  source: "ose-advanced-fantasy"
+  range: "10’ around the caster"
+  duration: "12 turns"
+  description: |-
+    This spell wards the caster and all allies within 10’ from attacks by creatures of another alignment, as follows:
+    
+    ▶ **Bonuses:** Those warded gain a +1 bonus to saving throws against attacks or special abilities of affected creatures.
+    
+    ▶ **Affected creatures’ attacks:** Against those warded are penalised by –1.
+    
+    ▶ **Enchanted, constructed, or summoned creatures:** The spell additionally prevents such creatures from making melee attacks against those warded, though they may still make ranged attacks. If any of the warded party engages such a creature in melee, this protection is broken (those warded still gain the save and attack bonuses mentioned above).
+- id: "cleric_speak_with_plants"
+  name: "Speak with Plants"
+  level: 4
+  spell_lists: [cleric]
+  source: "ose-advanced-fantasy"
+  range: "30’"
+  duration: "3 turns"
+  description: |-
+    This spell has two uses:
+    
+    1. **Normal plants:** Communication with normal plants. The caster is able to ask questions and receive answers and may ask for simple favours. Plants may comply, if the request is within their ability to understand and perform. For example, densely overgrown plants may clear a passageway through which the caster and party may travel.
+    2. **Monstrous plants:** Communication with plant-like or plant-based monsters.
+- id: "sticks_to_snakes"
+  name: "Sticks to Snakes"
+  level: 4
+  spell_lists: [cleric]
+  source: "ose-advanced-fantasy"
+  range: "120’"
+  duration: "6 turns"
+  description: |-
+    2d8 normal sticks are miraculously transformed into snakes that follow the caster’s orders.
+    
+    ▶ **Reversion:** When killed or at the end of the spell’s duration, the snakes revert back into sticks.
+    
+    #### Conjured Snakes
+    
+    **AC** 6 [13], **HD** 1 (4hp), **Att** 1 × bite (1d4), **THAC0** 19 [0], **MV** 90’ (30’), **SV** D12 W13 P14 B15 S16 (1), **ML** 7, **AL** Neutral, **XP** 10 (13 if poisonous)
+    
+    ▶ **Poison:** There is a 50% chance of the snakes being poisonous.
+    
+    ▶ **When killed:** Revert back to sticks.
+- id: "commune"
+  name: "Commune"
+  level: 5
+  spell_lists: [cleric]
+  source: "ose-advanced-fantasy"
+  range: "The caster"
+  duration: "3 turns"
+  description: |-
+    The caster calls upon divine powers in order to seek knowledge.
+    
+    ▶ **Questions:** The caster may ask three questions per casting. Once per year, the caster may instead ask six questions.
+    
+    ▶ **Answers:** Each question receives a simple “yes” or “no” answer.
+    
+    ▶ **Usage limit:** *Commune* may only be cast once per week. If the referee feels this spell is being overused, its usage may be limited to once per month.
+- id: "create_food"
+  name: "Create Food"
+  level: 5
+  spell_lists: [cleric]
+  source: "ose-advanced-fantasy"
+  range: "Appears in the caster’s presence"
+  duration: "permanent"
+  description: |-
+    Conjures food from thin air.
+    
+    ▶ **Volume:** Food sufficient for twelve humans and twelve mounts for one day is conjured.
+    
+    ▶ **Higher level casters:** If the caster is higher than 8th level, food sufficient for an additional 12 humans and mounts is produced for each level beyond 8th.
+- id: "dispel_evil"
+  name: "Dispel Evil"
+  level: 5
+  spell_lists: [cleric]
+  source: "ose-advanced-fantasy"
+  range: "30’"
+  duration: "concentration (up to 1 turn) or instant (see below)"
+  description: |-
+    This spell has three uses:
+    
+    1. **Ward:** By concentrating and remaining stationary, enchanted or undead monsters that come within range may be banished or destroyed. Each monster may save versus spells to avoid banishment or destruction. If a monster’s save succeeds, it flees the affected area.
+    2. **Target single monster:** Instantly banish or destroy a single enchanted or undead monster within range. The monster may save versus spells (with a –2 penalty) to avoid banishment or destruction. If the monster’s save succeeds, it flees the affected area.
+    3. **Dispel curse:** Instantly dispel the hold that a cursed item has over a being within range.
+- id: "insect_plague"
+  name: "Insect Plague"
+  level: 5
+  spell_lists: [cleric]
+  source: "ose-advanced-fantasy"
+  range: "480’"
+  duration: "concentration (up to 1 day)"
+  description: |-
+    Cast above ground, this spell conjures a 60’ diameter swarm of flying insects with the following properties:
+    
+    ▶ **Movement:** 20’ per round. While the swarm is within range, the caster is able to direct its movements.
+    
+    ▶ **Vision:** Within the area of the swarm is obscured.
+    
+    ▶ **Creatures of 2 HD or less:** Are driven away, if caught within the swarm.
+    
+    ▶ **Concentration:** If the caster moves or loses concentration, the swarm dissipates, ending the spell.
+    
+    **Restrictions:** The spell has no effect if cast underground.
+- id: "quest"
+  name: "Quest"
+  level: 5
+  spell_lists: [cleric]
+  source: "ose-advanced-fantasy"
+  range: "30’"
+  duration: "until quest is completed / Instant (*remove quest*)"
+  description: |-
+    The caster commands a single subject to perform a specific quest or task.
+    
+    ▶ **Examples:** Rescuing a prisoner, killing a specific monster, bringing a magic item to the caster, or going on a journey to a holy site.
+    
+    ▶ **Suicidal quests:** The prescribed quest must not be obviously suicidal.
+    
+    ▶ **Saving throw:** The subject may save versus spells, with success indicating that the *quest* has no effect.
+    
+    ▶ **Refusal:** Otherwise, the subject must undertake the quest or fall under a curse (per the *curse* spell, with the exact nature of the curse determined by the referee).
+    
+    ▶ **Completion:** Once the task is completed, the spell ends.
+    
+    #### Reversed: Remove Quest
+    
+    Can dispel an active *quest* spell. If the character who cast the *quest* spell to be nullified is higher level than the character casting *remove quest*, there is a chance of the spell having no effect. The probability of failure is 5% per level the caster is below the caster of *quest*.
+  reversible: true
+  reverse_name: "Remove Quest"
+- id: "raise_dead"
+  name: "Raise Dead"
+  level: 5
+  spell_lists: [cleric]
+  source: "ose-advanced-fantasy"
+  range: "120’"
+  duration: "instant"
+  description: |-
+    This spell has two uses:
+    
+    1. **Restore life:** To a recently deceased human or demihuman. See below.
+    2. **Destroy undead:** A single undead monster is destroyed, if it fails a saving throw versus spells.
+    
+    **Restoring life:** When used to restore life, the following stipulations apply:
+    
+    ▶ **Time limit:** The caster can raise a person that has been dead for no longer than four days per level of the caster above 7th. For example, a 10th level caster can revive a character that has been dead for twelve days (three levels above 7th × four days).
+    
+    ▶ **Weakness:** Returning from death is an ordeal. Until the subject gets two full weeks of bed rest, they have 1 hit point, move at half the normal rate, cannot carry heavy items, and cannot attack, cast spells, or use other class abilities. This period of weakness may not be shortened by any magical healing.
+    
+    #### Reversed: Finger of Death
+    
+    Directs a ray of deadly magic at a single target. If the target fails a saving throw versus death, it dies instantly. Casting *finger of death* is a chaotic act; it will only be used by lawful casters in desperate situations.
+  reversible: true
+  reverse_name: "Finger of Death"

@@ -1,0 +1,526 @@
+- id: animal_friendship
+  name: Animal Friendship
+  level: 1
+  spell_lists: [druid]
+  source: "ose-advanced-fantasy"
+  range: "10'"
+  duration: permanent
+  description: |-
+    The caster approaches a neutral-aligned beast of animal intelligence with a piece of food that it finds attractive. The animal must save versus spells:
+    
+    ▶If the save succeeds: The animal is not affected by the magic and behaves normally.
+    ▶If the save fails: The animal waits quietly while the caster performs a binding ritual lasting 6 turns.
+    
+    Once the binding is complete: The animal behaves as follows:
+    
+    ▶Follow: It will follow the caster wherever they go.
+    ▶Leaving the animal: The animal will not harm the caster, but if it is left alone for more than three days during the first three months, it reverts to its natural behaviour, ending the spell.
+    ▶Training: During the first three months, the animal may be trained to perform up to six simple tricks (depending on its intelligence). Each trick takes one week to train.
+    
+    Maximum animal companions: Up to 2HD of animals per level of the caster may be befriended by this spell at any one time.
+- id: detect_danger
+  name: Detect Danger
+  level: 1
+  spell_lists: [druid]
+  source: "ose-advanced-fantasy"
+  range: "5' per level"
+  duration: "6 turns (outdoors), otherwise 3 turns"
+  description: |-
+    The caster can concentrate to detect dangers within range.
+    
+    ▶Areas: Scanning a 10' × 10' area takes one turn.
+    ▶Creatures: Scanning a creature takes one round.
+    ▶Objects: Scanning a small object (e.g. a chest, weapon, etc.) takes one round. Larger objects take longer.
+    
+    After scanning: The caster knows whether the area, creature, or object poses a danger to their person. This knowledge distinguishes between immediate dangers and potential dangers.
+- id: entangle
+  name: Entangle
+  level: 1
+  spell_lists: [druid]
+  source: "ose-advanced-fantasy"
+  range: "80'"
+  duration: "1 turn"
+  description: |-
+    All plants present in a 20' radius area within range bend and twist, entangling creatures inside the area.
+    
+    ▶Saving throw: Each creature in the affected area may save versus spells.
+    ▶If the save fails: The creature is entangled and cannot move.
+    ▶If the save succeeds: The creature is able to move through the entangled area at half its normal movement rate.
+- id: faerie_fire
+  name: Faerie Fire
+  level: 1
+  spell_lists: [druid]
+  source: "ose-advanced-fantasy"
+  range: "60'"
+  duration: "1 turn"
+  description: |-
+    Selected objects or creatures in range are outlined with a lambent, green fire.
+    
+    ▶Targets: The caster must be able to perceive or detect the targets.
+    ▶Size of targets: If the caster is below 5th level, a single object or creature of approximately human size (or smaller) can be affected. At 5th level, two human-sized targets or one target up to 10' tall can be affected. At 10th level, three human-sized targets or one target up to 15' tall can be affected. At 14th level, four human-sized targets or one target up to 20' tall can be affected.
+    ▶Harmless: The faerie fire does not cause damage.
+    ▶Counters invisibility: The flickering fire makes invisible targets visible.
+    ▶In low light conditions: Attacks on targets gain a +2 bonus to hit.
+- id: invisibility_to_animals
+  name: Invisibility to Animals
+  level: 1
+  spell_lists: [druid]
+  source: "ose-advanced-fantasy"
+  range: The caster or a creature touched
+  duration: "1 turn"
+  description: |-
+    This spell renders the subject undetectable to all senses (smell, sight, hearing) of non-magical animals and able to wander among them completely unnoticed.
+- id: locate_plant_or_animal
+  name: Locate Plant or Animal
+  level: 1
+  spell_lists: [druid]
+  source: "ose-advanced-fantasy"
+  range: "120'"
+  duration: "6 turns"
+  description: |-
+    The caster can sense the direction (but not distance) of a non-magical, non-sentient plant or animal of a chosen type. The spell has two uses:
+    
+    1. Named species: Locating a plant or animal of a named species. In this case, the nearest plant or animal of that species is located.
+    2. Individual: Locating a specific plant or animal which the caster can clearly visualise in all aspects.
+- id: predict_weather
+  name: Predict Weather
+  level: 1
+  spell_lists: [druid]
+  source: "ose-advanced-fantasy"
+  range: "1 mile diameter per level"
+  duration: instant
+  description: |-
+    The caster gains accurate knowledge of the weather within range over the next 12 hours.
+- id: druid_speak_with_animals
+  name: Speak with Animals
+  level: 1
+  spell_lists: [druid]
+  source: "ose-advanced-fantasy"
+  range: "30'"
+  duration: "6 turns"
+  description: |-
+    The caster can communicate with one type of animal within range when the spell is cast.
+    
+    ▶Type of animal: Ordinary animals or giant versions of ordinary animals may be targeted.
+    ▶Questions: The caster can ask questions of and receive answers from animals of the chosen kind, although the spell doesn't make animals any more friendly or cooperative than normal (a reaction roll may be required).
+    ▶Services: If an animal is friendly toward the caster, it may perform some favour or service.
+- id: barkskin
+  name: Barkskin
+  level: 2
+  spell_lists: [druid]
+  source: "ose-advanced-fantasy"
+  range: The caster or a creature touched
+  duration: "1 turn per level"
+  description: |-
+    The subject's skin toughens like bark.
+    
+    ▶AC bonus: The subject's Armour Class improves by 1.
+    ▶Save bonus: The subject gains a +1 bonus to all saving throws except against magical effects.
+- id: druid_create_water
+  name: Create Water
+  level: 2
+  spell_lists: [druid]
+  source: "ose-advanced-fantasy"
+  range: Touch
+  duration: permanent
+  description: |-
+    This spell causes a magical spring to gush forth from the ground.
+    
+    ▶Volume: The fount produces approximately 50 gallons of water—enough to sustain twelve humans and twelve mounts for one day.
+    ▶Higher level casters: If the caster is higher than 8th level, water sufficient for an additional twelve humans and mounts is produced for each level beyond 8th.
+- id: druid_cure_light_wounds
+  name: Cure Light Wounds
+  level: 2
+  spell_lists: [druid]
+  source: "ose-advanced-fantasy"
+  range: The caster or a creature touched
+  duration: instant
+  description: |-
+    This spell has two uses
+    
+    1. Healing a living subject: Restores 1d6+1 hit points of damage. This cannot grant more hit points than the subject's normal maximum.
+    2. Curing paralysis: Paralysing effects are negated.
+    
+    #### Reversed: Cause Light Wounds
+    
+    Inflicts 1d6+1 hit points of damage to a touched creature. In combat, a melee attack roll is required.
+  reversible: true
+  reverse_name: Cause Light Wounds
+- id: heat_metal
+  name: Heat Metal
+  level: 2
+  spell_lists: [druid]
+  source: "ose-advanced-fantasy"
+  range: "30'"
+  duration: "7 rounds"
+  description: |-
+    All metal in the possession of a number of human-sized subjects is heated to extreme temperatures.
+    
+    ▶Number of subjects: One per two experience levels of the caster.
+    ▶The heat produced: Increases for four rounds, then fades (see the table below).
+    ▶Effects: A subject whose flesh is in contact with the affected metal may be damaged (see below).
+    ▶Dropping items: A subject who drops all heated objects suffers no further harm.
+    ▶Water or snow: Immersing heated metal negates the harmful effects.
+    ▶Immunities: Creatures that are immune to fire are not harmed by this spell.
+    
+    #### Heat Metal Effects Per Round
+    
+    | Round | Level of Heat |
+    |---|---|
+    | 1 | Very hot |
+    | 2 | Blistering |
+    | 3 | Searing |
+    | 4 | White hot |
+    | 5 | Searing |
+    | 6 | Blistering |
+    | 7 | Very hot |
+    
+    ▶Very hot: Uncomfortable to the touch.
+    ▶Blistering: 1d3 damage.
+    ▶Searing: 1d6 damage. Flammable materials touching the object are set alight.
+    ▶White hot: 1d6 damage. Flammable materials touching the object are set alight. Save versus spells or suffer a disability, depending on the affected area(s) of the body. Hand or foot: unusable for 2d4 days. Body: severely weakened for 1d4 days (movement rate halved, unable to fight, cast spells, or perform any strenuous activity). Head: unconscious for 1d4 turns.
+- id: obscuring_mist
+  name: Obscuring Mist
+  level: 2
+  spell_lists: [druid]
+  source: "ose-advanced-fantasy"
+  range: "10' per level around the caster"
+  duration: "1 turn per level"
+  description: |-
+    A cloud of misty vapour emanates from the ground, filling an area centred on the caster.
+    
+    ▶Height: The mist is 10' high.
+    ▶Vision: The mist blocks normal vision and infravision. Creatures that can see invisible things can see faintly through the mist.
+    ▶The caster: Can see faintly through the mist.
+    ▶Strong winds: Reduce the spell's duration by three quarters.
+- id: produce_flame
+  name: Produce Flame
+  level: 2
+  spell_lists: [druid]
+  source: "ose-advanced-fantasy"
+  range: The caster
+  duration: "2 turns per level"
+  description: |-
+    A flame springs to life in the palm of the caster's hand.
+    
+    ▶The caster: Is unharmed by the flame.
+    ▶Light: The flame casts light that clearly illuminates a 30' radius.
+    ▶Touching objects: Flammable objects touched with the flame catch on fire.
+    ▶Control: During the spell's duration, the caster can make the flame disappear and reappear at will.
+    ▶Throwing the flame: The caster may drop the flame or throw it up to 30'. This ends the spell (though fires started by the magical flame may persist).
+- id: slow_poison
+  name: Slow Poison
+  level: 2
+  spell_lists: [druid]
+  source: "ose-advanced-fantasy"
+  range: The caster or a creature touched
+  duration: "1 hour per level"
+  description: |-
+    Poisons affecting the subject are dramatically slowed, giving the caster time to effect a full cure.
+    
+    ▶Poison effects: As long as the subject has more than 1 hit point, the slowed poison inflicts 1hp of damage per turn. If the subject is at 1hp, the poison inflicts no further damage.
+    ▶Characters killed by poison: Can be revived by this spell. Death must have occurred within one turn per level of the caster.
+    ▶Natural poisons: If the subject was poisoned by a natural plant or animal, the caster has a 10% chance per level of knowing a herbal antidote that will fully neutralize the poison. In the wilderness, gathering the herbs for the antidote takes one turn. In a settlement, the herbs may be available for purchase from a herbalist.
+    ▶When the duration ends: The full effects of the poison occur. If the subject was revived from death by this spell, they die once more.
+- id: warp_wood
+  name: Warp Wood
+  level: 2
+  spell_lists: [druid]
+  source: "ose-advanced-fantasy"
+  range: "240'"
+  duration: permanent
+  description: |-
+    Wooden objects of the caster's choice warp and become useless.
+    
+    ▶Common objects: One arrow-sized object is affected per level of the caster. A javelin, magic wand, or spear counts as two arrows; a bow, club, or staff counts as four.
+    ▶Objects of other shapes: (e.g. boards or planks) of roughly equivalent size may also be targeted.
+    
+    Magical objects: That are targeted have a chance of being unaffected:
+    
+    ▶Magic weapons and arms: Have a 10% chance of being unaffected per magical "plus". (e.g. a magical spear +2 has a 20% chance of being unaffected by warp wood.)
+    ▶Wielding: If the magical object is in the hands of a creature, the creature may also save versus spells to prevent the object being warped.
+- id: call_lightning
+  name: Call Lightning
+  level: 3
+  spell_lists: [druid]
+  source: "ose-advanced-fantasy"
+  range: "360'"
+  duration: "1 turn per level"
+  description: |-
+    The caster directs the violent energies of a storm, causing lightning to strike the ground at points of the caster's choice.
+    
+    ▶Storm clouds: Must be present in the sky above the point to be struck by lightning.
+    ▶Number of strikes: One lightning strike may be summoned per turn of the spell's duration.
+    ▶Area: A lightning strike affects a 10' radius area.
+    ▶Damage: All creatures in the area suffer 8d6 damage (save versus spells for half damage).
+    ▶If the storm dissipates: The spell ends prematurely.
+- id: growth_of_nature
+  name: Growth of Nature
+  level: 3
+  spell_lists: [druid]
+  source: "ose-advanced-fantasy"
+  range: "120'"
+  duration: "12 turns (animals) or permanent (plants)"
+  description: |-
+    This spell has two uses:
+    
+    1. Animal growth: Doubling the size of a normal, non-magical animal.
+    2. Plant growth: Causing vigorous growth of normal vegetation.
+    
+    #### When used to affect an animal:
+    
+    ▶Strength: The animal's strength is doubled, along with the damage inflicted by its attacks and the amount of weight it can carry.
+    ▶Restrictions: This spell may be used on giant versions of normal animals, but intelligent animals and fantastic monsters are unaffected.
+    
+    #### When used to affect plants:
+    
+    ▶Area: Plants in an area within range of up to 3,000 square feet are affected. The area is selected by the caster (e.g. 150' × 20', 100' × 30', etc.).
+    ▶Passage: Plants in the affected area become thick and overgrown, entwining to form a thorny jungle that only very large creatures can force their way through.
+- id: hold_animal
+  name: Hold Animal
+  level: 3
+  spell_lists: [druid]
+  source: "ose-advanced-fantasy"
+  range: "180'"
+  duration: "1 turn per level"
+  description: |-
+    This spell causes one or more animals to be paralysed if they fail a saving throw versus spells.
+    
+    ▶Number of targets: Up to 1 Hit Die of animals per level of the caster may be targeted.
+    ▶Restrictions: Normal or giant animals may be affected. Fantastic creatures, intelligent animals, or magically conjured, controlled, or summoned animals cannot be affected.
+- id: protection_from_poison
+  name: Protection from Poison
+  level: 3
+  spell_lists: [druid]
+  source: "ose-advanced-fantasy"
+  range: The caster or a creature touched
+  duration: "1 turn per level"
+  description: |-
+    The subject gains a supernatural resistance to poisons.
+    
+    ▶Venoms and gases: Complete immunity is granted against venomous attacks of monsters (e.g. bites) and poisonous gases (including those conjured by magic).
+    ▶Breath attacks: The subject gains a +4 bonus to saving throws against poisonous breath weapons. (This does not include petrifying breath attacks.)
+    ▶Pre-existing poisons: Any poisons that are actively affecting the subject when protection from poison is cast are neutralized. A character who has died from poisoning can be revived if this spell is cast within ten rounds.
+- id: tree_shape
+  name: Tree Shape
+  level: 3
+  spell_lists: [druid]
+  source: "ose-advanced-fantasy"
+  range: The caster
+  duration: "6 turns +1 per level"
+  description: |-
+    The caster takes on the form of a living or dead tree.
+    
+    ▶Appearance: The tree form is completely realistic, even to very close inspection.
+    ▶Gear: All of the caster's clothing and equipment is also transformed.
+    ▶Perception: While in this form, the caster can perceive the surroundings with their normal senses.
+    ▶Cancelling: The caster may end the spell at will, returning to their normal form.
+- id: water_breathing
+  name: Water Breathing
+  level: 3
+  spell_lists: [druid]
+  source: "ose-advanced-fantasy"
+  range: "30'"
+  duration: "1 day"
+  description: |-
+    The subject can breathe water freely by means of this spell.
+    
+    ▶Breathing air: The spell does not affect the subject's ability to breathe air.
+    ▶Swimming: No additional proficiency at swimming is granted.
+    
+    #### Reversed: Air Breathing
+    
+    An aquatic subject can breathe air freely. The spell does not affect the subject's ability to breathe water and grants no additional ability to move on land.
+  reversible: true
+  reverse_name: Air Breathing
+- id: druid_cure_serious_wounds
+  name: Cure Serious Wounds
+  level: 4
+  spell_lists: [druid]
+  source: "ose-advanced-fantasy"
+  range: The caster or a creature touched
+  duration: instant
+  description: |-
+    The caster's touch heals 2d6+2 hit points of damage in one living subject. This cannot grant more hit points than the subject's normal maximum.
+    
+    #### Reversed: Cause Serious Wounds
+    
+    Inflicts 2d6+2 hit points of damage to a touched creature. In combat, a melee attack roll is required.
+  reversible: true
+  reverse_name: Cause Serious Wounds
+- id: druid_dispel_magic
+  name: Dispel Magic
+  level: 4
+  spell_lists: [druid]
+  source: "ose-advanced-fantasy"
+  range: "120'"
+  duration: instant
+  description: |-
+    Dispel magic ends spells of non-instantaneous duration within a 20' cube area.
+    
+    ▶Caster levels: If the level of the caster of the effect to be dispelled is higher than the level of the caster of dispel magic, there is a 5% chance per level difference that the attempt to dispel will fail.
+    ▶Magic items: Are unaffected.
+- id: protection_from_fire_and_lightning
+  name: Protection from Fire and Lightning
+  level: 4
+  spell_lists: [druid]
+  source: "ose-advanced-fantasy"
+  range: The caster or a creature touched
+  duration: "1 turn per level"
+  description: |-
+    The subject is granted immunity to a certain amount of either electrical or fire damage.
+    
+    ▶Fire or lightning: Upon casting the spell, the caster must choose the type of energy the subject is protected from.
+    ▶Damage negation: The subject gains protection against 6 hit points of damage of the chosen type per level.
+    ▶Ending: When all of the hit points of protection are used up, the spell ends.
+- id: druid_speak_with_plants
+  name: Speak with Plants
+  level: 4
+  spell_lists: [druid]
+  source: "ose-advanced-fantasy"
+  range: "30'"
+  duration: "3 turns"
+  description: |-
+    This spell has two uses:
+    
+    1. Normal plants: Communication with normal plants. The caster is able to ask questions and receive answers and may ask for simple favours. Plants may comply if the request is within their ability to understand and perform. For example, densely overgrown plants may clear a passageway through which the caster and party may travel.
+    2. Monstrous plants: Communication with plant-like or plant-based monsters.
+- id: summon_animals
+  name: Summon Animals
+  level: 4
+  spell_lists: [druid]
+  source: "ose-advanced-fantasy"
+  range: "360'"
+  duration: "3 turns"
+  description: |-
+    Normal animals within range are summoned to the caster's aid. The creatures that respond to the summons are determined as follows:
+    
+    ▶Restrictions: Insects, arachnids, and other "bugs" are not summoned. Magical creatures and those of greater than animal intelligence are not summoned.
+    ▶Targeted summons: The caster may choose to limit the summons to creatures of specific species, or to specific, known individuals.
+    ▶Number of animals: A number of animals of total Hit Dice equal to the caster's level will respond to the summons.
+    ▶Small animals: Normal, small animals (e.g. mice, sparrows, squirrels, etc.) are treated as one tenth of a HD, for this purpose.
+    
+    Summoned creatures: Behave as follows:
+    
+    ▶Arrival: They will come to the caster's location as fast as they can.
+    ▶Comprehension: They understand the caster's words while the spell lasts.
+    ▶Aid: They will aid the caster in whatever way they can.
+    ▶If the caster is being attacked: The summoned animals will attack the enemy, only fleeing if they fail a morale check.
+    ▶If the caster is not being attacked: Summoned animals will usually flee if harmed.
+    ▶Once an animal flees: The spell is broken for that animal.
+- id: temperature_control
+  name: Temperature Control
+  level: 4
+  spell_lists: [druid]
+  source: "ose-advanced-fantasy"
+  range: "10' around the caster"
+  duration: "1 turn per level"
+  description: |-
+    The caster can control the surrounding temperature in a limited radius.
+    
+    ▶Temperature range: The temperature may be raised or lowered up to the full, range of temperature variance in the natural world. (e.g. down to arctic cold or up to tropical heat.)
+    ▶Control: The caster can adjust the temperature at will while the spell lasts.
+- id: commune_with_nature
+  name: Commune with Nature
+  level: 5
+  spell_lists: [druid]
+  source: "ose-advanced-fantasy"
+  range: Half a mile per level
+  duration: "1 turn"
+  description: |-
+    The caster enters into a trance of communion with the natural world.
+    
+    ▶During the trance: Over 1 turn, one fact about the surrounding land is revealed to the caster per experience level.
+    ▶Facts: Knowledge of one of the following, in a certain direction: the terrain, bodies of water, plants, animals, minerals, or resident intelligent creatures.
+    ▶Restrictions: The spell has no effect if cast underground or in a non-natural environment.
+- id: control_weather
+  name: Control Weather
+  level: 5
+  spell_lists: [druid]
+  source: "ose-advanced-fantasy"
+  range: "240 yards around the caster"
+  duration: concentration
+  description: |-
+    By concentrating (no movement allowed), the caster causes one of the following conditions to manifest around them. This spell only functions outdoors.
+    
+    ▶Calm: Clears bad weather (though side-effects—e.g. mud after rain—remain.)
+    ▶Extreme heat: Dries up snow or mud (including transmute rock to mud). Creatures in the area move at half normal rate.
+    ▶Fog: Visibility drops to 20'. Creatures in the fog move at half their normal rate. At the referee's option, they may also have a chance of getting lost.
+    ▶High winds: Movement rates are halved. Missile fire and flight are impossible. High winds may be used to increase the sailing speed of ships by 50% if they travel with the wind. In sandy areas, may cause a sandstorm, reducing visibility to 20'.
+    ▶Rain: –2 penalty to missile attacks. Mud forms in 3 turns, halving movement rates.
+    ▶Snow: Visibility drops to 20'. Movement rates are halved. Bodies of water may freeze. After the snow thaws, mud remains and still impedes movement.
+    ▶Tornado: The caster can direct the tornado, which moves at 120' per round. The tornado can be directed to attack (see stats below). Ships caught in a tornado have a 75% chance of suffering 12 points of hull damage.
+    
+    #### Tornado
+    
+    A whirling column of air, 24' high and 6' across, that wreaks havoc for flying creatures and ships.
+    
+    AC 0 [19], HD 12* (54hp), Att 1 × blow (2d8), THAC0 10 [+9], MV 360' (120') flying, SV D6 W7 P8 B8 S10 (12), ML 10, AL Neutral, XP 1,900
+    
+    ▶Whirlwind: Creatures with less than 2HD swept aside (save versus death).
+    ▶Mundane damage immunity: Can only be harmed by magical attacks.
+    ▶Harm flying creatures: Inflict extra 1d8 damage.
+- id: pass_plant
+  name: Pass Plant
+  level: 5
+  spell_lists: [druid]
+  source: "ose-advanced-fantasy"
+  range: The caster
+  duration: instant
+  description: |-
+    The caster steps into a tree, then instantly steps out of a tree of the same species in another location. The trunks of both trees must be large enough for the caster to fit inside.
+    
+    Distance: The maximum distance between the two trees depends on their type:
+    
+    ▶Oak: 600 yards
+    ▶Ash, elm, linden, yew: 360 yards
+    ▶Other deciduous trees: 300 yards
+    ▶All other trees: 240 yards
+- id: protection_from_plants_and_animals
+  name: Protection from Plants and Animals
+  level: 5
+  spell_lists: [druid]
+  source: "ose-advanced-fantasy"
+  range: The caster
+  duration: "1 turn per level"
+  description: |-
+    An invisible barrier is conjured around the caster's person, preventing contact by either plants or animals.
+    
+    ▶Plants or animals: When this spell is cast, the caster must choose whether the barrier is effective against plants (including plant-like monsters) or animals (normal and giant-sized but excluding fantastic creatures or those of greater than animal intelligence).
+    ▶Range: The magical barrier extends merely an inch from the caster's body.
+    ▶Life-forms of the selected type: Cannot touch or physically attack the caster.
+    ▶Caster's attacks: The caster cannot touch or attack affected life-forms except by using spells.
+    ▶A barrier of protection from plants: May be used to clear a path through dense undergrowth. The path may then be used by others.
+- id: transmute_rock_to_mud
+  name: Transmute Rock to Mud
+  level: 5
+  spell_lists: [druid]
+  source: "ose-advanced-fantasy"
+  range: "120'"
+  duration: "3d6 days / Permanent (transmute mud to rock)"
+  description: |-
+    This spell turns up to 3,000 square feet of rock into 10' deep mud.
+    
+    ▶Movement: Any creatures passing through the mud have their movement rate reduced by 90%.
+    
+    #### Reversed: Transmute Mud to Rock
+    
+    Changes an area of mud—up to 3,000 square feet and up to 10' deep—into rock. This alteration is permanent.
+  reversible: true
+  reverse_name: Transmute Mud to Rock
+- id: wall_of_thorns
+  name: Wall of Thorns
+  level: 5
+  spell_lists: [druid]
+  source: "ose-advanced-fantasy"
+  range: "80'"
+  duration: "1 turn per level"
+  description: |-
+    A barrier of tough, thorny plants is conjured at a point of the caster's choosing.
+    
+    ▶Size: The wall can be any size up to 1,200 square feet and may be shaped in any manner and to any dimensions the caster desires. For example, it may be a straight wall or curved into a protective circle.
+    ▶Enveloping creatures: Any creatures standing in a spot where the wall is conjured suffer damage equal to 1d8 plus their AC score.
+    ▶Pushing through: Creatures may push through the wall, but suffer damage equal to 1d8 plus their AC score for every 10'.
+    ▶Ascending AC: If using the optional rule for Ascending Armour Class (see Ascending AC, p13), the damage inflicted by the thorns is 1d8 + (19 – AAC score).
+    ▶Hacking through the wall: Is possible and does not inflict damage on those breaking through. It takes 4 turns to chop through a 10' section.
+    ▶Fire: The wall is unharmed by normal fire, but magical fire will burn it away completely in 2 turns.

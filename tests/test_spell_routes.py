@@ -45,38 +45,38 @@ def _save_mu(client, spellbook=None, prepared=None, advanced=False):
 def test_sheet_learn_route(client):
     _save_mu(client, advanced=True)
     r = client.post("/character/mu/spells/learn",
-                    data={"class_id": "magic_user", "spell_id": "magic_missile"})
+                    data={"class_id": "magic_user", "spell_id": "magic_user_magic_missile"})
     assert r.status_code == 303
     spec = load_character("mu", client._characters_dir)
-    assert spec.classes[0].spellbook == ["magic_missile"]
+    assert spec.classes[0].spellbook == ["magic_user_magic_missile"]
 
 
 def test_sheet_prepare_and_unprepare(client):
-    _save_mu(client, spellbook=["magic_missile"])
+    _save_mu(client, spellbook=["magic_user_magic_missile"])
     client.post("/character/mu/spells/prepare",
-                data={"class_id": "magic_user", "spell_id": "magic_missile"})
-    assert load_character("mu", client._characters_dir).classes[0].prepared == ["magic_missile"]
+                data={"class_id": "magic_user", "spell_id": "magic_user_magic_missile"})
+    assert load_character("mu", client._characters_dir).classes[0].prepared == ["magic_user_magic_missile"]
     client.post("/character/mu/spells/unprepare",
-                data={"class_id": "magic_user", "spell_id": "magic_missile"})
+                data={"class_id": "magic_user", "spell_id": "magic_user_magic_missile"})
     assert load_character("mu", client._characters_dir).classes[0].prepared == []
 
 
 def test_sheet_prepare_over_cap_400(client):
-    _save_mu(client, spellbook=["magic_missile"], prepared=["magic_missile"])
+    _save_mu(client, spellbook=["magic_user_magic_missile"], prepared=["magic_user_magic_missile"])
     r = client.post("/character/mu/spells/prepare",
-                    data={"class_id": "magic_user", "spell_id": "magic_missile"})
+                    data={"class_id": "magic_user", "spell_id": "magic_user_magic_missile"})
     assert r.status_code == 400
 
 
 def test_sheet_forget_route(client):
-    _save_mu(client, spellbook=["magic_missile"])
+    _save_mu(client, spellbook=["magic_user_magic_missile"])
     client.post("/character/mu/spells/forget",
-                data={"class_id": "magic_user", "spell_id": "magic_missile"})
+                data={"class_id": "magic_user", "spell_id": "magic_user_magic_missile"})
     assert load_character("mu", client._characters_dir).classes[0].spellbook == []
 
 
 def test_sheet_renders_spells_section(client):
-    _save_mu(client, spellbook=["magic_missile"], prepared=["magic_missile"])
+    _save_mu(client, spellbook=["magic_user_magic_missile"], prepared=["magic_user_magic_missile"])
     r = client.get("/character/mu")
     assert r.status_code == 200
     assert "Magic Missile" in r.text
@@ -118,13 +118,13 @@ def test_wizard_arcane_requires_exact_count(client):
     assert r.status_code == 200 and "Magic Missile" in r.text
     bad = client.post(f"/wizard/{draft_id}/spells",
                       data={"class_id": "magic_user",
-                            "spell_magic_user": ["magic_missile", "sleep"]})
+                            "spell_magic_user": ["magic_user_magic_missile", "magic_user_sleep"]})
     assert bad.status_code == 400
     ok = client.post(f"/wizard/{draft_id}/spells",
-                     data={"class_id": "magic_user", "spell_magic_user": ["magic_missile"]})
+                     data={"class_id": "magic_user", "spell_magic_user": ["magic_user_magic_missile"]})
     assert ok.status_code == 303
     draft = load_draft(draft_id, client._drafts_dir)
-    assert draft["spellbooks"]["magic_user"] == ["magic_missile"]
+    assert draft["spellbooks"]["magic_user"] == ["magic_user_magic_missile"]
 
 
 def test_wizard_divine_autocompletes(client):
@@ -138,10 +138,10 @@ def test_wizard_divine_autocompletes(client):
 def test_wizard_finalize_persists_spellbook(client):
     draft_id = _start_caster_draft(client, "magic_user")
     client.post(f"/wizard/{draft_id}/spells",
-                data={"class_id": "magic_user", "spell_magic_user": ["magic_missile"]})
+                data={"class_id": "magic_user", "spell_magic_user": ["magic_user_magic_missile"]})
     client.get(f"/wizard/{draft_id}/equipment")
     client.post(f"/wizard/{draft_id}/equipment")
     r = client.post(f"/wizard/{draft_id}/finalize")
     char_id = r.headers["location"].rsplit("/", 1)[1]
     spec = load_character(char_id, client._characters_dir)
-    assert spec.classes[0].spellbook == ["magic_missile"]
+    assert spec.classes[0].spellbook == ["magic_user_magic_missile"]

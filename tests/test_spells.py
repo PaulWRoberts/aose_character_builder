@@ -69,7 +69,7 @@ def test_thorin_example_loads():
 def test_seed_spells_loaded_and_tagged():
     from aose.data.loader import GameData
     data = GameData.load(DATA_DIR)
-    rm = data.spells["read_magic"]
+    rm = data.spells["magic_user_read_magic"]
     assert rm.level == 1
     assert rm.spell_lists == ["magic_user"]
     # Druid L1 spells are tagged for the druid list only (RAW: no L1 spell is
@@ -144,20 +144,20 @@ def test_arcane_known_is_just_the_spellbook():
     from aose.data.loader import GameData
     from aose.engine import spells
     data = GameData.load(DATA_DIR)
-    e = ClassEntry(class_id="magic_user", level=1, spellbook=["magic_missile"])
+    e = ClassEntry(class_id="magic_user", level=1, spellbook=["magic_user_magic_missile"])
     cls = data.classes["magic_user"]
-    assert [s.id for s in spells.known_spells(e, cls, data)] == ["magic_missile"]
+    assert [s.id for s in spells.known_spells(e, cls, data)] == ["magic_user_magic_missile"]
 
 
 def test_learnable_excludes_known_and_off_level():
     from aose.data.loader import GameData
     from aose.engine import spells
     data = GameData.load(DATA_DIR)
-    e = ClassEntry(class_id="magic_user", level=1, spellbook=["magic_missile"])
+    e = ClassEntry(class_id="magic_user", level=1, spellbook=["magic_user_magic_missile"])
     cls = data.classes["magic_user"]
     ids = {s.id for s in spells.learnable_spells(e, cls, data)}
-    assert "magic_missile" not in ids
-    assert "read_magic" in ids
+    assert "magic_user_magic_missile" not in ids
+    assert "magic_user_read_magic" in ids
     assert all(s.level == 1 for s in spells.learnable_spells(e, cls, data))
 
 
@@ -180,8 +180,8 @@ def test_learn_adds_to_spellbook():
     data = GameData.load(DATA_DIR)
     e = ClassEntry(class_id="magic_user", level=1, spellbook=[])
     cls = data.classes["magic_user"]
-    e2 = spells.learn(e, cls, data, RuleSet(), "magic_missile")
-    assert e2.spellbook == ["magic_missile"]
+    e2 = spells.learn(e, cls, data, RuleSet(), "magic_user_magic_missile")
+    assert e2.spellbook == ["magic_user_magic_missile"]
     assert e.spellbook == []  # original untouched
 
 
@@ -199,12 +199,12 @@ def test_learn_standard_caps_at_memorizable():
     from aose.data.loader import GameData
     from aose.engine import spells
     data = GameData.load(DATA_DIR)
-    e = ClassEntry(class_id="magic_user", level=1, spellbook=["magic_missile"])
+    e = ClassEntry(class_id="magic_user", level=1, spellbook=["magic_user_magic_missile"])
     cls = data.classes["magic_user"]
     with pytest.raises(spells.SpellError):
-        spells.learn(e, cls, data, RuleSet(), "sleep")
-    e3 = spells.learn(e, cls, data, RuleSet(advanced_spell_books=True), "sleep")
-    assert set(e3.spellbook) == {"magic_missile", "sleep"}
+        spells.learn(e, cls, data, RuleSet(), "magic_user_sleep")
+    e3 = spells.learn(e, cls, data, RuleSet(advanced_spell_books=True), "magic_user_sleep")
+    assert set(e3.spellbook) == {"magic_user_magic_missile", "magic_user_sleep"}
 
 
 def test_learn_rejects_divine():
@@ -222,15 +222,15 @@ def test_learn_rejects_noncaster():
     data = GameData.load(DATA_DIR)
     e = ClassEntry(class_id="fighter", level=1)
     with pytest.raises(spells.SpellError):
-        spells.learn(e, data.classes["fighter"], data, RuleSet(), "magic_missile")
+        spells.learn(e, data.classes["fighter"], data, RuleSet(), "magic_user_magic_missile")
 
 
 def test_forget_removes():
     from aose.engine import spells
-    e = ClassEntry(class_id="magic_user", level=1, spellbook=["magic_missile", "sleep"])
-    e2 = spells.forget(e, "magic_missile")
-    assert e2.spellbook == ["sleep"]
-    assert e.spellbook == ["magic_missile", "sleep"]  # original untouched
+    e = ClassEntry(class_id="magic_user", level=1, spellbook=["magic_user_magic_missile", "magic_user_sleep"])
+    e2 = spells.forget(e, "magic_user_magic_missile")
+    assert e2.spellbook == ["magic_user_sleep"]
+    assert e.spellbook == ["magic_user_magic_missile", "magic_user_sleep"]  # original untouched
 
 
 def test_prepare_respects_known_and_slot_cap():
@@ -238,13 +238,13 @@ def test_prepare_respects_known_and_slot_cap():
     from aose.engine import spells
     data = GameData.load(DATA_DIR)
     cls = data.classes["magic_user"]
-    e = ClassEntry(class_id="magic_user", level=1, spellbook=["magic_missile"])
-    e2 = spells.prepare(e, cls, data, "magic_missile")
-    assert e2.prepared == ["magic_missile"]
+    e = ClassEntry(class_id="magic_user", level=1, spellbook=["magic_user_magic_missile"])
+    e2 = spells.prepare(e, cls, data, "magic_user_magic_missile")
+    assert e2.prepared == ["magic_user_magic_missile"]
     with pytest.raises(spells.SpellError):
-        spells.prepare(e2, cls, data, "magic_missile")   # exceeds the single slot
+        spells.prepare(e2, cls, data, "magic_user_magic_missile")   # exceeds the single slot
     with pytest.raises(spells.SpellError):
-        spells.prepare(e, cls, data, "sleep")            # not known
+        spells.prepare(e, cls, data, "magic_user_sleep")            # not known
 
 
 def test_prepare_divine_from_full_list():
@@ -268,17 +268,17 @@ def test_spells_view_arcane_shape():
     from aose.data.loader import GameData
     from aose.sheet.view import build_sheet
     data = GameData.load(DATA_DIR)
-    spec = _spec("magic_user", spellbook=["magic_missile"], prepared=["magic_missile"])
+    spec = _spec("magic_user", spellbook=["magic_user_magic_missile"], prepared=["magic_user_magic_missile"])
     sheet = build_sheet(spec, data)
     assert len(sheet.spells) == 1
     block = sheet.spells[0]
     assert block.caster_type == "arcane"
     assert block.can_learn is True
-    assert [s.id for s in block.known] == ["magic_missile"]
+    assert [s.id for s in block.known] == ["magic_user_magic_missile"]
     grp = block.prepared_groups[0]
     assert grp.level == 1 and grp.slots == 1
-    assert [s.id for s in grp.prepared] == ["magic_missile"]
-    assert any(s.id == "read_magic" for s in block.learnable)
+    assert [s.id for s in grp.prepared] == ["magic_user_magic_missile"]
+    assert any(s.id == "magic_user_read_magic" for s in block.learnable)
 
 
 def test_spells_view_divine_shape():

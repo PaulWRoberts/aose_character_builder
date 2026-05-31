@@ -1,0 +1,1418 @@
+- id: auditory_illusion
+  name: Auditory Illusion
+  level: 1
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: "240'"
+  duration: "3 turns"
+  description: |-
+    A sound of the caster's choosing is conjured, emanating from a point anywhere within range.
+    
+    ▶Motion: The sound may move as long as it remains within range.
+    
+    ▶Change: The sound may change and evolve over the course of the duration as the caster wishes.
+    
+    ▶Loudness: The loudness of the sound is limited by the caster's level: a maximum equivalent to approximately four humans shouting per experience level. (For example, a horde of rats is equal to 8 humans, a lion roaring is equal to 16 humans, a dragon roaring is equal to 24 or more humans.)
+- id: chromatic_orb
+  name: Chromatic Orb
+  level: 1
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: "60'"
+  duration: instant
+  description: |-
+    This spell conjures an orb of pure colour that shoots towards a visible target within range.
+    
+    ▶Colour: The caster may conjure an orb of one of the colours listed in the table opposite, depending on their experience level and the gems available.
+    
+    ▶Gemstone: The colour orb is created by refracting and amplifying the pure hue and intrinsic properties of a gemstone, which must be in the caster's possession. Casting chromatic orb does not cause the gemstone to be consumed.
+    
+    ▶Value: The gem to be used must be of a certain minimum value (indicated in the table opposite).
+    
+    ▶Hit: The orb hits unerringly, inflicting damage on the target and another effect that depends on its colour.
+    
+    #### Chromatic Orb Effects
+    
+    | Caster's Level | Gem (Value) | Colour of Orb | Damage | Effect |
+    |---|---|---|---|---|
+    | 1st or greater | Quartz (10gp) | Clear | 1d4 | Light |
+    | 2nd or greater | Ruby (50gp) | Red | 1d6 | Heat |
+    | 3rd or greater | Agate (100gp) | Orange | 1d8 | Fire |
+    | 4th or greater | Onyx (250gp) | Black | 1d10 | Blindness |
+    | 5th or greater | Emerald (500gp) | Green | 1d12 | Stench |
+    | 6th or greater | Magnetite (500gp) | Grey | 2d6 | Magnetism |
+    | 7th or greater | Sapphire (1,000gp) | Blue | 2d8 | Paralysis |
+    
+    #### Chromatic Orb Effects
+    
+    Light: If the target fails a saving throw versus spells, it is surrounded by light in a 15' radius for 1d4 rounds. In low light conditions, attacks against the target gain a +2 bonus. Any attempts at stealth or surprise on the target's part may be nullified.
+    
+    Heat: If the target fails a saving throw versus spells, it suffers a –2 penalty to attacks, saves, and AC for 1d4 rounds. The heat of the ruby orb may also be used to melt up to a cubic yard of ice.
+    
+    Fire: All flammable objects within 2' of the target are set alight. If the target fails a saving throw versus spells, flammable objects (e.g. clothing, hair, etc.) on its person are also set alight. This inflicts 1d3 damage for 1d4 rounds, unless the target spends a round extinguishing the flames.
+    
+    Blindness: The target is blinded for 1d4 rounds unless it saves versus spells. A blind creature cannot attack.
+    
+    Stench: A 5' radius cloud of stinking vapours erupts at the target's location. Creatures within the cloud (including the target) must save versus poison or be overcome with nausea—unable to act except to move at half movement rate. Once leaving the cloud, the nausea subsides after 1d4 rounds. The cloud disperses after 1 turn.
+    
+    Magnetism: The electrical energy of the orb strongly magnetizes any metal objects on the target (e.g. armour, weapons) unless a saving throw versus spells is made. The magnetic charge lasts for 1d4 rounds and causes metal objects to stick together. A target wearing metal armour suffers a –2 penalty to AC and is unable to attack with metal weapons.
+    
+    Paralysis: Unless a saving throw versus paralysis is made, the target is paralysed for 1d4 rounds.
+- id: colour_spray
+  name: Colour Spray
+  level: 1
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: "20' long cone, 20' wide at end"
+  duration: instant
+  description: |-
+    A flurry of clashing, rainbow-hued colours erupts from the caster's hand.
+    
+    ▶Targets: 1d6 creatures in the area of effect.
+    
+    The effect: Depends on the HD of each target, relative to the caster:
+    
+    ▶HD less than or equal to caster: Knocked unconscious for 2d4 rounds. (Creatures of 6HD or greater may save versus spells.)
+    
+    ▶HD up to 2 greater than caster: Save versus spells or be blinded for 1d4 rounds. A blind creature cannot attack.
+    
+    ▶HD 3 or more greater than caster: Save versus spells or be unable to move, attack, or make other actions for one round.
+    
+    Creatures that cannot see: Are unaffected by this spell.
+- id: dancing_lights
+  name: Dancing Lights
+  level: 1
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: "40' + 10' per level"
+  duration: "1 turn"
+  description: |-
+    Lights under the caster's control are conjured and may be directed to move anywhere within range. The caster may choose to conjure one of the following types of light:
+    
+    1. Torches: 1–4 lights that resemble torches or lanterns, casting the appropriate volume of light.
+    
+    2. Spheres: 1–4 glowing spheres, resembling will-o-the-wisps.
+    
+    3. Humanoid: A single, glowing, humanoid form.
+- id: detect_illusion
+  name: Detect Illusion
+  level: 1
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: The caster or a creature touched
+  duration: "3 turns"
+  description: |-
+    The subject can see through illusions within 10' per level of the caster. Invisible creatures or objects in the same range are also revealed.
+- id: glamour
+  name: Glamour
+  level: 1
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: The caster
+  duration: "2d6 rounds +2 per level"
+  description: |-
+    The caster is wrapped in an illusion, taking on the outward appearance of another humanoid. Two variants are possible, chosen as the spell is cast:
+    
+    1. Imagined form: The caster takes on a form which they imagine.
+    
+    2. Duplicate individual: The caster copies the form of a living individual whom they touch. An attack roll is required if the target is unwilling.
+    
+    Stipulations: The following apply:
+    
+    ▶Height: The illusionary form may be at most 1' taller or shorter than the caster's normal form.
+    
+    ▶Weight: Apparent weight may be altered in any way.
+    
+    ▶Gear: Clothing or items may be altered in any way.
+    
+    ▶Observers: If the spell is used to copy another's appearance, those familiar with the copied individual may save versus spells to detect the ruse.
+- id: hypnotism
+  name: Hypnotism
+  level: 1
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: "30'"
+  duration: "1 round +1 per level"
+  description: |-
+    The caster's gestures and droning syllables open the minds of one or more subjects within range to a hypnotic suggestion that is uttered as part of the spell casting.
+    
+    ▶Number of targets: Up to 1d6 creatures are affected. The number of creatures affected is determined after the suggestion is made.
+    
+    ▶Wording: The suggestion must take the form of a short phrase (at most one or two sentences) suggesting a course of action to the subjects.
+    
+    ▶Comprehension: A language that is understood by the subjects must be used.
+    
+    ▶Harmful suggestions: A suggested course of action that is obviously harmful to a subject causes the spell to automatically fail for that subject.
+    
+    ▶Saving throw: Each subject may save versus spells to resist the hypnotic suggestion. If the save fails, the subject will follow the caster's suggestion for up to the duration of the spell.
+    
+    ▶Reasonable suggestions: A suggestion that is worded in such a way to make it sound very reasonable incurs a –2 penalty to the saving throw.
+    
+    Restrictions: Undead are not affected by hypnotism.
+- id: illusionist_light
+  name: Light
+  level: 1
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: "120'"
+  duration: "6 turns +1 per level"
+  description: |-
+    This spell has three usages:
+    
+    1. Conjuring light: In a 15' radius. The magical light is sufficient for reading, but is not as bright as daylight. The spell may be cast upon an object, in which case the light moves with the object.
+    
+    2. Blinding a creature: By casting the spell upon its eyes. If the target fails a saving throw versus spells, it is blinded for the duration. A blind creature cannot attack.
+    
+    3. Cancelling darkness: Light may cancel a darkness spell (see below).
+    
+    #### Reversed: Darkness
+    
+    Creates a 15' radius area of magical blackness, preventing normal sight (but not infravision). Like light, it may alternatively be used to blind creatures or to dispel a light spell.
+  reversible: true
+  reverse_name: Darkness
+- id: phantasmal_force
+  name: Phantasmal Force
+  level: 1
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: "240'"
+  duration: concentration
+  description: |-
+    A visual illusion of the caster's choosing manifests in a 20' cube area. Three types of illusions may be created:
+    
+    1. An illusionary monster: That can be directed to attack. The monster has AC 9 [10] and vanishes if hit in combat.
+    
+    2. An illusionary attack: For example, an avalanche, a falling ceiling, a magic missile, etc. Targets who save versus spells are unaffected.
+    
+    3. A scene: Either changing the appearance of the affected area or creating the appearance of something new. The scene disappears if touched.
+    
+    Stipulations: The following apply:
+    
+    ▶Concentration: Is required to maintain the illusion. If the caster moves or loses concentration, the spell ends.
+    
+    ▶Illusionary monsters or attacks: May appear to be harmful but never inflict real damage. A character who appears to die actually falls unconscious, a character turned to stone will actually be paralysed, and so on. Such effects last for 1d4 turns.
+    
+    ▶Illusions from imagination: If the illusion is of something the caster has not personally seen, the referee should grant targets a bonus to any applicable saving throws.
+- id: illusionist_read_magic
+  name: Read Magic
+  level: 1
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: The caster
+  duration: "1 turn"
+  description: |-
+    By means of read magic, the caster can decipher magical inscriptions or runes as follows:
+    
+    ▶Scrolls: The magical script of a scroll of arcane spells can be understood. The caster is then able to activate the scroll at any time in the future.
+    
+    ▶Spell books: A spell book written by another arcane spell caster can be deciphered.
+    
+    ▶Inscriptions: Runes or magical words inscribed on an object or surface can be understood.
+    
+    ▶Reading again: Once the caster has read a magical inscription using read magic, they are thereafter able to read that particular writing without recourse to the use of this spell.
+- id: spook
+  name: Spook
+  level: 1
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: "10'"
+  duration: Until broken (see below)
+  description: |-
+    The caster gestures threateningly at an intelligent target within range.
+    
+    ▶Saving throw: The target may save versus spells to avoid coming under the spell's effect.
+    
+    ▶An afflicted target: Perceives the caster as a monster from its worst nightmares and will flee from the caster at maximum speed.
+    
+    ▶Breaking the spell: The target may make a new save versus spells each round with success indicating that the spell is broken. Until the spell is broken, the target believes it is being pursued by the imagined horror.
+    
+    Restrictions: Undead and creatures of less than animal intelligence are not affected.
+- id: wall_of_fog
+  name: Wall of Fog
+  level: 1
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: "60'"
+  duration: "1 turn"
+  description: |-
+    A wall of roiling vapour is conjured at a location of the caster's choosing within range.
+    
+    ▶Area: The fog fills a 10' cube area per level of the caster.
+    
+    ▶Vision: The fog blocks normal vision and infravision.
+    
+    ▶Strong winds: Can clear the fog before the spell's duration has expired.
+- id: blindness_deafness
+  name: Blindness / Deafness
+  level: 2
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: "30'"
+  duration: permanent
+  description: |-
+    A single creature is afflicted by a phantasm which nullifies either its visual or aural sensory input (as selected by the caster), rendering it blind or deaf.
+    
+    ▶Saving throw: The target may save versus spells to avoid the phantasm.
+    
+    ▶Removing: As the blindness or deafness caused by this spell is illusory, it cannot be removed by magic that cures disease. The affliction may be removed by spells that dispel magic or illusions.
+    
+    ▶Cancelling: The caster may cancel the spell's effect at will.
+- id: blur
+  name: Blur
+  level: 2
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: The caster
+  duration: "1 turn"
+  description: |-
+    The caster's form becomes blurry and wavering.
+    
+    ▶Attack penalties: Creatures attacking the caster suffer a –4 penalty to hit. This penalty is reduced to –2 on a creature's second or subsequent attempts to hit the caster.
+    
+    ▶Save bonus: The caster gains a +1 bonus to saving throws against magic that directly targets them.
+- id: illusionist_detect_magic
+  name: Detect Magic
+  level: 2
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: "60'"
+  duration: "2 turns"
+  description: |-
+    Enchanted objects, areas, or creatures are caused to glow. Both permanent and temporary enchantments are revealed.
+- id: false_aura
+  name: False Aura
+  level: 2
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: "30'"
+  duration: "1 turn"
+  description: |-
+    The aura of a creature or object is veiled.
+    
+    ▶Detection spells: (e.g. detect magic, detect evil) are deflected, revealing another creature or object nearby.
+    
+    ▶Divination spells: (e.g. know alignment) cast upon the subject reveal the opposite to the truth.
+- id: fascinate
+  name: Fascinate
+  level: 2
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: "30'"
+  duration: See below
+  description: |-
+    This spell causes a single creature to perceive the caster—whatever their normal appearance—as utterly captivating.
+    
+    ▶Restrictions: Creatures of less than animal intelligence are not affected.
+    
+    ▶Saving throw: The subject may save versus spells to avoid the effect.
+    
+    Affected subjects: Behave as follows:
+    
+    ▶Besotted: The subject follows the caster wherever they go, as if besotted, unless doing so would present a serious danger.
+    
+    ▶Obedience: If the caster can communicate with the subject (even if only by gestures), it may obey requests. Each time a request is made of the subject, the caster must make a CHA check (possibly penalised, if the request is against the nature or best interests of the subject). If the check fails, the spell is broken and the target's perception of the caster becomes one of horror, rage, and hate.
+    
+    ▶Animals: An animal remains fascinated for 1d4 days, after which it may either attack the caster (if it has been mistreated) or simply leave. If the caster treated the animal well, there is a percentage chance equal to the caster's CHA that the animal will henceforth remain by the character's side of its own free will.
+- id: hypnotic_pattern
+  name: Hypnotic Pattern
+  level: 2
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: "30' square around the caster"
+  duration: concentration
+  description: |-
+    A pattern of twisting, interweaving colours fills the air in a 30' × 30' area centred on the caster.
+    
+    ▶Creatures that see the pattern: Must save versus spells or become hypnotised as long as they are able to watch the pattern.
+    
+    ▶Number of creatures affected: Up to 24HD of creatures may be hypnotised.
+    
+    ▶Hypnotised creatures: Simply stand still, gazing at the pattern of colours.
+    
+    ▶If a hypnotised creature is harmed: The pattern ceases to enthral it and it may act next round.
+    
+    Concentration: The caster can maintain the pattern indefinitely as long as they concentrate on the spell and remain stationary.
+- id: improved_phantasmal_force
+  name: Improved Phantasmal Force
+  level: 2
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: "240'"
+  duration: concentration
+  description: |-
+    An illusion of the caster's choosing—including minor sounds (though not speech)—manifests in a 20' cube area.
+    
+    Three types of illusions may be created:
+    
+    1. An illusionary monster: That can be directed to attack. The monster has an Armour Class of 7 [12] and will vanish if hit in combat.
+    
+    2. An illusionary attack: For example, an avalanche, a falling ceiling, a magic missile, etc. Targets who save versus spells are unaffected.
+    
+    3. A scene: Either changing the appearance of the affected area or creating the appearance of something new. The scene disappears if touched.
+    
+    Stipulations: The following apply:
+    
+    ▶Concentration: Is required to maintain the illusion. If the caster moves at faster than half speed or loses concentration, the spell ends.
+    
+    ▶Persistence: Even when the caster stops concentrating on the spell, the illusion persists for two further rounds.
+    
+    ▶Illusionary monsters or attacks: May appear to be harmful but never inflict real damage. A character who appears to die actually falls unconscious, a character turned to stone will actually be paralysed, and so on. Such effects last for 1d4 turns.
+    
+    ▶Illusions from imagination: If the illusion is of something the caster has not personally seen, the referee should grant targets a bonus to any applicable saving throws.
+- id: invisibility
+  name: Invisibility
+  level: 2
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: "240'"
+  duration: "permanent (but may be broken, see below)"
+  description: |-
+    The caster or another creature or object within range becomes invisible:
+    
+    ▶If cast on a creature: Any gear the subject is carrying is also rendered invisible (this includes clothing and armour). Items dropped or put down by an invisible creature become visible. If the subject attacks or casts a spell, the invisibility is broken, ending the spell.
+    
+    ▶If cast on an object: The invisibility is permanent.
+    
+    ▶Light sources: If a light source is made invisible (either as part of a creature's gear or as an individual object), the light it casts remains visible.
+- id: magic_mouth
+  name: Magic Mouth
+  level: 2
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: Touch
+  duration: permanent until triggered
+  description: |-
+    The caster imbues an inanimate object with a message that is to be spoken out loud by a magical mouth when a certain trigger condition occurs.
+    
+    ▶The message: Must be in a language the caster speaks and may consist of up to 25 words.
+    
+    ▶The trigger condition: May be as broad or as specific as the caster wishes. It may include conditions on the enchanted object being touched or on the presence of creatures within 30' of the object. The trigger condition may only take visual appearances into account (e.g. it cannot discern the alignment, class, level, etc. of creatures who pass by).
+    
+    ▶Once triggered: The mouth appears, animates, and speaks the predetermined message. The enchantment then ends.
+    
+    ▶Casting spells: The triggered message cannot cast spells.
+- id: mirror_image
+  name: Mirror Image
+  level: 2
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: The caster
+  duration: "6 turns"
+  description: |-
+    1d4 illusory duplicates of the caster appear.
+    
+    ▶Behaviour: The mirror images look and behave exactly as the caster.
+    
+    ▶Attacks on the caster: Destroy one of the mirror images (even if the attack misses).
+- id: quasimorph
+  name: Quasimorph
+  level: 2
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: The caster
+  duration: "3d4 rounds +2 per level"
+  description: |-
+    The caster's physical form undergoes a quasi-real transformation, taking on the appearance of another creature.
+    
+    ▶The new form: Is chosen by the caster. The form of any creature may be adopted.
+    
+    ▶Size: The new form may be at most 50% larger or smaller than the caster's normal size.
+    
+    The physical capabilities of the new form: Are granted to the caster to a limited degree:
+    
+    ▶Flight: If the new form can fly, the caster is able to fly at one-quarter of its flying movement rate.
+    
+    ▶Breathing: If the new form can breathe underwater, the caster may also do so.
+    
+    ▶Attacks: When attacking, the caster may appear to use the attacks of the new form but cannot make more attack rolls or inflict more damage than they are normally able to (using whatever weapon is carried).
+    
+    ▶Special abilities: The caster does not gain any special or magical attacks possessed by the new form (e.g. breath weapons, poison, charm, etc.).
+- id: whispering_wind
+  name: Whispering Wind
+  level: 2
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: "1 mile per level"
+  duration: special
+  description: |-
+    This spell allows the caster to send a message or other, non-verbal sound via the wind to a distant location within range.
+    
+    ▶The destination: Must be known to the caster.
+    
+    ▶The message: Up to 100 words or one minute of non-verbal sound.
+    
+    ▶Rate: The message travels on the wind, unnoticed, at one mile per turn.
+    
+    ▶Delivery: On reaching the designated destination, the wind delivers the caster's message. The message is whisper quiet, relayed by the susurrations of the air, but can be heard by all within 30'. The message is delivered at the location whether or not anyone is present to hear it.
+- id: blacklight
+  name: Blacklight
+  level: 3
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: "60'"
+  duration: "1 turn per level"
+  description: |-
+    Twisting the nature of light and darkness, this spell creates a 30' diameter area of illumination which cannot be perceived outside of this area.
+    
+    ▶Stealth: It is thus possible for those within the area of blacklight to see in utter darkness while not revealing their own presence.
+    
+    ▶Area: The caster may cause the area of blacklight to manifest either in a designated area within range or about their own person. (In the latter case, the magical effect moves with the caster.)
+    
+    ▶Magical darkness: The illumination created by blacklight does not penetrate magical darkness.
+- id: dispel_illusion
+  name: Dispel Illusion
+  level: 3
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: "10' per level"
+  duration: instant
+  description: |-
+    Dispel illusion ends ongoing illusions or phantasms (i.e. those with a non-instantaneous duration) within a 20' cube area.
+    
+    ▶Spells cast by a non-illusionist: Are automatically dispelled.
+    
+    ▶Spells cast by another illusionist: Have a chance of not being dispelled. If the level of the caster of the effect to be dispelled is higher than the level of the caster of dispel illusion, there is a 5% chance per level difference that the attempt to dispel will fail.
+    
+    ▶Magic items: Are unaffected.
+- id: fear
+  name: Fear
+  level: 3
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: "60' cone, 30' wide at end"
+  duration: instant
+  description: |-
+    Conjures a cone of magical energy that terrifies those within it.
+    
+    ▶Effect: Creatures in the cone are struck with terror and will flee from the caster at maximum speed for one round per level of the caster. (A save versus spells negates the effect).
+    
+    ▶Dropping items: Affected creatures have a 60% chance of immediately dropping anything in their hands. The chance is decreased by 5% for each level or Hit Die above 1.
+- id: hallucinatory_terrain
+  name: Hallucinatory Terrain
+  level: 3
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: "240'"
+  duration: Until touched
+  description: |-
+    Hallucinatory terrain either conjures an illusory terrain feature (e.g. a hill, wood, marsh, etc.) or hides an existing terrain feature.
+    
+    ▶Area: The illusion must fit completely within the spell's range.
+    
+    ▶Touching: If the illusion is touched by an intelligent being, the spell is negated.
+- id: invisibility_10_radius
+  name: "Invisibility 10' Radius"
+  level: 3
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: "120'"
+  duration: "permanent (but may be broken, see below)"
+  description: |-
+    A selected creature and all creatures within 10' of it become invisible:
+    
+    ▶Area: The 10' radius area of the spell's effect moves with the chosen creature.
+    
+    ▶Exiting the area: Subjects that move more than 10' away from the chosen creature become visible.
+    
+    ▶Entering the area: Creatures that move into the area after the spell is cast do not become invisible.
+    
+    ▶Gear: Any gear a subject is carrying is also rendered invisible. Items dropped or put down by an invisible creature become visible. Carried light sources become invisible but the emitted light does not.
+    
+    ▶Breaking the invisibility: If a subject attacks or casts a spell, the invisibility is broken for that subject.
+- id: nondetection
+  name: Nondetection
+  level: 3
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: The caster
+  duration: "1 turn per level"
+  description: |-
+    While this spell lasts, the caster is invisible to all forms of magical location, scrying, and divination, including effects such as clairvoyance, clairaudience, and ESP.
+- id: paralysation
+  name: Paralysation
+  level: 3
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: "10' per level"
+  duration: "6 turns or until cancelled"
+  description: |-
+    A number of creatures within a 20' cube area are afflicted with the terrifying phantasm of being unable to move.
+    
+    ▶Number of creatures affected: Up to 2HD of creatures per level of the caster.
+    
+    ▶Priority: Creatures with the lowest HD are affected first.
+    
+    ▶Saving throw: Each target may save versus spells to resist the phantasm.
+    
+    ▶Mindless creatures: Are unaffected.
+    
+    ▶Cancelling: The caster may cancel the phantasm at will.
+- id: phantom_steed
+  name: Phantom Steed
+  level: 3
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: "10'"
+  duration: "6 turns per level"
+  description: |-
+    A quasi-real, shadowy, horse-like creature is conjured by this spell to carry the caster (or another, designated person) upon its back.
+    
+    ▶Appearance: The steed is deep black in colour and has ghostly hooves that make no sound as it runs.
+    
+    ▶Loads: The steed refuses to carry any load beyond that of the rider and their possessions.
+    
+    ▶Stats: The steed has 12 hit points, AC 8 [11], and a movement rate of 30' (10') per level of the caster.
+    
+    ▶If the steed is killed: It evaporates into smoke.
+    
+    Special abilities: The phantom steed gains additional abilities, depending on the level of the caster:
+    
+    ▶8th level: The steed is unhindered by unstable ground (e.g. mud or bog).
+    
+    ▶10th level: The steed may walk across water.
+    
+    ▶12th level: The steed may walk upon air and is thus able to cross chasms and pits.
+    
+    ▶14th level: The steed can fly.
+- id: rope_trick
+  name: Rope Trick
+  level: 3
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: Touch
+  duration: "2 turns per level"
+  description: |-
+    A rope is enchanted to rise up into the air, enabling the caster and others to climb it and disappear into an imaginary space.
+    
+    ▶The rope: Rises up to its full length (or at most 30') and hangs stiffly in the air, magically tethered at the upper end.
+    
+    ▶Climbing the rope: The rope may be climbed normally.
+    
+    ▶Imaginary space: Human-sized (or smaller) creatures that climb to the top of the rope disappear into the imaginary space beyond.
+    
+    ▶Capacity: The imaginary space can hold up to six individuals.
+    
+    ▶Hidden: Creatures inside the imaginary space cannot be perceived or affected in any way by those on the outside, in real space.
+    
+    ▶Pulling up the rope: The rope may be pulled up into the imaginary space, also disappearing.
+    
+    When the spell's duration ends: The rope falls slack, the imaginary space disappears, and anyone inside the imaginary space reappears in mid air.
+- id: spectral_force
+  name: Spectral Force
+  level: 3
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: "240'"
+  duration: concentration
+  description: |-
+    An illusion of the caster's choosing—including sounds, smells, and thermal elements—manifests in a 20' cube area.
+    
+    Three types of illusions may be created:
+    
+    1. An illusionary monster: That can be directed to attack. The monster has AC 5 [14] and vanishes if hit in combat.
+    
+    2. An illusionary attack: For example, an avalanche, a falling ceiling, a magic missile, etc. Targets who save versus spells are unaffected.
+    
+    3. A scene: Either changing the appearance of the affected area or creating the appearance of something new. The scene disappears if touched.
+    
+    Stipulations: The following apply:
+    
+    ▶Concentration: Is required to maintain the illusion. If the caster moves at faster than half speed or loses concentration, the spell ends.
+    
+    ▶Persistence: Even when the caster stops concentrating on the spell, the illusion persists for three further rounds.
+    
+    ▶Illusionary monsters or attacks: May appear to be harmful but never inflict real damage. A character who appears to die actually falls unconscious, a character turned to stone will actually be paralysed, and so on. Such effects last for 1d4 turns.
+    
+    ▶Illusions from imagination: If the illusion is of something the caster has not personally seen, the referee should grant targets a bonus to any applicable saving throws.
+- id: suggestion
+  name: Suggestion
+  level: 3
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: "30'"
+  duration: "4 turns +4 per level"
+  description: |-
+    The caster utters a suggestion to influence the behaviour of a selected subject.
+    
+    ▶Wording: The suggestion must take the form of a short phrase (at most one or two sentences) suggesting a course of action to the subject.
+    
+    ▶Comprehension: A language that is understood by the subject must be used.
+    
+    ▶Harmful suggestions: Suggestions that are obviously harmful to the subject cause the spell to automatically fail.
+    
+    ▶Saving throw: A save versus spells is allowed to resist the suggestion. If the save fails, the subject will follow the caster's suggestion for up to the duration.
+    
+    ▶Reasonable suggestions: A suggestion that is worded in such a way to make it sound very reasonable incurs a –2 penalty to the saving throw.
+    
+    Restrictions: Undead are unaffected.
+- id: wraithform
+  name: Wraithform
+  level: 3
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: The caster
+  duration: "1 turn"
+  description: |-
+    The caster's person—along with everything worn or carried—becomes shadowy and semi-ethereal.
+    
+    ▶Movement: The caster is able to pass through small holes and cracks.
+    
+    ▶Actions: The caster may cast spells but may only attack incorporeal creatures.
+    
+    ▶Invulnerability: Only ethereal creatures or magic may harm the caster.
+    
+    ▶Pass undead: Undead will ignore the caster, believing them to be a phantom of some kind. Undead of 10 or more HD may save versus spells (at a –4 penalty) to notice the illusion.
+    
+    ▶Cancelling: The caster may end the spell at will, returning to normal.
+- id: confusion
+  name: Confusion
+  level: 4
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: "120'"
+  duration: "12 rounds"
+  description: |-
+    This spell causes 3d6 subjects within 60' of one another to become confused, making them unable to independently determine what they will do.
+    
+    ▶Subjects of 2+1 HD or greater: May save versus spells each round to resist the spell's effect, acting with free will that round if they make the save.
+    
+    ▶Subjects of 2 HD or lower: May not make a saving throw.
+    
+    ▶Behaviour: Roll on the following table separately for each affected subject each round to determine how that subject acts that round:
+    
+    #### Confusion: Subject Behaviour
+    
+    | 2d6 | Behaviour |
+    |---|---|
+    | 2–5 | Attack caster's group |
+    | 6–8 | No action |
+    | 9–12 | Attack subject's group |
+- id: illusionist_dispel_magic
+  name: Dispel Magic
+  level: 4
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: "120'"
+  duration: instant
+  description: |-
+    Dispel magic ends spells of non-instantaneous duration within a 20' cube area.
+    
+    ▶Caster levels: If the level of the caster of the effect to be dispelled is higher than the level of the caster of dispel magic, there is a 5% chance per level difference that the attempt to dispel will fail.
+    
+    ▶Magic items: Are unaffected.
+- id: emotion
+  name: Emotion
+  level: 4
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: "10' per level"
+  duration: concentration
+  description: |-
+    All creatures in a 40' square area within range must save versus spells or be afflicted by an emotion of the caster's choosing:
+    
+    ▶Fear: Subjects are struck with terror and will flee from the caster at maximum speed. Affected creatures have a 60% chance of immediately dropping anything in their hands. The chance is decreased by 5% for each level or Hit Die above 1. Fear counters ongoing rage effects.
+    
+    ▶Hate: Subjects gain a +2 bonus to attacks, damage, saving throws, and morale. Hate counters ongoing hopelessness effects.
+    
+    ▶Hopelessness: Subjects are utterly demoralised and will dejectedly follow enemies' orders (e.g. to surrender or leave). In combat, there is a 1-in-4 chance of a subject doing nothing each round, and a 1-in-4 chance of them retreating. Hopelessness counters ongoing hate effects.
+    
+    ▶Rage: Subjects go berserk, gaining a +1 bonus to hit and +3 to damage. Subjects fight without thought for their own lives and will not use shields. Subjects also gain 5 temporary hit points. These may take a subject above its normal maximum, but disappear when the spell ceases. Rage counters ongoing fear effects.
+    
+    Concentration: Is required to maintain the projected emotion. If the caster moves or loses concentration, the spell ends.
+- id: illusory_stamina
+  name: Illusory Stamina
+  level: 4
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: Touch
+  duration: "3 turns per level"
+  description: |-
+    Up to four persons touched by the caster are refreshed, some of their lost hit points being temporarily restored.
+    
+    ▶Bonus hit points: Each subject gains a number of bonus hit points equal to 50% of the number of hit points they are currently below maximum. For example, if the subject has a maximum of 30 hit points and a current total of 12 hit points, they gain 9 bonus hit points (50% of 18).
+    
+    ▶Any damage suffered: Is subtracted first from the bonus hit points.
+    
+    ▶When the duration ends: If any of the bonus hit points remain, they disappear.
+- id: improved_invisibility
+  name: Improved Invisibility
+  level: 4
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: The caster or a creature touched
+  duration: "4 rounds +1 per level"
+  description: |-
+    The caster or another creature touched becomes invisible:
+    
+    ▶Attacking: The subject may attack while invisible.
+    
+    ▶Being attacked: Opponents who are aware of the subject's presence (but who cannot see invisible) may detect a faint shimmering, allowing them to locate the subject. The subject gains a +4 bonus to AC and saving throws against attacks from such opponents.
+    
+    ▶Equipment: Any gear the subject is carrying is also rendered invisible (this includes clothing and armour). Items dropped or put down by an invisible creature become visible.
+    
+    ▶Light sources: If a light source is made invisible (as part of the subject's gear), the light it casts is unaffected.
+- id: massmorph
+  name: Massmorph
+  level: 4
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: "240'"
+  duration: permanent
+  description: |-
+    A force of human-sized creatures within a 240' diameter area is veiled by illusion to appear as a copse of trees or orchard.
+    
+    ▶Moving through: Once the illusion is in place, even creatures moving among the veiled subjects are deceived.
+    
+    ▶Subjects who leave the affected area: Cease to be veiled.
+    
+    ▶Dismissing: The caster may dismiss the illusion in its entirety at any time.
+- id: minor_creation
+  name: Minor Creation
+  level: 4
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: Touch
+  duration: "6 turns per level"
+  description: |-
+    Over the course of one turn, the caster weaves a semi-real but tangible object from a tiny piece of constituent matter. For example, a semi-real rope could be formed from a strand of hemp fibre.
+    
+    ▶Non-living: Only objects of non-living vegetable matter may be created (e.g. fabric, rope, wood, etc.).
+    
+    ▶Size: The object may be no larger than one cubic foot per level of the caster.
+    
+    ▶Food: While it is possible to create food, its semi-real nature means that it provides no nourishment.
+    
+    ▶When the duration ends: The conjured item disappears. The piece of matter from which it was woven remains.
+- id: phantasmal_killer
+  name: Phantasmal Killer
+  level: 4
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: "5' per level"
+  duration: "1 round per level"
+  description: |-
+    The subconscious fears of a single target are manifest in its mind as a vision of the most horrible monstrosity it can imagine.
+    
+    ▶Saving throw: The subject may save versus spells with a +2 bonus to resist the phantasm.
+    
+    ▶Pursuit: The monster pursues the subject relentlessly and, as it only exists in the subject's mind, can move at any speed and pass through any obstacles.
+    
+    ▶Invulnerability: The monster is invulnerable to all of the subject's attacks.
+    
+    ▶Attacks: The monster attacks the subject once per round with a THAC0 of 16 [+3]. If one of the monster's attacks is successful, the subject dies of terror.
+    
+    ▶Cancelling: Killing or knocking out the caster ends the phantasm.
+    
+    Restrictions: Undead and creatures of less than animal intelligence are unaffected.
+- id: rainbow_pattern
+  name: Rainbow Pattern
+  level: 4
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: "30' square around the caster"
+  duration: concentration
+  description: |-
+    A band of twisting, interweaving, rainbow colours fills the air in a 30' × 30' area centred on the caster.
+    
+    ▶Creatures that see the pattern: Must save versus spells or become hypnotised as long as they are able to watch the pattern.
+    
+    ▶Number of creatures affected: A total of up to 24 Hit Dice of creatures may be hypnotised.
+    
+    ▶Hypnotised creatures: Simply stand still, gazing at the pattern of colours.
+    
+    ▶If a hypnotised creature is harmed: The pattern ceases to enthral it and it may act next round.
+    
+    Maintaining the pattern: The pattern can be maintained and directed as follows:
+    
+    ▶Concentration: The caster can maintain the pattern indefinitely, as long as they concentrate on the spell and remain stationary.
+    
+    ▶Releasing: The caster may optionally end concentration and direct the pattern to drift away in a specified direction. The pattern drifts at a rate of 30' per round and fades after 1d4 rounds. Hypnotised creatures will do their best to follow the pattern, but if they are led into a dangerous area, another saving throw versus spells is allowed to snap out of the trance.
+- id: shadow_monsters
+  name: Shadow Monsters
+  level: 4
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: "30'"
+  duration: "1 round per level"
+  description: |-
+    The caster conjures one or more semi-real monsters, woven from shadow-stuff.
+    
+    ▶Hit Dice: The monsters' total Hit Dice may not exceed the caster's level.
+    
+    ▶Type: All monsters must be of the same type.
+    
+    ▶Hit points: The monsters have 1d2 hit points per Hit Die (instead of the normal 1d8 hit points per Hit Die).
+    
+    ▶Control: The monsters are under the caster's control.
+    
+    Saving throw: Every creature viewing the shadow monsters may save versus spells:
+    
+    ▶If the save succeeds: The subject views the monsters as they truly are: vague, shifting forms of shadow. To this subject, the shadow monsters have AC 9 [10] and inflict one quarter of their normal damage (rounding down). This subject is unaffected by any special or magical attack forms of the monsters.
+    
+    ▶If the save fails: The subject perceives the monsters as real creatures of the chosen type. To this subject, the shadow monsters attack as normal and inflict normal damage. They may use any special or magical attack forms they possess, but attacks such as energy drain or petrification do not really occur—at worst, they might cause an opponent to fall unconscious or be paralysed for 1d4 turns.
+- id: solid_fog
+  name: Solid Fog
+  level: 4
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: "60'"
+  duration: "1 turn"
+  description: |-
+    A wall of roiling vapour appears at a location of the caster's choosing within range.
+    
+    ▶Area: The fog bank fills a 10' cube area per level of the caster.
+    
+    ▶Vision: The solid fog blocks normal vision and infravision.
+    
+    ▶Movement: Creatures moving through the fog move at one tenth of their normal movement rate.
+    
+    ▶Strong winds: Only very strong winds can clear the fog before the spell's duration has expired.
+    
+    ▶Magical fire: A large area of magical fire can dissipate the fog in one round.
+- id: veil_of_abandonment
+  name: Veil of Abandonment
+  level: 4
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: "10' per level"
+  duration: "1 turn per level"
+  description: |-
+    An area is cloaked with a combination of invisibility and illusion, making it seem vacant and neglected—covered in dust, cobwebs, and dirt, as if long abandoned.
+    
+    ▶Creatures: In the affected area when the spell is cast are not cloaked.
+    
+    ▶Inanimate objects: In the affected area are cloaked with invisibility and are veiled such that only direct contact will reveal their presence. Even then, an observer must make a saving throw versus spells to realise that the whole area is under the effects of an illusion: if the save fails, the observer believes that the detected object is merely invisible.
+    
+    ▶Creatures passing through the area: Believe that their passing makes footprints in the dust, breaks through cobwebs, etc.
+    
+    ▶Detection: Creatures that can detect invisible cannot see through this illusion.
+- id: chaos
+  name: Chaos
+  level: 5
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: "120'"
+  duration: "12 rounds"
+  description: |-
+    This spell causes all creatures in a 60' diameter area to become confused, making them unable to independently determine what they will do.
+    
+    ▶Saving throw: Subjects that can cast illusionist spells or that have innate powers of illusion may save versus spells to resist the spell's effect.
+    
+    ▶Behaviour: Roll on the following table separately for each affected subject each round to determine how that subject acts that round:
+    
+    #### Chaos: Subject Behaviour
+    
+    | 2d6 | Behaviour |
+    |---|---|
+    | 2–5 | Attack caster's group |
+    | 6–8 | No action |
+    | 9–12 | Attack subject's group |
+- id: demi_shadow_monsters
+  name: Demi-Shadow Monsters
+  level: 5
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: "30'"
+  duration: "1 round per level"
+  description: |-
+    The caster conjures one or more semi-real monsters, woven from shadow-stuff.
+    
+    ▶Hit Dice: The monsters' total Hit Dice may not exceed the caster's level.
+    
+    ▶Type: All monsters must be of the same type.
+    
+    ▶Hit points: The monsters have 1d4 hit points per Hit Die (instead of the normal 1d8 hit points per Hit Die).
+    
+    ▶Control: The monsters are under the caster's control.
+    
+    Saving throw: Every creature viewing the shadow monsters may save versus spells:
+    
+    ▶If the save succeeds: The subject views the monsters as they truly are: vague, shifting forms of shadow. To this subject, the shadow monsters have AC 9 [10] and inflict half of their normal damage (rounding down). This subject is unaffected by any special or magical attack forms of the monsters.
+    
+    ▶If the save fails: The subject perceives the monsters as real creatures of the chosen type. To this subject, the shadow monsters attack as normal and inflict normal damage. They may use any special or magical attack forms they possess, but attacks such as energy drain or petrification do not really occur—at worst, they might cause an opponent to fall unconscious or be paralysed for 1d4 turns.
+- id: illusion
+  name: Illusion
+  level: 5
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: "240'"
+  duration: "1 round per level"
+  description: |-
+    An illusion of the caster's choosing—including sounds, smells, and thermal elements—manifests in a 20' cube area.
+    
+    Three types of illusions may be created:
+    
+    1. An illusionary monster: That can be directed to attack. The monster has AC 5 [14]. If it is hit in combat, the attacker may save versus spells. If the save succeeds, the attacker realises the illusory nature of the monster and can no longer be harmed by it.
+    
+    2. An illusionary attack: For example, an avalanche, a falling ceiling, a magic missile, etc. Targets who save versus spells are unaffected.
+    
+    3. A scene: Either changing the appearance of the affected area or creating the appearance of something new.
+    
+    Stipulations: The following apply:
+    
+    ▶Responsiveness: The illusion behaves and responds as decided by the caster when the spell is cast. No concentration is required to maintain the illusion.
+    
+    ▶Illusionary monsters or attacks: May appear to be harmful but never inflict real damage. A character who appears to die actually falls unconscious, a character turned to stone will actually be paralysed, and so on. Such effects last for 1d4 turns.
+    
+    ▶Illusions from imagination: If the illusion is of something the caster has not personally seen, the referee should grant targets a bonus to any applicable saving throws.
+- id: looking_glass
+  name: Looking Glass
+  level: 5
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: Touch
+  duration: "1 round per level"
+  description: |-
+    A finely wrought, silver mirror is enchanted to act as a scrying device, allowing the caster to fleetingly view any place or object that is brought to mind:
+    
+    ▶The clarity of the vision: Is dependent on the scryer's familiarity with the subject.
+    
+    ▶Casting spells: It is not possible to cast spells through the mirror into the viewed scene.
+    
+    Material cost: The mirror enchanted by this spell must be of at least 1,000gp value.
+- id: major_creation
+  name: Major Creation
+  level: 5
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: Touch
+  duration: "12 or 6 turns per level"
+  description: |-
+    Over the course of a turn, the caster weaves a semi-real but tangible object from a tiny piece of constituent matter. For example, a sword could be formed from a splinter of steel.
+    
+    ▶Non-living: Only objects of non-living vegetable or mineral matter may be created (e.g. fabric, rope, wood, metal, stone, etc.).
+    
+    ▶Size: The object may be no larger than one cubic foot per level of the caster.
+    
+    ▶Food: While it is possible to create food, its semi-real nature means that it provides no nourishment.
+    
+    ▶Duration: If objects of vegetable matter are created, the duration is 12 turns per level, otherwise it is 6 turns per level.
+    
+    ▶When the duration ends: The conjured item disappears. The piece of matter from which it was woven remains.
+- id: maze_of_mirrors
+  name: Maze of Mirrors
+  level: 5
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: "5' per level"
+  duration: "Varies by subject's INT"
+  description: |-
+    A single subject within range is transported into a shifting, extra-dimensional mirror maze.
+    
+    ▶Duration: The subject is trapped in the maze for a duration depending on its intelligence. See the table below.
+    
+    ▶Escaping the maze: Once the subject has found its way out of the maze, it reappears in the location it was transported from.
+    
+    #### Maze of Mirrors Duration
+    
+    | Subject's INT | Duration |
+    |---|---|
+    | Less than 3 | 2d4 turns |
+    | 3–5 | 1d4 turns |
+    | 6–8 | 5d4 rounds |
+    | 9–11 | 4d4 rounds |
+    | 12–14 | 3d4 rounds |
+    | 15–17 | 2d4 rounds |
+    | 18 or higher | 1d4 rounds |
+- id: projected_image
+  name: Projected Image
+  level: 5
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: "240'"
+  duration: "6 turns"
+  description: |-
+    An illusory duplicate of the caster appears within range.
+    
+    ▶Duplicate: The image is an exact duplicate of the caster that can only be differentiated by touch.
+    
+    ▶Subsequent spells cast: Appear to originate from the image. (Targets must still be visible to the caster, however.)
+    
+    ▶Spells and missiles: The image appears unaffected by spells or missile weapons.
+    
+    ▶Melee or touch: If the image is touched or hit in melee, it disappears.
+- id: seeming
+  name: Seeming
+  level: 5
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: "10'"
+  duration: "12 hours"
+  description: |-
+    This spell alters the outward appearance of one or more persons to that of another type of humanoid.
+    
+    ▶Number of subjects: Up to one subject per two levels of the caster may be affected.
+    
+    ▶The illusionary appearance: All subjects take on the appearance of the same type of creature (e.g. human, elf, goblin, etc.), but each remains a recognisable individual—they do not look like clones.
+    
+    ▶Size and weight: The illusionary appearance may be at most 1' taller or shorter than the subject. Apparent weight may be altered in any way.
+    
+    ▶Clothing or equipment: May be altered in any way.
+    
+    ▶Cloning: The spell cannot be used to precisely copy another's appearance.
+    
+    ▶Saving throw: Unwilling subjects may save versus spells to avoid being affected.
+- id: shadowcast
+  name: Shadowcast
+  level: 5
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: "30'"
+  duration: Up to 6 turns +1 per level
+  description: |-
+    The shadows cast by the light of a candle are enchanted, causing them to re-enact events which previously occurred in the area where the spell is cast.
+    
+    ▶Candle: The caster must light a candle and place it in the centre of the area to be affected, which must otherwise be in darkness. The candle burns down completely over the spell's duration.
+    
+    ▶Time span: The caster may choose to look back into the past up to six turns plus one turn per level.
+    
+    ▶Shadow play: Once the starting point for the shadow re-enactment has been selected, the spell lasts for that amount of time, producing a shadowy replay of the past up to the moment the spell was cast.
+    
+    ▶Silhouettes: Only silhouettes of past events in the area are produced; any sound or speech which occurred is not replicated.
+    
+    Enhancement: The power of the illusion may be enhanced by using a specially manufactured candle:
+    
+    ▶Special candle: The candle must be formed from the earwax of a giant monster (which must be obtained by adventuring) and be inlaid with fine runes in gold leaf (at a cost of 200gp).
+    
+    ▶Sound: If such a candle is used, the shadow play is also accompanied by sound, faintly reproduced in the sputtering of the candle's flame.
+- id: shadowy_transformation
+  name: Shadowy Transformation
+  level: 5
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: The caster or a creature or object touched
+  duration: "1d4 rounds +1 per level"
+  description: |-
+    An object or creature touched becomes shadowy and semi-ethereal.
+    
+    If an object is touched:
+    
+    ▶Insubstantial: The object becomes utterly insubstantial. It cannot be touched and provides no physical resistance. For example, a door transformed by this spell could be freely passed through.
+    
+    ▶Size: The object may be no larger than one cubic foot per level of the caster.
+    
+    ▶Magical objects: Magic items and objects created by spells (e.g. a wall of stone) cannot be targeted.
+    
+    If a creature is touched:
+    
+    ▶Insubstantial: The subject and everything it carries becomes insubstantial.
+    
+    ▶Movement: The subject is able to pass through small holes and cracks.
+    
+    ▶Invulnerability: Only ethereal creatures or magic may harm the subject.
+    
+    ▶Pass undead: Undead will ignore the subject, believing them to be a phantom of some kind. Undead of 10 or more HD may save versus spells (at a –4 penalty) to notice the illusion.
+    
+    ▶Saving throw: An unwilling subject may save versus spells to avoid the transformation.
+- id: time_flow
+  name: Time Flow
+  level: 5
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: "10'"
+  duration: "6 turns per level"
+  description: |-
+    This powerful spell warps the flow of time in the location where it is cast.
+    
+    ▶Time acceleration: For those within the area of effect, each turn that passes has the subjective effect of a whole hour. Within the affected area, spell durations pass more quickly and characters must eat and sleep at the accelerated rate.
+    
+    ▶Rest: If enough perceptual time is spent in the affected area, hit points may be recovered due to rest and spells may be re-memorized, subject to the normal rules.
+    
+    ▶Interaction: Any interaction between characters within the enchanted area and those outside of it occur at the normal rate—characters inside the area of time distortion do not gain or lose actions in combat, for instance.
+    
+    ▶Usage limit: Casting time flow more than once in the space of a week causes a permanent loss of one point of CON.
+- id: visitation
+  name: Visitation
+  level: 5
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: Unlimited
+  duration: "5 minutes"
+  description: |-
+    This spell sends an apparition to deliver a message to a named subject.
+    
+    ▶The apparition: Takes the form of a ghostly figure of sinister or beguiling aspect, as the caster wishes.
+    
+    ▶The message delivered: May be up to 5 minutes long.
+    
+    ▶Sympathetic item: The caster requires an item of close personal connection to the subject (e.g. a ring, commonly worn garment, lock of hair, etc.).
+    
+    ▶Saving throw: If the subject is unwilling, they may save versus spells to prevent the visitation.
+- id: acid_fog
+  name: Acid Fog
+  level: 6
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: "30'"
+  duration: "1d4 rounds +1 per level"
+  description: |-
+    A wall of roiling, acidic vapour appears at a location of the caster's choosing within range.
+    
+    ▶Area: The fog bank fills a 10' cube area per level of the caster.
+    
+    ▶Plant-life in the fog: Withers and dies. Small shrubs and grasses perish in two rounds, while large trees are more resilient and may take up to 16 rounds to finally blacken and die.
+    
+    ▶Creatures in the fog: Suffer 1 damage on the first round they are in the fog, 2 damage on the second round, 4 damage on the third round, and 8 damage on each subsequent round.
+    
+    ▶Vision: The acid fog blocks normal vision and infravision.
+    
+    ▶Movement: Creatures moving through the fog move at one tenth of their normal movement rate.
+    
+    ▶Strong winds: Only very strong winds can clear the fog before the spell's duration has expired.
+    
+    ▶Magical fire: A large area of magical fire can dissipate the fog in one round.
+- id: dream_quest
+  name: Dream Quest
+  level: 6
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: "60'"
+  duration: permanent until fulfilled
+  description: |-
+    The caster commands a single subject to perform a specific quest or task, conveyed through a recurring dream.
+    
+    ▶The dream: While the spell remains in effect, the subject experiences the recurring dream every time they sleep. In the recurring dream, the subject witnesses themselves completing the prescribed quest.
+    
+    ▶Examples of quests: Rescuing a prisoner, killing a specific monster, bringing a magic item to the caster, or going on a journey to an oracle.
+    
+    ▶Suicidal quests: The prescribed quest must not be obviously suicidal.
+    
+    ▶Saving throw: The subject may save versus spells, with success indicating that the initial dream is experienced but the spell has no further effect.
+    
+    ▶Refusal: The subject must undertake the quest or begin to fade from reality. Every day in which the subject does not pursue the quest, they lose 1 hit point. This damage cannot be fatal (e.g. if the subject has only 1 hit point, no further loss due to this spell will occur). However, accrued damage cannot be healed by any means except completing the quest.
+    
+    ▶Completion: Once the task is completed, the spell ends. Any lost hit points are recovered.
+- id: impersonation
+  name: Impersonation
+  level: 6
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: The caster or a person touched
+  duration: "1 turn per level"
+  description: |-
+    The subject takes on the appearance of a person of the caster's choosing.
+    
+    ▶Appearance: The subject becomes physically indistinguishable from the selected individual, becoming the same height, age, race, sex, etc.
+    
+    ▶Manner: Even the subject's gestures, voice, mode of speech, and mannerisms are rendered identical to those of the mimicked target.
+    
+    ▶Mind: The subject does not gain any of the memories, mental faculties, experiences, or abilities of the target.
+    
+    ▶Observers: Who know the mimicked target may save versus spells to detect the illusion if the subject does or says anything that the original would not.
+    
+    Sympathetic item: The caster must have a personal possession or bodily sample (e.g. drop of blood, lock of hair) of the target to be mimicked.
+- id: manifest_dream
+  name: Manifest Dream
+  level: 6
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: The caster
+  duration: Varies by manifestation (see examples below)
+  description: |-
+    This spell harnesses the malleable, imaginative potency of the dream world, manifesting the caster's wish.
+    
+    ▶Dreaming: After casting the spell, the caster must lie down and drift off to sleep while visualising the desired manifestation. The visualisation will then be taken up by the caster's subconscious and experienced as a potent dream.
+    
+    ▶Upon awakening: If the caster sleeps for an uninterrupted 8 hours, the desired manifestation comes to pass.
+    
+    Potency: While manifest dream can bring about a wide range of effects, its power is not unlimited. The following are examples of the maximum potency of the spell:
+    
+    ▶Healing: All of an individual's wounds.
+    
+    ▶Regeneration: Of a lost body part (e.g. a hand or foot).
+    
+    ▶Revelation: Of a route through the wilderness, a secret entrance into a fortress, or the location of a lost item. (As long as the sought location or object is not warded by magic.)
+    
+    ▶Divination: Of the approximate strength of enemy forces. (Creatures of 7 or more Hit Dice in the force may save versus spells to avoid being detected in this way.)
+    
+    ▶Temporary restoration: Of a dead creature or destroyed object for 1 turn per level of the caster.
+    
+    Usage limit: This spell may be used at most once per week. A caster who oversteps this limit will become permanently insane.
+- id: mass_suggestion
+  name: Mass Suggestion
+  level: 6
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: "90'"
+  duration: "4 turns +4 per level"
+  description: |-
+    The caster utters a suggestion to influence the behaviour of selected subjects within range.
+    
+    ▶Number of subjects: Up to one subject per level of the caster may be targeted.
+    
+    ▶Wording: The suggestion must take the form of a short phrase (at most one or two sentences) suggesting a course of action to the subjects.
+    
+    ▶Comprehension: A language that is understood by the subjects must be used.
+    
+    ▶Harmful suggestions: Suggestions that are obviously harmful to a subject cause the spell to automatically fail for that subject.
+    
+    ▶Saving throw: A save versus spells is allowed to resist the suggestion. If the save fails, the subject will follow the caster's suggestion for up to the duration of the spell.
+    
+    ▶Reasonable suggestions: A suggestion that is worded in such a way to make it sound very reasonable incurs a –2 penalty to the saving throw.
+    
+    Restrictions: Undead are unaffected.
+- id: mislead
+  name: Mislead
+  level: 6
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: The caster
+  duration: "1 round per level"
+  description: |-
+    This spell causes an illusory double of the caster to appear while the real caster is rendered invisible.
+    
+    ▶Appearance: The illusion of the double includes visual, sonic, olfactory, and tactile elements. It is an entirely convincing double of the caster.
+    
+    ▶Action: The double may act completely independently, including moving, speaking, attacking, and casting spells (that the caster has memorized).
+    
+    ▶Combat: The double has the same combat capabilities as the caster and has a separate pool of hit points, equal to those of the caster when the spell is cast.
+    
+    The caster: Is rendered invisible as follows:
+    
+    ▶Attacking: The caster may attack while invisible.
+    
+    ▶Being attacked: Opponents who are aware of the caster's presence (but who cannot see invisible) may detect a faint shimmering, allowing them to locate the caster. The caster gains a +4 bonus to AC and saving throws against such attacks.
+    
+    ▶Equipment: Any gear the caster is carrying is also rendered invisible (this includes clothing and armour). Items dropped or put down become visible.
+    
+    ▶Light sources: If a light source is made invisible (as part of the caster's gear), the light it casts is unaffected.
+- id: permanent_illusion
+  name: Permanent Illusion
+  level: 6
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: "240'"
+  duration: permanent
+  description: |-
+    An illusion of the caster's choosing—including sounds, smells, and thermal elements—manifests in a 20' cube area.
+    
+    Two types of illusions may be created:
+    
+    1. An illusionary monster: That can be directed to attack. The monster has AC 5 [14]. If it is hit in combat, the attacker may save versus spells. If the save succeeds, the attacker realises the illusory nature of the monster and can no longer be harmed by it.
+    
+    2. A scene: Either changing the appearance of the affected area or creating the appearance of something new.
+    
+    Stipulations: The following apply:
+    
+    ▶Responsiveness: The illusion behaves and responds as decided by the caster when the spell is cast.
+    
+    ▶Illusionary monsters: May appear to be harmful but never inflict real damage. A character who appears to die actually falls unconscious, a character turned to stone will actually be paralysed, and so on. Such effects last for 1d4 turns.
+    
+    ▶Illusions from imagination: If the illusion is of something the caster has not personally seen, the referee should grant targets a bonus to any applicable saving throws.
+- id: shades
+  name: Shades
+  level: 6
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: "30'"
+  duration: "1 round per level"
+  description: |-
+    The caster conjures one or more semi-real monsters, woven from shadow-stuff.
+    
+    ▶Hit Dice: The monsters' total Hit Dice may not exceed the caster's level.
+    
+    ▶Type: All monsters must be of the same type.
+    
+    ▶Hit points: The monsters have 1d6 hit points per Hit Die (instead of the normal 1d8 hit points per Hit Die).
+    
+    ▶Control: The monsters are under the caster's control.
+    
+    Saving throw: Every creature viewing the shadow monsters may save versus spells:
+    
+    ▶If the save succeeds: The subject views the monsters as they truly are: vague, shifting forms of shadow. To this subject, the shadow monsters have AC 9 [10] and inflict three quarters of their normal damage (rounding down). This subject is unaffected by any special or magical attack forms of the monsters.
+    
+    ▶If the save fails: The subject perceives the monsters as real creatures of the chosen type. To this subject, the shadow monsters attack as normal and inflict normal damage. They may use any special or magical attack forms they possess, but attacks such as energy drain or petrification do not really occur—at worst, they might cause an opponent to fall unconscious or be paralysed for 1d4 turns.
+- id: through_the_looking_glass
+  name: Through the Looking Glass
+  level: 6
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: "10'"
+  duration: "1 round per level"
+  description: |-
+    A finely wrought, full-length, silver mirror is enchanted to act as a scrying device, allowing the caster to view any place or object that is brought to mind:
+    
+    ▶The clarity of the vision: Depends on the scryer's familiarity with the subject.
+    
+    ▶Casting spells: Through the mirror into the viewed scene is not possible.
+    
+    Stepping into the mirror: The caster may step into the divined scene:
+    
+    ▶Portal: A faint, spatial distortion exists at the point at which the caster entered the scene. The portal is invisible, but may be perceived by the caster or by magic.
+    
+    ▶Stepping back through: Anyone who perceives the portal may step out of the mirror and into the location whence the caster originated.
+    
+    ▶At the end of the spell's duration: The portal disappears. Any creature (including the caster) that stepped through the portal/mirror and did not return must save versus death or becomes lost in another plane of reality.
+    
+    Material cost: The mirror must be of at least 5,000gp value.
+- id: triggered_illusion
+  name: Triggered Illusion
+  level: 6
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: "240'"
+  duration: "permanent until triggered, then 1 round per level"
+  description: |-
+    An area within range is enchanted to produce an illusion of the caster's choosing —including sounds, smells, and thermal elements—when a specified triggering condition occurs. Once triggered, the illusion manifests in a 20' cube area, remaining for up to 1 round per level. The enchantment then ends. Three types of illusions may be created:
+    
+    1. An illusionary monster: That can be directed to attack. The monster has AC 5 [14]. If it is hit in combat, the attacker may save versus spells. If the save succeeds, the attacker realises the illusory nature of the monster and can no longer be harmed by it.
+    
+    2. An illusionary attack: For example, an avalanche, a falling ceiling, a magic missile, etc. Targets who save versus spells are unaffected.
+    
+    3. A scene: Either changing the appearance of the affected area or creating the appearance of something new. The scene disappears if touched.
+    
+    Stipulations: The following apply:
+    
+    ▶Responsiveness: The illusion behaves and responds as decided by the caster when the spell is cast.
+    
+    ▶Illusionary monsters: May appear to be harmful but never inflict real damage. A character who appears to die actually falls unconscious, a character turned to stone will actually be paralysed, and so on. Such effects last for 1d4 turns.
+    
+    ▶Illusions from imagination: If the illusion is of something the caster has not personally seen, the referee should grant targets a bonus to any applicable saving throws.
+    
+    The trigger condition: May be as broad or as specific as the caster wishes, and may include conditions on objects in the enchanted area being touched or on the presence of creatures in the area. It may only take visual appearances into account (e.g. it cannot discern the alignment, class, level, etc. of creatures who pass through).
+- id: true_seeing
+  name: True Seeing
+  level: 6
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: The caster or a creature touched
+  duration: "1 round per level"
+  description: |-
+    The subject sees all things within 60' as they truly are.
+    
+    ▶Secret doors: Are revealed.
+    
+    ▶Invisibility: Invisible objects and creatures are perceived.
+    
+    ▶Illusions: Are seen through.
+    
+    ▶Enchantments: Enchanted objects and creatures are made apparent.
+- id: vision
+  name: Vision
+  level: 6
+  spell_lists: [illusionist]
+  source: "ose-advanced-fantasy"
+  range: The caster
+  duration: "1 turn"
+  description: |-
+    The caster calls upon a supernatural power, asking to be sent a vision in answer to a question which vexes them.
+    
+    ▶The power to be called upon: May be selected by the caster.
+    
+    ▶Sacrifice: In order to supplicate the power being contacted, the caster must sacrifice something either valuable to themselves or valuable to the supernatural power. More valuable sacrifices increase the chance of the caster's question being answered (see below).
+    
+    The response of the power: Is determined by rolling 2d6:
+    
+    ▶2–6: The power is angered. No vision is sent. Instead, the caster is placed under a powerful enchantment forcing them to perform some quest for the power.
+    
+    ▶7–9: A minor vision is sent. It may not be directly related to the caster's question.
+    
+    ▶10 or higher: A vision that answers the caster's question is sent.
+    
+    Value of sacrifice: The 2d6 roll is modified by the value of the sacrifice (as judged by the referee):
+    
+    ▶Very precious: +1
+    
+    ▶Extremely precious: +2
+    
+    ▶Priceless: +3
