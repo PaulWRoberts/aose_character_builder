@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from aose.models import CharClass, CharacterSpec
+from aose.models import Armor, CharClass, CharacterSpec, Weapon
 
 Category = Literal["martial", "semi_martial", "non_martial"]
 
@@ -109,6 +109,65 @@ def total_proficiency_slots(pairs: list[tuple[CharClass, int]]) -> int:
     """Total slots for a (possibly multi-class) character: the max over classes
     of that class's slot count at its level."""
     return max((proficiency_slots(c, lvl) for c, lvl in pairs), default=0)
+
+
+# ── Class allowance resolver ────────────────────────────────────────────────
+
+def _normalize(text: str) -> str:
+    return text.strip().lower().replace(" ", "_").replace("-", "_")
+
+
+def _resolve_entries(entries: list[str], candidates) -> "set[str] | str":
+    """Resolve prose allowance entries to item ids by matching normalised ids
+    and names.  Any entry that resolves to nothing → ``"all"`` (fail-open)."""
+    by_key: dict[str, str] = {}
+    for item in candidates:
+        by_key[_normalize(item.id)] = item.id
+        by_key[_normalize(item.name)] = item.id
+    resolved: set[str] = set()
+    for entry in entries:
+        match = by_key.get(_normalize(entry))
+        if match is None:
+            return "all"  # freeform / unrecognised → unrestricted
+        resolved.add(match)
+    return resolved
+
+
+def _union(values: list["set[str] | str"]) -> "set[str] | str":
+    out: set[str] = set()
+    for v in values:
+        if v == "all":
+            return "all"
+        out |= v
+    return out
+
+
+def allowed_weapon_ids(classes: list[CharClass], data) -> "set[str] | str":
+    weapons = [i for i in data.items.values() if isinstance(i, Weapon)]
+    per_class: list["set[str] | str"] = []
+    for cls in classes:
+        if cls.weapons_allowed == "all":
+            per_class.append("all")
+        else:
+            per_class.append(_resolve_entries(list(cls.weapons_allowed), weapons))
+    return _union(per_class)
+
+
+def allowed_armor_ids(classes: list[CharClass], data) -> "set[str] | str":
+    armors = [i for i in data.items.values() if isinstance(i, Armor) and not i.is_shield]
+    per_class: list["set[str] | str"] = []
+    for cls in classes:
+        if cls.armor_allowed == "all":
+            per_class.append("all")
+        elif not cls.armor_allowed:           # empty list → nothing allowed
+            per_class.append(set())
+        else:
+            per_class.append(_resolve_entries(list(cls.armor_allowed), armors))
+    return _union(per_class)
+
+
+def shields_allowed(classes: list[CharClass]) -> bool:
+    return any(cls.shields_allowed for cls in classes)
 
 
 # ── Stubs retained for wizard.py compatibility during Task 10 migration ──────
