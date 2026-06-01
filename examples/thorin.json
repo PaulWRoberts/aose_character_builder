@@ -31,7 +31,6 @@
     "reroll_1s_2s_hp_l1": false,
     "separate_race_class": true,
     "variable_weapon_damage": false,
-    "ability_roll_method": "3d6_in_order",
     "encumbrance": "basic"
   }
 }

@@ -115,7 +115,6 @@ def test_post_settings_persists_to_disk(client):
     r = client.post("/settings", data={
         "ascending_ac": "on",
         "reroll_1s_2s_hp_l1": "on",
-        "ability_roll_method": "3d6_arrange",
         "encumbrance": "detailed",
     })
     assert r.status_code == 303
@@ -124,7 +123,6 @@ def test_post_settings_persists_to_disk(client):
     rs = load_settings(client._settings_path)
     assert rs.ascending_ac is True
     assert rs.reroll_1s_2s_hp_l1 is True
-    assert rs.ability_roll_method == "3d6_arrange"
     assert rs.encumbrance == "detailed"
     assert rs.weapon_proficiency is False
 
@@ -137,11 +135,11 @@ def test_post_settings_unchecking_clears_flag(client):
 
 
 def test_post_settings_ignores_invalid_radio_choice(client):
-    r = client.post("/settings", data={"ability_roll_method": "made_up_method"})
+    r = client.post("/settings", data={"encumbrance": "made_up_mode"})
     assert r.status_code == 303
     rs = load_settings(client._settings_path)
-    # Falls back to the default since the choice was invalid
-    assert rs.ability_roll_method == "3d6_in_order"
+    # Falls back to the default since the choice was invalid.
+    assert rs.encumbrance == "basic"
 
 
 def test_get_settings_shows_flash_after_save(client):

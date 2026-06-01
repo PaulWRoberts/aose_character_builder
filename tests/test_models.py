@@ -10,13 +10,14 @@ def test_default_ruleset():
     assert rs.separate_race_class is True
     assert rs.lift_demihuman_restrictions is False
     assert rs.encumbrance == "basic"
-    assert rs.ability_roll_method == "3d6_in_order"
 
 
 def test_ruleset_has_no_removed_flags():
-    """max_hp_at_l1 and the two split demihuman flags are gone; extra='forbid'
-    means passing them raises rather than silently accepting."""
-    for dead in ("max_hp_at_l1", "demihuman_level_limits", "demihuman_class_restrictions"):
+    """max_hp_at_l1, the two split demihuman flags, and ability_roll_method are
+    gone; extra='forbid' means passing them raises rather than silently
+    accepting."""
+    for dead in ("max_hp_at_l1", "demihuman_level_limits",
+                 "demihuman_class_restrictions", "ability_roll_method"):
         with pytest.raises(ValidationError):
             RuleSet(**{dead: True})  # type: ignore[arg-type]
 

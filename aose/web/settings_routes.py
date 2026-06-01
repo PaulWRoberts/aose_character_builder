@@ -40,7 +40,7 @@ IMPLEMENTED_RULES = {
 }
 
 # Choice-group rules that have full integration too.
-IMPLEMENTED_CHOICE_GROUPS = {"ability_roll_method", "encumbrance"}
+IMPLEMENTED_CHOICE_GROUPS = {"encumbrance"}
 
 RULE_GROUPS = [
     ("Advanced Options", [
@@ -84,11 +84,6 @@ CHOICE_GROUPS = [
         ("none", "None — ignore encumbrance entirely"),
         ("basic", "Basic — track only armour and significant loads"),
         ("detailed", "Detailed — track item-by-item weight in coins"),
-    ]),
-    ("ability_roll_method", "Ability Score Method", [
-        ("3d6_in_order", "3d6 in order — traditional and most deadly"),
-        ("3d6_arrange", "3d6, arrange to taste"),
-        ("4d6_drop_lowest", "4d6, drop the lowest"),
     ]),
 ]
 

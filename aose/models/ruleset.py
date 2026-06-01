@@ -3,7 +3,6 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict
 
 
-AbilityRollMethod = Literal["3d6_in_order", "3d6_arrange", "4d6_drop_lowest"]
 EncumbranceMode = Literal["none", "basic", "detailed"]
 
 
@@ -20,5 +19,4 @@ class RuleSet(BaseModel):
     variable_weapon_damage: bool = False
     advanced_spell_books: bool = False
 
-    ability_roll_method: AbilityRollMethod = "3d6_in_order"
     encumbrance: EncumbranceMode = "basic"
