@@ -10,6 +10,8 @@ hit_die: 1d8
 weapons_allowed: all
 armor_allowed: all
 shields_allowed: true
+allowed_alignments:
+- law
 spell_lists:
 - cleric
 progression:

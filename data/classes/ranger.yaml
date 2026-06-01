@@ -12,6 +12,9 @@ armor_allowed:
 - leather
 - chainmail
 shields_allowed: true
+allowed_alignments:
+- law
+- neutral
 spell_lists:
 - druid
 progression:

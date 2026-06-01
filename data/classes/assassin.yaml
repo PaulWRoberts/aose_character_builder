@@ -10,6 +10,9 @@ weapons_allowed: all
 armor_allowed:
 - leather
 shields_allowed: true
+allowed_alignments:
+- neutral
+- chaos
 progression:
   1:
     xp_required: 0

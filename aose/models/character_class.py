@@ -52,3 +52,7 @@ class CharClass(BaseModel):
     # step, layered on top of the {STR,INT,WIS} base set (forbid-only). Empty
     # = no extra restriction. Today: acrobat/assassin/thief forbid STR.
     non_reducible_abilities: list[Ability] = Field(default_factory=list)
+    # Creation-time alignment restriction (typed; the descriptive `alignment`
+    # feature text stays on `features` for the sheet). Empty = unrestricted
+    # (any of the three). E.g. paladin=[law], ranger=[law, neutral].
+    allowed_alignments: list[Literal["law", "neutral", "chaos"]] = Field(default_factory=list)

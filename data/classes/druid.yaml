@@ -13,6 +13,8 @@ weapons_allowed:
 armor_allowed:
 - leather
 shields_allowed: true
+allowed_alignments:
+- neutral
 spell_lists:
 - druid
 progression:
