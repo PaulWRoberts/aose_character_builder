@@ -16,7 +16,11 @@ from aose.characters import (
     slugify,
     unique_character_id,
 )
-from aose.engine.ability_mods import ability_modifier, ability_warnings
+from aose.engine.ability_mods import (
+    ability_modifier,
+    ability_warnings,
+    apply_racial_modifiers,
+)
 from aose.engine import spells as spell_engine
 from aose.engine.dice import roll_3d6_in_order, roll_hp
 from aose.engine.equip import equip as _equip, unequip as _unequip
@@ -397,6 +401,19 @@ async def post_abilities(request: Request, draft_id: str):
 
 def _meets_ability_requirements(reqs: dict[Ability, int], abilities: dict[str, int]) -> bool:
     return all(abilities.get(ab.value, 0) >= score for ab, score in reqs.items())
+
+
+def _effective_abilities(draft: dict[str, Any], data) -> dict[str, int]:
+    """Rolled base plus racial modifiers (Advanced only, once a race is chosen).
+
+    In Basic / race-as-class mode, or before a race is picked, this is the
+    rolled base unchanged. Modifiers are clamped to [3, 18].
+    """
+    base = draft["abilities"]
+    rs = _ruleset_of(draft)
+    if not rs.separate_race_class or "race_id" not in draft:
+        return dict(base)
+    return apply_racial_modifiers(base, data.races[draft["race_id"]])
 
 
 @router.get("/{draft_id}/race", response_class=HTMLResponse)
@@ -1413,7 +1430,7 @@ async def post_equipment_continue(request: Request, draft_id: str):
     return _redirect(f"/wizard/{draft_id}/review")
 
 
-def _draft_to_spec(draft: dict[str, Any]) -> CharacterSpec:
+def _draft_to_spec(draft: dict[str, Any], data) -> CharacterSpec:
     ruleset = RuleSet(**draft.get("ruleset", {}))
     ids = _class_ids(draft)
     if "hp_rolls" in draft:
@@ -1434,7 +1451,7 @@ def _draft_to_spec(draft: dict[str, Any]) -> CharacterSpec:
     ]
     return CharacterSpec(
         name=draft["name"],
-        abilities=draft["abilities"],
+        abilities=_effective_abilities(draft, data),
         race_id=draft["race_id"],
         classes=classes,
         alignment=draft["alignment"],
@@ -1463,7 +1480,7 @@ async def get_review(request: Request, draft_id: str):
     if redirect:
         return redirect
     from aose.sheet.view import build_sheet
-    spec = _draft_to_spec(draft)
+    spec = _draft_to_spec(draft, request.app.state.game_data)
     sheet = build_sheet(spec, request.app.state.game_data)
     ctx = _base_context(request, draft_id, draft, "review")
     ctx["sheet"] = sheet
@@ -1473,7 +1490,7 @@ async def get_review(request: Request, draft_id: str):
 @router.post("/{draft_id}/finalize")
 async def post_finalize(request: Request, draft_id: str):
     draft = _load(request, draft_id)
-    spec = _draft_to_spec(draft)
+    spec = _draft_to_spec(draft, request.app.state.game_data)
     characters_dir = _characters_dir(request)
     char_id = unique_character_id(slugify(spec.name), characters_dir)
     save_character(char_id, spec, characters_dir)
