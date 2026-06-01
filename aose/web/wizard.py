@@ -830,7 +830,7 @@ async def get_hp(request: Request, draft_id: str):
         return redirect
     data = request.app.state.game_data
     ruleset = _ruleset_of(draft)
-    con_mod = ability_modifier(draft["abilities"]["CON"])
+    con_mod = ability_modifier(_effective_abilities(draft, data)["CON"])
 
     ids = _class_ids(draft)
     classes = [data.classes[cid] for cid in ids]
