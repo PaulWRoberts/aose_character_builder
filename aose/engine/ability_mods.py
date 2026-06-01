@@ -27,3 +27,17 @@ def prime_requisite_xp_multiplier(score: int) -> float:
     if score <= 15:
         return 1.05
     return 1.10
+
+
+def ability_warnings(abilities: dict[str, int]) -> dict:
+    """Non-blocking creation warnings derived purely from ability scores.
+
+    * ``subpar``      — True when *all six* scores are 8 or lower (the AOSE
+                        "may start over" condition).
+    * ``rock_bottom`` — the names of any abilities that rolled exactly 3.
+
+    Both are advisory only; nothing here blocks character creation.
+    """
+    subpar = all(v <= 8 for v in abilities.values())
+    rock_bottom = [name for name, v in abilities.items() if v == 3]
+    return {"subpar": subpar, "rock_bottom": rock_bottom}
