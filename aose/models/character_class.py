@@ -48,3 +48,7 @@ class CharClass(BaseModel):
     spell_lists: list[str] = Field(default_factory=list)
     # When set, this entry is a race-as-class option (e.g., classic OSE Dwarf).
     race_locked: str | None = None
+    # Abilities this class forbids *lowering* during the ability-adjustment
+    # step, layered on top of the {STR,INT,WIS} base set (forbid-only). Empty
+    # = no extra restriction. Today: acrobat/assassin/thief forbid STR.
+    non_reducible_abilities: list[Ability] = Field(default_factory=list)
