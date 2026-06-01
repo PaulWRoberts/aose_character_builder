@@ -18,11 +18,8 @@ RULE_LABELS = {
     "ascending_ac": "Ascending AC",
     "variable_weapon_damage": "Variable Weapon Damage",
     "weapon_proficiency": "Weapon Proficiency",
-    "max_hp_at_l1": "Max HP at L1",
     "reroll_1s_2s_hp_l1": "Reroll 1s & 2s for HP at L1",
-    "demihuman_level_limits": "Demihuman Level Limits",
-    "demihuman_class_restrictions": "Demihuman Class Restrictions",
-    "separate_race_class": "Separate Race & Class",
+    "lift_demihuman_restrictions": "Lift Demihuman Class & Level Restrictions",
     "secondary_skills": "Secondary Skills",
     "multiclassing": "Multiclassing",
     "advanced_spell_books": "Advanced Spell Books",
@@ -33,13 +30,10 @@ RULE_LABELS = {
 # but not yet enforced.
 IMPLEMENTED_RULES = {
     "ascending_ac",
-    "max_hp_at_l1",
     "reroll_1s_2s_hp_l1",
     "secondary_skills",
-    "demihuman_level_limits",
-    "demihuman_class_restrictions",
+    "lift_demihuman_restrictions",
     "weapon_proficiency",
-    "separate_race_class",
     "multiclassing",
     "variable_weapon_damage",
     "advanced_spell_books",
@@ -49,36 +43,23 @@ IMPLEMENTED_RULES = {
 IMPLEMENTED_CHOICE_GROUPS = {"ability_roll_method", "encumbrance"}
 
 RULE_GROUPS = [
-    ("Combat", [
-        ("ascending_ac",
-         "Show armour class as ascending (10 = unarmoured) and use Attack Bonus, "
-         "instead of descending (9 = unarmoured) with THAC0."),
-        ("variable_weapon_damage",
-         "Each weapon rolls its specific damage die instead of the default 1d6."),
+    ("Advanced Options", [
+        ("multiclassing",
+         "Demihumans may pursue two or three classes simultaneously, sharing XP."),
+        ("lift_demihuman_restrictions",
+         "Demihuman races ignore their normal class options and per-class "
+         "maximum-level caps."),
+    ]),
+    ("Character Options", [
         ("weapon_proficiency",
          "Characters are only proficient with specific weapons; non-proficient "
          "attacks suffer −2 to hit."),
-    ]),
-    ("Hit Points (1st Level)", [
-        ("max_hp_at_l1",
-         "Take the maximum result on the hit die instead of rolling at 1st level."),
-        ("reroll_1s_2s_hp_l1",
-         "When rolling 1st-level HP, re-roll any result of 1 or 2."),
-    ]),
-    ("Demihumans", [
-        ("demihuman_level_limits",
-         "Demihuman races have a maximum level in each class."),
-        ("demihuman_class_restrictions",
-         "Demihuman races may only enter certain classes."),
-        ("separate_race_class",
-         "Race and class are chosen independently.  Disable for classic "
-         "race-as-class (Dwarf/Elf/Halfling are entire classes)."),
-    ]),
-    ("Skills & Multiclass", [
         ("secondary_skills",
          "Each character has a secondary skill (a non-adventuring trade)."),
-        ("multiclassing",
-         "Demihumans may pursue two or three classes simultaneously, sharing XP."),
+    ]),
+    ("Survivability & Logistics", [
+        ("reroll_1s_2s_hp_l1",
+         "When rolling 1st-level HP, re-roll any result of 1 or 2."),
     ]),
     ("Magic", [
         ("advanced_spell_books",
@@ -86,18 +67,28 @@ RULE_GROUPS = [
          "spells is set by Intelligence. Off = standard rules: the book holds "
          "exactly the spells the caster can memorise."),
     ]),
+    ("Combat", [
+        ("variable_weapon_damage",
+         "Each weapon rolls its specific damage die instead of the default 1d6."),
+        ("ascending_ac",
+         "Show armour class as ascending (10 = unarmoured) and use Attack Bonus, "
+         "instead of descending (9 = unarmoured) with THAC0."),
+    ]),
 ]
 
+# Name of the rule group whose inputs are disabled when Basic is selected.
+ADVANCED_OPTIONS_GROUP = "Advanced Options"
+
 CHOICE_GROUPS = [
-    ("ability_roll_method", "Ability Score Method", [
-        ("3d6_in_order", "3d6 in order — traditional and most deadly"),
-        ("3d6_arrange", "3d6, arrange to taste"),
-        ("4d6_drop_lowest", "4d6, drop the lowest"),
-    ]),
     ("encumbrance", "Encumbrance", [
         ("none", "None — ignore encumbrance entirely"),
         ("basic", "Basic — track only armour and significant loads"),
         ("detailed", "Detailed — track item-by-item weight in coins"),
+    ]),
+    ("ability_roll_method", "Ability Score Method", [
+        ("3d6_in_order", "3d6 in order — traditional and most deadly"),
+        ("3d6_arrange", "3d6, arrange to taste"),
+        ("4d6_drop_lowest", "4d6, drop the lowest"),
     ]),
 ]
 
@@ -120,6 +111,7 @@ async def get_settings(request: Request):
             "rule_labels": RULE_LABELS,
             "implemented_rules": IMPLEMENTED_RULES,
             "implemented_choice_groups": IMPLEMENTED_CHOICE_GROUPS,
+            "advanced_options_group": ADVANCED_OPTIONS_GROUP,
             "saved": saved,
         },
     )
@@ -127,12 +119,25 @@ async def get_settings(request: Request):
 
 def parse_ruleset_from_form(form) -> RuleSet:
     """Build a :class:`RuleSet` from the toggle/radio form fields used by the
-    settings page AND the wizard's per-character rules step.  Unknown radio
-    choices are silently dropped so the RuleSet defaults take over."""
+    settings page AND the wizard's per-character rules step.
+
+    ``creation_method`` (a radio with values ``"advanced"`` / ``"basic"``) is
+    the single source for ``separate_race_class``: Advanced ⇒ True. When Basic
+    is chosen the Advanced-only rules (``multiclassing`` and
+    ``lift_demihuman_restrictions``) are forced off regardless of what was
+    posted. Unknown radio choices are silently dropped so the RuleSet defaults
+    take over."""
     bool_field_names = {
         field for _, fields in RULE_GROUPS for field, _ in fields
     }
     bools = {field: field in form for field in bool_field_names}
+
+    # Creation method radio → separate_race_class (default Advanced when absent).
+    advanced = form.get("creation_method") != "basic"
+    bools["separate_race_class"] = advanced
+    if not advanced:
+        bools["multiclassing"] = False
+        bools["lift_demihuman_restrictions"] = False
 
     choices = {}
     for field, _label, options in CHOICE_GROUPS:

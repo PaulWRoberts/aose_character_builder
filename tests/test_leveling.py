@@ -128,7 +128,7 @@ def test_advancement_respects_race_cap_when_rule_on(data):
     patched_race = data.races["dwarf"].model_copy(update={"class_level_caps": {"fighter": 2}})
     patched = replace(data, races={**data.races, "dwarf": patched_race})
     spec = _spec(level=2, xp=10000, hp_rolls=[8, 8],
-                 ruleset=RuleSet(demihuman_level_limits=True))
+                 ruleset=RuleSet(lift_demihuman_restrictions=False))
     adv = class_advancement(spec, patched, spec.classes[0])
     assert adv.at_max is True
 
@@ -137,7 +137,7 @@ def test_advancement_ignores_race_cap_when_rule_off(data):
     patched_race = data.races["dwarf"].model_copy(update={"class_level_caps": {"fighter": 2}})
     patched = replace(data, races={**data.races, "dwarf": patched_race})
     spec = _spec(level=2, xp=10000, hp_rolls=[8, 8],
-                 ruleset=RuleSet(demihuman_level_limits=False))
+                 ruleset=RuleSet(lift_demihuman_restrictions=True))
     adv = class_advancement(spec, patched, spec.classes[0])
     assert adv.at_max is False
     assert adv.next_level == 3

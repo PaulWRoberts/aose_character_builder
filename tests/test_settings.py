@@ -42,10 +42,10 @@ def test_load_returns_defaults_when_missing(tmp_path):
 
 def test_save_then_load_roundtrip(tmp_path):
     path = tmp_path / "settings.json"
-    save_settings(path, RuleSet(ascending_ac=True, max_hp_at_l1=True))
+    save_settings(path, RuleSet(ascending_ac=True, reroll_1s_2s_hp_l1=True))
     rs = load_settings(path)
     assert rs.ascending_ac is True
-    assert rs.max_hp_at_l1 is True
+    assert rs.reroll_1s_2s_hp_l1 is True
 
 
 def test_save_writes_pretty_json(tmp_path):
@@ -114,7 +114,7 @@ def test_no_pending_badge_for_ascending_ac(client):
 def test_post_settings_persists_to_disk(client):
     r = client.post("/settings", data={
         "ascending_ac": "on",
-        "max_hp_at_l1": "on",
+        "reroll_1s_2s_hp_l1": "on",
         "ability_roll_method": "3d6_arrange",
         "encumbrance": "detailed",
     })
@@ -123,10 +123,9 @@ def test_post_settings_persists_to_disk(client):
 
     rs = load_settings(client._settings_path)
     assert rs.ascending_ac is True
-    assert rs.max_hp_at_l1 is True
+    assert rs.reroll_1s_2s_hp_l1 is True
     assert rs.ability_roll_method == "3d6_arrange"
     assert rs.encumbrance == "detailed"
-    # Unchecked boxes default to False
     assert rs.weapon_proficiency is False
 
 
@@ -177,11 +176,11 @@ def _run_wizard_to_completion(client, drafts_dir, name="Thorin"):
 
 
 def test_new_character_inherits_active_ruleset(client, tmp_path):
-    save_settings(client._settings_path, RuleSet(ascending_ac=True, max_hp_at_l1=True))
+    save_settings(client._settings_path, RuleSet(ascending_ac=True, reroll_1s_2s_hp_l1=True))
     char_id = _run_wizard_to_completion(client, tmp_path / "drafts")
     spec = load_character(char_id, tmp_path / "characters")
     assert spec.ruleset.ascending_ac is True
-    assert spec.ruleset.max_hp_at_l1 is True
+    assert spec.ruleset.reroll_1s_2s_hp_l1 is True
 
 
 def test_changing_settings_does_not_alter_existing_character(client, tmp_path):
@@ -209,8 +208,6 @@ def test_ascending_ac_renders_on_sheet(client, tmp_path):
     assert "THAC0" not in r.text
 
 
-# ── Max HP at L1 ───────────────────────────────────────────────────────────
-
 def _start_draft_with(client, drafts_dir):
     """Start a draft and walk it up to the HP step."""
     from aose.characters import load_draft, save_draft
@@ -224,42 +221,6 @@ def _start_draft_with(client, drafts_dir):
     client.post(f"/wizard/{draft_id}/class", data={"class_id": "fighter"})
     client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "law"})
     return draft_id
-
-
-def test_max_hp_rule_auto_fills_on_get(client, tmp_path):
-    """With max_hp_at_l1 active, GET /hp should populate hp_roll to die max."""
-    from aose.characters import load_draft
-    save_settings(client._settings_path, RuleSet(max_hp_at_l1=True))
-    draft_id = _start_draft_with(client, tmp_path / "drafts")
-
-    # Before visiting /hp, no roll exists
-    draft = load_draft(draft_id, tmp_path / "drafts")
-    assert "hp_roll" not in draft
-
-    r = client.get(f"/wizard/{draft_id}/hp")
-    assert r.status_code == 200
-    assert "Max HP at L1" in r.text
-
-    # Fighter has 1d8, so max is 8
-    draft = load_draft(draft_id, tmp_path / "drafts")
-    assert draft["hp_roll"] == 8
-
-
-def test_max_hp_rule_hides_roll_button(client, tmp_path):
-    save_settings(client._settings_path, RuleSet(max_hp_at_l1=True))
-    draft_id = _start_draft_with(client, tmp_path / "drafts")
-    r = client.get(f"/wizard/{draft_id}/hp")
-    # Roll button form action should not be present
-    assert f'/wizard/{draft_id}/hp/roll' not in r.text
-
-
-def test_max_hp_rule_persists_to_character(client, tmp_path):
-    save_settings(client._settings_path, RuleSet(max_hp_at_l1=True))
-    char_id = _run_wizard_to_completion(client, tmp_path / "drafts")
-    spec = load_character(char_id, tmp_path / "characters")
-    # Fighter d8 → 8 on the die + CON 14 (mod +1) = 9 max HP
-    assert spec.classes[0].hp_rolls == [8]
-    assert spec.ruleset.max_hp_at_l1 is True
 
 
 # ── Reroll 1s & 2s ─────────────────────────────────────────────────────────
@@ -303,3 +264,71 @@ def test_default_ruleset_keeps_normal_hp_roll_flow(client, tmp_path):
     # hp_roll not auto-populated
     draft = load_draft(draft_id, tmp_path / "drafts")
     assert "hp_roll" not in draft
+
+
+# ── Creation method + Basic enforcement (Slice 1) ─────────────────────────
+
+from aose.web.settings_routes import parse_ruleset_from_form
+
+
+class _Form(dict):
+    """Minimal stand-in for a Starlette FormData: supports `in` and `.get`.
+    The parser only uses membership tests and `.get`, so a dict suffices."""
+
+
+def test_parser_advanced_method_sets_separate_race_class_true():
+    rs = parse_ruleset_from_form(_Form({"creation_method": "advanced"}))
+    assert rs.separate_race_class is True
+
+
+def test_parser_basic_method_sets_separate_race_class_false():
+    rs = parse_ruleset_from_form(_Form({"creation_method": "basic"}))
+    assert rs.separate_race_class is False
+
+
+def test_parser_missing_method_defaults_to_advanced():
+    rs = parse_ruleset_from_form(_Form({}))
+    assert rs.separate_race_class is True
+
+
+def test_parser_basic_forces_advanced_only_rules_off():
+    """Even if multiclassing / lift_demihuman_restrictions are posted true,
+    Basic mode forces them off server-side."""
+    rs = parse_ruleset_from_form(_Form({
+        "creation_method": "basic",
+        "multiclassing": "on",
+        "lift_demihuman_restrictions": "on",
+    }))
+    assert rs.separate_race_class is False
+    assert rs.multiclassing is False
+    assert rs.lift_demihuman_restrictions is False
+
+
+def test_parser_advanced_keeps_advanced_only_rules():
+    rs = parse_ruleset_from_form(_Form({
+        "creation_method": "advanced",
+        "multiclassing": "on",
+        "lift_demihuman_restrictions": "on",
+    }))
+    assert rs.multiclassing is True
+    assert rs.lift_demihuman_restrictions is True
+
+
+def test_settings_page_shows_creation_method(client):
+    r = client.get("/settings")
+    assert "Character Creation Method" in r.text
+    assert 'value="basic"' in r.text
+    assert 'value="advanced"' in r.text
+
+
+def test_post_settings_basic_forces_advanced_rules_off(client):
+    """Posting Basic with multiclassing + lift checked still persists them off."""
+    client.post("/settings", data={
+        "creation_method": "basic",
+        "multiclassing": "on",
+        "lift_demihuman_restrictions": "on",
+    })
+    rs = load_settings(client._settings_path)
+    assert rs.separate_race_class is False
+    assert rs.multiclassing is False
+    assert rs.lift_demihuman_restrictions is False

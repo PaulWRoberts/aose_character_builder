@@ -46,25 +46,6 @@ def test_roll_3d6_deterministic_with_seed():
     assert a == b
 
 
-# ── roll_hp: max_hp_at_l1 ────────────────────────────────────────────────
-
-def test_roll_hp_take_max_d8():
-    # Deterministic — RNG is ignored entirely
-    assert roll_hp("1d8", take_max=True) == 8
-
-
-def test_roll_hp_take_max_d6():
-    assert roll_hp("1d6", take_max=True) == 6
-
-
-def test_roll_hp_take_max_does_not_consume_rng():
-    rng = random.Random(0)
-    roll_hp("1d8", rng, take_max=True)
-    # If take_max ignored RNG, the next consumer should see seed-0 state.
-    expected = random.Random(0).randint(1, 8)
-    assert rng.randint(1, 8) == expected
-
-
 # ── roll_hp: reroll 1s & 2s ──────────────────────────────────────────────
 
 def test_roll_hp_reroll_never_returns_below_three_on_d8():

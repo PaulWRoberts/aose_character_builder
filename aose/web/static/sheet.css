@@ -924,3 +924,6 @@ button {
 .unarmed-row { color: #555; }
 .magic-items-table input[type="text"] { width: 9rem; }
 
+
+/* Advanced-only rules greyed out when Basic creation method is selected. */
+.rule-disabled { opacity: 0.45; }

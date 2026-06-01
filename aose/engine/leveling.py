@@ -62,7 +62,7 @@ def grant_xp(spec: CharacterSpec, data: GameData, amount: int) -> None:
 def _effective_max_level(spec: CharacterSpec, data: GameData, entry: ClassEntry) -> int:
     cls = data.classes[entry.class_id]
     eff = cls.max_level
-    if spec.ruleset.demihuman_level_limits:
+    if not spec.ruleset.lift_demihuman_restrictions:
         race = data.races[spec.race_id]
         race_cap = race.class_level_caps.get(entry.class_id)
         if race_cap is not None:

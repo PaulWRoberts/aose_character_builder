@@ -70,6 +70,7 @@ from aose.models import (
 from aose.sheet.view import magic_items_view
 from aose.web.move_dispatch import dispatch_move
 from aose.web.settings_routes import (
+    ADVANCED_OPTIONS_GROUP,
     CHOICE_GROUPS,
     IMPLEMENTED_CHOICE_GROUPS,
     IMPLEMENTED_RULES,
@@ -322,6 +323,7 @@ async def get_rules(request: Request, draft_id: str):
         "rule_labels": RULE_LABELS,
         "implemented_rules": IMPLEMENTED_RULES,
         "implemented_choice_groups": IMPLEMENTED_CHOICE_GROUPS,
+        "advanced_options_group": ADVANCED_OPTIONS_GROUP,
     })
     return templates.TemplateResponse(request, "wizard.html", ctx)
 
@@ -336,7 +338,9 @@ def _apply_rule_changes(draft: dict[str, Any], old_rs: RuleSet, new_rs: RuleSet)
       abilities + clear everything from race down.
     * separate_race_class toggle → clear race + class + below (the race-as-class
       flow restructures both steps).
-    * max_hp_at_l1 or reroll_1s_2s_hp_l1 change → clear hp_roll(s) only.
+    * lift_demihuman_restrictions toggle → clear class + below (mirrors a race
+      change, so an on→off flip can't leave a now-illegal class/level pick).
+    * reroll_1s_2s_hp_l1 change → clear hp_roll(s) only.
     * weapon_proficiency change → clear proficiencies only.
     * multiclassing turned OFF while a combo is picked → clear class + below.
     """
@@ -352,8 +356,10 @@ def _apply_rule_changes(draft: dict[str, Any], old_rs: RuleSet, new_rs: RuleSet)
         _clear_after_abilities(draft)
         return
 
-    if (new_rs.max_hp_at_l1 != old_rs.max_hp_at_l1
-            or new_rs.reroll_1s_2s_hp_l1 != old_rs.reroll_1s_2s_hp_l1):
+    if new_rs.lift_demihuman_restrictions != old_rs.lift_demihuman_restrictions:
+        _clear_after_race(draft)
+
+    if new_rs.reroll_1s_2s_hp_l1 != old_rs.reroll_1s_2s_hp_l1:
         draft.pop("hp_roll", None)
         draft.pop("hp_rolls", None)
 
@@ -504,11 +510,11 @@ async def post_race(request: Request, draft_id: str, race_id: str = Form(...)):
 def _class_allowed_for_race(class_id: str, race, ruleset: RuleSet) -> bool:
     """Return whether a race may pick a class, given the active ruleset.
 
-    With ``demihuman_class_restrictions`` off, any race may pick any class.
+    With ``lift_demihuman_restrictions`` on, any race may pick any class.
     Otherwise an empty ``allowed_classes`` is treated as "no restriction"
     (the human-style default), and a populated list is enforced.
     """
-    if not ruleset.demihuman_class_restrictions:
+    if ruleset.lift_demihuman_restrictions:
         return True
     if not race.allowed_classes:
         return True
@@ -547,7 +553,7 @@ async def get_class(request: Request, draft_id: str):
             allowed_by_race = _class_allowed_for_race(cls.id, race, ruleset)
             level_cap = (
                 race.class_level_caps.get(cls.id)
-                if ruleset.demihuman_level_limits
+                if not ruleset.lift_demihuman_restrictions
                 else None
             )
         else:
@@ -866,15 +872,6 @@ async def get_hp(request: Request, draft_id: str):
     classes = [data.classes[cid] for cid in ids]
     is_multi = len(ids) > 1
 
-    # Max HP at L1 is deterministic — populate every class's HP on first visit.
-    if ruleset.max_hp_at_l1:
-        if is_multi and "hp_rolls" not in draft:
-            draft["hp_rolls"] = [roll_hp(c.hit_die, take_max=True) for c in classes]
-            save_draft(draft_id, draft, _drafts_dir(request))
-        elif not is_multi and "hp_roll" not in draft:
-            draft["hp_roll"] = roll_hp(classes[0].hit_die, take_max=True)
-            save_draft(draft_id, draft, _drafts_dir(request))
-
     # Pre-render per-class rolls (None if not rolled yet)
     rolls_for_template: list[dict] = []
     total = None
@@ -905,7 +902,6 @@ async def get_hp(request: Request, draft_id: str):
         "con_mod": con_mod,
         "rolls": rolls_for_template,
         "total_hp": total,
-        "max_hp_rule": ruleset.max_hp_at_l1,
         "reroll_rule": ruleset.reroll_1s_2s_hp_l1,
         "ready": (total is not None),
     })
@@ -920,15 +916,14 @@ async def post_hp_roll(request: Request, draft_id: str):
     ids = _class_ids(draft)
     classes = [data.classes[cid] for cid in ids]
 
-    take_max = ruleset.max_hp_at_l1
     min_die = 3 if ruleset.reroll_1s_2s_hp_l1 else 1
 
     if len(ids) == 1:
-        draft["hp_roll"] = roll_hp(classes[0].hit_die, take_max=take_max, min_die=min_die)
+        draft["hp_roll"] = roll_hp(classes[0].hit_die, min_die=min_die)
         draft.pop("hp_rolls", None)
     else:
         draft["hp_rolls"] = [
-            roll_hp(c.hit_die, take_max=take_max, min_die=min_die) for c in classes
+            roll_hp(c.hit_die, min_die=min_die) for c in classes
         ]
         draft.pop("hp_roll", None)
     save_draft(draft_id, draft, _drafts_dir(request))
