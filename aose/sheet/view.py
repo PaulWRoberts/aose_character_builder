@@ -36,7 +36,7 @@ OPTIONAL_RULE_LABELS = {
     "weapon_proficiency": "Weapon Proficiency",
     "multiclassing": "Multiclassing",
     "reroll_1s_2s_hp_l1": "Reroll 1s & 2s for HP at L1",
-    "max_hp_at_l1": "Max HP at L1",
+    "lift_demihuman_restrictions": "Lift Demihuman Class & Level Restrictions",
     "variable_weapon_damage": "Variable Weapon Damage",
 }
 
