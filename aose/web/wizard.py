@@ -480,7 +480,7 @@ async def get_class(request: Request, draft_id: str):
     if redirect:
         return redirect
     data = request.app.state.game_data
-    abilities = draft["abilities"]
+    abilities = _effective_abilities(draft, data)
     ruleset = _ruleset_of(draft)
 
     # In race-as-class mode the user has not picked a race yet, so race-based
@@ -584,9 +584,10 @@ async def post_class(request: Request, draft_id: str):
             raise HTTPException(400, f"A character may have at most {MAX_CLASSES} classes.")
 
     # Per-class gating (ability requirements + race allowance / race-as-class).
+    effective = _effective_abilities(draft, data)
     for cid in ids:
         cls = data.classes[cid]
-        if not _meets_ability_requirements(cls.ability_requirements, draft["abilities"]):
+        if not _meets_ability_requirements(cls.ability_requirements, effective):
             raise HTTPException(400, f"Abilities do not meet {cls.name} requirements")
 
         if ruleset.separate_race_class:
