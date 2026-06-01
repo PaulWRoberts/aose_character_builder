@@ -17,6 +17,14 @@
             </div>
             {% endif %}
             <div class="card-detail">Movement: {{ race.base_movement }}'/turn</div>
+            {% if race.ability_changes %}
+            <div class="card-detail small">Ability changes:
+                {%- for ch in race.ability_changes %}
+                    {{ ch.name }} {{ ch.rolled }} &rarr; {{ ch.effective }}
+                    ({{ '+' if ch.delta > 0 else '' }}{{ ch.delta }}){% if not loop.last %},{% endif %}
+                {%- endfor %}
+            </div>
+            {% endif %}
             {% if race.infravision %}
             <div class="card-detail">Infravision: {{ race.infravision }}'</div>
             {% endif %}

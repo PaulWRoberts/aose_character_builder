@@ -426,6 +426,16 @@ async def get_race(request: Request, draft_id: str):
     abilities = draft["abilities"]
     races = []
     for race in sorted(data.races.values(), key=lambda r: r.name):
+        effective = apply_racial_modifiers(abilities, race)
+        ability_changes = [
+            {
+                "name": ab.value,
+                "rolled": abilities[ab.value],
+                "delta": delta,
+                "effective": effective[ab.value],
+            }
+            for ab, delta in race.ability_modifiers.items()
+        ]
         races.append({
             "id": race.id,
             "name": race.name,
@@ -433,6 +443,7 @@ async def get_race(request: Request, draft_id: str):
             "base_movement": race.base_movement,
             "requirements": {ab.value: v for ab, v in race.ability_requirements.items()},
             "languages": race.languages,
+            "ability_changes": ability_changes,
             "meets_requirements": _meets_ability_requirements(race.ability_requirements, abilities),
             "selected": draft.get("race_id") == race.id,
         })
