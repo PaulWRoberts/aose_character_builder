@@ -29,3 +29,32 @@ def test_restricted_classes_forbid_lowering_str(data):
 def test_other_classes_have_no_restriction(data):
     assert data.classes["fighter"].non_reducible_abilities == []
     assert data.classes["magic_user"].non_reducible_abilities == []
+
+
+# ── Task 2: adjustable_abilities ───────────────────────────────────────────
+
+from aose.engine.ability_mods import adjustable_abilities
+
+
+def test_adjustable_fighter(data):
+    adj = adjustable_abilities([data.classes["fighter"]])
+    assert adj["raisable"] == {"STR"}
+    assert adj["lowerable"] == {"INT", "WIS"}
+
+
+def test_adjustable_magic_user(data):
+    adj = adjustable_abilities([data.classes["magic_user"]])
+    assert adj["raisable"] == {"INT"}
+    assert adj["lowerable"] == {"STR", "WIS"}
+
+
+def test_adjustable_thief_removes_str_via_restriction(data):
+    adj = adjustable_abilities([data.classes["thief"]])
+    assert adj["raisable"] == {"DEX"}
+    assert adj["lowerable"] == {"INT", "WIS"}  # STR removed by restriction layer
+
+
+def test_adjustable_multiclass_union(data):
+    adj = adjustable_abilities([data.classes["fighter"], data.classes["magic_user"]])
+    assert adj["raisable"] == {"STR", "INT"}
+    assert adj["lowerable"] == {"WIS"}
