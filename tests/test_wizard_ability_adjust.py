@@ -178,17 +178,17 @@ def _drive_to_adjust(client, abilities=None, race="human", cls="fighter"):
     """Create a draft and advance it to (but not past) the adjust step."""
     draft_id = _new_draft(client)
     _set_abilities(client, draft_id, dict(abilities or _FIGHTER_ABILITIES))
-    client.post(f"/wizard/{draft_id}/abilities", data={"name": "Conan"})
+    client.post(f"/wizard/{draft_id}/abilities", data={})
     client.post(f"/wizard/{draft_id}/race", data={"race_id": race})
     client.post(f"/wizard/{draft_id}/class", data={"class_id": cls})
     return draft_id
 
 
-def test_adjust_step_between_class_and_alignment(tmp_path):
+def test_adjust_step_between_class_and_class_setup(tmp_path):
     client = _make_client(tmp_path)
     draft_id = _drive_to_adjust(client)
-    # After picking class, the next incomplete step is adjust (not alignment).
-    r = client.get(f"/wizard/{draft_id}/alignment")
+    # After picking class, the next incomplete step is adjust (not class_setup/identity).
+    r = client.get(f"/wizard/{draft_id}/identity")
     assert r.status_code == 303
     assert r.headers["location"].endswith("/adjust")
 
@@ -197,9 +197,9 @@ def test_adjust_step_present_in_basic_mode(tmp_path):
     client = _make_client(tmp_path, ruleset=RuleSet(separate_race_class=False))
     draft_id = _new_draft(client)
     _set_abilities(client, draft_id, dict(_FIGHTER_ABILITIES))
-    client.post(f"/wizard/{draft_id}/abilities", data={"name": "Conan"})
+    client.post(f"/wizard/{draft_id}/abilities", data={})
     client.post(f"/wizard/{draft_id}/class", data={"class_id": "fighter"})
-    r = client.get(f"/wizard/{draft_id}/alignment")
+    r = client.get(f"/wizard/{draft_id}/identity")
     assert r.status_code == 303
     assert r.headers["location"].endswith("/adjust")
 
@@ -224,7 +224,7 @@ def test_adjust_post_valid_stores_and_advances(tmp_path):
         "raise_STR": "1", "lower_INT": "1", "lower_WIS": "1",
     })
     assert r.status_code == 303
-    assert r.headers["location"].endswith("/alignment")
+    assert r.headers["location"].endswith("/class_setup")
     draft = load_draft(draft_id, client._drafts_dir)
     assert draft["ability_adjustments"] == {"STR": 1, "INT": -1, "WIS": -1}
 
@@ -254,9 +254,9 @@ def test_finalize_reflects_adjustment(tmp_path):
     client.post(f"/wizard/{draft_id}/adjust", data={
         "raise_STR": "1", "lower_INT": "1", "lower_WIS": "1",
     })
-    client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "law"})
     client.post(f"/wizard/{draft_id}/hp/roll")
     client.post(f"/wizard/{draft_id}/hp")
+    client.post(f"/wizard/{draft_id}/identity", data={"name": "Conan", "alignment": "law"})
     client.get(f"/wizard/{draft_id}/equipment")
     client.post(f"/wizard/{draft_id}/equipment")
     r = client.post(f"/wizard/{draft_id}/finalize")

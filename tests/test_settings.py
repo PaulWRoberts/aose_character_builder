@@ -162,13 +162,13 @@ def _run_wizard_to_completion(client, drafts_dir, name="Thorin"):
     _override_abilities(draft_id, drafts_dir, {
         "STR": 15, "INT": 11, "WIS": 12, "DEX": 13, "CON": 14, "CHA": 10,
     })
-    client.post(f"/wizard/{draft_id}/abilities", data={"name": name})
+    client.post(f"/wizard/{draft_id}/abilities", data={})
     client.post(f"/wizard/{draft_id}/race", data={"race_id": "dwarf"})
     client.post(f"/wizard/{draft_id}/class", data={"class_id": "fighter"})
     client.post(f"/wizard/{draft_id}/adjust", data={})
-    client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "law"})
     client.post(f"/wizard/{draft_id}/hp/roll")
     client.post(f"/wizard/{draft_id}/hp")
+    client.post(f"/wizard/{draft_id}/identity", data={"name": name, "alignment": "law"})
     r = client.post(f"/wizard/{draft_id}/finalize")
     char_id = r.headers["location"].split("/")[-1]
     return char_id
@@ -215,11 +215,10 @@ def _start_draft_with(client, drafts_dir):
     draft = load_draft(draft_id, drafts_dir)
     draft["abilities"] = {"STR": 15, "INT": 11, "WIS": 12, "DEX": 13, "CON": 14, "CHA": 10}
     save_draft(draft_id, draft, drafts_dir)
-    client.post(f"/wizard/{draft_id}/abilities", data={"name": "Thorin"})
+    client.post(f"/wizard/{draft_id}/abilities", data={})
     client.post(f"/wizard/{draft_id}/race", data={"race_id": "dwarf"})
     client.post(f"/wizard/{draft_id}/class", data={"class_id": "fighter"})
     client.post(f"/wizard/{draft_id}/adjust", data={})
-    client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "law"})
     return draft_id
 
 

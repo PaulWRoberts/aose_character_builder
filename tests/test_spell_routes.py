@@ -91,11 +91,10 @@ def _start_caster_draft(client, class_id, int_score=13, advanced=False):
                           "DEX": 10, "CON": 10, "CHA": 10}
     draft["ruleset"]["advanced_spell_books"] = advanced
     save_draft(draft_id, draft, client._drafts_dir)
-    client.post(f"/wizard/{draft_id}/abilities", data={"name": "Caster"})
+    client.post(f"/wizard/{draft_id}/abilities", data={})
     client.post(f"/wizard/{draft_id}/race", data={"race_id": "human"})
     client.post(f"/wizard/{draft_id}/class", data={"class_id": class_id})
     client.post(f"/wizard/{draft_id}/adjust", data={})
-    client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "neutral"})
     client.post(f"/wizard/{draft_id}/hp/roll")
     client.post(f"/wizard/{draft_id}/hp")
     return draft_id
@@ -104,14 +103,13 @@ def _start_caster_draft(client, class_id, int_score=13, advanced=False):
 def test_wizard_skips_spells_for_noncaster(client):
     r = client.get("/wizard/new")
     draft_id = r.headers["location"].rsplit("/", 2)[1]
-    client.post(f"/wizard/{draft_id}/abilities", data={"name": "Grog"})
+    client.post(f"/wizard/{draft_id}/abilities", data={})
     client.post(f"/wizard/{draft_id}/race", data={"race_id": "human"})
     client.post(f"/wizard/{draft_id}/class", data={"class_id": "fighter"})
     client.post(f"/wizard/{draft_id}/adjust", data={})
-    client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "law"})
     client.post(f"/wizard/{draft_id}/hp/roll")
     r = client.post(f"/wizard/{draft_id}/hp")
-    assert r.headers["location"].endswith("/equipment")
+    assert r.headers["location"].endswith("/identity")
 
 
 def test_wizard_arcane_requires_exact_count(client):
@@ -134,13 +132,14 @@ def test_wizard_divine_autocompletes(client):
     r = client.get(f"/wizard/{draft_id}/class_setup")
     assert r.status_code == 200 and "know" in r.text.lower()
     r = client.post(f"/wizard/{draft_id}/spells", data={"class_id": "druid"})
-    assert r.headers["location"].endswith("/equipment")
+    assert r.headers["location"].endswith("/identity")
 
 
 def test_wizard_finalize_persists_spellbook(client):
     draft_id = _start_caster_draft(client, "magic_user")
     client.post(f"/wizard/{draft_id}/spells",
                 data={"class_id": "magic_user", "spell_magic_user": ["magic_user_magic_missile"]})
+    client.post(f"/wizard/{draft_id}/identity", data={"name": "Caster", "alignment": "neutral"})
     client.get(f"/wizard/{draft_id}/equipment")
     client.post(f"/wizard/{draft_id}/equipment")
     r = client.post(f"/wizard/{draft_id}/finalize")

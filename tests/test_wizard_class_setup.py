@@ -153,7 +153,7 @@ def test_post_racial_applies_optional_only_when_flag_on(tmp_path):
     client.post(f"/wizard/{draft_id}/rules", data=_rules_form(
         lift_demihuman_restrictions="on", human_racial_abilities="on"))
     _set_abilities(client, draft_id, dict(_GOOD))
-    client.post(f"/wizard/{draft_id}/abilities", data={"name": "H"})
+    client.post(f"/wizard/{draft_id}/abilities", data={})
     client.post(f"/wizard/{draft_id}/race", data={"race_id": "human"})
     client.post(f"/wizard/{draft_id}/class", data={"class_id": "fighter"})
     r = client.get(f"/wizard/{draft_id}/adjust")
@@ -166,7 +166,7 @@ def test_post_racial_no_optional_when_flag_off(tmp_path):
     draft_id = _new_draft(client)
     client.post(f"/wizard/{draft_id}/rules", data=_rules_form())  # flag off
     _set_abilities(client, draft_id, dict(_GOOD))
-    client.post(f"/wizard/{draft_id}/abilities", data={"name": "H"})
+    client.post(f"/wizard/{draft_id}/abilities", data={})
     client.post(f"/wizard/{draft_id}/race", data={"race_id": "human"})
     client.post(f"/wizard/{draft_id}/class", data={"class_id": "fighter"})
     from aose.web.wizard import _post_racial_abilities
@@ -246,11 +246,10 @@ def _drive_to_class_setup(client, draft_id, race="human", cls="fighter",
              if flag else _rules_form())
     client.post(f"/wizard/{draft_id}/rules", data=rules)
     _set_abilities(client, draft_id, dict(abilities or _GOOD))
-    client.post(f"/wizard/{draft_id}/abilities", data={"name": "H"})
+    client.post(f"/wizard/{draft_id}/abilities", data={})
     client.post(f"/wizard/{draft_id}/race", data={"race_id": race})
     client.post(f"/wizard/{draft_id}/class", data={"class_id": cls})
     client.post(f"/wizard/{draft_id}/adjust", data={})
-    client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "law"})
 
 
 def test_hp_locked_after_first_roll(tmp_path):
@@ -313,6 +312,7 @@ def test_human_plus_one_con_raises_hp(tmp_path):
     draft_id = _new_draft(client)
     _drive_to_class_setup(client, draft_id, race="human", flag=True, abilities=abil)
     client.post(f"/wizard/{draft_id}/hp/roll")
+    client.post(f"/wizard/{draft_id}/identity", data={"name": "H", "alignment": "law"})
     data = GameData.load(DATA_DIR)
     spec = _draft_to_spec(load_draft(draft_id, client._drafts_dir), data)
     assert spec.abilities["CON"] == 13  # 12 + 1 optional
@@ -350,9 +350,10 @@ def test_class_setup_incomplete_until_hp(tmp_path):
     assert r.status_code == 303
     assert r.headers["location"].endswith("/class_setup")
     client.post(f"/wizard/{draft_id}/hp/roll")
-    # HP rolled, no prof/spells required for a plain human fighter -> equipment.
+    # HP rolled, no prof/spells required -> past class_setup, now needs identity.
     r = client.get(f"/wizard/{draft_id}/equipment")
-    assert r.status_code == 200
+    assert r.status_code == 303
+    assert r.headers["location"].endswith("/identity")
 
 
 def test_class_setup_incomplete_until_proficiencies(tmp_path):
@@ -360,19 +361,19 @@ def test_class_setup_incomplete_until_proficiencies(tmp_path):
     draft_id = _new_draft(client)
     client.post(f"/wizard/{draft_id}/rules", data=_rules_form(weapon_proficiency="on"))
     _set_abilities(client, draft_id, dict(_GOOD))
-    client.post(f"/wizard/{draft_id}/abilities", data={"name": "H"})
+    client.post(f"/wizard/{draft_id}/abilities", data={})
     client.post(f"/wizard/{draft_id}/race", data={"race_id": "human"})
     client.post(f"/wizard/{draft_id}/class", data={"class_id": "fighter"})
     client.post(f"/wizard/{draft_id}/adjust", data={})
-    client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "law"})
     client.post(f"/wizard/{draft_id}/hp/roll")
-    # HP done but proficiencies still required -> equipment bounces back.
+    # HP done but proficiencies still required -> equipment bounces back to class_setup.
     r = client.get(f"/wizard/{draft_id}/equipment")
     assert r.status_code == 303 and r.headers["location"].endswith("/class_setup")
     client.post(f"/wizard/{draft_id}/proficiencies",
                 data={"weapon": ["sword", "spear", "mace", "hand_axe"]})
+    # Proficiencies done -> class_setup complete, now needs identity.
     r = client.get(f"/wizard/{draft_id}/equipment")
-    assert r.status_code == 200
+    assert r.status_code == 303 and r.headers["location"].endswith("/identity")
 
 
 def test_flag_toggle_clears_hp_and_adjustments(tmp_path):
@@ -408,11 +409,10 @@ def test_page_shows_proficiency_section_when_rule_on(tmp_path):
     draft_id = _new_draft(client)
     client.post(f"/wizard/{draft_id}/rules", data=_rules_form(weapon_proficiency="on"))
     _set_abilities(client, draft_id, dict(_GOOD))
-    client.post(f"/wizard/{draft_id}/abilities", data={"name": "H"})
+    client.post(f"/wizard/{draft_id}/abilities", data={})
     client.post(f"/wizard/{draft_id}/race", data={"race_id": "human"})
     client.post(f"/wizard/{draft_id}/class", data={"class_id": "fighter"})
     client.post(f"/wizard/{draft_id}/adjust", data={})
-    client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "law"})
     r = client.get(f"/wizard/{draft_id}/class_setup")
     assert "Sword" in r.text  # weapon picker present
 
@@ -422,11 +422,10 @@ def test_page_shows_spell_section_for_caster(tmp_path):
     draft_id = _new_draft(client)
     _set_abilities(client, draft_id, dict(_GOOD))
     client.post(f"/wizard/{draft_id}/rules", data=_rules_form())
-    client.post(f"/wizard/{draft_id}/abilities", data={"name": "H"})
+    client.post(f"/wizard/{draft_id}/abilities", data={})
     client.post(f"/wizard/{draft_id}/race", data={"race_id": "human"})
     client.post(f"/wizard/{draft_id}/class", data={"class_id": "magic_user"})
     client.post(f"/wizard/{draft_id}/adjust", data={})
-    client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "law"})
     r = client.get(f"/wizard/{draft_id}/class_setup")
     assert "Magic Missile" in r.text
 
@@ -440,7 +439,7 @@ def test_continue_advances_only_when_complete(tmp_path):
     assert r.status_code == 303 and r.headers["location"].endswith("/class_setup")
     client.post(f"/wizard/{draft_id}/hp/roll")
     r = client.post(f"/wizard/{draft_id}/hp")
-    assert r.headers["location"].endswith("/equipment")
+    assert r.headers["location"].endswith("/identity")
 
 
 # ── Task 7: end-to-end through Class Setup ─────────────────────────────────
@@ -453,11 +452,10 @@ def test_full_flow_caster_with_proficiencies_and_blessed(tmp_path):
         weapon_proficiency="on", lift_demihuman_restrictions="on",
         human_racial_abilities="on"))
     _set_abilities(client, draft_id, dict(_GOOD))
-    client.post(f"/wizard/{draft_id}/abilities", data={"name": "Gandalf"})
+    client.post(f"/wizard/{draft_id}/abilities", data={})
     client.post(f"/wizard/{draft_id}/race", data={"race_id": "human"})
     client.post(f"/wizard/{draft_id}/class", data={"class_id": "magic_user"})
     client.post(f"/wizard/{draft_id}/adjust", data={})
-    client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "law"})
 
     # All three sections on one page.
     page = client.get(f"/wizard/{draft_id}/class_setup")
@@ -470,10 +468,11 @@ def test_full_flow_caster_with_proficiencies_and_blessed(tmp_path):
     client.post(f"/wizard/{draft_id}/spells",
                 data={"class_id": "magic_user", "spell_magic_user": ["magic_user_magic_missile"]})
 
-    # Continue now advances to equipment.
+    # Continue now advances to identity.
     cont = client.post(f"/wizard/{draft_id}/hp")
-    assert cont.headers["location"].endswith("/equipment")
+    assert cont.headers["location"].endswith("/identity")
 
+    client.post(f"/wizard/{draft_id}/identity", data={"name": "Gandalf", "alignment": "neutral"})
     client.get(f"/wizard/{draft_id}/equipment")
     client.post(f"/wizard/{draft_id}/equipment")
     r = client.post(f"/wizard/{draft_id}/finalize")

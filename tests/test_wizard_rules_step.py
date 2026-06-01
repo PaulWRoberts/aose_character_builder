@@ -146,7 +146,7 @@ def test_toggling_separate_race_class_clears_race_and_class(client):
     draft = load_draft(draft_id, client._drafts_dir)
     draft["abilities"] = {"STR": 15, "INT": 11, "WIS": 12, "DEX": 13, "CON": 14, "CHA": 10}
     save_draft(draft_id, draft, client._drafts_dir)
-    client.post(f"/wizard/{draft_id}/abilities", data={"name": "T"})
+    client.post(f"/wizard/{draft_id}/abilities", data={})
     client.post(f"/wizard/{draft_id}/race", data={"race_id": "dwarf"})
     client.post(f"/wizard/{draft_id}/class", data={"class_id": "fighter"})
 
@@ -165,14 +165,14 @@ def test_toggling_reroll_hp_rule_clears_hp_only(client):
     draft = load_draft(draft_id, client._drafts_dir)
     draft["abilities"] = {"STR": 15, "INT": 11, "WIS": 12, "DEX": 13, "CON": 14, "CHA": 10}
     save_draft(draft_id, draft, client._drafts_dir)
-    client.post(f"/wizard/{draft_id}/abilities", data={"name": "T"})
+    client.post(f"/wizard/{draft_id}/abilities", data={})
     client.post(f"/wizard/{draft_id}/race", data={"race_id": "dwarf"})
     client.post(f"/wizard/{draft_id}/class", data={"class_id": "fighter"})
-    client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "law"})
+    client.post(f"/wizard/{draft_id}/identity", data={"name": "T", "alignment": "law"})
     client.post(f"/wizard/{draft_id}/hp/roll")
     assert "hp_roll" in load_draft(draft_id, client._drafts_dir)
 
-    # Toggle reroll_1s_2s_hp_l1 on
+    # Toggle reroll_1s_2s_hp_l1 on — only HP is cleared
     client.post(f"/wizard/{draft_id}/rules", data=_rules_form(reroll_1s_2s_hp_l1="on"))
     draft = load_draft(draft_id, client._drafts_dir)
     assert "hp_roll" not in draft  # cleared so HP step re-rolls under new rule
@@ -190,10 +190,9 @@ def test_toggling_weapon_proficiency_clears_only_proficiencies(client):
     draft = load_draft(draft_id, client._drafts_dir)
     draft["abilities"] = {"STR": 15, "INT": 11, "WIS": 12, "DEX": 13, "CON": 14, "CHA": 10}
     save_draft(draft_id, draft, client._drafts_dir)
-    client.post(f"/wizard/{draft_id}/abilities", data={"name": "T"})
+    client.post(f"/wizard/{draft_id}/abilities", data={})
     client.post(f"/wizard/{draft_id}/race", data={"race_id": "human"})
     client.post(f"/wizard/{draft_id}/class", data={"class_id": "fighter"})
-    client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "law"})
     client.post(f"/wizard/{draft_id}/proficiencies", data={
         "weapon": ["sword", "spear", "mace", "hand_axe"],
     })
@@ -214,7 +213,7 @@ def test_turning_multiclassing_off_drops_combo(client):
     draft = load_draft(draft_id, client._drafts_dir)
     draft["abilities"] = {"STR": 12, "INT": 14, "WIS": 11, "DEX": 14, "CON": 14, "CHA": 10}
     save_draft(draft_id, draft, client._drafts_dir)
-    client.post(f"/wizard/{draft_id}/abilities", data={"name": "Tauriel"})
+    client.post(f"/wizard/{draft_id}/abilities", data={})
     client.post(f"/wizard/{draft_id}/race", data={"race_id": "elf"})
     client.post(f"/wizard/{draft_id}/class", data={"class_id": "fighter,magic_user"})
     assert "class_ids" in load_draft(draft_id, client._drafts_dir)
@@ -238,12 +237,12 @@ def test_per_character_rules_persist_to_saved_character(tmp_path):
     draft = load_draft(draft_id, client._drafts_dir)
     draft["abilities"] = {"STR": 15, "INT": 11, "WIS": 12, "DEX": 13, "CON": 14, "CHA": 10}
     save_draft(draft_id, draft, client._drafts_dir)
-    client.post(f"/wizard/{draft_id}/abilities", data={"name": "Thorin"})
+    client.post(f"/wizard/{draft_id}/abilities", data={})
     client.post(f"/wizard/{draft_id}/race", data={"race_id": "dwarf"})
     client.post(f"/wizard/{draft_id}/class", data={"class_id": "fighter"})
-    client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "law"})
     client.post(f"/wizard/{draft_id}/hp/roll")
     client.post(f"/wizard/{draft_id}/hp")
+    client.post(f"/wizard/{draft_id}/identity", data={"name": "Thorin", "alignment": "law"})
     r = client.post(f"/wizard/{draft_id}/finalize")
     char_id = r.headers["location"].split("/")[-1]
     spec = load_character(char_id, tmp_path / "characters")
@@ -270,7 +269,7 @@ def test_changing_lift_demihuman_clears_class_and_downstream(client):
     draft = load_draft(draft_id, client._drafts_dir)
     draft["abilities"] = {"STR": 15, "INT": 11, "WIS": 12, "DEX": 13, "CON": 14, "CHA": 10}
     save_draft(draft_id, draft, client._drafts_dir)
-    client.post(f"/wizard/{draft_id}/abilities", data={"name": "T"})
+    client.post(f"/wizard/{draft_id}/abilities", data={})
     client.post(f"/wizard/{draft_id}/race", data={"race_id": "dwarf"})
     client.post(f"/wizard/{draft_id}/class", data={"class_id": "fighter"})
     assert "class_id" in load_draft(draft_id, client._drafts_dir)

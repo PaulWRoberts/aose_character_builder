@@ -115,7 +115,7 @@ def _start_elf(client):
     draft = load_draft(draft_id, client._drafts_dir)
     draft["abilities"] = {"STR": 12, "INT": 14, "WIS": 11, "DEX": 14, "CON": 14, "CHA": 10}
     save_draft(draft_id, draft, client._drafts_dir)
-    client.post(f"/wizard/{draft_id}/abilities", data={"name": "Tauriel"})
+    client.post(f"/wizard/{draft_id}/abilities", data={})
     client.post(f"/wizard/{draft_id}/race", data={"race_id": "elf"})
     return draft_id
 
@@ -197,7 +197,7 @@ def test_post_multi_rejected_when_one_class_fails_abilities(mc_client):
     draft = load_draft(draft_id, mc_client._drafts_dir)
     draft["abilities"] = {"STR": 12, "INT": 6, "WIS": 11, "DEX": 14, "CON": 14, "CHA": 10}
     save_draft(draft_id, draft, mc_client._drafts_dir)
-    mc_client.post(f"/wizard/{draft_id}/abilities", data={"name": "Dim"})
+    mc_client.post(f"/wizard/{draft_id}/abilities", data={})
     r = mc_client.post(f"/wizard/{draft_id}/race", data={"race_id": "elf"})
     assert r.status_code == 400
 
@@ -219,7 +219,6 @@ def _to_hp(mc_client, draft_id):
         data={"class_id": ["fighter", "magic_user"]},
     )
     mc_client.post(f"/wizard/{draft_id}/adjust", data={})
-    mc_client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "neutral"})
 
 
 def test_hp_get_shows_one_die_per_class_for_multiclass(mc_client):
@@ -250,9 +249,9 @@ def test_full_multiclass_flow_creates_character(mc_client):
         f"/wizard/{draft_id}/class",
         data={"class_id": ["fighter", "magic_user"]},
     )
-    mc_client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "neutral"})
     mc_client.post(f"/wizard/{draft_id}/hp/roll")
     mc_client.post(f"/wizard/{draft_id}/hp")
+    mc_client.post(f"/wizard/{draft_id}/identity", data={"name": "Tauriel", "alignment": "neutral"})
     r = mc_client.post(f"/wizard/{draft_id}/finalize")
     assert r.status_code == 303
     char_id = r.headers["location"].split("/")[-1]
@@ -270,9 +269,9 @@ def test_sheet_renders_multiclass_summary(mc_client):
         f"/wizard/{draft_id}/class",
         data={"class_id": ["fighter", "magic_user"]},
     )
-    mc_client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "neutral"})
     mc_client.post(f"/wizard/{draft_id}/hp/roll")
     mc_client.post(f"/wizard/{draft_id}/hp")
+    mc_client.post(f"/wizard/{draft_id}/identity", data={"name": "Tauriel", "alignment": "neutral"})
     r = mc_client.post(f"/wizard/{draft_id}/finalize")
     char_id = r.headers["location"].split("/")[-1]
     r = mc_client.get(f"/character/{char_id}")
@@ -294,7 +293,6 @@ def test_proficiency_step_combines_class_names(mc_client):
         data={"class_id": ["fighter", "magic_user"]},
     )
     mc_client.post(f"/wizard/{draft_id}/adjust", data={})
-    mc_client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "neutral"})
     r = mc_client.get(f"/wizard/{draft_id}/class_setup")
     assert r.status_code == 200
     assert "Fighter / Magic-User" in r.text

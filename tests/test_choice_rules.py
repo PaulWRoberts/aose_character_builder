@@ -66,12 +66,12 @@ def test_sheet_html_renders_encumbrance_description(tmp_path):
     draft = load_draft(draft_id, client._drafts_dir)
     draft["abilities"] = {"STR": 15, "INT": 11, "WIS": 12, "DEX": 13, "CON": 14, "CHA": 10}
     save_draft(draft_id, draft, client._drafts_dir)
-    client.post(f"/wizard/{draft_id}/abilities", data={"name": "X"})
+    client.post(f"/wizard/{draft_id}/abilities", data={})
     client.post(f"/wizard/{draft_id}/race", data={"race_id": "dwarf"})
     client.post(f"/wizard/{draft_id}/class", data={"class_id": "fighter"})
-    client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "law"})
     client.post(f"/wizard/{draft_id}/hp/roll")
     client.post(f"/wizard/{draft_id}/hp")
+    client.post(f"/wizard/{draft_id}/identity", data={"name": "X", "alignment": "law"})
     r = client.post(f"/wizard/{draft_id}/finalize")
     char_id = r.headers["location"].split("/")[-1]
     r = client.get(f"/character/{char_id}")
@@ -94,11 +94,12 @@ def test_new_wizard_rolls_3d6_in_order(tmp_path):
     assert "abilities_pool" not in draft
 
 
-def test_abilities_form_only_needs_name(tmp_path):
+def test_abilities_form_needs_no_data(tmp_path):
+    """Abilities step collects no user input (name moved to identity step)."""
     client = _make_client(tmp_path, RuleSet())
     r = client.get("/wizard/new")
     draft_id = r.headers["location"].split("/")[2]
-    r = client.post(f"/wizard/{draft_id}/abilities", data={"name": "Whatever"})
+    r = client.post(f"/wizard/{draft_id}/abilities", data={})
     assert r.status_code == 303
 
 

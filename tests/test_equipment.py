@@ -70,7 +70,7 @@ def test_roll_starting_gold_in_range():
 def test_shop_categories_is_data_driven(data):
     cats = shop_categories(data)
     ids = {c.id for c in cats}
-    # Categories are read from items' category field â€” adding a new YAML
+    # Categories are read from items' category field â€" adding a new YAML
     # category should appear here automatically.
     assert "weapons" in ids
     assert "armor" in ids
@@ -111,7 +111,7 @@ def test_inventory_rows_handles_stale_id(data):
     assert rows[0].cost_gp == 0
 
 
-# â”€â”€ buy â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# â"€â"€ buy â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 
 def test_buy_appends_and_deducts(data):
     inv, gold = buy([], 50, "sword", data)
@@ -135,7 +135,7 @@ def test_buy_rejects_unknown_item(data):
         buy([], 100, "imaginary_thing", data)
 
 
-# â”€â”€ remove â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# â"€â"€ remove â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 
 def test_remove_drop_no_refund(data):
     inv, gold, _eq, _wp = remove(["sword"], 0, "sword", "drop", data)
@@ -188,22 +188,19 @@ def _walk_to_equipment(client):
     draft = load_draft(draft_id, client._drafts_dir)
     draft["abilities"] = {"STR": 15, "INT": 11, "WIS": 12, "DEX": 13, "CON": 14, "CHA": 10}
     save_draft(draft_id, draft, client._drafts_dir)
-    client.post(f"/wizard/{draft_id}/abilities", data={"name": "Thorin"})
+    client.post(f"/wizard/{draft_id}/abilities", data={})
     client.post(f"/wizard/{draft_id}/race", data={"race_id": "dwarf"})
     client.post(f"/wizard/{draft_id}/class", data={"class_id": "fighter"})
     client.post(f"/wizard/{draft_id}/adjust", data={})
-    client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "law"})
     client.post(f"/wizard/{draft_id}/hp/roll")
     client.post(f"/wizard/{draft_id}/hp")
+    client.post(f"/wizard/{draft_id}/identity", data={"name": "Thorin", "alignment": "law"})
     return draft_id
 
 
-def test_hp_post_redirects_to_equipment(client):
-    """Confirms the new step order â€” HP now flows to /equipment, not /review."""
+def test_equipment_accessible_after_identity(client):
+    """Equipment is reachable once identity (name + alignment) is complete."""
     draft_id = _walk_to_equipment(client)
-    # The above already POSTed /hp; the draft is now sitting on equipment
-    draft = load_draft(draft_id, client._drafts_dir)
-    # Visiting GET /equipment should land on equipment (no gate bounce)
     r = client.get(f"/wizard/{draft_id}/equipment")
     assert r.status_code == 200
 
@@ -284,7 +281,7 @@ def test_remove_modes_via_wizard(client):
     assert draft["inventory"].count("torch") == 2
     gold_after_drop = draft["gold"]
 
-    # Sell next (half refund â€” torch costs 1, sell value 0 due to floor)
+    # Sell next (half refund â€" torch costs 1, sell value 0 due to floor)
     client.post(f"/wizard/{draft_id}/equipment/remove",
                 data={"item_id": "torch", "mode": "sell"})
     # And refund the last (full price)
@@ -385,7 +382,7 @@ def test_sheet_does_not_offer_reroll_button(client):
     assert 'action="/character/test/equipment/reroll-gold"' not in r.text
 
 
-# â”€â”€ Add (free) button â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# â"€â"€ Add (free) button â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 
 def test_sheet_add_route_grants_item_without_spending_gold(client):
     _seed_character(client, gold=5)
@@ -424,7 +421,7 @@ def test_wizard_add_route_does_not_lock_gold(client):
     assert r.status_code == 303
 
 
-# â”€â”€ Shop search box â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# â"€â"€ Shop search box â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 
 def test_sheet_shop_has_search_input(client):
     _seed_character(client, gold=50)
@@ -440,7 +437,7 @@ def test_sheet_shop_rows_carry_search_metadata(client):
     assert 'data-shop-name="sword"' in r.text
 
 
-# â”€â”€ Gold-grant form on the sheet â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# â"€â"€ Gold-grant form on the sheet â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 
 def test_sheet_grant_gold_form_present(client):
     _seed_character(client, gold=10)

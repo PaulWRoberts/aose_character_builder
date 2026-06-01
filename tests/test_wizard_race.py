@@ -102,13 +102,13 @@ _DWARF_ABILITIES = {"STR": 15, "INT": 11, "WIS": 12, "DEX": 13, "CON": 14, "CHA"
 def _drive_dwarf_fighter_to_finalize(client):
     draft_id = _new_draft(client)
     _set_abilities(client, draft_id, dict(_DWARF_ABILITIES))
-    client.post(f"/wizard/{draft_id}/abilities", data={"name": "Gloin"})
+    client.post(f"/wizard/{draft_id}/abilities", data={})
     client.post(f"/wizard/{draft_id}/race", data={"race_id": "dwarf"})
     client.post(f"/wizard/{draft_id}/class", data={"class_id": "fighter"})
     client.post(f"/wizard/{draft_id}/adjust", data={})
-    client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "law"})
     client.post(f"/wizard/{draft_id}/hp/roll")
     client.post(f"/wizard/{draft_id}/hp")
+    client.post(f"/wizard/{draft_id}/identity", data={"name": "Gloin", "alignment": "law"})
     client.get(f"/wizard/{draft_id}/equipment")
     client.post(f"/wizard/{draft_id}/equipment")
     r = client.post(f"/wizard/{draft_id}/finalize")
@@ -132,12 +132,12 @@ def test_basic_race_as_class_finalize_has_no_racial_mods(tmp_path):
     client = _make_client(tmp_path, ruleset=RuleSet(separate_race_class=False))
     draft_id = _new_draft(client)
     _set_abilities(client, draft_id, dict(_DWARF_ABILITIES))
-    client.post(f"/wizard/{draft_id}/abilities", data={"name": "Gloin"})
+    client.post(f"/wizard/{draft_id}/abilities", data={})
     client.post(f"/wizard/{draft_id}/class", data={"class_id": "dwarf"})
     client.post(f"/wizard/{draft_id}/adjust", data={})
-    client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "law"})
     client.post(f"/wizard/{draft_id}/hp/roll")
     client.post(f"/wizard/{draft_id}/hp")
+    client.post(f"/wizard/{draft_id}/identity", data={"name": "Gloin", "alignment": "law"})
     client.get(f"/wizard/{draft_id}/equipment")
     client.post(f"/wizard/{draft_id}/equipment")
     r = client.post(f"/wizard/{draft_id}/finalize")
@@ -156,7 +156,7 @@ def test_race_minimum_checked_pre_modifier(tmp_path):
     _set_abilities(client, draft_id, {
         "STR": 12, "INT": 11, "WIS": 12, "DEX": 13, "CON": 8, "CHA": 12,
     })
-    client.post(f"/wizard/{draft_id}/abilities", data={"name": "Gloin"})
+    client.post(f"/wizard/{draft_id}/abilities", data={})
     r = client.post(f"/wizard/{draft_id}/race", data={"race_id": "dwarf"})
     assert r.status_code == 400
 
@@ -169,7 +169,7 @@ def test_class_minimum_passes_after_racial_bonus(tmp_path):
     client = _make_client(tmp_path, ruleset=RuleSet(lift_demihuman_restrictions=True))
     draft_id = _new_draft(client)
     _set_abilities(client, draft_id, dict(_KNIGHT_BORDERLINE))
-    client.post(f"/wizard/{draft_id}/abilities", data={"name": "Grok"})
+    client.post(f"/wizard/{draft_id}/abilities", data={})
     r = client.post(f"/wizard/{draft_id}/race", data={"race_id": "half_orc"})
     assert r.status_code == 303
     r = client.post(f"/wizard/{draft_id}/class", data={"class_id": "knight"})
@@ -181,7 +181,7 @@ def test_class_minimum_fails_without_racial_bonus(tmp_path):
     client = _make_client(tmp_path, ruleset=RuleSet(lift_demihuman_restrictions=True))
     draft_id = _new_draft(client)
     _set_abilities(client, draft_id, dict(_KNIGHT_BORDERLINE))
-    client.post(f"/wizard/{draft_id}/abilities", data={"name": "Otto"})
+    client.post(f"/wizard/{draft_id}/abilities", data={})
     r = client.post(f"/wizard/{draft_id}/race", data={"race_id": "human"})
     assert r.status_code == 303
     r = client.post(f"/wizard/{draft_id}/class", data={"class_id": "knight"})
@@ -194,7 +194,7 @@ def test_race_step_shows_ability_change_for_dwarf(tmp_path):
     client = _make_client(tmp_path)
     draft_id = _new_draft(client)
     _set_abilities(client, draft_id, dict(_DWARF_ABILITIES))  # CON 14, CHA 10
-    client.post(f"/wizard/{draft_id}/abilities", data={"name": "Gloin"})
+    client.post(f"/wizard/{draft_id}/abilities", data={})
     r = client.get(f"/wizard/{draft_id}/race")
     assert r.status_code == 200
     assert "14 → 15" in r.text or "14 &rarr; 15" in r.text
@@ -205,7 +205,7 @@ def test_race_step_no_change_block_for_human(tmp_path):
     client = _make_client(tmp_path)
     draft_id = _new_draft(client)
     _set_abilities(client, draft_id, dict(_DWARF_ABILITIES))
-    client.post(f"/wizard/{draft_id}/abilities", data={"name": "Nim"})
+    client.post(f"/wizard/{draft_id}/abilities", data={})
     r = client.get(f"/wizard/{draft_id}/race")
     assert r.status_code == 200
     # The dwarf card has at least one "Ability changes:" block.
@@ -221,11 +221,10 @@ def test_hp_step_con_mod_reflects_racial_bonus(tmp_path):
     _set_abilities(client, draft_id, {
         "STR": 15, "INT": 11, "WIS": 12, "DEX": 13, "CON": 15, "CHA": 12,
     })
-    client.post(f"/wizard/{draft_id}/abilities", data={"name": "Gloin"})
+    client.post(f"/wizard/{draft_id}/abilities", data={})
     client.post(f"/wizard/{draft_id}/race", data={"race_id": "dwarf"})
     client.post(f"/wizard/{draft_id}/class", data={"class_id": "fighter"})
     client.post(f"/wizard/{draft_id}/adjust", data={})
-    client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "law"})
     r = client.get(f"/wizard/{draft_id}/class_setup")
     assert r.status_code == 200
     assert "+2" in r.text

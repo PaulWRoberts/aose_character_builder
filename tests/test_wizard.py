@@ -63,8 +63,8 @@ def test_full_wizard_flow_creates_character(client, tmp_path):
         "STR": 15, "INT": 11, "WIS": 12, "DEX": 13, "CON": 14, "CHA": 10
     })
 
-    # Abilities + name
-    r = client.post(f"/wizard/{draft_id}/abilities", data={"name": "Thorin"})
+    # Abilities (name moved to identity step)
+    r = client.post(f"/wizard/{draft_id}/abilities", data={})
     assert r.status_code == 303
     assert r.headers["location"] == f"/wizard/{draft_id}/race"
 
@@ -81,11 +81,6 @@ def test_full_wizard_flow_creates_character(client, tmp_path):
     # Ability adjustments (skip)
     r = client.post(f"/wizard/{draft_id}/adjust", data={})
     assert r.status_code == 303
-    assert r.headers["location"] == f"/wizard/{draft_id}/alignment"
-
-    # Alignment
-    r = client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "law"})
-    assert r.status_code == 303
     assert r.headers["location"] == f"/wizard/{draft_id}/class_setup"
 
     # HP roll
@@ -94,8 +89,13 @@ def test_full_wizard_flow_creates_character(client, tmp_path):
     draft = load_draft(draft_id, tmp_path / "drafts")
     assert 1 <= draft["hp_roll"] <= 8
 
-    # HP now redirects to the equipment step, not directly to review.
+    # HP advances to identity
     r = client.post(f"/wizard/{draft_id}/hp")
+    assert r.status_code == 303
+    assert r.headers["location"] == f"/wizard/{draft_id}/identity"
+
+    # Identity (name + alignment)
+    r = client.post(f"/wizard/{draft_id}/identity", data={"name": "Thorin", "alignment": "law"})
     assert r.status_code == 303
     assert r.headers["location"] == f"/wizard/{draft_id}/equipment"
 
@@ -134,13 +134,13 @@ def test_unique_id_on_name_collision(client, tmp_path):
     _override_abilities(tmp_path, draft_id, {
         "STR": 15, "INT": 11, "WIS": 12, "DEX": 13, "CON": 14, "CHA": 10
     })
-    client.post(f"/wizard/{draft_id}/abilities", data={"name": "Thorin"})
+    client.post(f"/wizard/{draft_id}/abilities", data={})
     client.post(f"/wizard/{draft_id}/race", data={"race_id": "dwarf"})
     client.post(f"/wizard/{draft_id}/class", data={"class_id": "fighter"})
     client.post(f"/wizard/{draft_id}/adjust", data={})
-    client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "law"})
     client.post(f"/wizard/{draft_id}/hp/roll")
     client.post(f"/wizard/{draft_id}/hp")
+    client.post(f"/wizard/{draft_id}/identity", data={"name": "Thorin", "alignment": "law"})
     r = client.post(f"/wizard/{draft_id}/finalize")
     assert r.headers["location"] == "/character/thorin-2"
 
@@ -150,7 +150,7 @@ def test_race_rejected_if_abilities_too_low(client, tmp_path):
     _override_abilities(tmp_path, draft_id, {
         "STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 5, "CHA": 10
     })
-    client.post(f"/wizard/{draft_id}/abilities", data={"name": "Weakling"})
+    client.post(f"/wizard/{draft_id}/abilities", data={})
     r = client.post(f"/wizard/{draft_id}/race", data={"race_id": "dwarf"})
     assert r.status_code == 400
 

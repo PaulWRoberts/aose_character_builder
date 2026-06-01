@@ -78,13 +78,13 @@ def _start(client):
 
 def test_split_mode_abilities_post_goes_to_race(split_client):
     draft_id = _start(split_client)
-    r = split_client.post(f"/wizard/{draft_id}/abilities", data={"name": "X"})
+    r = split_client.post(f"/wizard/{draft_id}/abilities", data={})
     assert r.headers["location"].endswith("/race")
 
 
 def test_rac_mode_abilities_post_skips_race(rac_client):
     draft_id = _start(rac_client)
-    r = rac_client.post(f"/wizard/{draft_id}/abilities", data={"name": "X"})
+    r = rac_client.post(f"/wizard/{draft_id}/abilities", data={})
     assert r.headers["location"].endswith("/class")
 
 
@@ -132,7 +132,7 @@ def test_rac_mode_class_step_shows_demihuman_badge(rac_client):
 
 def test_rac_mode_picking_race_locked_assigns_race(rac_client):
     draft_id = _start(rac_client)
-    rac_client.post(f"/wizard/{draft_id}/abilities", data={"name": "Thorin"})
+    rac_client.post(f"/wizard/{draft_id}/abilities", data={})
     r = rac_client.post(f"/wizard/{draft_id}/class", data={"class_id": "dwarf"})
     assert r.status_code == 303
     draft = load_draft(draft_id, rac_client._drafts_dir)
@@ -142,7 +142,7 @@ def test_rac_mode_picking_race_locked_assigns_race(rac_client):
 
 def test_rac_mode_picking_human_class_defaults_to_human_race(rac_client):
     draft_id = _start(rac_client)
-    rac_client.post(f"/wizard/{draft_id}/abilities", data={"name": "Alice"})
+    rac_client.post(f"/wizard/{draft_id}/abilities", data={})
     r = rac_client.post(f"/wizard/{draft_id}/class", data={"class_id": "fighter"})
     assert r.status_code == 303
     draft = load_draft(draft_id, rac_client._drafts_dir)
@@ -165,7 +165,7 @@ def test_rac_mode_low_con_still_rejects_dwarf(rac_client):
     draft = load_draft(draft_id, rac_client._drafts_dir)
     draft["abilities"] = {"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 5, "CHA": 10}
     save_draft(draft_id, draft, rac_client._drafts_dir)
-    rac_client.post(f"/wizard/{draft_id}/abilities", data={"name": "Weakling"})
+    rac_client.post(f"/wizard/{draft_id}/abilities", data={})
     r = rac_client.post(f"/wizard/{draft_id}/class", data={"class_id": "dwarf"})
     assert r.status_code == 400
 
@@ -211,11 +211,13 @@ def test_sheet_class_summary_for_dwarf_as_class():
 
 def test_sheet_subtitle_omits_race_for_race_as_class(rac_client):
     draft_id = _start(rac_client)
-    rac_client.post(f"/wizard/{draft_id}/abilities", data={"name": "Thorin"})
+    rac_client.post(f"/wizard/{draft_id}/abilities", data={})
     rac_client.post(f"/wizard/{draft_id}/class", data={"class_id": "dwarf"})
-    rac_client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "law"})
     rac_client.post(f"/wizard/{draft_id}/hp/roll")
     rac_client.post(f"/wizard/{draft_id}/hp")
+    rac_client.post(f"/wizard/{draft_id}/identity", data={"name": "Thorin", "alignment": "law"})
+    rac_client.get(f"/wizard/{draft_id}/equipment")
+    rac_client.post(f"/wizard/{draft_id}/equipment")
     r = rac_client.post(f"/wizard/{draft_id}/finalize")
     char_id = r.headers["location"].split("/")[-1]
     r = rac_client.get(f"/character/{char_id}")
@@ -229,12 +231,14 @@ def test_sheet_subtitle_omits_race_for_race_as_class(rac_client):
 
 def test_sheet_subtitle_keeps_race_in_split_mode(split_client):
     draft_id = _start(split_client)
-    split_client.post(f"/wizard/{draft_id}/abilities", data={"name": "Thorin"})
+    split_client.post(f"/wizard/{draft_id}/abilities", data={})
     split_client.post(f"/wizard/{draft_id}/race", data={"race_id": "dwarf"})
     split_client.post(f"/wizard/{draft_id}/class", data={"class_id": "fighter"})
-    split_client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "law"})
     split_client.post(f"/wizard/{draft_id}/hp/roll")
     split_client.post(f"/wizard/{draft_id}/hp")
+    split_client.post(f"/wizard/{draft_id}/identity", data={"name": "Thorin", "alignment": "law"})
+    split_client.get(f"/wizard/{draft_id}/equipment")
+    split_client.post(f"/wizard/{draft_id}/equipment")
     r = split_client.post(f"/wizard/{draft_id}/finalize")
     char_id = r.headers["location"].split("/")[-1]
     r = split_client.get(f"/character/{char_id}")
@@ -246,12 +250,14 @@ def test_sheet_subtitle_keeps_race_in_split_mode(split_client):
 
 def test_full_race_as_class_flow_creates_character(rac_client):
     draft_id = _start(rac_client)
-    rac_client.post(f"/wizard/{draft_id}/abilities", data={"name": "Thorin"})
+    rac_client.post(f"/wizard/{draft_id}/abilities", data={})
     r = rac_client.post(f"/wizard/{draft_id}/class", data={"class_id": "dwarf"})
     assert r.status_code == 303
-    rac_client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "law"})
     rac_client.post(f"/wizard/{draft_id}/hp/roll")
     rac_client.post(f"/wizard/{draft_id}/hp")
+    rac_client.post(f"/wizard/{draft_id}/identity", data={"name": "Thorin", "alignment": "law"})
+    rac_client.get(f"/wizard/{draft_id}/equipment")
+    rac_client.post(f"/wizard/{draft_id}/equipment")
     r = rac_client.post(f"/wizard/{draft_id}/finalize")
     char_id = r.headers["location"].split("/")[-1]
     spec = load_character(char_id, rac_client._characters_dir)

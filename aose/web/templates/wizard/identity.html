@@ -1,0 +1,45 @@
+<h2>Identity &amp; Background</h2>
+
+<form method="post" action="/wizard/{{ draft_id }}/identity" class="step-form">
+    <label class="field">
+        <span>Character Name</span>
+        <input type="text" name="name" required value="{{ draft.name or '' }}" autofocus>
+    </label>
+
+    <fieldset class="field">
+        <legend>Alignment</legend>
+        <div class="radio-stack">
+        {% for a in alignments %}
+            <label class="radio-card {% if draft.alignment == a.id %}selected{% endif %}">
+                <input type="radio" name="alignment" value="{{ a.id }}" required
+                       {% if draft.alignment == a.id %}checked{% endif %}>
+                <span class="radio-label">{{ a.label }}</span>
+            </label>
+        {% endfor %}
+        </div>
+    </fieldset>
+
+    {% if show_skill %}
+    <fieldset class="field">
+        <legend>Secondary Skill</legend>
+        <p class="muted">A humble trade from before adventuring — we've rolled one;
+           re-roll or pick another.</p>
+        <label class="field">
+            <span>Skill</span>
+            <select name="secondary_skill">
+                {% for s in skills %}
+                <option value="{{ s }}" {% if s == current_skill %}selected{% endif %}>{{ s }}</option>
+                {% endfor %}
+            </select>
+        </label>
+    </fieldset>
+    {% endif %}
+
+    <button type="submit" class="primary">Next: Equipment &rarr;</button>
+</form>
+
+{% if show_skill %}
+<form method="post" action="/wizard/{{ draft_id }}/identity/skill-reroll" class="inline-form">
+    <button type="submit">Re-roll skill</button>
+</form>
+{% endif %}

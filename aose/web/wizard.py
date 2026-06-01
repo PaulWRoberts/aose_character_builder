@@ -96,9 +96,8 @@ STEP_LABELS = {
     "race": "Race",
     "class": "Class",
     "adjust": "Ability Adjustments",
-    "alignment": "Alignment",
-    "skill": "Secondary Skill",
     "class_setup": "Class Setup",
+    "identity": "Identity & Background",
     "equipment": "Equipment",
     "review": "Review",
 }
@@ -119,13 +118,7 @@ def _wizard_steps(draft: dict[str, Any]) -> list[str]:
     steps = ["rules", "abilities"]
     if rs.separate_race_class:
         steps.append("race")
-    steps += ["class", "adjust", "alignment"]
-    if rs.secondary_skills:
-        steps.append("skill")
-    # HP, weapon proficiencies, and spells are consolidated into one always-on
-    # Class Setup step; proficiencies/spells are sections within it.
-    steps.append("class_setup")
-    steps += ["equipment", "review"]
+    steps += ["class", "adjust", "class_setup", "identity", "equipment", "review"]
     return steps
 ABILITY_ORDER = [Ability.STR, Ability.INT, Ability.WIS, Ability.DEX, Ability.CON, Ability.CHA]
 ALIGNMENT_LABELS = {"law": "Lawful", "neutral": "Neutral", "chaos": "Chaotic"}
@@ -190,8 +183,10 @@ def _clear_after_race(draft: dict[str, Any]) -> None:
 
 
 def _clear_after_class(draft: dict[str, Any]) -> None:
+    # A class change can invalidate the chosen alignment (e.g. picking paladin
+    # after choosing chaos). name and secondary_skill don't depend on class.
     for k in ("ability_adjustments", "hp_roll", "hp_rolls", "proficiencies",
-              "spellcasting", "spellbooks", "spells_done"):
+              "spellcasting", "spellbooks", "spells_done", "alignment"):
         draft.pop(k, None)
 
 
@@ -209,12 +204,24 @@ def _class_setup_complete(draft: dict[str, Any]) -> bool:
     return True
 
 
+def _identity_complete(draft: dict[str, Any]) -> bool:
+    """Identity is complete once name and alignment are set (and the secondary
+    skill, when that rule is on)."""
+    if not draft.get("name"):
+        return False
+    if "alignment" not in draft:
+        return False
+    if _ruleset_of(draft).secondary_skills and "secondary_skill" not in draft:
+        return False
+    return True
+
+
 def _next_incomplete_step(draft: dict[str, Any]) -> str:
     # The rules step is "complete" once it has rolled abilities — at /new we
     # seed only the ruleset, so a draft without abilities is mid-rules step.
     if "abilities" not in draft:
         return "rules"
-    if "name" not in draft:
+    if not draft.get("abilities_confirmed"):
         return "abilities"
     rs = _ruleset_of(draft)
     # In race-as-class mode, race_id is assigned by the class POST handler,
@@ -225,12 +232,10 @@ def _next_incomplete_step(draft: dict[str, Any]) -> str:
         return "class"
     if "ability_adjustments" not in draft:
         return "adjust"
-    if "alignment" not in draft:
-        return "alignment"
-    if rs.secondary_skills and "secondary_skill" not in draft:
-        return "skill"
     if not _class_setup_complete(draft):
         return "class_setup"
+    if not _identity_complete(draft):
+        return "identity"
     if "gold" not in draft:
         return "equipment"
     return "review"
@@ -409,11 +414,9 @@ async def get_abilities(request: Request, draft_id: str):
 @router.post("/{draft_id}/abilities")
 async def post_abilities(request: Request, draft_id: str):
     draft = _load(request, draft_id)
-    form = await request.form()
-    name = (form.get("name") or "").strip()
-    if not name:
-        raise HTTPException(400, "Name required")
-    draft["name"] = name
+    # Name moved to the Identity step; confirming abilities is now the step's
+    # completion marker. Abilities themselves are locked at draft creation.
+    draft["abilities_confirmed"] = True
     save_draft(draft_id, draft, _drafts_dir(request))
     # Route via _next_incomplete_step so race-as-class drafts skip /race.
     return _redirect(f"/wizard/{draft_id}/{_next_incomplete_step(draft)}")
@@ -746,33 +749,7 @@ async def post_adjust(request: Request, draft_id: str):
     return _redirect(f"/wizard/{draft_id}/{_next_incomplete_step(draft)}")
 
 
-@router.get("/{draft_id}/alignment", response_class=HTMLResponse)
-async def get_alignment(request: Request, draft_id: str):
-    draft = _load(request, draft_id)
-    redirect = _gate(draft, "alignment", draft_id)
-    if redirect:
-        return redirect
-    ctx = _base_context(request, draft_id, draft, "alignment")
-    ctx["alignments"] = [
-        {"id": "law", "label": "Lawful"},
-        {"id": "neutral", "label": "Neutral"},
-        {"id": "chaos", "label": "Chaotic"},
-    ]
-    return templates.TemplateResponse(request, "wizard.html", ctx)
-
-
-@router.post("/{draft_id}/alignment")
-async def post_alignment(request: Request, draft_id: str, alignment: str = Form(...)):
-    if alignment not in ("law", "neutral", "chaos"):
-        raise HTTPException(400, "Invalid alignment")
-    draft = _load(request, draft_id)
-    draft["alignment"] = alignment
-    save_draft(draft_id, draft, _drafts_dir(request))
-    next_step = _next_incomplete_step(draft)
-    return _redirect(f"/wizard/{draft_id}/{next_step}")
-
-
-# ── Secondary skill (optional, gated by ruleset.secondary_skills) ─────────
+# ── Secondary skill helpers (reused by identity routes) ────────────────────
 
 def _available_skills(request: Request) -> list[str]:
     return request.app.state.game_data.secondary_skills
@@ -785,51 +762,82 @@ def _roll_skill(request: Request) -> str | None:
     return random.choice(skills)
 
 
-@router.get("/{draft_id}/skill", response_class=HTMLResponse)
-async def get_skill(request: Request, draft_id: str):
+# ── Identity & Background (name + alignment + optional skill, after class setup)
+
+def _identity_alignment_options(draft: dict[str, Any], data) -> list[dict]:
+    """Alignment radio options filtered to the legal set for the picked class(es)."""
+    classes = [data.classes[cid] for cid in _class_ids(draft) if cid in data.classes]
+    allowed = _allowed_alignments(classes)
+    return [
+        {"id": a, "label": ALIGNMENT_LABELS[a]}
+        for a in ("law", "neutral", "chaos")
+        if a in allowed
+    ]
+
+
+@router.get("/{draft_id}/identity", response_class=HTMLResponse)
+async def get_identity(request: Request, draft_id: str):
     draft = _load(request, draft_id)
-    redirect = _gate(draft, "skill", draft_id)
+    redirect = _gate(draft, "identity", draft_id)
     if redirect:
         return redirect
-    skills = _available_skills(request)
-    if not skills:
-        raise HTTPException(
-            500,
-            "Secondary Skills rule is active but data/secondary_skills.yaml is empty.",
-        )
-    # Auto-roll on first visit so the user has something to either accept,
-    # re-roll, or override from the dropdown.
-    if "secondary_skill" not in draft:
-        draft["secondary_skill"] = random.choice(skills)
-        save_draft(draft_id, draft, _drafts_dir(request))
-    ctx = _base_context(request, draft_id, draft, "skill")
-    ctx.update({
-        "skills": skills,
-        "current_skill": draft.get("secondary_skill"),
-    })
+    data = request.app.state.game_data
+    rs = _ruleset_of(draft)
+    ctx = _base_context(request, draft_id, draft, "identity")
+    ctx["alignments"] = _identity_alignment_options(draft, data)
+    ctx["show_skill"] = rs.secondary_skills
+    if rs.secondary_skills:
+        skills = _available_skills(request)
+        if not skills:
+            raise HTTPException(
+                500,
+                "Secondary Skills rule is active but data/secondary_skills.yaml is empty.",
+            )
+        if "secondary_skill" not in draft:
+            draft["secondary_skill"] = random.choice(skills)
+            save_draft(draft_id, draft, _drafts_dir(request))
+        ctx["skills"] = skills
+        ctx["current_skill"] = draft.get("secondary_skill")
     return templates.TemplateResponse(request, "wizard.html", ctx)
 
 
-@router.post("/{draft_id}/skill/reroll")
-async def post_skill_reroll(request: Request, draft_id: str):
+@router.post("/{draft_id}/identity/skill-reroll")
+async def post_identity_skill_reroll(request: Request, draft_id: str):
     draft = _load(request, draft_id)
     skill = _roll_skill(request)
     if skill is None:
         raise HTTPException(500, "No secondary skills configured.")
     draft["secondary_skill"] = skill
     save_draft(draft_id, draft, _drafts_dir(request))
-    return _redirect(f"/wizard/{draft_id}/skill")
+    return _redirect(f"/wizard/{draft_id}/identity")
 
 
-@router.post("/{draft_id}/skill")
-async def post_skill(request: Request, draft_id: str, secondary_skill: str = Form(...)):
+@router.post("/{draft_id}/identity")
+async def post_identity(request: Request, draft_id: str):
     draft = _load(request, draft_id)
-    if secondary_skill not in _available_skills(request):
-        raise HTTPException(400, f"Unknown skill: {secondary_skill!r}")
-    draft["secondary_skill"] = secondary_skill
+    data = request.app.state.game_data
+    rs = _ruleset_of(draft)
+    form = await request.form()
+
+    name = (form.get("name") or "").strip()
+    if not name:
+        raise HTTPException(400, "Name required")
+
+    alignment = form.get("alignment")
+    allowed = {o["id"] for o in _identity_alignment_options(draft, data)}
+    if alignment not in allowed:
+        raise HTTPException(400, "Invalid alignment for the chosen class(es).")
+
+    if rs.secondary_skills:
+        secondary_skill = form.get("secondary_skill")
+        if secondary_skill not in _available_skills(request):
+            raise HTTPException(400, f"Unknown skill: {secondary_skill!r}")
+        draft["secondary_skill"] = secondary_skill
+
+    draft["name"] = name
+    draft["alignment"] = alignment
     save_draft(draft_id, draft, _drafts_dir(request))
-    next_step = _next_incomplete_step(draft)
-    return _redirect(f"/wizard/{draft_id}/{next_step}")
+    return _redirect(f"/wizard/{draft_id}/{_next_incomplete_step(draft)}")
 
 
 # ── Weapon proficiencies (optional, gated by ruleset.weapon_proficiency) ──

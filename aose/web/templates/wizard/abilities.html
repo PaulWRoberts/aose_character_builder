@@ -1,4 +1,4 @@
-<h2>Step 1: Abilities &amp; Name</h2>
+<h2>Step 1: Abilities</h2>
 <p class="muted">Rolled 3d6 in order — these scores are fixed for this character.</p>
 
 {% if subpar %}
@@ -28,10 +28,5 @@
         </tbody>
     </table>
 
-    <label class="field">
-        <span>Character Name</span>
-        <input type="text" name="name" required value="{{ draft.name or '' }}" autofocus>
-    </label>
-
-    <button type="submit" class="primary">Next: Choose Race &rarr;</button>
+    <button type="submit" class="primary">Continue &rarr;</button>
 </form>

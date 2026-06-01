@@ -179,11 +179,10 @@ def _start_fighter(client):
     draft = load_draft(draft_id, client._drafts_dir)
     draft["abilities"] = {"STR": 15, "INT": 11, "WIS": 12, "DEX": 13, "CON": 14, "CHA": 10}
     save_draft(draft_id, draft, client._drafts_dir)
-    client.post(f"/wizard/{draft_id}/abilities", data={"name": "Thorin"})
+    client.post(f"/wizard/{draft_id}/abilities", data={})
     client.post(f"/wizard/{draft_id}/race", data={"race_id": "dwarf"})
     client.post(f"/wizard/{draft_id}/class", data={"class_id": "fighter"})
     client.post(f"/wizard/{draft_id}/adjust", data={})
-    client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "law"})
     return draft_id
 
 
@@ -193,11 +192,10 @@ def _start_magic_user(client):
     draft = load_draft(draft_id, client._drafts_dir)
     draft["abilities"] = {"STR": 10, "INT": 15, "WIS": 11, "DEX": 13, "CON": 12, "CHA": 10}
     save_draft(draft_id, draft, client._drafts_dir)
-    client.post(f"/wizard/{draft_id}/abilities", data={"name": "Raistlin"})
+    client.post(f"/wizard/{draft_id}/abilities", data={})
     client.post(f"/wizard/{draft_id}/race", data={"race_id": "human"})
     client.post(f"/wizard/{draft_id}/class", data={"class_id": "magic_user"})
     client.post(f"/wizard/{draft_id}/adjust", data={})
-    client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "neutral"})
     return draft_id
 
 
@@ -264,6 +262,7 @@ def test_proficiencies_persist_to_character(client):
                 data={"weapon": ["sword", "spear", "mace", "hand_axe"]})
     client.post(f"/wizard/{draft_id}/hp/roll")
     client.post(f"/wizard/{draft_id}/hp")
+    client.post(f"/wizard/{draft_id}/identity", data={"name": "Thorin", "alignment": "law"})
     r = client.post(f"/wizard/{draft_id}/finalize")
     char_id = r.headers["location"].split("/")[-1]
     spec = load_character(char_id, client._characters_dir)
@@ -318,6 +317,7 @@ def test_sheet_html_renders_per_weapon_section(client):
                 data={"weapon": ["sword", "spear", "mace", "hand_axe"]})
     client.post(f"/wizard/{draft_id}/hp/roll")
     client.post(f"/wizard/{draft_id}/hp")
+    client.post(f"/wizard/{draft_id}/identity", data={"name": "Thorin", "alignment": "law"})
     r = client.post(f"/wizard/{draft_id}/finalize")
     char_id = r.headers["location"].split("/")[-1]
     r = client.get(f"/character/{char_id}")

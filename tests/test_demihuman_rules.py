@@ -78,7 +78,7 @@ def _start_through_race(client, race_id="dwarf"):
     draft = load_draft(draft_id, client._drafts_dir)
     draft["abilities"] = {"STR": 15, "INT": 11, "WIS": 12, "DEX": 13, "CON": 14, "CHA": 10}
     save_draft(draft_id, draft, client._drafts_dir)
-    client.post(f"/wizard/{draft_id}/abilities", data={"name": "Thorin"})
+    client.post(f"/wizard/{draft_id}/abilities", data={})
     client.post(f"/wizard/{draft_id}/race", data={"race_id": race_id})
     return draft_id
 
@@ -204,9 +204,9 @@ def test_character_snapshots_lift_rule_choice(client):
     save_settings(client._settings_path, RuleSet(lift_demihuman_restrictions=True))
     draft_id = _start_through_race(client)
     client.post(f"/wizard/{draft_id}/class", data={"class_id": "fighter"})
-    client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "law"})
     client.post(f"/wizard/{draft_id}/hp/roll")
     client.post(f"/wizard/{draft_id}/hp")
+    client.post(f"/wizard/{draft_id}/identity", data={"name": "Thorin", "alignment": "law"})
     r = client.post(f"/wizard/{draft_id}/finalize")
     char_id = r.headers["location"].split("/")[-1]
     spec = load_character(char_id, client._characters_dir)
