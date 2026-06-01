@@ -303,3 +303,51 @@ def test_default_ruleset_keeps_normal_hp_roll_flow(client, tmp_path):
     # hp_roll not auto-populated
     draft = load_draft(draft_id, tmp_path / "drafts")
     assert "hp_roll" not in draft
+
+
+# ── Creation method + Basic enforcement (Slice 1) ─────────────────────────
+
+from aose.web.settings_routes import parse_ruleset_from_form
+
+
+class _Form(dict):
+    """Minimal stand-in for a Starlette FormData: supports `in` and `.get`.
+    The parser only uses membership tests and `.get`, so a dict suffices."""
+
+
+def test_parser_advanced_method_sets_separate_race_class_true():
+    rs = parse_ruleset_from_form(_Form({"creation_method": "advanced"}))
+    assert rs.separate_race_class is True
+
+
+def test_parser_basic_method_sets_separate_race_class_false():
+    rs = parse_ruleset_from_form(_Form({"creation_method": "basic"}))
+    assert rs.separate_race_class is False
+
+
+def test_parser_missing_method_defaults_to_advanced():
+    rs = parse_ruleset_from_form(_Form({}))
+    assert rs.separate_race_class is True
+
+
+def test_parser_basic_forces_advanced_only_rules_off():
+    """Even if multiclassing / lift_demihuman_restrictions are posted true,
+    Basic mode forces them off server-side."""
+    rs = parse_ruleset_from_form(_Form({
+        "creation_method": "basic",
+        "multiclassing": "on",
+        "lift_demihuman_restrictions": "on",
+    }))
+    assert rs.separate_race_class is False
+    assert rs.multiclassing is False
+    assert rs.lift_demihuman_restrictions is False
+
+
+def test_parser_advanced_keeps_advanced_only_rules():
+    rs = parse_ruleset_from_form(_Form({
+        "creation_method": "advanced",
+        "multiclassing": "on",
+        "lift_demihuman_restrictions": "on",
+    }))
+    assert rs.multiclassing is True
+    assert rs.lift_demihuman_restrictions is True
