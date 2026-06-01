@@ -29,6 +29,20 @@ def prime_requisite_xp_multiplier(score: int) -> float:
     return 1.10
 
 
+def apply_racial_modifiers(base: dict[str, int], race) -> dict[str, int]:
+    """Return ``base`` with ``race.ability_modifiers`` applied, each score
+    clamped to ``[3, 18]``.
+
+    The input dict is not mutated. Callers decide whether to apply (Advanced
+    only); this helper does not consult the ruleset.
+    """
+    result = dict(base)
+    for ability, delta in race.ability_modifiers.items():
+        key = ability.value if hasattr(ability, "value") else ability
+        result[key] = max(3, min(18, result.get(key, 0) + delta))
+    return result
+
+
 def ability_warnings(abilities: dict[str, int]) -> dict:
     """Non-blocking creation warnings derived purely from ability scores.
 
