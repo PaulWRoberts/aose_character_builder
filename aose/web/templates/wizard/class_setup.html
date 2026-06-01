@@ -1,0 +1,176 @@
+<h2>Class Setup</h2>
+
+{# ── Hit Points ─────────────────────────────────────────────────────────── #}
+<section class="class-setup-section">
+    <h3>Hit Points</h3>
+    <p>
+        {{ hp_class_name }} rolls
+        {% if is_multi %}one hit die per class{% else %}<strong>{{ hit_die }}</strong>{% endif %}
+        for level&nbsp;1 HP. CON modifier: <strong>{{ "%+d"|format(con_mod) }}</strong>.
+    </p>
+    {% if reroll_rule %}
+    <p class="rule-active"><strong>Reroll 1s &amp; 2s at L1</strong> is active &mdash; any 1 or 2 on a hit die is rerolled.</p>
+    {% endif %}
+    {% if blessed %}
+    <p class="rule-active"><strong>Blessed</strong> &mdash; rolled twice, kept the better result.</p>
+    {% endif %}
+    {% if is_multi %}
+    <p class="muted small">Multi-class HP: <em>floor(average of class rolls)</em> + CON modifier (minimum&nbsp;1).</p>
+    {% endif %}
+
+    {% if rolls %}
+    <div class="hp-display">
+        {% for r in rolls %}
+        <div class="stat-row">
+            <span>{{ r.class_name }} ({{ r.hit_die }})</span>
+            <span class="stat-big">{{ r.roll if r.roll is not none else '—' }}</span>
+        </div>
+        {% endfor %}
+        {% if total_hp is not none %}
+        <div class="stat-row" style="border-top: 1px solid #c8b89a; margin-top: 6px; padding-top: 6px;">
+            <span><strong>Total HP</strong></span>
+            <span class="stat-big">{{ total_hp }}</span>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% if not hp_done %}
+    <form method="post" action="/wizard/{{ draft_id }}/hp/roll" class="inline-form">
+        <button type="submit">Roll HP</button>
+    </form>
+    {% else %}
+    <p class="muted small">Hit points are locked. To re-roll, cancel and start over.</p>
+    {% endif %}
+</section>
+
+{# ── Weapon Proficiencies ───────────────────────────────────────────────── #}
+{% if show_proficiencies %}
+<section class="class-setup-section">
+    <h3>Weapon Proficiencies</h3>
+    <p>{{ class_name }} starts with <strong>{{ required }}</strong> weapon
+       proficiency slot{{ "s" if required != 1 else "" }}.{% if allow_specialise %}
+       A martial character may <strong>specialise</strong> in a weapon
+       (costs 2 slots) for +1 to hit and +1 damage.{% endif %}</p>
+    <form method="post" action="/wizard/{{ draft_id }}/proficiencies" class="step-form">
+        <table class="prof-table" data-required="{{ required }}"
+               data-specialise="{{ 1 if allow_specialise else 0 }}">
+            <thead>
+                <tr><th>Proficient</th><th>Weapon</th><th>Qualities</th>
+                {% if allow_specialise %}<th>Specialise (2)</th>{% endif %}</tr>
+            </thead>
+            <tbody>
+                {% for w in weapons %}
+                <tr>
+                    <td><input type="checkbox" name="weapon" value="{{ w.id }}"
+                               class="prof-weapon" {% if w.selected %}checked{% endif %}></td>
+                    <td>{{ w.name }}</td>
+                    <td class="muted small">{{ w.qualities }}</td>
+                    {% if allow_specialise %}
+                    <td><input type="checkbox" name="specialise" value="{{ w.id }}"
+                               class="prof-special" {% if w.specialised %}checked{% endif %}></td>
+                    {% endif %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <p class="muted" id="prof-counter">Spend exactly {{ required }} slot{{ "s" if required != 1 else "" }}.</p>
+        <button type="submit">{% if proficiencies_done %}Update proficiencies{% else %}Save proficiencies{% endif %}</button>
+    </form>
+    <script>
+        (function () {
+            const required = {{ required }};
+            const table = document.querySelector('.prof-table');
+            const counter = document.getElementById('prof-counter');
+            function rowOf(el) { return el.closest('tr'); }
+            function spent() {
+                let n = 0;
+                table.querySelectorAll('.prof-weapon:checked').forEach(() => n += 1);
+                table.querySelectorAll('.prof-special:checked').forEach(() => n += 1);
+                return n;
+            }
+            function refresh() {
+                table.querySelectorAll('.prof-special:checked').forEach(s => {
+                    const w = rowOf(s).querySelector('.prof-weapon');
+                    if (w && !w.checked) { w.checked = true; }
+                });
+                const n = spent();
+                counter.textContent = `Spent ${n} of ${required}.`;
+                counter.className = (n === required) ? '' : 'muted';
+            }
+            table.addEventListener('change', refresh);
+            refresh();
+        })();
+    </script>
+</section>
+{% endif %}
+
+{# ── Spells ─────────────────────────────────────────────────────────────── #}
+{% if show_spells %}
+<section class="class-setup-section">
+    <h3>Spells</h3>
+    {% for c in caster_classes %}
+    <div class="spell-class">
+        <h4>{{ c.class_name }}</h4>
+        {% if c.caster_type == "divine" %}
+        <p>{{ c.class_name }} casters know <strong>every spell</strong> on their list
+           that they are high enough level to cast. Nothing to choose here.</p>
+        <ul>
+            {% for s in c.candidates %}
+            <li><strong>{{ s.name }}</strong> <span class="small muted">(L{{ s.level }})</span></li>
+            {% endfor %}
+        </ul>
+        <form method="post" action="/wizard/{{ draft_id }}/spells" class="step-form">
+            <input type="hidden" name="class_id" value="{{ c.class_id }}">
+            <button type="submit">Confirm {{ c.class_name }} spells</button>
+        </form>
+        {% else %}
+        <p>Choose <strong>{{ c.required }}</strong> starting spell(s) for your spell
+           book{% if c.advanced %} (Advanced Spell Book rules: determined by Intelligence){% else %} (the spells you can memorise at this level){% endif %}.</p>
+        <form method="post" action="/wizard/{{ draft_id }}/spells" class="step-form">
+            <input type="hidden" name="class_id" value="{{ c.class_id }}">
+            <div class="card-grid" data-required="{{ c.required }}">
+                {% for s in c.candidates %}
+                <label class="card {% if s.selected %}selected{% endif %}">
+                    <input type="checkbox" name="spell_{{ c.class_id }}" value="{{ s.id }}"
+                           class="spell-checkbox" {% if s.selected %}checked{% endif %}>
+                    <div class="card-name">{{ s.name }}</div>
+                    <div class="card-detail small">{{ s.description }}</div>
+                </label>
+                {% endfor %}
+            </div>
+            <p class="muted spell-counter">Pick exactly {{ c.required }}.</p>
+            <button type="submit">Save {{ c.class_name }} spells</button>
+        </form>
+        {% endif %}
+    </div>
+    {% endfor %}
+    <script>
+        (function () {
+            document.querySelectorAll('.card-grid[data-required]').forEach(function (grid) {
+                const required = parseInt(grid.dataset.required, 10);
+                const boxes = Array.from(grid.querySelectorAll('.spell-checkbox'));
+                const form = grid.closest('form');
+                const counter = form ? form.querySelector('.spell-counter') : null;
+                const submit = form ? form.querySelector('button[type="submit"]') : null;
+                function update() {
+                    const checked = boxes.filter(b => b.checked).length;
+                    boxes.forEach(function (b) {
+                        b.disabled = !b.checked && checked >= required;
+                        b.closest('.card').classList.toggle('selected', b.checked);
+                    });
+                    if (counter) { counter.textContent = 'Picked ' + checked + ' of ' + required + '.'; }
+                    if (submit) { submit.disabled = checked !== required; }
+                }
+                boxes.forEach(b => b.addEventListener('change', update));
+                update();
+            });
+        })();
+    </script>
+</section>
+{% endif %}
+
+{# ── Continue ───────────────────────────────────────────────────────────── #}
+<form method="post" action="/wizard/{{ draft_id }}/hp" class="step-form">
+    <button type="submit" class="primary" {% if not ready %}disabled{% endif %}>Next: Equipment &rarr;</button>
+</form>

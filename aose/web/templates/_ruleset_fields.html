@@ -30,6 +30,7 @@
     {% for field, desc in fields %}
     <label class="rule">
         <input type="checkbox" name="{{ field }}"
+               {% if field == "human_racial_abilities" %}data-requires-lift{% endif %}
                {% if ruleset[field] %}checked{% endif %}>
         <span class="rule-body">
             <span class="rule-name">
@@ -68,6 +69,8 @@
 (function () {
     var radios = document.querySelectorAll('[data-creation-method]');
     var advancedInputs = document.querySelectorAll('[data-advanced-only] input');
+    var lift = document.querySelector('input[name="lift_demihuman_restrictions"]');
+    var dependent = document.querySelector('[data-requires-lift]');
     function sync() {
         var basic = document.querySelector('[data-creation-method][value="basic"]');
         var disable = !!(basic && basic.checked);
@@ -76,8 +79,17 @@
             var row = el.closest('.rule');
             if (row) { row.classList.toggle('rule-disabled', disable); }
         });
+        // Nested dependency: human_racial_abilities also needs lift checked.
+        if (dependent) {
+            var liftOff = disable || !(lift && lift.checked);
+            dependent.disabled = liftOff;
+            if (liftOff) { dependent.checked = false; }
+            var drow = dependent.closest('.rule');
+            if (drow) { drow.classList.toggle('rule-disabled', liftOff); }
+        }
     }
     radios.forEach(function (r) { r.addEventListener('change', sync); });
+    if (lift) { lift.addEventListener('change', sync); }
     sync();
 })();
 </script>

@@ -31,16 +31,26 @@ def prime_requisite_xp_multiplier(score: int) -> float:
     return 1.10
 
 
-def apply_racial_modifiers(base: dict[str, int], race) -> dict[str, int]:
-    """Return ``base`` with ``race.ability_modifiers`` applied, each score
-    clamped to ``[3, 18]``.
+def apply_racial_modifiers(base: dict[str, int], race, *,
+                           include_optional: bool = False) -> dict[str, int]:
+    """Return ``base`` with ``race.ability_modifiers`` applied (and, when
+    ``include_optional`` is set, ``race.optional_ability_modifiers`` on top),
+    each score clamped to ``[3, 18]``.
 
     The input dict is not mutated. Callers decide whether to apply (Advanced
-    only); this helper does not consult the ruleset.
+    only) and whether the optional human_racial_abilities rule is active; this
+    helper does not consult the ruleset.
     """
     result = dict(base)
+    deltas: dict = {}
     for ability, delta in race.ability_modifiers.items():
         key = ability.value if hasattr(ability, "value") else ability
+        deltas[key] = deltas.get(key, 0) + delta
+    if include_optional:
+        for ability, delta in race.optional_ability_modifiers.items():
+            key = ability.value if hasattr(ability, "value") else ability
+            deltas[key] = deltas.get(key, 0) + delta
+    for key, delta in deltas.items():
         result[key] = max(3, min(18, result.get(key, 0) + delta))
     return result
 

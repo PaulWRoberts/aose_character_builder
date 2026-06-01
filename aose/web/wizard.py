@@ -23,7 +23,7 @@ from aose.engine.ability_mods import (
     apply_racial_modifiers,
 )
 from aose.engine import spells as spell_engine
-from aose.engine.dice import roll_3d6_in_order, roll_hp
+from aose.engine.dice import roll_3d6_in_order, roll_first_level_hp, roll_hp
 from aose.engine.equip import equip as _equip, unequip as _unequip
 from aose.engine.magic import (
     add_free_magic_item,
@@ -97,9 +97,7 @@ STEP_LABELS = {
     "adjust": "Ability Adjustments",
     "alignment": "Alignment",
     "skill": "Secondary Skill",
-    "proficiencies": "Proficiencies",
-    "hp": "Hit Points",
-    "spells": "Spells",
+    "class_setup": "Class Setup",
     "equipment": "Equipment",
     "review": "Review",
 }
@@ -123,11 +121,9 @@ def _wizard_steps(draft: dict[str, Any]) -> list[str]:
     steps += ["class", "adjust", "alignment"]
     if rs.secondary_skills:
         steps.append("skill")
-    if rs.weapon_proficiency:
-        steps.append("proficiencies")
-    steps.append("hp")
-    if draft.get("spellcasting"):
-        steps.append("spells")
+    # HP, weapon proficiencies, and spells are consolidated into one always-on
+    # Class Setup step; proficiencies/spells are sections within it.
+    steps.append("class_setup")
     steps += ["equipment", "review"]
     return steps
 ABILITY_ORDER = [Ability.STR, Ability.INT, Ability.WIS, Ability.DEX, Ability.CON, Ability.CHA]
@@ -198,6 +194,20 @@ def _clear_after_class(draft: dict[str, Any]) -> None:
         draft.pop(k, None)
 
 
+def _class_setup_complete(draft: dict[str, Any]) -> bool:
+    """The consolidated Class Setup step is complete when HP is rolled AND
+    weapon proficiencies are chosen (if the rule is on) AND starting spells are
+    chosen (if any picked class casts at L1)."""
+    rs = _ruleset_of(draft)
+    if not _has_hp(draft):
+        return False
+    if rs.weapon_proficiency and "proficiencies" not in draft:
+        return False
+    if draft.get("spellcasting") and not draft.get("spells_done"):
+        return False
+    return True
+
+
 def _next_incomplete_step(draft: dict[str, Any]) -> str:
     # The rules step is "complete" once it has rolled abilities — at /new we
     # seed only the ruleset, so a draft without abilities is mid-rules step.
@@ -218,12 +228,8 @@ def _next_incomplete_step(draft: dict[str, Any]) -> str:
         return "alignment"
     if rs.secondary_skills and "secondary_skill" not in draft:
         return "skill"
-    if rs.weapon_proficiency and "proficiencies" not in draft:
-        return "proficiencies"
-    if not _has_hp(draft):
-        return "hp"
-    if draft.get("spellcasting") and not draft.get("spells_done"):
-        return "spells"
+    if not _class_setup_complete(draft):
+        return "class_setup"
     if "gold" not in draft:
         return "equipment"
     return "review"
@@ -357,6 +363,13 @@ def _apply_rule_changes(draft: dict[str, Any], old_rs: RuleSet, new_rs: RuleSet)
         draft.pop("hp_roll", None)
         draft.pop("hp_rolls", None)
 
+    if new_rs.human_racial_abilities != old_rs.human_racial_abilities:
+        # Blessed eligibility AND post-racial scores changed; clear the HP roll
+        # and any ability adjustments computed off the old post-racial baseline.
+        draft.pop("hp_roll", None)
+        draft.pop("hp_rolls", None)
+        draft.pop("ability_adjustments", None)
+
     if new_rs.weapon_proficiency != old_rs.weapon_proficiency:
         draft.pop("proficiencies", None)
 
@@ -413,14 +426,19 @@ def _post_racial_abilities(draft: dict[str, Any], data) -> dict[str, int]:
     """Rolled base plus racial modifiers (Advanced only, once a race is chosen).
 
     In Basic / race-as-class mode, or before a race is picked, this is the
-    rolled base unchanged. Modifiers are clamped to [3, 18]. This is the input
-    and baseline for the ability-adjustment step and the class requirement check.
+    rolled base unchanged. When the human_racial_abilities rule is on, the
+    race's optional modifiers (Human +1 CHA / +1 CON) are folded in too.
+    Modifiers are clamped to [3, 18]. This is the input and baseline for the
+    ability-adjustment step and the class requirement check.
     """
     base = draft["abilities"]
     rs = _ruleset_of(draft)
     if not rs.separate_race_class or "race_id" not in draft:
         return dict(base)
-    return apply_racial_modifiers(base, data.races[draft["race_id"]])
+    return apply_racial_modifiers(
+        base, data.races[draft["race_id"]],
+        include_optional=rs.human_racial_abilities,
+    )
 
 
 def _creation_abilities(draft: dict[str, Any], data) -> dict[str, int]:
@@ -846,23 +864,6 @@ def _proficiency_context(draft: dict[str, Any], data) -> dict:
     }
 
 
-@router.get("/{draft_id}/proficiencies", response_class=HTMLResponse)
-async def get_proficiencies(request: Request, draft_id: str):
-    draft = _load(request, draft_id)
-    redirect = _gate(draft, "proficiencies", draft_id)
-    if redirect:
-        return redirect
-    data = request.app.state.game_data
-    ctx = _base_context(request, draft_id, draft, "proficiencies")
-    ctx.update(_proficiency_context(draft, data))
-    if not ctx["weapons"]:
-        raise HTTPException(
-            500,
-            "Weapon Proficiency rule is active but the class has no usable "
-            "weapons in the data set.",
-        )
-    return templates.TemplateResponse(request, "wizard.html", ctx)
-
 
 @router.post("/{draft_id}/proficiencies")
 async def post_proficiencies(request: Request, draft_id: str):
@@ -898,7 +899,7 @@ async def post_proficiencies(request: Request, draft_id: str):
 
     draft["proficiencies"] = {"weapons": weapons, "specialisations": specialisations}
     save_draft(draft_id, draft, _drafts_dir(request))
-    return _redirect(f"/wizard/{draft_id}/hp")
+    return _redirect(f"/wizard/{draft_id}/class_setup")
 
 
 def _multiclass_total_hp(rolls: list[int], con_mod: int) -> int:
@@ -908,83 +909,109 @@ def _multiclass_total_hp(rolls: list[int], con_mod: int) -> int:
     return max(1, sum(rolls) // len(rolls) + con_mod)
 
 
-@router.get("/{draft_id}/hp", response_class=HTMLResponse)
-async def get_hp(request: Request, draft_id: str):
-    draft = _load(request, draft_id)
-    redirect = _gate(draft, "hp", draft_id)
-    if redirect:
-        return redirect
-    data = request.app.state.game_data
+def _hp_context(draft: dict[str, Any], data) -> dict:
+    """Per-class HP rolls + total for the Class Setup HP section. Rolls are
+    None until the locked roll happens."""
     ruleset = _ruleset_of(draft)
     con_mod = ability_modifier(_creation_abilities(draft, data)["CON"])
-
     ids = _class_ids(draft)
     classes = [data.classes[cid] for cid in ids]
     is_multi = len(ids) > 1
 
-    # Pre-render per-class rolls (None if not rolled yet)
     rolls_for_template: list[dict] = []
     total = None
     if is_multi:
         existing = draft.get("hp_rolls", [None] * len(ids))
         for cls, roll_val in zip(classes, existing):
             rolls_for_template.append({
-                "class_name": cls.name,
-                "hit_die": cls.hit_die,
-                "roll": roll_val,
+                "class_name": cls.name, "hit_die": cls.hit_die, "roll": roll_val,
             })
-        if all(r is not None for r in existing) and existing:
+        if existing and all(r is not None for r in existing):
             total = _multiclass_total_hp(existing, con_mod)
     else:
         rolls_for_template.append({
-            "class_name": classes[0].name,
-            "hit_die": classes[0].hit_die,
+            "class_name": classes[0].name, "hit_die": classes[0].hit_die,
             "roll": draft.get("hp_roll"),
         })
         if "hp_roll" in draft:
             total = max(1, draft["hp_roll"] + con_mod)
 
-    ctx = _base_context(request, draft_id, draft, "hp")
-    ctx.update({
+    blessed = (draft.get("race_id") == "human" and ruleset.human_racial_abilities)
+    return {
         "is_multi": is_multi,
-        "class_name": " / ".join(c.name for c in classes),
-        "hit_die": classes[0].hit_die,  # single-class template uses this
+        "hp_class_name": " / ".join(c.name for c in classes),
+        "hit_die": classes[0].hit_die,
         "con_mod": con_mod,
         "rolls": rolls_for_template,
         "total_hp": total,
         "reroll_rule": ruleset.reroll_1s_2s_hp_l1,
-        "ready": (total is not None),
-    })
+        "blessed": blessed,
+        "hp_done": (total is not None),
+    }
+
+
+@router.get("/{draft_id}/class_setup", response_class=HTMLResponse)
+async def get_class_setup(request: Request, draft_id: str):
+    draft = _load(request, draft_id)
+    redirect = _gate(draft, "class_setup", draft_id)
+    if redirect:
+        return redirect
+    data = request.app.state.game_data
+    ruleset = _ruleset_of(draft)
+    ctx = _base_context(request, draft_id, draft, "class_setup")
+    ctx.update(_hp_context(draft, data))
+    # Proficiency section (only when the rule is on).
+    ctx["show_proficiencies"] = ruleset.weapon_proficiency
+    if ruleset.weapon_proficiency:
+        ctx.update(_proficiency_context(draft, data))
+        ctx["proficiencies_done"] = "proficiencies" in draft
+    else:
+        ctx["proficiencies_done"] = True
+    # Spell section (only when a picked class casts at L1).
+    ctx["show_spells"] = bool(draft.get("spellcasting"))
+    if draft.get("spellcasting"):
+        ctx["caster_classes"] = _caster_entries(draft, data)
+        ctx["spells_done"] = bool(draft.get("spells_done"))
+    else:
+        ctx["spells_done"] = True
+    ctx["ready"] = _class_setup_complete(draft)
     return templates.TemplateResponse(request, "wizard.html", ctx)
 
 
 @router.post("/{draft_id}/hp/roll")
 async def post_hp_roll(request: Request, draft_id: str):
     draft = _load(request, draft_id)
+    if _has_hp(draft):
+        # HP is rolled once and locked (like abilities and gold). To change it
+        # the player cancels and starts over.
+        raise HTTPException(400, "Hit points are already rolled and locked.")
     data = request.app.state.game_data
     ruleset = _ruleset_of(draft)
     ids = _class_ids(draft)
     classes = [data.classes[cid] for cid in ids]
 
+    blessed = (draft.get("race_id") == "human" and ruleset.human_racial_abilities)
     min_die = 3 if ruleset.reroll_1s_2s_hp_l1 else 1
+    rolls = roll_first_level_hp(
+        [c.hit_die for c in classes], blessed=blessed, min_die=min_die,
+    )
 
     if len(ids) == 1:
-        draft["hp_roll"] = roll_hp(classes[0].hit_die, min_die=min_die)
+        draft["hp_roll"] = rolls[0]
         draft.pop("hp_rolls", None)
     else:
-        draft["hp_rolls"] = [
-            roll_hp(c.hit_die, min_die=min_die) for c in classes
-        ]
+        draft["hp_rolls"] = rolls
         draft.pop("hp_roll", None)
     save_draft(draft_id, draft, _drafts_dir(request))
-    return _redirect(f"/wizard/{draft_id}/hp")
+    return _redirect(f"/wizard/{draft_id}/class_setup")
 
 
 @router.post("/{draft_id}/hp")
 async def post_hp(request: Request, draft_id: str):
+    """Single 'Continue' action for the Class Setup page. Advances only when
+    every applicable section is complete; otherwise bounces back to the page
+    via _next_incomplete_step."""
     draft = _load(request, draft_id)
-    if not _has_hp(draft):
-        raise HTTPException(400, "Roll HP first")
     return _redirect(f"/wizard/{draft_id}/{_next_incomplete_step(draft)}")
 
 
@@ -1023,16 +1050,6 @@ def _caster_entries(draft: dict[str, Any], data) -> list[dict]:
         })
     return rows
 
-
-@router.get("/{draft_id}/spells", response_class=HTMLResponse)
-async def get_spells(request: Request, draft_id: str):
-    draft = _load(request, draft_id)
-    redirect = _gate(draft, "spells", draft_id)
-    if redirect:
-        return redirect
-    ctx = _base_context(request, draft_id, draft, "spells")
-    ctx["caster_classes"] = _caster_entries(draft, request.app.state.game_data)
-    return templates.TemplateResponse(request, "wizard.html", ctx)
 
 
 @router.post("/{draft_id}/spells")

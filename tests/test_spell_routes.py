@@ -116,7 +116,7 @@ def test_wizard_skips_spells_for_noncaster(client):
 
 def test_wizard_arcane_requires_exact_count(client):
     draft_id = _start_caster_draft(client, "magic_user")  # standard -> 1 spell
-    r = client.get(f"/wizard/{draft_id}/spells")
+    r = client.get(f"/wizard/{draft_id}/class_setup")
     assert r.status_code == 200 and "Magic Missile" in r.text
     bad = client.post(f"/wizard/{draft_id}/spells",
                       data={"class_id": "magic_user",
@@ -131,7 +131,7 @@ def test_wizard_arcane_requires_exact_count(client):
 
 def test_wizard_divine_autocompletes(client):
     draft_id = _start_caster_draft(client, "druid", int_score=10)
-    r = client.get(f"/wizard/{draft_id}/spells")
+    r = client.get(f"/wizard/{draft_id}/class_setup")
     assert r.status_code == 200 and "know" in r.text.lower()
     r = client.post(f"/wizard/{draft_id}/spells", data={"class_id": "druid"})
     assert r.headers["location"].endswith("/equipment")

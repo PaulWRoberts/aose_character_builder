@@ -203,7 +203,7 @@ def _start_magic_user(client):
 
 def test_fighter_picker_shows_four_slots_and_weapons(client):
     draft_id = _start_fighter(client)
-    r = client.get(f"/wizard/{draft_id}/proficiencies")
+    r = client.get(f"/wizard/{draft_id}/class_setup")
     assert r.status_code == 200
     assert "4" in r.text
     assert "Sword" in r.text
@@ -212,7 +212,7 @@ def test_fighter_picker_shows_four_slots_and_weapons(client):
 
 def test_magic_user_picker_shows_one_slot_filtered(client):
     draft_id = _start_magic_user(client)
-    r = client.get(f"/wizard/{draft_id}/proficiencies")
+    r = client.get(f"/wizard/{draft_id}/class_setup")
     assert r.status_code == 200
     assert "Dagger" in r.text
     assert "Staff" in r.text
@@ -224,7 +224,7 @@ def test_magic_user_post_one_weapon_advances(client):
     draft_id = _start_magic_user(client)
     r = client.post(f"/wizard/{draft_id}/proficiencies", data={"weapon": ["dagger"]})
     assert r.status_code == 303
-    assert r.headers["location"].endswith("/hp")
+    assert r.headers["location"].endswith("/class_setup")
     draft = load_draft(draft_id, client._drafts_dir)
     assert draft["proficiencies"]["weapons"] == ["dagger"]
 

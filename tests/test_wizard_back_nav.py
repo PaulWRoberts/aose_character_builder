@@ -105,7 +105,7 @@ def test_breadcrumb_link_renders_on_review_for_every_done_step(client):
     client.get(f"/wizard/{draft_id}/equipment")  # seeds gold
     client.post(f"/wizard/{draft_id}/equipment")
     r = client.get(f"/wizard/{draft_id}/review")
-    for step in ("abilities", "race", "class", "adjust", "alignment", "hp", "equipment"):
+    for step in ("abilities", "race", "class", "adjust", "alignment", "class_setup", "equipment"):
         assert f'href="/wizard/{draft_id}/{step}"' in r.text, f"{step} not linked"
 
 

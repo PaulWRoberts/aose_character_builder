@@ -23,6 +23,7 @@ RULE_LABELS = {
     "secondary_skills": "Secondary Skills",
     "multiclassing": "Multiclassing",
     "advanced_spell_books": "Advanced Spell Books",
+    "human_racial_abilities": "Human Racial Abilities",
 }
 
 # Rules whose engine/builder integration is fully wired up.  The settings
@@ -37,6 +38,7 @@ IMPLEMENTED_RULES = {
     "multiclassing",
     "variable_weapon_damage",
     "advanced_spell_books",
+    "human_racial_abilities",
 }
 
 # Choice-group rules that have full integration too.
@@ -49,6 +51,10 @@ RULE_GROUPS = [
         ("lift_demihuman_restrictions",
          "Demihuman races ignore their normal class options and per-class "
          "maximum-level caps."),
+        ("human_racial_abilities",
+         "Humans gain optional racial abilities: +1 CHA, +1 CON, and Blessed "
+         "(roll HP twice, keep the better). Requires lifting demihuman "
+         "restrictions."),
     ]),
     ("Character Options", [
         ("weapon_proficiency",
@@ -133,6 +139,11 @@ def parse_ruleset_from_form(form) -> RuleSet:
     if not advanced:
         bools["multiclassing"] = False
         bools["lift_demihuman_restrictions"] = False
+
+    # human_racial_abilities is gated behind BOTH Advanced and lifted demihuman
+    # restrictions — force it off unless both hold (mirrors the rules-page JS).
+    if not (bools["separate_race_class"] and bools.get("lift_demihuman_restrictions")):
+        bools["human_racial_abilities"] = False
 
     choices = {}
     for field, _label, options in CHOICE_GROUPS:

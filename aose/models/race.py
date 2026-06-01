@@ -23,6 +23,9 @@ class Race(BaseModel):
     ability_maxima: dict[Ability, int] = Field(default_factory=dict)
     ability_minima: dict[Ability, int] = Field(default_factory=dict)
     ability_modifiers: dict[Ability, int] = Field(default_factory=dict)
+    # Applied on top of ability_modifiers only when the human_racial_abilities
+    # optional rule is active (today: Human +1 CHA / +1 CON). Empty otherwise.
+    optional_ability_modifiers: dict[Ability, int] = Field(default_factory=dict)
     infravision: int = 0
     base_movement: int = 120
     languages: list[str] = Field(default_factory=list)

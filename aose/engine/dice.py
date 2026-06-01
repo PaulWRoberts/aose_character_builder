@@ -22,6 +22,34 @@ def roll_3d6_in_order(rng: Optional[random.Random] = None) -> list[int]:
     return [sum(r.randint(1, 6) for _ in range(3)) for _ in range(6)]
 
 
+def roll_first_level_hp(
+    hit_dice: list[str],
+    *,
+    blessed: bool,
+    min_die: int = 1,
+    rng: Optional[random.Random] = None,
+) -> list[int]:
+    """Roll first-level HP, one entry per class in ``hit_dice`` order.
+
+    ``min_die`` is forwarded to :func:`roll_hp` (the reroll-1s-2s house rule
+    passes 3). When ``blessed`` is set (Human Blessed racial ability) two
+    *complete* sets are rolled — one die per class each — and the set with the
+    larger sum of rolls is kept; ties keep the first set. There is no per-class
+    cherry-picking across sets (N and CON are identical, so summed rolls is the
+    correct comparison).
+    """
+    r = rng or random.Random()
+
+    def one_set() -> list[int]:
+        return [roll_hp(hd, r, min_die=min_die) for hd in hit_dice]
+
+    if not blessed:
+        return one_set()
+    set_a = one_set()
+    set_b = one_set()
+    return set_a if sum(set_a) >= sum(set_b) else set_b
+
+
 def roll_hp(
     hit_die: str,
     rng: Optional[random.Random] = None,

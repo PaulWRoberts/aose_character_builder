@@ -225,7 +225,7 @@ def _to_hp(mc_client, draft_id):
 def test_hp_get_shows_one_die_per_class_for_multiclass(mc_client):
     draft_id = _start_elf(mc_client)
     _to_hp(mc_client, draft_id)
-    r = mc_client.get(f"/wizard/{draft_id}/hp")
+    r = mc_client.get(f"/wizard/{draft_id}/class_setup")
     assert r.status_code == 200
     assert "1d8" in r.text
     assert "1d4" in r.text
@@ -295,6 +295,6 @@ def test_proficiency_step_combines_class_names(mc_client):
     )
     mc_client.post(f"/wizard/{draft_id}/adjust", data={})
     mc_client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "neutral"})
-    r = mc_client.get(f"/wizard/{draft_id}/proficiencies")
+    r = mc_client.get(f"/wizard/{draft_id}/class_setup")
     assert r.status_code == 200
     assert "Fighter / Magic-User" in r.text

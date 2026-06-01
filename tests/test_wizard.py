@@ -86,7 +86,7 @@ def test_full_wizard_flow_creates_character(client, tmp_path):
     # Alignment
     r = client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "law"})
     assert r.status_code == 303
-    assert r.headers["location"] == f"/wizard/{draft_id}/hp"
+    assert r.headers["location"] == f"/wizard/{draft_id}/class_setup"
 
     # HP roll
     r = client.post(f"/wizard/{draft_id}/hp/roll")

@@ -3,6 +3,9 @@ name: Human
 languages:
 - common
 allowed_classes: []
+optional_ability_modifiers:
+  CHA: 1
+  CON: 1
 features:
 - id: optional_ability_modifiers
   name: Ability Modifiers (Optional Rule)

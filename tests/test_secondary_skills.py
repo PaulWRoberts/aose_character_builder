@@ -111,7 +111,7 @@ def test_alignment_redirects_to_hp_when_rule_inactive(client, tmp_path):
     save_settings(client._settings_path, RuleSet(secondary_skills=False))
     draft_id = _start_draft_at(client)
     r = client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "law"})
-    assert r.headers["location"] == f"/wizard/{draft_id}/hp"
+    assert r.headers["location"] == f"/wizard/{draft_id}/class_setup"
 
 
 def test_skill_step_404_route_when_rule_inactive(client):
@@ -177,7 +177,7 @@ def test_post_skill_persists_choice_and_advances(client):
     client.get(f"/wizard/{draft_id}/skill")
     r = client.post(f"/wizard/{draft_id}/skill", data={"secondary_skill": "Healer"})
     assert r.status_code == 303
-    assert r.headers["location"] == f"/wizard/{draft_id}/hp"
+    assert r.headers["location"] == f"/wizard/{draft_id}/class_setup"
     assert load_draft(draft_id, client._drafts_dir)["secondary_skill"] == "Healer"
 
 

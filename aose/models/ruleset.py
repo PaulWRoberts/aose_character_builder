@@ -18,5 +18,6 @@ class RuleSet(BaseModel):
     lift_demihuman_restrictions: bool = False
     variable_weapon_damage: bool = False
     advanced_spell_books: bool = False
+    human_racial_abilities: bool = False
 
     encumbrance: EncumbranceMode = "basic"

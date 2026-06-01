@@ -228,7 +228,7 @@ def _start_draft_with(client, drafts_dir):
 def test_reroll_rule_shows_banner(client, tmp_path):
     save_settings(client._settings_path, RuleSet(reroll_1s_2s_hp_l1=True))
     draft_id = _start_draft_with(client, tmp_path / "drafts")
-    r = client.get(f"/wizard/{draft_id}/hp")
+    r = client.get(f"/wizard/{draft_id}/class_setup")
     assert "Reroll 1s &amp; 2s at L1" in r.text
 
 
@@ -236,10 +236,11 @@ def test_reroll_rule_never_yields_1_or_2_after_many_rolls(client, tmp_path):
     """Statistical: with reroll active, hp_roll on a d8 must stay ≥ 3."""
     from aose.characters import load_draft
     save_settings(client._settings_path, RuleSet(reroll_1s_2s_hp_l1=True))
-    draft_id = _start_draft_with(client, tmp_path / "drafts")
+    # HP is locked after the first roll, so each iteration uses a fresh draft.
     for _ in range(40):
-        client.post(f"/wizard/{draft_id}/hp/roll")
-        draft = load_draft(draft_id, tmp_path / "drafts")
+        fresh = _start_draft_with(client, tmp_path / "drafts")
+        client.post(f"/wizard/{fresh}/hp/roll")
+        draft = load_draft(fresh, tmp_path / "drafts")
         assert draft["hp_roll"] >= 3, f"got {draft['hp_roll']} which should have been rerolled"
 
 
@@ -247,7 +248,7 @@ def test_reroll_rule_still_shows_roll_button(client, tmp_path):
     """Reroll rule keeps the user in control of clicking Roll."""
     save_settings(client._settings_path, RuleSet(reroll_1s_2s_hp_l1=True))
     draft_id = _start_draft_with(client, tmp_path / "drafts")
-    r = client.get(f"/wizard/{draft_id}/hp")
+    r = client.get(f"/wizard/{draft_id}/class_setup")
     assert f'/wizard/{draft_id}/hp/roll' in r.text
 
 
@@ -257,7 +258,7 @@ def test_default_ruleset_keeps_normal_hp_roll_flow(client, tmp_path):
     """With no HP rules, the user still clicks Roll and any 1-8 result is valid."""
     from aose.characters import load_draft
     draft_id = _start_draft_with(client, tmp_path / "drafts")
-    r = client.get(f"/wizard/{draft_id}/hp")
+    r = client.get(f"/wizard/{draft_id}/class_setup")
     # No rule banner
     assert "Max HP at L1" not in r.text
     assert "Reroll 1s" not in r.text

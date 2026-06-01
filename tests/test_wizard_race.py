@@ -226,6 +226,6 @@ def test_hp_step_con_mod_reflects_racial_bonus(tmp_path):
     client.post(f"/wizard/{draft_id}/class", data={"class_id": "fighter"})
     client.post(f"/wizard/{draft_id}/adjust", data={})
     client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "law"})
-    r = client.get(f"/wizard/{draft_id}/hp")
+    r = client.get(f"/wizard/{draft_id}/class_setup")
     assert r.status_code == 200
     assert "+2" in r.text
