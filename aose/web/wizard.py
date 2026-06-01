@@ -19,6 +19,7 @@ from aose.characters import (
 from aose.engine.ability_mods import (
     ability_modifier,
     ability_warnings,
+    apply_ability_adjustments,
     apply_racial_modifiers,
 )
 from aose.engine import spells as spell_engine
@@ -403,17 +404,27 @@ def _meets_ability_requirements(reqs: dict[Ability, int], abilities: dict[str, i
     return all(abilities.get(ab.value, 0) >= score for ab, score in reqs.items())
 
 
-def _effective_abilities(draft: dict[str, Any], data) -> dict[str, int]:
+def _post_racial_abilities(draft: dict[str, Any], data) -> dict[str, int]:
     """Rolled base plus racial modifiers (Advanced only, once a race is chosen).
 
     In Basic / race-as-class mode, or before a race is picked, this is the
-    rolled base unchanged. Modifiers are clamped to [3, 18].
+    rolled base unchanged. Modifiers are clamped to [3, 18]. This is the input
+    and baseline for the ability-adjustment step and the class requirement check.
     """
     base = draft["abilities"]
     rs = _ruleset_of(draft)
     if not rs.separate_race_class or "race_id" not in draft:
         return dict(base)
     return apply_racial_modifiers(base, data.races[draft["race_id"]])
+
+
+def _creation_abilities(draft: dict[str, Any], data) -> dict[str, int]:
+    """Post-racial scores with the player's ability adjustments applied — the
+    creation-final scores stored on the character. Used by HP, finalize, review."""
+    return apply_ability_adjustments(
+        _post_racial_abilities(draft, data),
+        draft.get("ability_adjustments", {}),
+    )
 
 
 @router.get("/{draft_id}/race", response_class=HTMLResponse)
@@ -491,7 +502,7 @@ async def get_class(request: Request, draft_id: str):
     if redirect:
         return redirect
     data = request.app.state.game_data
-    abilities = _effective_abilities(draft, data)
+    abilities = _post_racial_abilities(draft, data)
     ruleset = _ruleset_of(draft)
 
     # In race-as-class mode the user has not picked a race yet, so race-based
@@ -595,7 +606,7 @@ async def post_class(request: Request, draft_id: str):
             raise HTTPException(400, f"A character may have at most {MAX_CLASSES} classes.")
 
     # Per-class gating (ability requirements + race allowance / race-as-class).
-    effective = _effective_abilities(draft, data)
+    effective = _post_racial_abilities(draft, data)
     for cid in ids:
         cls = data.classes[cid]
         if not _meets_ability_requirements(cls.ability_requirements, effective):
@@ -830,7 +841,7 @@ async def get_hp(request: Request, draft_id: str):
         return redirect
     data = request.app.state.game_data
     ruleset = _ruleset_of(draft)
-    con_mod = ability_modifier(_effective_abilities(draft, data)["CON"])
+    con_mod = ability_modifier(_creation_abilities(draft, data)["CON"])
 
     ids = _class_ids(draft)
     classes = [data.classes[cid] for cid in ids]
@@ -1463,7 +1474,7 @@ def _draft_to_spec(draft: dict[str, Any], data) -> CharacterSpec:
     ]
     return CharacterSpec(
         name=draft["name"],
-        abilities=_effective_abilities(draft, data),
+        abilities=_creation_abilities(draft, data),
         race_id=draft["race_id"],
         classes=classes,
         alignment=draft["alignment"],
