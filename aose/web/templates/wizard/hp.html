@@ -10,10 +10,7 @@
     CON modifier: <strong>{{ "%+d"|format(con_mod) }}</strong>.
 </p>
 
-{% if max_hp_rule %}
-<p class="rule-active"><strong>Max HP at L1</strong> is active &mdash; you automatically take the maximum on
-    {% if is_multi %}each hit die{% else %}the hit die{% endif %}.</p>
-{% elif reroll_rule %}
+{% if reroll_rule %}
 <p class="rule-active"><strong>Reroll 1s &amp; 2s at L1</strong> is active &mdash; any 1 or 2 on a hit die is rerolled.</p>
 {% endif %}
 
@@ -38,11 +35,9 @@
 </div>
 {% endif %}
 
-{% if not max_hp_rule %}
 <form method="post" action="/wizard/{{ draft_id }}/hp/roll" class="inline-form">
     <button type="submit">{% if ready %}Re-roll{% else %}Roll HP{% endif %}</button>
 </form>
-{% endif %}
 
 {% if ready %}
 <form method="post" action="/wizard/{{ draft_id }}/hp" class="step-form">

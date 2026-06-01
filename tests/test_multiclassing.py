@@ -241,18 +241,6 @@ def test_hp_roll_populates_one_value_per_class(mc_client):
     assert 1 <= draft["hp_rolls"][1] <= 4
 
 
-def test_max_hp_rule_autofills_max_rolls_for_each_class(mc_client):
-    save_settings(
-        mc_client._settings_path,
-        RuleSet(multiclassing=True, max_hp_at_l1=True),
-    )
-    draft_id = _start_elf(mc_client)
-    _to_hp(mc_client, draft_id)
-    mc_client.get(f"/wizard/{draft_id}/hp")
-    draft = load_draft(draft_id, mc_client._drafts_dir)
-    assert draft["hp_rolls"] == [8, 4]  # fighter max + MU max
-
-
 # ── End-to-end ────────────────────────────────────────────────────────────
 
 def test_full_multiclass_flow_creates_character(mc_client):
