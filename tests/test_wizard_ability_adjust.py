@@ -135,3 +135,70 @@ def test_apply_adds_deltas():
     assert result["INT"] == 12
     assert result["WIS"] == 12
     assert result["DEX"] == 12
+
+
+# ── Task 5/6: wizard integration ───────────────────────────────────────────
+
+def _make_client(tmp_path, ruleset=None):
+    characters_dir = tmp_path / "characters"
+    drafts_dir = tmp_path / "drafts"
+    examples_dir = tmp_path / "examples"
+    examples_dir.mkdir(parents=True)
+    settings_path = tmp_path / "settings.json"
+    save_settings(settings_path, ruleset or RuleSet())
+    app = create_app(
+        data_dir=DATA_DIR,
+        characters_dir=characters_dir,
+        drafts_dir=drafts_dir,
+        examples_dir=examples_dir,
+        settings_path=settings_path,
+    )
+    client = TestClient(app, follow_redirects=False)
+    client._drafts_dir = drafts_dir
+    client._characters_dir = characters_dir
+    return client
+
+
+def _new_draft(client):
+    r = client.get("/wizard/new")
+    return r.headers["location"].split("/")[2]
+
+
+def _set_abilities(client, draft_id, abilities):
+    draft = load_draft(draft_id, client._drafts_dir)
+    draft["abilities"] = abilities
+    save_draft(draft_id, draft, client._drafts_dir)
+
+
+# STR 13 so a fighter can spend 2 down (INT/WIS) for 1 up (STR) within floors.
+_FIGHTER_ABILITIES = {"STR": 13, "INT": 13, "WIS": 13, "DEX": 12, "CON": 12, "CHA": 10}
+
+
+def _drive_to_adjust(client, abilities=None, race="human", cls="fighter"):
+    """Create a draft and advance it to (but not past) the adjust step."""
+    draft_id = _new_draft(client)
+    _set_abilities(client, draft_id, dict(abilities or _FIGHTER_ABILITIES))
+    client.post(f"/wizard/{draft_id}/abilities", data={"name": "Conan"})
+    client.post(f"/wizard/{draft_id}/race", data={"race_id": race})
+    client.post(f"/wizard/{draft_id}/class", data={"class_id": cls})
+    return draft_id
+
+
+def test_adjust_step_between_class_and_alignment(tmp_path):
+    client = _make_client(tmp_path)
+    draft_id = _drive_to_adjust(client)
+    # After picking class, the next incomplete step is adjust (not alignment).
+    r = client.get(f"/wizard/{draft_id}/alignment")
+    assert r.status_code == 303
+    assert r.headers["location"].endswith("/adjust")
+
+
+def test_adjust_step_present_in_basic_mode(tmp_path):
+    client = _make_client(tmp_path, ruleset=RuleSet(separate_race_class=False))
+    draft_id = _new_draft(client)
+    _set_abilities(client, draft_id, dict(_FIGHTER_ABILITIES))
+    client.post(f"/wizard/{draft_id}/abilities", data={"name": "Conan"})
+    client.post(f"/wizard/{draft_id}/class", data={"class_id": "fighter"})
+    r = client.get(f"/wizard/{draft_id}/alignment")
+    assert r.status_code == 303
+    assert r.headers["location"].endswith("/adjust")

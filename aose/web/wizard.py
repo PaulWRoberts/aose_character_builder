@@ -94,6 +94,7 @@ STEP_LABELS = {
     "abilities": "Abilities",
     "race": "Race",
     "class": "Class",
+    "adjust": "Ability Adjustments",
     "alignment": "Alignment",
     "skill": "Secondary Skill",
     "proficiencies": "Proficiencies",
@@ -119,7 +120,7 @@ def _wizard_steps(draft: dict[str, Any]) -> list[str]:
     steps = ["rules", "abilities"]
     if rs.separate_race_class:
         steps.append("race")
-    steps += ["class", "alignment"]
+    steps += ["class", "adjust", "alignment"]
     if rs.secondary_skills:
         steps.append("skill")
     if rs.weapon_proficiency:
@@ -178,19 +179,21 @@ def _casts_at_level_1(cls) -> bool:
 # an earlier choice — keeps the draft from carrying stale data) ───────────
 
 def _clear_after_abilities(draft: dict[str, Any]) -> None:
-    for k in ("race_id", "class_id", "class_ids", "hp_roll", "hp_rolls",
-             "proficiencies", "spellcasting", "spellbooks", "spells_done"):
+    for k in ("race_id", "class_id", "class_ids", "ability_adjustments",
+              "hp_roll", "hp_rolls", "proficiencies",
+              "spellcasting", "spellbooks", "spells_done"):
         draft.pop(k, None)
 
 
 def _clear_after_race(draft: dict[str, Any]) -> None:
-    for k in ("class_id", "class_ids", "hp_roll", "hp_rolls", "proficiencies",
+    for k in ("class_id", "class_ids", "ability_adjustments",
+              "hp_roll", "hp_rolls", "proficiencies",
               "spellcasting", "spellbooks", "spells_done"):
         draft.pop(k, None)
 
 
 def _clear_after_class(draft: dict[str, Any]) -> None:
-    for k in ("hp_roll", "hp_rolls", "proficiencies",
+    for k in ("ability_adjustments", "hp_roll", "hp_rolls", "proficiencies",
               "spellcasting", "spellbooks", "spells_done"):
         draft.pop(k, None)
 
@@ -209,6 +212,8 @@ def _next_incomplete_step(draft: dict[str, Any]) -> str:
         return "race"
     if not _has_class_pick(draft):
         return "class"
+    if "ability_adjustments" not in draft:
+        return "adjust"
     if "alignment" not in draft:
         return "alignment"
     if rs.secondary_skills and "secondary_skill" not in draft:
