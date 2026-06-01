@@ -506,11 +506,11 @@ async def post_race(request: Request, draft_id: str, race_id: str = Form(...)):
 def _class_allowed_for_race(class_id: str, race, ruleset: RuleSet) -> bool:
     """Return whether a race may pick a class, given the active ruleset.
 
-    With ``demihuman_class_restrictions`` off, any race may pick any class.
+    With ``lift_demihuman_restrictions`` on, any race may pick any class.
     Otherwise an empty ``allowed_classes`` is treated as "no restriction"
     (the human-style default), and a populated list is enforced.
     """
-    if not ruleset.demihuman_class_restrictions:
+    if ruleset.lift_demihuman_restrictions:
         return True
     if not race.allowed_classes:
         return True
@@ -549,7 +549,7 @@ async def get_class(request: Request, draft_id: str):
             allowed_by_race = _class_allowed_for_race(cls.id, race, ruleset)
             level_cap = (
                 race.class_level_caps.get(cls.id)
-                if ruleset.demihuman_level_limits
+                if not ruleset.lift_demihuman_restrictions
                 else None
             )
         else:

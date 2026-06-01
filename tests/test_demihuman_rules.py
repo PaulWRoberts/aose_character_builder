@@ -1,4 +1,5 @@
-"""Tests for the demihuman_class_restrictions and demihuman_level_limits rules."""
+"""Tests for the merged lift_demihuman_restrictions rule (class restrictions
++ level caps lifted together)."""
 from dataclasses import replace
 from pathlib import Path
 
@@ -47,19 +48,19 @@ def _open_race() -> Race:
     return Race(id="x", name="X", allowed_classes=[])  # human-style
 
 
-def test_helper_blocks_unlisted_class_when_restrictions_on():
+def test_helper_blocks_unlisted_class_when_restrictions_apply():
     race = _restrictive_race(["fighter"])
     assert _class_allowed_for_race("magic_user", race, RuleSet()) is False
 
 
-def test_helper_allows_listed_class_when_restrictions_on():
+def test_helper_allows_listed_class_when_restrictions_apply():
     race = _restrictive_race(["fighter"])
     assert _class_allowed_for_race("fighter", race, RuleSet()) is True
 
 
-def test_helper_allows_anything_when_restrictions_off():
+def test_helper_allows_anything_when_restrictions_lifted():
     race = _restrictive_race(["fighter"])
-    rs = RuleSet(demihuman_class_restrictions=False)
+    rs = RuleSet(lift_demihuman_restrictions=True)
     assert _class_allowed_for_race("magic_user", race, rs) is True
     assert _class_allowed_for_race("anything_at_all", race, rs) is True
 
@@ -82,15 +83,15 @@ def _start_through_race(client, race_id="dwarf"):
     return draft_id
 
 
-def test_class_page_shows_dwarf_cap_when_limits_on(client):
+def test_class_page_shows_dwarf_cap_by_default(client):
     draft_id = _start_through_race(client)
     r = client.get(f"/wizard/{draft_id}/class")
     # Dwarf caps Fighter at 9
     assert "max level: 9" in r.text
 
 
-def test_class_page_hides_cap_when_limits_off(client):
-    save_settings(client._settings_path, RuleSet(demihuman_level_limits=False))
+def test_class_page_hides_cap_when_lifted(client):
+    save_settings(client._settings_path, RuleSet(lift_demihuman_restrictions=True))
     draft_id = _start_through_race(client)
     r = client.get(f"/wizard/{draft_id}/class")
     assert "max level" not in r.text
@@ -101,8 +102,6 @@ def test_class_page_hides_cap_when_limits_off(client):
 def test_class_card_marked_unavailable_when_restricted(client):
     """All data has only 'fighter', which Dwarf allows.  Patch a synthetic
     class into game_data to exercise the rejection path."""
-    # Smuggle a fake class onto the live app for this test.
-    from copy import deepcopy
     from aose.models.character_class import CharClass, ClassLevelData
 
     fake = CharClass(
@@ -131,8 +130,8 @@ def test_class_card_marked_unavailable_when_restricted(client):
         r = client.post(f"/wizard/{draft_id}/class", data={"class_id": "magic_user"})
         assert r.status_code == 400
 
-        # Now disable restrictions and try again
-        save_settings(client._settings_path, RuleSet(demihuman_class_restrictions=False))
+        # Now lift restrictions and try again
+        save_settings(client._settings_path, RuleSet(lift_demihuman_restrictions=True))
         draft_id = _start_through_race(client)
         r = client.post(f"/wizard/{draft_id}/class", data={"class_id": "magic_user"})
         assert r.status_code == 303
@@ -160,54 +159,49 @@ def _dwarf_fighter(level: int, ruleset: RuleSet, hp_rolls: list[int] | None = No
 def test_xp_to_next_at_l1_unaffected_by_either_rule_setting():
     """L1 → L2 is far below any cap, so both settings yield the same result."""
     data = GameData.load(DATA_DIR)
-    on = _dwarf_fighter(1, RuleSet(demihuman_level_limits=True))
-    off = _dwarf_fighter(1, RuleSet(demihuman_level_limits=False))
+    on = _dwarf_fighter(1, RuleSet(lift_demihuman_restrictions=False))
+    off = _dwarf_fighter(1, RuleSet(lift_demihuman_restrictions=True))
     assert _xp_to_next(on, data) == _xp_to_next(off, data) == (2, 2000)
 
 
-def test_xp_to_next_returns_none_at_race_cap_when_rule_on(tmp_path):
+def test_xp_to_next_returns_none_at_race_cap_by_default(tmp_path):
     """Synthetic race that caps fighter at L2 — at L2 we should see no next."""
-    data = GameData.load(DATA_DIR)
-    # Replace the dwarf race with one that has a hard fighter cap at 2
-    patched_race = data.races["dwarf"].model_copy(update={
-        "class_level_caps": {"fighter": 2},
-    })
-    patched_races = {**data.races, "dwarf": patched_race}
-    data = replace(data, races=patched_races)
-
-    spec = _dwarf_fighter(2, RuleSet(demihuman_level_limits=True))
-    assert _xp_to_next(spec, data) == (None, None)
-
-
-def test_xp_to_next_ignores_race_cap_when_rule_off():
     data = GameData.load(DATA_DIR)
     patched_race = data.races["dwarf"].model_copy(update={
         "class_level_caps": {"fighter": 2},
     })
     data = replace(data, races={**data.races, "dwarf": patched_race})
 
-    spec = _dwarf_fighter(2, RuleSet(demihuman_level_limits=False))
-    # With limits off, the race cap is ignored — class progression gives L3 = 4000 XP
+    spec = _dwarf_fighter(2, RuleSet(lift_demihuman_restrictions=False))
+    assert _xp_to_next(spec, data) == (None, None)
+
+
+def test_xp_to_next_ignores_race_cap_when_lifted():
+    data = GameData.load(DATA_DIR)
+    patched_race = data.races["dwarf"].model_copy(update={
+        "class_level_caps": {"fighter": 2},
+    })
+    data = replace(data, races={**data.races, "dwarf": patched_race})
+
+    spec = _dwarf_fighter(2, RuleSet(lift_demihuman_restrictions=True))
+    # With limits lifted, the race cap is ignored — class progression gives L3 = 4000 XP
     assert _xp_to_next(spec, data) == (3, 4000)
 
 
-def test_xp_to_next_still_bounded_by_class_max_when_rule_off():
-    """Even with limits off, the class's own max_level still applies."""
+def test_xp_to_next_still_bounded_by_class_max_when_lifted():
+    """Even with limits lifted, the class's own max_level still applies."""
     data = GameData.load(DATA_DIR)
     patched_cls = data.classes["fighter"].model_copy(update={"max_level": 3})
     data = replace(data, classes={**data.classes, "fighter": patched_cls})
 
-    spec = _dwarf_fighter(3, RuleSet(demihuman_level_limits=False))
+    spec = _dwarf_fighter(3, RuleSet(lift_demihuman_restrictions=True))
     assert _xp_to_next(spec, data) == (None, None)
 
 
 # ── End-to-end: settings → character snapshot ─────────────────────────────
 
-def test_character_snapshots_demihuman_rule_choices(client):
-    save_settings(client._settings_path, RuleSet(
-        demihuman_class_restrictions=False,
-        demihuman_level_limits=False,
-    ))
+def test_character_snapshots_lift_rule_choice(client):
+    save_settings(client._settings_path, RuleSet(lift_demihuman_restrictions=True))
     draft_id = _start_through_race(client)
     client.post(f"/wizard/{draft_id}/class", data={"class_id": "fighter"})
     client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "law"})
@@ -216,5 +210,4 @@ def test_character_snapshots_demihuman_rule_choices(client):
     r = client.post(f"/wizard/{draft_id}/finalize")
     char_id = r.headers["location"].split("/")[-1]
     spec = load_character(char_id, client._characters_dir)
-    assert spec.ruleset.demihuman_class_restrictions is False
-    assert spec.ruleset.demihuman_level_limits is False
+    assert spec.ruleset.lift_demihuman_restrictions is True
