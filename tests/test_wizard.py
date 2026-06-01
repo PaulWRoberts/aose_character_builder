@@ -46,19 +46,8 @@ def test_abilities_page_renders(client):
     r = client.get(f"/wizard/{draft_id}/abilities")
     assert r.status_code == 200
     assert "Abilities" in r.text
-    assert "Re-roll" in r.text
-
-
-def test_reroll_changes_abilities(client, tmp_path):
-    draft_id = _start_draft(client)
-    before = load_draft(draft_id, tmp_path / "drafts")["abilities"]
-    # Re-roll until we get a different result (probability of identical is tiny)
-    for _ in range(5):
-        client.post(f"/wizard/{draft_id}/reroll")
-        after = load_draft(draft_id, tmp_path / "drafts")["abilities"]
-        if after != before:
-            return
-    pytest.fail("Re-roll never produced a different result in 5 tries")
+    # Reroll affordance is gone — abilities are locked at draft creation.
+    assert "Re-roll" not in r.text
 
 
 def _override_abilities(tmp_path, draft_id, abilities):

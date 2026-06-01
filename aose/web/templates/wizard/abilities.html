@@ -1,12 +1,17 @@
 <h2>Step 1: Abilities &amp; Name</h2>
-<p class="muted">Rolling method: {{ method_label }}.</p>
+<p class="muted">Rolled 3d6 in order — these scores are fixed for this character.</p>
 
-{% if arrange_mode %}
-<p class="rule-active">
-    <strong>Assign to taste:</strong> the six rolled values below form your pool.
-    Use each exactly once across the ability dropdowns.
+{% if subpar %}
+<p class="creation-warning">
+    <strong>Sub-par character:</strong> all six scores are 8 or lower. The rules
+    let you start over — use <em>Cancel</em> to abandon this character and begin a
+    new one if you'd like a fresh set of rolls. You may also proceed as-is.
 </p>
-<p class="muted small">Pool (sorted): {{ pool | join(", ") }}</p>
+{% endif %}
+{% if rock_bottom %}
+<p class="creation-note">
+    {% for name in rock_bottom %}{{ name }} is 3 — extremely low.{% if not loop.last %} {% endif %}{% endfor %}
+</p>
 {% endif %}
 
 <form method="post" action="/wizard/{{ draft_id }}/abilities" class="step-form">
@@ -16,24 +21,8 @@
         {% for ab in ability_rows %}
             <tr>
                 <td>{{ ab.name }}</td>
-                <td class="num">
-                    {% if arrange_mode %}
-                    <select name="{{ ab.name }}" class="arrange-pick" data-current="{{ ab.score }}">
-                        {% for v in pool %}
-                        <option value="{{ v }}" {% if v == ab.score %}selected{% endif %}>{{ v }}</option>
-                        {% endfor %}
-                    </select>
-                    {% else %}
-                    {{ ab.score }}
-                    {% endif %}
-                </td>
-                <td class="num">
-                    {% if arrange_mode %}
-                    <span class="arrange-mod" data-for="{{ ab.name }}">{{ "%+d"|format(ab.modifier) }}</span>
-                    {% else %}
-                    {{ "%+d"|format(ab.modifier) }}
-                    {% endif %}
-                </td>
+                <td class="num">{{ ab.score }}</td>
+                <td class="num">{{ "%+d"|format(ab.modifier) }}</td>
             </tr>
         {% endfor %}
         </tbody>
@@ -46,32 +35,3 @@
 
     <button type="submit" class="primary">Next: Choose Race &rarr;</button>
 </form>
-
-<form method="post" action="/wizard/{{ draft_id }}/reroll" class="inline-form">
-    <button type="submit">Re-roll All</button>
-</form>
-
-{% if arrange_mode %}
-<script>
-    // Live-update the modifier column when the user reshuffles assignments.
-    // Server still validates that the submitted multiset matches the pool.
-    (function () {
-        function mod(score) {
-            if (score >= 18) return 3;
-            if (score >= 16) return 2;
-            if (score >= 13) return 1;
-            if (score >= 9)  return 0;
-            if (score >= 6)  return -1;
-            if (score >= 4)  return -2;
-            return -3;
-        }
-        function fmt(m) { return (m >= 0 ? '+' : '') + m; }
-        document.querySelectorAll('.arrange-pick').forEach(sel => {
-            sel.addEventListener('change', () => {
-                const span = document.querySelector('.arrange-mod[data-for="' + sel.name + '"]');
-                if (span) span.textContent = fmt(mod(parseInt(sel.value, 10)));
-            });
-        });
-    })();
-</script>
-{% endif %}

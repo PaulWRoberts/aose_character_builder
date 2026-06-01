@@ -60,7 +60,6 @@ def _rules_form(**overrides):
     Pass ``rule="on"`` to enable a bool, ``rule=None`` to drop it, or override
     ``creation_method`` ("advanced"/"basic") and the radio choices directly."""
     data = {
-        "ability_roll_method": "3d6_in_order",
         "encumbrance": "basic",
         "creation_method": "advanced",
     }
@@ -107,8 +106,6 @@ def test_get_rules_renders_every_bool_toggle(client):
 def test_get_rules_renders_choice_radios(client):
     draft_id = _start(client)
     r = client.get(f"/wizard/{draft_id}/rules")
-    assert 'name="ability_roll_method"' in r.text
-    assert 'value="4d6_drop_lowest"' in r.text
     assert 'name="encumbrance"' in r.text
     assert 'value="detailed"' in r.text
 
@@ -138,41 +135,6 @@ def test_post_rules_advances_to_abilities(client):
     draft_id = _start(client)
     r = client.post(f"/wizard/{draft_id}/rules", data=_rules_form())
     assert r.headers["location"].endswith("/abilities")
-
-
-# ── Cascading clears: ability_roll_method change ──────────────────────────
-
-def test_changing_ability_method_rerolls_and_clears(client):
-    draft_id = _start(client)
-    # Walk to alignment so there's downstream data
-    client.post(f"/wizard/{draft_id}/rules", data=_rules_form())
-    draft = load_draft(draft_id, client._drafts_dir)
-    draft["abilities"] = {"STR": 15, "INT": 11, "WIS": 12, "DEX": 13, "CON": 14, "CHA": 10}
-    save_draft(draft_id, draft, client._drafts_dir)
-    client.post(f"/wizard/{draft_id}/abilities", data={"name": "Thorin"})
-    client.post(f"/wizard/{draft_id}/race", data={"race_id": "dwarf"})
-    client.post(f"/wizard/{draft_id}/class", data={"class_id": "fighter"})
-    before = load_draft(draft_id, client._drafts_dir)
-    assert "class_id" in before
-
-    # Now switch method on the rules step
-    client.post(f"/wizard/{draft_id}/rules",
-                data=_rules_form(ability_roll_method="4d6_drop_lowest"))
-    after = load_draft(draft_id, client._drafts_dir)
-    # Abilities re-rolled (different dict, name preserved)
-    assert "class_id" not in after
-    assert "race_id" not in after
-    assert after.get("name") == "Thorin"  # cosmetic data is preserved
-    assert after["ruleset"]["ability_roll_method"] == "4d6_drop_lowest"
-
-
-def test_arrange_mode_via_rules_step_seeds_pool(client):
-    draft_id = _start(client)
-    client.post(f"/wizard/{draft_id}/rules",
-                data=_rules_form(ability_roll_method="3d6_arrange"))
-    draft = load_draft(draft_id, client._drafts_dir)
-    assert "abilities_pool" in draft
-    assert len(draft["abilities_pool"]) == 6
 
 
 # ── Cascading clears: separate_race_class toggle ──────────────────────────

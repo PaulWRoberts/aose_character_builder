@@ -561,6 +561,22 @@ button {
     max-width: 500px;
 }
 
+.creation-warning {
+    background: #f4e4e0;
+    border: 1px solid #a04040;
+    padding: 8px 12px;
+    margin: 12px 0;
+    font-size: 13px;
+    color: #5a1a1a;
+    max-width: 500px;
+}
+
+.creation-note {
+    color: #a04040;
+    font-size: 13px;
+    margin: 8px 0;
+}
+
 .skill-display {
     margin: 15px 0;
     padding: 15px;

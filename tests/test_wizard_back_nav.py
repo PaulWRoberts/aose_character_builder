@@ -189,29 +189,6 @@ def test_changing_class_clears_hp_and_proficiencies(tmp_path):
     assert "proficiencies" not in draft
 
 
-def test_reroll_clears_race_and_below(client):
-    """Re-rolling abilities at any point during the wizard wipes downstream."""
-    draft_id = _start(client)
-    client.post(f"/wizard/{draft_id}/abilities", data={"name": "Thorin"})
-    client.post(f"/wizard/{draft_id}/race", data={"race_id": "dwarf"})
-    client.post(f"/wizard/{draft_id}/class", data={"class_id": "fighter"})
-    client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "law"})
-    client.post(f"/wizard/{draft_id}/hp/roll")
-    draft_before = load_draft(draft_id, client._drafts_dir)
-    assert "race_id" in draft_before
-    assert "hp_roll" in draft_before
-
-    client.post(f"/wizard/{draft_id}/reroll")
-    draft_after = load_draft(draft_id, client._drafts_dir)
-    assert "race_id" not in draft_after
-    assert "class_id" not in draft_after
-    assert "hp_roll" not in draft_after
-    # Name should be preserved (purely cosmetic)
-    assert draft_after.get("name") == "Thorin"
-    # Alignment is preserved too — it doesn't depend on abilities
-    assert draft_after.get("alignment") == "law"
-
-
 def test_changing_class_in_multiclass_combo_clears_downstream(tmp_path):
     """Multi-class → single-class change must clear HP rolls (which were a list)."""
     client = _make_client(tmp_path, RuleSet(multiclassing=True))

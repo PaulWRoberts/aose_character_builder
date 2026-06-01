@@ -79,117 +79,23 @@ def test_sheet_html_renders_encumbrance_description(tmp_path):
 
 
 # ════════════════════════════════════════════════════════════════════════════
-# Ability roll method
+# Abilities are always 3d6 in order (no method choice)
 # ════════════════════════════════════════════════════════════════════════════
 
-def test_new_wizard_uses_3d6_in_order_by_default(tmp_path):
+def test_new_wizard_rolls_3d6_in_order(tmp_path):
     client = _make_client(tmp_path, RuleSet())
     r = client.get("/wizard/new")
     draft_id = r.headers["location"].split("/")[2]
     draft = load_draft(draft_id, client._drafts_dir)
-    # All scores in 3-18 range
+    assert set(draft["abilities"]) == {"STR", "INT", "WIS", "DEX", "CON", "CHA"}
     for v in draft["abilities"].values():
         assert 3 <= v <= 18
-    # No arrange pool
+    # No arrange pool is ever seeded.
     assert "abilities_pool" not in draft
 
 
-def test_new_wizard_4d6_drop_lowest_pools_higher(tmp_path):
-    """Across 30 fresh drafts, 4d6-drop-lowest should beat 3d6 in total."""
-    client_4d6 = _make_client(tmp_path / "a", RuleSet(ability_roll_method="4d6_drop_lowest"))
-    client_3d6 = _make_client(tmp_path / "b", RuleSet(ability_roll_method="3d6_in_order"))
-    def grand_total(client, n):
-        total = 0
-        for _ in range(n):
-            r = client.get("/wizard/new")
-            did = r.headers["location"].split("/")[2]
-            draft = load_draft(did, client._drafts_dir)
-            total += sum(draft["abilities"].values())
-        return total
-    assert grand_total(client_4d6, 30) > grand_total(client_3d6, 30)
-
-
-def test_arrange_mode_seeds_pool_on_new_draft(tmp_path):
-    client = _make_client(tmp_path, RuleSet(ability_roll_method="3d6_arrange"))
-    r = client.get("/wizard/new")
-    draft_id = r.headers["location"].split("/")[2]
-    draft = load_draft(draft_id, client._drafts_dir)
-    assert "abilities_pool" in draft
-    assert len(draft["abilities_pool"]) == 6
-    # Initial assignment is just the pool in some order — the multiset matches
-    assert sorted(draft["abilities"].values()) == sorted(draft["abilities_pool"])
-
-
-def test_arrange_mode_renders_dropdowns(tmp_path):
-    client = _make_client(tmp_path, RuleSet(ability_roll_method="3d6_arrange"))
-    r = client.get("/wizard/new")
-    draft_id = r.headers["location"].split("/")[2]
-    r = client.get(f"/wizard/{draft_id}/abilities")
-    assert "Assign to taste" in r.text
-    # Six <select> elements, one per ability
-    assert r.text.count("arrange-pick") >= 6
-
-
-def test_arrange_mode_accepts_valid_permutation(tmp_path):
-    client = _make_client(tmp_path, RuleSet(ability_roll_method="3d6_arrange"))
-    r = client.get("/wizard/new")
-    draft_id = r.headers["location"].split("/")[2]
-    draft = load_draft(draft_id, client._drafts_dir)
-    pool = draft["abilities_pool"]
-    # Send a reverse-order assignment — still a valid permutation of the pool
-    assignment = dict(zip(["STR", "INT", "WIS", "DEX", "CON", "CHA"], reversed(pool)))
-    r = client.post(
-        f"/wizard/{draft_id}/abilities",
-        data={"name": "Permuted", **{k: str(v) for k, v in assignment.items()}},
-    )
-    assert r.status_code == 303
-    draft = load_draft(draft_id, client._drafts_dir)
-    assert draft["abilities"] == assignment
-
-
-def test_arrange_mode_rejects_invalid_assignment(tmp_path):
-    """Submitting six copies of the highest pool value must 400."""
-    client = _make_client(tmp_path, RuleSet(ability_roll_method="3d6_arrange"))
-    r = client.get("/wizard/new")
-    draft_id = r.headers["location"].split("/")[2]
-    pool = load_draft(draft_id, client._drafts_dir)["abilities_pool"]
-    high = max(pool)
-    r = client.post(
-        f"/wizard/{draft_id}/abilities",
-        data={
-            "name": "Cheater",
-            "STR": str(high), "INT": str(high), "WIS": str(high),
-            "DEX": str(high), "CON": str(high), "CHA": str(high),
-        },
-    )
-    assert r.status_code == 400
-
-
-def test_arrange_mode_reroll_regenerates_pool(tmp_path):
-    client = _make_client(tmp_path, RuleSet(ability_roll_method="3d6_arrange"))
-    r = client.get("/wizard/new")
-    draft_id = r.headers["location"].split("/")[2]
-    before = load_draft(draft_id, client._drafts_dir)["abilities_pool"]
-    for _ in range(8):
-        client.post(f"/wizard/{draft_id}/reroll")
-        after = load_draft(draft_id, client._drafts_dir)["abilities_pool"]
-        if after != before:
-            return
-    pytest.fail("Re-roll never produced a new pool in 8 attempts")
-
-
-def test_non_arrange_mode_rejects_no_arrange_pool(tmp_path):
-    """Switching from 3d6-in-order should not leave a stale pool around."""
-    client = _make_client(tmp_path, RuleSet(ability_roll_method="3d6_in_order"))
-    r = client.get("/wizard/new")
-    draft_id = r.headers["location"].split("/")[2]
-    draft = load_draft(draft_id, client._drafts_dir)
-    assert "abilities_pool" not in draft
-
-
-def test_non_arrange_post_abilities_works_without_score_fields(tmp_path):
-    """In-order mode: the abilities form only needs ``name`` — no STR/INT/... fields."""
-    client = _make_client(tmp_path, RuleSet(ability_roll_method="3d6_in_order"))
+def test_abilities_form_only_needs_name(tmp_path):
+    client = _make_client(tmp_path, RuleSet())
     r = client.get("/wizard/new")
     draft_id = r.headers["location"].split("/")[2]
     r = client.post(f"/wizard/{draft_id}/abilities", data={"name": "Whatever"})
@@ -203,7 +109,7 @@ def test_non_arrange_post_abilities_works_without_score_fields(tmp_path):
 def test_choice_group_pending_badge_hidden_when_implemented(tmp_path):
     client = _make_client(tmp_path, RuleSet())
     r = client.get("/settings")
-    # Find the ability_roll_method legend area
-    idx = r.text.index('Ability Score Method')
+    # The Encumbrance group is implemented — no "pending" badge near its legend.
+    idx = r.text.index('Encumbrance')
     snippet = r.text[idx:idx + 400]
     assert ">pending<" not in snippet
