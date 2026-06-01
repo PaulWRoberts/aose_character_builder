@@ -15,10 +15,8 @@ class RuleSet(BaseModel):
     weapon_proficiency: bool = False
     multiclassing: bool = False
     reroll_1s_2s_hp_l1: bool = False
-    max_hp_at_l1: bool = False
     separate_race_class: bool = True
-    demihuman_level_limits: bool = True
-    demihuman_class_restrictions: bool = True
+    lift_demihuman_restrictions: bool = False
     variable_weapon_damage: bool = False
     advanced_spell_books: bool = False
 
