@@ -202,3 +202,78 @@ def test_adjust_step_present_in_basic_mode(tmp_path):
     r = client.get(f"/wizard/{draft_id}/alignment")
     assert r.status_code == 303
     assert r.headers["location"].endswith("/adjust")
+
+
+def test_adjust_get_renders_scores_and_marks(tmp_path):
+    client = _make_client(tmp_path)
+    draft_id = _drive_to_adjust(client)
+    r = client.get(f"/wizard/{draft_id}/adjust")
+    assert r.status_code == 200
+    # Fighter: STR raisable, INT/WIS lowerable.
+    assert "raise_STR" in r.text
+    assert "lower_INT" in r.text
+    assert "lower_WIS" in r.text
+    # STR is a prime — it must not be offered as lowerable.
+    assert "lower_STR" not in r.text
+
+
+def test_adjust_post_valid_stores_and_advances(tmp_path):
+    client = _make_client(tmp_path)
+    draft_id = _drive_to_adjust(client)
+    r = client.post(f"/wizard/{draft_id}/adjust", data={
+        "raise_STR": "1", "lower_INT": "1", "lower_WIS": "1",
+    })
+    assert r.status_code == 303
+    assert r.headers["location"].endswith("/alignment")
+    draft = load_draft(draft_id, client._drafts_dir)
+    assert draft["ability_adjustments"] == {"STR": 1, "INT": -1, "WIS": -1}
+
+
+def test_adjust_post_zero_is_valid(tmp_path):
+    client = _make_client(tmp_path)
+    draft_id = _drive_to_adjust(client)
+    r = client.post(f"/wizard/{draft_id}/adjust", data={})
+    assert r.status_code == 303
+    draft = load_draft(draft_id, client._drafts_dir)
+    assert draft["ability_adjustments"] == {}
+
+
+def test_adjust_post_waste_rejected(tmp_path):
+    client = _make_client(tmp_path)
+    draft_id = _drive_to_adjust(client)
+    r = client.post(f"/wizard/{draft_id}/adjust", data={
+        "raise_STR": "1", "lower_INT": "1", "lower_WIS": "2",
+    })
+    assert r.status_code == 400
+
+
+def test_finalize_reflects_adjustment(tmp_path):
+    import json
+    client = _make_client(tmp_path)
+    draft_id = _drive_to_adjust(client)
+    client.post(f"/wizard/{draft_id}/adjust", data={
+        "raise_STR": "1", "lower_INT": "1", "lower_WIS": "1",
+    })
+    client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "law"})
+    client.post(f"/wizard/{draft_id}/hp/roll")
+    client.post(f"/wizard/{draft_id}/hp")
+    client.get(f"/wizard/{draft_id}/equipment")
+    client.post(f"/wizard/{draft_id}/equipment")
+    r = client.post(f"/wizard/{draft_id}/finalize")
+    char_id = r.headers["location"].split("/")[-1]
+    saved = json.loads((client._characters_dir / f"{char_id}.json").read_text())
+    assert saved["abilities"]["STR"] == 14  # 13 +1
+    assert saved["abilities"]["INT"] == 12  # 13 -1
+    assert saved["abilities"]["WIS"] == 12  # 13 -1
+
+
+def test_changing_class_clears_adjustment(tmp_path):
+    client = _make_client(tmp_path)
+    draft_id = _drive_to_adjust(client)
+    client.post(f"/wizard/{draft_id}/adjust", data={
+        "raise_STR": "1", "lower_INT": "1", "lower_WIS": "1",
+    })
+    # Re-pick a different class — the stored adjustment must be cleared.
+    client.post(f"/wizard/{draft_id}/class", data={"class_id": "thief"})
+    draft = load_draft(draft_id, client._drafts_dir)
+    assert "ability_adjustments" not in draft

@@ -650,6 +650,76 @@ async def post_class(request: Request, draft_id: str):
     return _redirect(f"/wizard/{draft_id}/{_next_incomplete_step(draft)}")
 
 
+def _adjust_context(draft: dict[str, Any], data) -> dict:
+    """Per-ability rows for the adjust step: post-racial score, raisable /
+    lowerable marks, floor, and any previously stored allocation."""
+    from aose.engine.ability_mods import _ability_floor, adjustable_abilities
+
+    classes = [data.classes[cid] for cid in _class_ids(draft) if cid in data.classes]
+    post_racial = _post_racial_abilities(draft, data)
+    adj = adjustable_abilities(classes)
+    stored = draft.get("ability_adjustments", {})
+    rows = []
+    for ab in ABILITY_ORDER:
+        name = ab.value
+        delta = stored.get(name, 0)
+        rows.append({
+            "name": name,
+            "score": post_racial[name],
+            "raisable": name in adj["raisable"],
+            "lowerable": name in adj["lowerable"],
+            "floor": _ability_floor(name, classes) if name in adj["lowerable"] else None,
+            "raise_val": delta if delta > 0 else 0,
+            "lower_val": -delta if delta < 0 else 0,
+        })
+    return {"adjust_rows": rows}
+
+
+@router.get("/{draft_id}/adjust", response_class=HTMLResponse)
+async def get_adjust(request: Request, draft_id: str):
+    draft = _load(request, draft_id)
+    redirect = _gate(draft, "adjust", draft_id)
+    if redirect:
+        return redirect
+    ctx = _base_context(request, draft_id, draft, "adjust")
+    ctx.update(_adjust_context(draft, request.app.state.game_data))
+    return templates.TemplateResponse(request, "wizard.html", ctx)
+
+
+@router.post("/{draft_id}/adjust")
+async def post_adjust(request: Request, draft_id: str):
+    from aose.engine.ability_mods import AdjustmentError, validate_ability_adjustments
+
+    draft = _load(request, draft_id)
+    data = request.app.state.game_data
+    classes = [data.classes[cid] for cid in _class_ids(draft) if cid in data.classes]
+    post_racial = _post_racial_abilities(draft, data)
+
+    form = await request.form()
+    adjustments: dict[str, int] = {}
+    for ab in ABILITY_ORDER:
+        name = ab.value
+        try:
+            up = int(form.get(f"raise_{name}", 0) or 0)
+            down = int(form.get(f"lower_{name}", 0) or 0)
+        except ValueError:
+            raise HTTPException(400, f"Invalid number for {name}")
+        if up < 0 or down < 0:
+            raise HTTPException(400, "Adjustment amounts must be non-negative.")
+        delta = up - down
+        if delta:
+            adjustments[name] = delta
+
+    try:
+        validate_ability_adjustments(post_racial, classes, adjustments)
+    except AdjustmentError as e:
+        raise HTTPException(400, str(e))
+
+    draft["ability_adjustments"] = adjustments
+    save_draft(draft_id, draft, _drafts_dir(request))
+    return _redirect(f"/wizard/{draft_id}/{_next_incomplete_step(draft)}")
+
+
 @router.get("/{draft_id}/alignment", response_class=HTMLResponse)
 async def get_alignment(request: Request, draft_id: str):
     draft = _load(request, draft_id)

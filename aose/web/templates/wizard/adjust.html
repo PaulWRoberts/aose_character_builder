@@ -1,0 +1,38 @@
+<h2>Ability Score Adjustments</h2>
+<p class="muted">
+    Optionally trade points down to raise a prime requisite. Every <strong>2
+    points lowered</strong> buys <strong>1 point raised</strong> &mdash; no waste.
+    Only prime requisites may be raised (max 18); only STR/INT/WIS that aren&rsquo;t a
+    prime (or class-restricted) may be lowered (floor shown). Leave everything at
+    0 to skip.
+</p>
+
+<form method="post" action="/wizard/{{ draft_id }}/adjust" class="step-form">
+    <table class="abilities-roll">
+        <thead>
+            <tr><th>Ability</th><th>Score</th><th>Raise</th><th>Lower</th></tr>
+        </thead>
+        <tbody>
+        {% for row in adjust_rows %}
+            <tr>
+                <td>{{ row.name }}</td>
+                <td class="num">{{ row.score }}</td>
+                <td class="num">
+                    {% if row.raisable %}
+                    <input type="number" name="raise_{{ row.name }}" min="0"
+                           value="{{ row.raise_val }}" step="1">
+                    {% else %}&mdash;{% endif %}
+                </td>
+                <td class="num">
+                    {% if row.lowerable %}
+                    <input type="number" name="lower_{{ row.name }}" min="0"
+                           value="{{ row.lower_val }}" step="1">
+                    <span class="muted">(floor {{ row.floor }})</span>
+                    {% else %}&mdash;{% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <button type="submit" class="primary">Next: Choose Alignment &rarr;</button>
+</form>
