@@ -70,6 +70,7 @@ from aose.models import (
 from aose.sheet.view import magic_items_view
 from aose.web.move_dispatch import dispatch_move
 from aose.web.settings_routes import (
+    ADVANCED_OPTIONS_GROUP,
     CHOICE_GROUPS,
     IMPLEMENTED_CHOICE_GROUPS,
     IMPLEMENTED_RULES,
@@ -322,6 +323,7 @@ async def get_rules(request: Request, draft_id: str):
         "rule_labels": RULE_LABELS,
         "implemented_rules": IMPLEMENTED_RULES,
         "implemented_choice_groups": IMPLEMENTED_CHOICE_GROUPS,
+        "advanced_options_group": ADVANCED_OPTIONS_GROUP,
     })
     return templates.TemplateResponse(request, "wizard.html", ctx)
 
