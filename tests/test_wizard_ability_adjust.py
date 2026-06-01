@@ -58,3 +58,80 @@ def test_adjustable_multiclass_union(data):
     adj = adjustable_abilities([data.classes["fighter"], data.classes["magic_user"]])
     assert adj["raisable"] == {"STR", "INT"}
     assert adj["lowerable"] == {"WIS"}
+
+
+# ── Task 3: validate + apply ───────────────────────────────────────────────
+
+from aose.engine.ability_mods import (
+    AdjustmentError,
+    apply_ability_adjustments,
+    validate_ability_adjustments,
+)
+
+_POST_RACIAL = {"STR": 12, "INT": 13, "WIS": 13, "DEX": 12, "CON": 12, "CHA": 10}
+
+
+def test_validate_exact_two_to_one_passes(data):
+    validate_ability_adjustments(
+        _POST_RACIAL, [data.classes["fighter"]], {"STR": 1, "INT": -1, "WIS": -1}
+    )
+
+
+def test_validate_waste_fails(data):
+    with pytest.raises(AdjustmentError):
+        validate_ability_adjustments(
+            _POST_RACIAL, [data.classes["fighter"]],
+            {"STR": 1, "INT": -2, "WIS": -1},
+        )
+
+
+def test_validate_lower_below_nine_fails(data):
+    scores = {**_POST_RACIAL, "INT": 9, "WIS": 13}
+    with pytest.raises(AdjustmentError):
+        validate_ability_adjustments(
+            scores, [data.classes["fighter"]], {"STR": 1, "INT": -1, "WIS": -1}
+        )
+
+
+def test_validate_raise_above_eighteen_fails(data):
+    scores = {**_POST_RACIAL, "STR": 18}
+    with pytest.raises(AdjustmentError):
+        validate_ability_adjustments(
+            scores, [data.classes["fighter"]], {"STR": 1, "INT": -1, "WIS": -1}
+        )
+
+
+def test_validate_lower_prime_fails(data):
+    with pytest.raises(AdjustmentError):
+        validate_ability_adjustments(
+            _POST_RACIAL, [data.classes["fighter"]], {"INT": 1, "STR": -2}
+        )
+
+
+def test_validate_raise_non_prime_fails(data):
+    with pytest.raises(AdjustmentError):
+        validate_ability_adjustments(
+            _POST_RACIAL, [data.classes["fighter"]], {"WIS": 1, "INT": -2}
+        )
+
+
+def test_validate_lower_restricted_str_fails(data):
+    with pytest.raises(AdjustmentError):
+        validate_ability_adjustments(
+            _POST_RACIAL, [data.classes["thief"]], {"DEX": 1, "STR": -2}
+        )
+
+
+def test_validate_empty_is_valid(data):
+    validate_ability_adjustments(_POST_RACIAL, [data.classes["fighter"]], {})
+
+
+def test_apply_adds_deltas():
+    result = apply_ability_adjustments(
+        {"STR": 12, "INT": 13, "WIS": 13, "DEX": 12, "CON": 12, "CHA": 10},
+        {"STR": 1, "INT": -1, "WIS": -1},
+    )
+    assert result["STR"] == 13
+    assert result["INT"] == 12
+    assert result["WIS"] == 12
+    assert result["DEX"] == 12

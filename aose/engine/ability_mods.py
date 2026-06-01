@@ -83,3 +83,64 @@ def adjustable_abilities(classes) -> dict:
         non_reducible |= {a.value for a in cls.non_reducible_abilities}
     lowerable = _BASE_LOWERABLE - raisable - non_reducible
     return {"raisable": raisable, "lowerable": lowerable}
+
+
+def _ability_floor(ability: str, classes) -> int:
+    """The lowest a lowered ability may reach: ``max(9, highest class
+    requirement for that ability)``."""
+    reqs = [cls.ability_requirements.get(Ability(ability), 0) for cls in classes]
+    return max(9, max(reqs, default=0))
+
+
+def validate_ability_adjustments(post_racial: dict, classes,
+                                 adjustments: dict) -> None:
+    """Raise ``AdjustmentError`` unless every rule holds:
+
+    * raised abilities ⊆ raisable; lowered ⊆ lowerable
+    * ``lowered_total == 2 * raised_total`` (exact, no waste)
+    * each lowered post-value ≥ ``max(9, class requirement)``
+    * each raised post-value ≤ 18
+    """
+    adj = adjustable_abilities(classes)
+    raised = {a: d for a, d in adjustments.items() if d > 0}
+    lowered = {a: -d for a, d in adjustments.items() if d < 0}  # positive amounts
+
+    bad_raise = set(raised) - adj["raisable"]
+    if bad_raise:
+        raise AdjustmentError(
+            f"Cannot raise non-prime-requisite abilities: {sorted(bad_raise)}"
+        )
+    bad_lower = set(lowered) - adj["lowerable"]
+    if bad_lower:
+        raise AdjustmentError(f"Cannot lower abilities: {sorted(bad_lower)}")
+
+    raised_total = sum(raised.values())
+    lowered_total = sum(lowered.values())
+    if lowered_total != 2 * raised_total:
+        raise AdjustmentError(
+            "Must lower exactly 2 points for every 1 raised (no waste): "
+            f"lowered {lowered_total}, raised {raised_total}."
+        )
+
+    for ability, amount in lowered.items():
+        new_value = post_racial[ability] - amount
+        floor = _ability_floor(ability, classes)
+        if new_value < floor:
+            raise AdjustmentError(
+                f"{ability} may not drop below {floor} (would be {new_value})."
+            )
+    for ability, amount in raised.items():
+        new_value = post_racial[ability] + amount
+        if new_value > 18:
+            raise AdjustmentError(
+                f"{ability} may not exceed 18 (would be {new_value})."
+            )
+
+
+def apply_ability_adjustments(scores: dict, adjustments: dict) -> dict:
+    """Return ``scores`` with ``adjustments`` added per key. No clamping —
+    validation has already bounded the result. Input is not mutated."""
+    result = dict(scores)
+    for ability, delta in adjustments.items():
+        result[ability] = result.get(ability, 0) + delta
+    return result
