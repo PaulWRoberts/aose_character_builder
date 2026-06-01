@@ -3,6 +3,9 @@ name: Halfling
 ability_requirements:
   CON: 9
   DEX: 9
+ability_modifiers:
+  DEX: 1
+  STR: -1
 languages:
 - common
 - halfling
@@ -18,10 +21,6 @@ features:
 - id: ability_modifiers
   name: Ability Modifiers
   text: +1 DEX, –1 STR.
-  mechanical:
-    ability_modifiers:
-      DEX: 1
-      STR: -1
 - id: npc_only_classes_referee_option
   name: NPC-Only Classes (Referee Option)
   text: At the referee’s option, halfling druids may only exist as NPCs.

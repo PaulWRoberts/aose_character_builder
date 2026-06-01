@@ -2,6 +2,9 @@ id: elf
 name: Elf
 ability_requirements:
   INT: 9
+ability_modifiers:
+  CON: -1
+  DEX: 1
 infravision: 60
 languages:
 - common
@@ -33,10 +36,6 @@ features:
 - id: ability_modifiers
   name: Ability Modifiers
   text: –1 CON, +1 DEX.
-  mechanical:
-    ability_modifiers:
-      CON: -1
-      DEX: 1
 - id: npc_only_classes_referee_option
   name: NPC-Only Classes (Referee Option)
   text: At the referee’s option, elven cleric and druids may only exist as NPCs.

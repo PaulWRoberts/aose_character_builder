@@ -22,6 +22,7 @@ class Race(BaseModel):
     ability_requirements: dict[Ability, int] = Field(default_factory=dict)
     ability_maxima: dict[Ability, int] = Field(default_factory=dict)
     ability_minima: dict[Ability, int] = Field(default_factory=dict)
+    ability_modifiers: dict[Ability, int] = Field(default_factory=dict)
     infravision: int = 0
     base_movement: int = 120
     languages: list[str] = Field(default_factory=list)

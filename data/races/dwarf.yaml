@@ -2,6 +2,9 @@ id: dwarf
 name: Dwarf
 ability_requirements:
   CON: 9
+ability_modifiers:
+  CHA: -1
+  CON: 1
 infravision: 60
 languages:
 - common
@@ -23,10 +26,6 @@ features:
 - id: ability_modifiers
   name: Ability Modifiers
   text: –1 CHA, +1 CON.
-  mechanical:
-    ability_modifiers:
-      CHA: -1
-      CON: 1
 - id: npc_only_classes_referee_option
   name: NPC-Only Classes (Referee Option)
   text: At the referee’s option, dwarven clerics may only exist as NPCs.

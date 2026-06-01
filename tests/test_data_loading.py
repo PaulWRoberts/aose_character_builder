@@ -55,6 +55,29 @@ def test_spell_model_fields():
     assert not hasattr(s, "classes")
 
 
+def test_demihuman_ability_modifiers_loaded(data):
+    assert data.races["dwarf"].ability_modifiers == {Ability.CHA: -1, Ability.CON: 1}
+    assert data.races["duergar"].ability_modifiers == {Ability.CHA: -1, Ability.CON: 1}
+    assert data.races["drow"].ability_modifiers == {Ability.CON: -1, Ability.DEX: 1}
+    assert data.races["elf"].ability_modifiers == {Ability.CON: -1, Ability.DEX: 1}
+    assert data.races["halfling"].ability_modifiers == {Ability.DEX: 1, Ability.STR: -1}
+    assert data.races["half_orc"].ability_modifiers == {
+        Ability.CHA: -2, Ability.CON: 1, Ability.STR: 1
+    }
+
+
+def test_races_without_modifiers_have_empty_field(data):
+    for rid in ("gnome", "half_elf", "svirfneblin"):
+        assert data.races[rid].ability_modifiers == {}
+
+
+def test_human_optional_modifier_feature_untouched(data):
+    human = data.races["human"]
+    assert human.ability_modifiers == {}
+    feature = next(f for f in human.features if f.id == "optional_ability_modifiers")
+    assert feature.mechanical["ability_modifiers"] == {"CHA": 1, "CON": 1}
+
+
 def test_charclass_spell_lists_field():
     from aose.models import CharClass
 
