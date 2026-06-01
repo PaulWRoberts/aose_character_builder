@@ -50,20 +50,19 @@ def _start(client):
     return r.headers["location"].split("/")[2]
 
 
-# Default bool rules that ship as True in RuleSet().  When building form data
-# for POST /rules, you have to include these explicitly or you'll be silently
-# turning them off (the form-vs-RuleSet semantics — a missing checkbox is False).
-_TRUE_DEFAULTS = ("separate_race_class", "demihuman_level_limits",
-                  "demihuman_class_restrictions")
+# Bool rules that ship True in RuleSet() and ARE rendered as checkboxes.  The
+# creation method (separate_race_class) is now a radio, handled separately.
+_TRUE_DEFAULTS = ()
 
 
 def _rules_form(**overrides):
-    """Build form data for POST /wizard/{id}/rules that matches the
-    RuleSet() defaults, with optional overrides.  Pass ``rule="on"`` to enable
-    a bool, ``rule=None`` to disable, or override the radio choices directly."""
+    """Build form data for POST /wizard/{id}/rules matching RuleSet() defaults.
+    Pass ``rule="on"`` to enable a bool, ``rule=None`` to drop it, or override
+    ``creation_method`` ("advanced"/"basic") and the radio choices directly."""
     data = {
         "ability_roll_method": "3d6_in_order",
         "encumbrance": "basic",
+        "creation_method": "advanced",
     }
     for r in _TRUE_DEFAULTS:
         data[r] = "on"
@@ -98,9 +97,11 @@ def test_rules_is_first_step_in_breadcrumb(client):
 def test_get_rules_renders_every_bool_toggle(client):
     draft_id = _start(client)
     r = client.get(f"/wizard/{draft_id}/rules")
-    for field in ("ascending_ac", "max_hp_at_l1", "weapon_proficiency",
-                  "secondary_skills", "multiclassing", "separate_race_class"):
+    for field in ("ascending_ac", "weapon_proficiency",
+                  "secondary_skills", "multiclassing", "lift_demihuman_restrictions"):
         assert f'name="{field}"' in r.text, f"missing toggle for {field}"
+    # Creation method is a radio, not a checkbox
+    assert 'name="creation_method"' in r.text
 
 
 def test_get_rules_renders_choice_radios(client):
@@ -114,7 +115,7 @@ def test_get_rules_renders_choice_radios(client):
 
 def test_get_rules_prefills_from_settings(tmp_path):
     """The settings.json defaults flow into a fresh draft."""
-    client = _make_client(tmp_path, RuleSet(ascending_ac=True, max_hp_at_l1=True))
+    client = _make_client(tmp_path, RuleSet(ascending_ac=True, multiclassing=True))
     draft_id = _start(client)
     r = client.get(f"/wizard/{draft_id}/rules")
     # ascending_ac checkbox should be 'checked'
@@ -187,8 +188,8 @@ def test_toggling_separate_race_class_clears_race_and_class(client):
     client.post(f"/wizard/{draft_id}/race", data={"race_id": "dwarf"})
     client.post(f"/wizard/{draft_id}/class", data={"class_id": "fighter"})
 
-    # Turn separate_race_class OFF
-    client.post(f"/wizard/{draft_id}/rules", data=_rules_form(separate_race_class=None))
+    # Switch to Basic (separate_race_class off)
+    client.post(f"/wizard/{draft_id}/rules", data=_rules_form(creation_method="basic"))
     draft = load_draft(draft_id, client._drafts_dir)
     assert "race_id" not in draft
     assert "class_id" not in draft
@@ -196,7 +197,7 @@ def test_toggling_separate_race_class_clears_race_and_class(client):
 
 # ── Cascading clears: HP rule changes ─────────────────────────────────────
 
-def test_toggling_max_hp_rule_clears_hp_only(client):
+def test_toggling_reroll_hp_rule_clears_hp_only(client):
     draft_id = _start(client)
     client.post(f"/wizard/{draft_id}/rules", data=_rules_form())
     draft = load_draft(draft_id, client._drafts_dir)
@@ -209,11 +210,10 @@ def test_toggling_max_hp_rule_clears_hp_only(client):
     client.post(f"/wizard/{draft_id}/hp/roll")
     assert "hp_roll" in load_draft(draft_id, client._drafts_dir)
 
-    # Toggle max_hp_at_l1 on
-    client.post(f"/wizard/{draft_id}/rules", data=_rules_form(max_hp_at_l1="on"))
+    # Toggle reroll_1s_2s_hp_l1 on
+    client.post(f"/wizard/{draft_id}/rules", data=_rules_form(reroll_1s_2s_hp_l1="on"))
     draft = load_draft(draft_id, client._drafts_dir)
     assert "hp_roll" not in draft  # cleared so HP step re-rolls under new rule
-    # But race + class + alignment survive
     assert draft.get("race_id") == "dwarf"
     assert draft.get("class_id") == "fighter"
     assert draft.get("alignment") == "law"
@@ -289,3 +289,32 @@ def test_per_character_rules_persist_to_saved_character(tmp_path):
     # Global settings still unchanged
     from aose.characters import load_settings
     assert load_settings(client._settings_path).ascending_ac is False
+
+
+def test_basic_method_via_wizard_forces_advanced_rules_off(client):
+    draft_id = _start(client)
+    client.post(f"/wizard/{draft_id}/rules", data=_rules_form(
+        creation_method="basic", multiclassing="on", lift_demihuman_restrictions="on",
+    ))
+    rs = load_draft(draft_id, client._drafts_dir)["ruleset"]
+    assert rs["separate_race_class"] is False
+    assert rs["multiclassing"] is False
+    assert rs["lift_demihuman_restrictions"] is False
+
+
+def test_changing_lift_demihuman_clears_class_and_downstream(client):
+    draft_id = _start(client)
+    client.post(f"/wizard/{draft_id}/rules", data=_rules_form())
+    draft = load_draft(draft_id, client._drafts_dir)
+    draft["abilities"] = {"STR": 15, "INT": 11, "WIS": 12, "DEX": 13, "CON": 14, "CHA": 10}
+    save_draft(draft_id, draft, client._drafts_dir)
+    client.post(f"/wizard/{draft_id}/abilities", data={"name": "T"})
+    client.post(f"/wizard/{draft_id}/race", data={"race_id": "dwarf"})
+    client.post(f"/wizard/{draft_id}/class", data={"class_id": "fighter"})
+    assert "class_id" in load_draft(draft_id, client._drafts_dir)
+
+    # Flip lift_demihuman_restrictions on — class + downstream must clear, race stays
+    client.post(f"/wizard/{draft_id}/rules", data=_rules_form(lift_demihuman_restrictions="on"))
+    draft = load_draft(draft_id, client._drafts_dir)
+    assert "class_id" not in draft
+    assert draft.get("race_id") == "dwarf"  # race survives (mirrors a race change clear)
