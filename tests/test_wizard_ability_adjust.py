@@ -277,3 +277,21 @@ def test_changing_class_clears_adjustment(tmp_path):
     client.post(f"/wizard/{draft_id}/class", data={"class_id": "thief"})
     draft = load_draft(draft_id, client._drafts_dir)
     assert "ability_adjustments" not in draft
+
+
+# ── Task 7: prime-req XP reflects the adjustment ───────────────────────────
+
+from aose.engine.ability_mods import prime_requisite_xp_multiplier
+
+
+def test_raised_prime_increases_xp_multiplier(data):
+    # Fighter prime is STR. Post-racial STR 15 → multiplier 1.05.
+    # Raise to 16 (lower INT+WIS) → multiplier 1.10.
+    post_racial = {"STR": 15, "INT": 13, "WIS": 13, "DEX": 12, "CON": 12, "CHA": 10}
+    before = prime_requisite_xp_multiplier(post_racial["STR"])
+    creation = apply_ability_adjustments(
+        post_racial, {"STR": 1, "INT": -1, "WIS": -1}
+    )
+    after = prime_requisite_xp_multiplier(creation["STR"])
+    assert before == 1.05
+    assert after == 1.10

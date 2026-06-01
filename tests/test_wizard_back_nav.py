@@ -98,13 +98,14 @@ def test_breadcrumb_link_renders_on_review_for_every_done_step(client):
     client.post(f"/wizard/{draft_id}/abilities", data={"name": "Thorin"})
     client.post(f"/wizard/{draft_id}/race", data={"race_id": "dwarf"})
     client.post(f"/wizard/{draft_id}/class", data={"class_id": "fighter"})
+    client.post(f"/wizard/{draft_id}/adjust", data={})
     client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "law"})
     client.post(f"/wizard/{draft_id}/hp/roll")
     client.post(f"/wizard/{draft_id}/hp")
     client.get(f"/wizard/{draft_id}/equipment")  # seeds gold
     client.post(f"/wizard/{draft_id}/equipment")
     r = client.get(f"/wizard/{draft_id}/review")
-    for step in ("abilities", "race", "class", "alignment", "hp", "equipment"):
+    for step in ("abilities", "race", "class", "adjust", "alignment", "hp", "equipment"):
         assert f'href="/wizard/{draft_id}/{step}"' in r.text, f"{step} not linked"
 
 

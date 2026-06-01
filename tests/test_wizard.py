@@ -76,6 +76,11 @@ def test_full_wizard_flow_creates_character(client, tmp_path):
     # Class
     r = client.post(f"/wizard/{draft_id}/class", data={"class_id": "fighter"})
     assert r.status_code == 303
+    assert r.headers["location"] == f"/wizard/{draft_id}/adjust"
+
+    # Ability adjustments (skip)
+    r = client.post(f"/wizard/{draft_id}/adjust", data={})
+    assert r.status_code == 303
     assert r.headers["location"] == f"/wizard/{draft_id}/alignment"
 
     # Alignment
@@ -132,6 +137,7 @@ def test_unique_id_on_name_collision(client, tmp_path):
     client.post(f"/wizard/{draft_id}/abilities", data={"name": "Thorin"})
     client.post(f"/wizard/{draft_id}/race", data={"race_id": "dwarf"})
     client.post(f"/wizard/{draft_id}/class", data={"class_id": "fighter"})
+    client.post(f"/wizard/{draft_id}/adjust", data={})
     client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "law"})
     client.post(f"/wizard/{draft_id}/hp/roll")
     client.post(f"/wizard/{draft_id}/hp")

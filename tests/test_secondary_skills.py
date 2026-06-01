@@ -89,6 +89,7 @@ def _start_draft_at(client, abilities=None):
     client.post(f"/wizard/{draft_id}/abilities", data={"name": "Thorin"})
     client.post(f"/wizard/{draft_id}/race", data={"race_id": "dwarf"})
     client.post(f"/wizard/{draft_id}/class", data={"class_id": "fighter"})
+    client.post(f"/wizard/{draft_id}/adjust", data={})
     return draft_id
 
 

@@ -182,6 +182,7 @@ def _start_fighter(client):
     client.post(f"/wizard/{draft_id}/abilities", data={"name": "Thorin"})
     client.post(f"/wizard/{draft_id}/race", data={"race_id": "dwarf"})
     client.post(f"/wizard/{draft_id}/class", data={"class_id": "fighter"})
+    client.post(f"/wizard/{draft_id}/adjust", data={})
     client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "law"})
     return draft_id
 
@@ -195,6 +196,7 @@ def _start_magic_user(client):
     client.post(f"/wizard/{draft_id}/abilities", data={"name": "Raistlin"})
     client.post(f"/wizard/{draft_id}/race", data={"race_id": "human"})
     client.post(f"/wizard/{draft_id}/class", data={"class_id": "magic_user"})
+    client.post(f"/wizard/{draft_id}/adjust", data={})
     client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "neutral"})
     return draft_id
 

@@ -218,6 +218,7 @@ def _to_hp(mc_client, draft_id):
         f"/wizard/{draft_id}/class",
         data={"class_id": ["fighter", "magic_user"]},
     )
+    mc_client.post(f"/wizard/{draft_id}/adjust", data={})
     mc_client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "neutral"})
 
 
@@ -292,6 +293,7 @@ def test_proficiency_step_combines_class_names(mc_client):
         f"/wizard/{draft_id}/class",
         data={"class_id": ["fighter", "magic_user"]},
     )
+    mc_client.post(f"/wizard/{draft_id}/adjust", data={})
     mc_client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "neutral"})
     r = mc_client.get(f"/wizard/{draft_id}/proficiencies")
     assert r.status_code == 200

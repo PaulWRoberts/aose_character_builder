@@ -165,6 +165,7 @@ def _run_wizard_to_completion(client, drafts_dir, name="Thorin"):
     client.post(f"/wizard/{draft_id}/abilities", data={"name": name})
     client.post(f"/wizard/{draft_id}/race", data={"race_id": "dwarf"})
     client.post(f"/wizard/{draft_id}/class", data={"class_id": "fighter"})
+    client.post(f"/wizard/{draft_id}/adjust", data={})
     client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "law"})
     client.post(f"/wizard/{draft_id}/hp/roll")
     client.post(f"/wizard/{draft_id}/hp")
@@ -217,6 +218,7 @@ def _start_draft_with(client, drafts_dir):
     client.post(f"/wizard/{draft_id}/abilities", data={"name": "Thorin"})
     client.post(f"/wizard/{draft_id}/race", data={"race_id": "dwarf"})
     client.post(f"/wizard/{draft_id}/class", data={"class_id": "fighter"})
+    client.post(f"/wizard/{draft_id}/adjust", data={})
     client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "law"})
     return draft_id
 

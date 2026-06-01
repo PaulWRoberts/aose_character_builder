@@ -105,6 +105,7 @@ def _drive_dwarf_fighter_to_finalize(client):
     client.post(f"/wizard/{draft_id}/abilities", data={"name": "Gloin"})
     client.post(f"/wizard/{draft_id}/race", data={"race_id": "dwarf"})
     client.post(f"/wizard/{draft_id}/class", data={"class_id": "fighter"})
+    client.post(f"/wizard/{draft_id}/adjust", data={})
     client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "law"})
     client.post(f"/wizard/{draft_id}/hp/roll")
     client.post(f"/wizard/{draft_id}/hp")
@@ -133,6 +134,7 @@ def test_basic_race_as_class_finalize_has_no_racial_mods(tmp_path):
     _set_abilities(client, draft_id, dict(_DWARF_ABILITIES))
     client.post(f"/wizard/{draft_id}/abilities", data={"name": "Gloin"})
     client.post(f"/wizard/{draft_id}/class", data={"class_id": "dwarf"})
+    client.post(f"/wizard/{draft_id}/adjust", data={})
     client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "law"})
     client.post(f"/wizard/{draft_id}/hp/roll")
     client.post(f"/wizard/{draft_id}/hp")
@@ -222,6 +224,7 @@ def test_hp_step_con_mod_reflects_racial_bonus(tmp_path):
     client.post(f"/wizard/{draft_id}/abilities", data={"name": "Gloin"})
     client.post(f"/wizard/{draft_id}/race", data={"race_id": "dwarf"})
     client.post(f"/wizard/{draft_id}/class", data={"class_id": "fighter"})
+    client.post(f"/wizard/{draft_id}/adjust", data={})
     client.post(f"/wizard/{draft_id}/alignment", data={"alignment": "law"})
     r = client.get(f"/wizard/{draft_id}/hp")
     assert r.status_code == 200
