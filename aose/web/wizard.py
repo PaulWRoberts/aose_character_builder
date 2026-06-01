@@ -22,6 +22,7 @@ from aose.engine.ability_mods import (
     apply_ability_adjustments,
     apply_racial_modifiers,
 )
+from aose.engine.alignment import allowed_alignments as _allowed_alignments
 from aose.engine import spells as spell_engine
 from aose.engine.dice import roll_3d6_in_order, roll_first_level_hp, roll_hp
 from aose.engine.equip import equip as _equip, unequip as _unequip
@@ -645,6 +646,13 @@ async def post_class(request: Request, draft_id: str):
             race = data.races[draft["race_id"]]
             if not _class_allowed_for_race(cid, race, ruleset):
                 raise HTTPException(400, f"{race.name} cannot be a {cls.name}")
+
+    # Reject alignment-incompatible multi-class combos up front so the player
+    # never reaches an unsatisfiable Identity page. (Single-class is never empty.)
+    if not _allowed_alignments([data.classes[c] for c in ids]):
+        raise HTTPException(
+            400, "These classes have incompatible alignment requirements."
+        )
 
     # Race-as-class (single only): derive the race from the picked class.
     if not ruleset.separate_race_class:

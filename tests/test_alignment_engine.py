@@ -55,3 +55,59 @@ def test_allowed_alignments_empty_for_incompatible_combo():
 
 def test_allowed_alignments_no_classes_is_all_three():
     assert allowed_alignments([]) == ALL
+
+
+import pytest
+from fastapi.testclient import TestClient
+
+from aose.characters import load_draft, save_draft, save_settings
+from aose.models import RuleSet
+from aose.web.app import create_app
+
+
+@pytest.fixture
+def mc_client(tmp_path):
+    """Client with Multiclassing + Separate Race/Class on (free-form combos)."""
+    examples_dir = tmp_path / "examples"
+    examples_dir.mkdir()
+    settings_path = tmp_path / "settings.json"
+    save_settings(settings_path, RuleSet(multiclassing=True, separate_race_class=True))
+    app = create_app(
+        data_dir=DATA_DIR,
+        characters_dir=tmp_path / "characters",
+        drafts_dir=tmp_path / "drafts",
+        examples_dir=examples_dir,
+        settings_path=settings_path,
+    )
+    client = TestClient(app, follow_redirects=False)
+    client._drafts_dir = tmp_path / "drafts"
+    return client
+
+
+def _seed_human_high_stats(client):
+    """New draft on a human with stats high enough for paladin+assassin."""
+    r = client.get("/wizard/new")
+    draft_id = r.headers["location"].split("/")[2]
+    draft = load_draft(draft_id, client._drafts_dir)
+    draft["abilities"] = {"STR": 15, "INT": 13, "WIS": 13, "DEX": 15, "CON": 13, "CHA": 13}
+    save_draft(draft_id, draft, client._drafts_dir)
+    client.post(f"/wizard/{draft_id}/abilities", data={})
+    client.post(f"/wizard/{draft_id}/race", data={"race_id": "human"})
+    return draft_id
+
+
+def test_class_step_rejects_alignment_incompatible_combo(mc_client):
+    draft_id = _seed_human_high_stats(mc_client)
+    r = mc_client.post(
+        f"/wizard/{draft_id}/class", data={"class_id": ["paladin", "assassin"]}
+    )
+    assert r.status_code == 400
+    assert "alignment" in r.text.lower()
+
+
+def test_class_step_allows_alignment_compatible_combo(mc_client):
+    draft_id = _seed_human_high_stats(mc_client)
+    r = mc_client.post(
+        f"/wizard/{draft_id}/class", data={"class_id": ["paladin", "fighter"]}
+    )
+    assert r.status_code == 303  # paladin [law] ∩ fighter [all] = {law}, OK
