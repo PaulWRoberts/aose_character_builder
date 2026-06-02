@@ -151,6 +151,8 @@ td.num, th.num { text-align: right; }
 
 .muted { color: #777; }
 .small { font-size: 11px; }
+.status-dead { color: #b00; font-weight: bold; }
+.status-alive { color: #2a7; font-weight: bold; }
 
 .feature {
     margin-bottom: 10px;

@@ -5,7 +5,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 
 from aose.characters.storage import list_character_ids, load_character, save_character
-from aose.engine import hp, spells as spell_engine
+from aose.engine import dice, hp, spells as spell_engine
 from aose.engine.equip import equip as _equip, unequip as _unequip
 from aose.engine.leveling import grant_xp as _grant_xp, level_up as _level_up
 from aose.engine.magic import (
@@ -114,6 +114,7 @@ async def character_sheet(request: Request, character_id: str):
             "show_gold_reroll": False,
             "show_gold_grant": True,
             "gold_grant_url": f"/character/{character_id}/gold",
+            "rest_heal_roll": dice.roll("1d3"),
         },
     )
 

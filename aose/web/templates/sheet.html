@@ -42,7 +42,31 @@
 
             <section class="section">
                 <h2>Combat</h2>
-                <div class="stat-row"><span>Max HP</span><span class="stat-big">{{ sheet.max_hp }}</span></div>
+                <div class="stat-row">
+                    <span>Hit Points</span>
+                    <span class="stat-big">{{ sheet.current_hp }} / {{ sheet.max_hp }}</span>
+                </div>
+                <div class="stat-row">
+                    <span>Status</span>
+                    <span class="{{ 'status-dead' if sheet.is_dead else 'status-alive' }}">
+                        {{ "Dead" if sheet.is_dead else "Alive" }}
+                    </span>
+                </div>
+                <div class="no-print hp-actions">
+                    <form method="post" class="inline" action="/character/{{ character_id }}/hp/damage">
+                        <input type="number" name="amount" min="0" value="1" style="width:4em">
+                        <button type="submit" class="link-button">damage</button>
+                    </form>
+                    <form method="post" class="inline" action="/character/{{ character_id }}/hp/heal">
+                        <input type="number" name="amount" min="0" value="1" style="width:4em">
+                        <button type="submit" class="link-button">heal</button>
+                    </form>
+                    <form method="post" class="inline" action="/character/{{ character_id }}/hp/set">
+                        <input type="number" name="value" min="0" max="{{ sheet.max_hp }}"
+                               value="{{ sheet.current_hp }}" style="width:4em">
+                        <button type="submit" class="link-button">set</button>
+                    </form>
+                </div>
                 <div class="stat-row">
                     <span>Armor Class</span>
                     <span class="stat-big">
@@ -332,20 +356,50 @@
                     <h3>{{ block.class_name }}
                         <span class="small muted">({{ block.caster_type }})</span></h3>
 
-                    <h4>Prepared</h4>
-                    {% for grp in block.prepared_groups %}
+                    <h4>Memorized Slots</h4>
+                    {% for grp in block.slot_groups %}
                     <div class="spell-level">
                         <strong>Level {{ grp.level }}</strong>
-                        <span class="small muted">{{ grp.prepared | length }} / {{ grp.slots }}</span>
+                        <span class="small muted">{{ grp.slots | length }} / {{ grp.cap }}
+                            ({{ grp.free }} free)</span>
                         <ul>
-                            {% for s in grp.prepared %}
+                            {% for sv in grp.slots %}
                             <li>
-                                {{ s.name }}
+                                {{ sv.display_name }}
+                                {% if sv.spent %}
+                                <span class="small muted">— Spent</span>
                                 <form method="post" class="no-print inline"
-                                      action="/character/{{ character_id }}/spells/unprepare">
+                                      action="/character/{{ character_id }}/spells/restore">
                                     <input type="hidden" name="class_id" value="{{ block.class_id }}">
-                                    <input type="hidden" name="spell_id" value="{{ s.id }}">
-                                    <button type="submit" class="link-button">unprepare</button>
+                                    <input type="hidden" name="slot_index" value="{{ sv.index }}">
+                                    <button type="submit" class="link-button">restore</button>
+                                </form>
+                                {% elif block.caster_type == "divine" and sv.reversible %}
+                                <form method="post" class="no-print inline"
+                                      action="/character/{{ character_id }}/spells/cast">
+                                    <input type="hidden" name="class_id" value="{{ block.class_id }}">
+                                    <input type="hidden" name="slot_index" value="{{ sv.index }}">
+                                    <button type="submit" class="link-button">cast normal</button>
+                                </form>
+                                <form method="post" class="no-print inline"
+                                      action="/character/{{ character_id }}/spells/cast">
+                                    <input type="hidden" name="class_id" value="{{ block.class_id }}">
+                                    <input type="hidden" name="slot_index" value="{{ sv.index }}">
+                                    <button type="submit" class="link-button">cast reversed</button>
+                                </form>
+                                {% else %}
+                                <form method="post" class="no-print inline"
+                                      action="/character/{{ character_id }}/spells/cast">
+                                    <input type="hidden" name="class_id" value="{{ block.class_id }}">
+                                    <input type="hidden" name="slot_index" value="{{ sv.index }}">
+                                    <button type="submit" class="link-button">cast</button>
+                                </form>
+                                {% endif %}
+                                <form method="post" class="no-print inline"
+                                      action="/character/{{ character_id }}/spells/clear">
+                                    <input type="hidden" name="class_id" value="{{ block.class_id }}">
+                                    <input type="hidden" name="slot_index" value="{{ sv.index }}">
+                                    <button type="submit" class="link-button">clear</button>
                                 </form>
                             </li>
                             {% endfor %}
@@ -359,11 +413,23 @@
                         <li>
                             <strong>{{ s.name }}</strong> <span class="small muted">(L{{ s.level }})</span>
                             <form method="post" class="no-print inline"
-                                  action="/character/{{ character_id }}/spells/prepare">
+                                  action="/character/{{ character_id }}/spells/assign">
                                 <input type="hidden" name="class_id" value="{{ block.class_id }}">
+                                <input type="hidden" name="level" value="{{ s.level }}">
                                 <input type="hidden" name="spell_id" value="{{ s.id }}">
-                                <button type="submit" class="link-button">prepare</button>
+                                <input type="hidden" name="reversed" value="false">
+                                <button type="submit" class="link-button">memorize</button>
                             </form>
+                            {% if block.caster_type == "arcane" and s.reversible %}
+                            <form method="post" class="no-print inline"
+                                  action="/character/{{ character_id }}/spells/assign">
+                                <input type="hidden" name="class_id" value="{{ block.class_id }}">
+                                <input type="hidden" name="level" value="{{ s.level }}">
+                                <input type="hidden" name="spell_id" value="{{ s.id }}">
+                                <input type="hidden" name="reversed" value="true">
+                                <button type="submit" class="link-button">memorize (reversed)</button>
+                            </form>
+                            {% endif %}
                             {% if block.can_learn %}
                             <form method="post" class="no-print inline"
                                   action="/character/{{ character_id }}/spells/forget">
@@ -398,6 +464,44 @@
                 {% endfor %}
             </section>
             {% endif %}
+
+            <section class="section no-print">
+                <h2>Rest</h2>
+                {% if sheet.is_dead %}
+                <p class="small muted">A dead character cannot rest.</p>
+                {% else %}
+                {% if sheet.spells %}
+                <form method="post" action="/character/{{ character_id }}/rest/night">
+                    <label>Loadout:
+                        <select name="mode">
+                            <option value="restore">Restore previous</option>
+                            <option value="clear">Clear all</option>
+                            <option value="keep">Keep as-is</option>
+                        </select>
+                    </label>
+                    <button type="submit" class="primary">Rest and Memorize Spells</button>
+                </form>
+                {% endif %}
+                <form method="post" action="/character/{{ character_id }}/rest/full-day">
+                    {% if sheet.spells %}
+                    <label>Loadout:
+                        <select name="mode">
+                            <option value="restore">Restore previous</option>
+                            <option value="clear">Clear all</option>
+                            <option value="keep">Keep as-is</option>
+                        </select>
+                    </label>
+                    {% else %}
+                    <input type="hidden" name="mode" value="keep">
+                    {% endif %}
+                    <label>Healing (1d3):
+                        <input type="number" name="heal_amount" min="0" max="3"
+                               value="{{ rest_heal_roll }}" style="width:4em">
+                    </label>
+                    <button type="submit" class="primary">Full Day Rest</button>
+                </form>
+                {% endif %}
+            </section>
 
             <section class="section">
                 <h2>Equipment</h2>
