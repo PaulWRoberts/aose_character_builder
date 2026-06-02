@@ -693,14 +693,34 @@ def _adjust_context(draft: dict[str, Any], data) -> dict:
     for ab in ABILITY_ORDER:
         name = ab.value
         delta = stored.get(name, 0)
+        score = post_racial[name]
+        raisable = name in adj["raisable"]
+        lowerable = name in adj["lowerable"]
+        floor = _ability_floor(name, classes) if lowerable else None
+
+        raise_options = []
+        if raisable:
+            raise_options = [
+                {"amount": amt, "final": score + amt}
+                for amt in range(0, 18 - score + 1)
+            ]
+        lower_options = []
+        if lowerable:
+            lower_options = [
+                {"amount": amt, "final": score - amt}
+                for amt in range(0, score - floor + 1, 2)
+            ]
+
         rows.append({
             "name": name,
-            "score": post_racial[name],
-            "raisable": name in adj["raisable"],
-            "lowerable": name in adj["lowerable"],
-            "floor": _ability_floor(name, classes) if name in adj["lowerable"] else None,
+            "score": score,
+            "raisable": raisable,
+            "lowerable": lowerable,
+            "floor": floor,
             "raise_val": delta if delta > 0 else 0,
             "lower_val": -delta if delta < 0 else 0,
+            "raise_options": raise_options,
+            "lower_options": lower_options,
         })
     return {"adjust_rows": rows}
 

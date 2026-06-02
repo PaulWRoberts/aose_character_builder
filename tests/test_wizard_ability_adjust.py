@@ -317,3 +317,27 @@ def test_raised_prime_increases_xp_multiplier(data):
     after = prime_requisite_xp_multiplier(creation["STR"])
     assert before == 1.05
     assert after == 1.10
+
+
+# ── Task 2: legal resulting-score options ──────────────────────────────────
+
+def test_adjust_context_legal_options(data):
+    from aose.web.wizard import _adjust_context
+
+    draft = {
+        "abilities": dict(_FIGHTER_ABILITIES),  # STR/INT/WIS = 13
+        "ruleset": RuleSet().model_dump(mode="json"),
+        "race_id": "human",
+        "class_id": "fighter",
+    }
+    rows = {r["name"]: r for r in _adjust_context(draft, data)["adjust_rows"]}
+
+    # STR is the prime → raise options step by 1 up to 18, starting at 13.
+    assert [o["final"] for o in rows["STR"]["raise_options"]] == list(range(13, 19))
+    assert rows["STR"]["raise_options"][0]["amount"] == 0
+    assert rows["STR"]["lower_options"] == []  # prime is not lowerable
+
+    # INT is lowerable, floor 9 → resulting scores 13, 11, 9; deltas 0, 2, 4.
+    assert [o["final"] for o in rows["INT"]["lower_options"]] == [13, 11, 9]
+    assert [o["amount"] for o in rows["INT"]["lower_options"]] == [0, 2, 4]
+    assert rows["INT"]["raise_options"] == []  # not a prime → not raisable
