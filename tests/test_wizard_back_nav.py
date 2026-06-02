@@ -34,7 +34,7 @@ def _make_client(tmp_path, ruleset):
 
 @pytest.fixture
 def client(tmp_path):
-    return _make_client(tmp_path, RuleSet())
+    return _make_client(tmp_path, RuleSet(strict_mode=False))
 
 
 def _start(client, abilities=None):
@@ -102,7 +102,7 @@ def test_breadcrumb_link_renders_on_review_for_every_done_step(client):
     client.post(f"/wizard/{draft_id}/hp/roll")
     client.post(f"/wizard/{draft_id}/hp")
     client.post(f"/wizard/{draft_id}/identity", data={"name": "Thorin", "alignment": "law"})
-    client.get(f"/wizard/{draft_id}/equipment")  # seeds gold
+    client.post(f"/wizard/{draft_id}/equipment/roll-gold")  # roll gold
     client.post(f"/wizard/{draft_id}/equipment")
     r = client.get(f"/wizard/{draft_id}/review")
     for step in ("abilities", "race", "class", "adjust", "class_setup", "identity", "equipment"):
@@ -165,7 +165,7 @@ def test_same_race_repick_keeps_downstream(client):
 
 def test_changing_class_clears_hp_and_proficiencies(tmp_path):
     """Switching from one class to another should clear HP and proficiencies."""
-    client = _make_client(tmp_path, RuleSet(weapon_proficiency=True))
+    client = _make_client(tmp_path, RuleSet(weapon_proficiency=True, strict_mode=False))
     draft_id = _start(client)
     client.post(f"/wizard/{draft_id}/abilities", data={})
     client.post(f"/wizard/{draft_id}/race", data={"race_id": "human"})  # no class restrictions
@@ -187,9 +187,24 @@ def test_changing_class_clears_hp_and_proficiencies(tmp_path):
     assert "proficiencies" not in draft
 
 
+def test_strict_blocks_changing_race_after_hp(tmp_path):
+    client = _make_client(tmp_path, RuleSet())  # strict on (default)
+    draft_id = _start(client)
+    client.post(f"/wizard/{draft_id}/abilities", data={})
+    client.post(f"/wizard/{draft_id}/race", data={"race_id": "dwarf"})
+    client.post(f"/wizard/{draft_id}/class", data={"class_id": "fighter"})
+    client.post(f"/wizard/{draft_id}/hp/roll")
+    # Back to race is gated: the POST is bounced and race is unchanged.
+    r = client.post(f"/wizard/{draft_id}/race", data={"race_id": "human"})
+    assert r.status_code == 303
+    draft = load_draft(draft_id, client._drafts_dir)
+    assert draft["race_id"] == "dwarf"
+    assert draft.get("class_id") == "fighter"
+
+
 def test_changing_class_in_multiclass_combo_clears_downstream(tmp_path):
     """Multi-class → single-class change must clear HP rolls (which were a list)."""
-    client = _make_client(tmp_path, RuleSet(multiclassing=True))
+    client = _make_client(tmp_path, RuleSet(multiclassing=True, strict_mode=False))
     r = client.get("/wizard/new")
     draft_id = r.headers["location"].split("/")[2]
     draft = load_draft(draft_id, client._drafts_dir)

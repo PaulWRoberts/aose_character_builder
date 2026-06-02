@@ -406,6 +406,15 @@ button {
     cursor: pointer;
 }
 
+.wizard-steps li.locked {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+.wizard-steps li.locked .step-label::after {
+    content: " 🔒";
+    font-size: 0.85em;
+}
+
 .wizard-steps li.current {
     background: #4a3728;
     color: white;

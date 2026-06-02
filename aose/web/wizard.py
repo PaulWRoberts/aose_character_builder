@@ -258,12 +258,13 @@ def _base_context(request: Request, draft_id: str, draft: dict, current_step: st
     except ValueError:
         next_idx = len(steps)  # ruleset changed; treat all as done
 
+    floor_idx = _strict_floor_index(draft, steps)
     step_states: list[dict] = []
     for i, step in enumerate(steps):
         if step == current_step:
             state = "current"
         elif i < next_idx:
-            state = "done"
+            state = "locked" if i < floor_idx else "done"
         else:
             state = "todo"
         step_states.append({
@@ -296,6 +297,32 @@ def _gate(draft: dict, required_step: str, draft_id: str) -> RedirectResponse | 
     return None
 
 
+def _strict_floor_index(draft: dict[str, Any], steps: list[str]) -> int:
+    """Earliest step index navigable under Strict Mode (0 when Strict is off).
+
+    Rolling abilities locks the rules step; rolling HP locks every step before
+    the HP page (``class_setup``). The floor only ever rises."""
+    if not _ruleset_of(draft).strict_mode:
+        return 0
+    floor = 0
+    if "abilities" in draft:
+        floor = max(floor, steps.index("abilities"))
+    if _has_hp(draft):
+        floor = max(floor, steps.index("class_setup"))
+    return floor
+
+
+def _strict_back_gate(draft: dict[str, Any], step: str,
+                      draft_id: str) -> RedirectResponse | None:
+    """Redirect forward when *step* is below the Strict-Mode lock floor."""
+    steps = _wizard_steps(draft)
+    if step not in steps:
+        return None
+    if steps.index(step) < _strict_floor_index(draft, steps):
+        return _redirect(f"/wizard/{draft_id}/{_next_incomplete_step(draft)}")
+    return None
+
+
 def _seed_draft_abilities(draft: dict[str, Any]) -> None:
     """Roll 3d6 in order and store the six scores on the draft.
 
@@ -321,6 +348,9 @@ async def new_wizard(request: Request):
 @router.get("/{draft_id}/rules", response_class=HTMLResponse)
 async def get_rules(request: Request, draft_id: str):
     draft = _load(request, draft_id)
+    blocked = _strict_back_gate(draft, "rules", draft_id)
+    if blocked:
+        return blocked
     ruleset = _ruleset_of(draft)
     ctx = _base_context(request, draft_id, draft, "rules")
     ctx.update({
@@ -384,6 +414,9 @@ def _apply_rule_changes(draft: dict[str, Any], old_rs: RuleSet, new_rs: RuleSet)
 @router.post("/{draft_id}/rules")
 async def post_rules(request: Request, draft_id: str):
     draft = _load(request, draft_id)
+    blocked = _strict_back_gate(draft, "rules", draft_id)
+    if blocked:
+        return blocked
     form = await request.form()
     new_rs = parse_ruleset_from_form(form)
     old_rs = _ruleset_of(draft)
@@ -395,6 +428,9 @@ async def post_rules(request: Request, draft_id: str):
 @router.post("/{draft_id}/abilities/roll")
 async def post_abilities_roll(request: Request, draft_id: str):
     draft = _load(request, draft_id)
+    blocked = _strict_back_gate(draft, "abilities", draft_id)
+    if blocked:
+        return blocked
     if "abilities" in draft:
         warn = ability_warnings(draft["abilities"])
         hopeless = warn["subpar"] or bool(warn["rock_bottom"])
@@ -410,6 +446,9 @@ async def post_abilities_roll(request: Request, draft_id: str):
 @router.get("/{draft_id}/abilities", response_class=HTMLResponse)
 async def get_abilities(request: Request, draft_id: str):
     draft = _load(request, draft_id)
+    blocked = _strict_back_gate(draft, "abilities", draft_id)
+    if blocked:
+        return blocked
     ctx = _base_context(request, draft_id, draft, "abilities")
     rolled = "abilities" in draft
     ctx["abilities_rolled"] = rolled
@@ -432,6 +471,9 @@ async def get_abilities(request: Request, draft_id: str):
 @router.post("/{draft_id}/abilities")
 async def post_abilities(request: Request, draft_id: str):
     draft = _load(request, draft_id)
+    blocked = _strict_back_gate(draft, "abilities", draft_id)
+    if blocked:
+        return blocked
     if "abilities" not in draft:
         return _redirect(f"/wizard/{draft_id}/abilities")
     draft["abilities_confirmed"] = True
@@ -474,6 +516,9 @@ def _creation_abilities(draft: dict[str, Any], data) -> dict[str, int]:
 @router.get("/{draft_id}/race", response_class=HTMLResponse)
 async def get_race(request: Request, draft_id: str):
     draft = _load(request, draft_id)
+    blocked = _strict_back_gate(draft, "race", draft_id)
+    if blocked:
+        return blocked
     redirect = _gate(draft, "race", draft_id)
     if redirect:
         return redirect
@@ -510,6 +555,9 @@ async def get_race(request: Request, draft_id: str):
 @router.post("/{draft_id}/race")
 async def post_race(request: Request, draft_id: str, race_id: str = Form(...)):
     draft = _load(request, draft_id)
+    blocked = _strict_back_gate(draft, "race", draft_id)
+    if blocked:
+        return blocked
     data = request.app.state.game_data
     if race_id not in data.races:
         raise HTTPException(400, f"Unknown race '{race_id}'")
@@ -542,6 +590,9 @@ def _class_allowed_for_race(class_id: str, race, ruleset: RuleSet) -> bool:
 @router.get("/{draft_id}/class", response_class=HTMLResponse)
 async def get_class(request: Request, draft_id: str):
     draft = _load(request, draft_id)
+    blocked = _strict_back_gate(draft, "class", draft_id)
+    if blocked:
+        return blocked
     redirect = _gate(draft, "class", draft_id)
     if redirect:
         return redirect
@@ -622,6 +673,9 @@ async def post_class(request: Request, draft_id: str):
     (``"fighter,magic_user"``) for convenience.  Each picked class must meet its
     own ability requirements and the race's class allowance."""
     draft = _load(request, draft_id)
+    blocked = _strict_back_gate(draft, "class", draft_id)
+    if blocked:
+        return blocked
     data = request.app.state.game_data
     ruleset = _ruleset_of(draft)
 
@@ -744,6 +798,9 @@ def _adjust_context(draft: dict[str, Any], data) -> dict:
 @router.get("/{draft_id}/adjust", response_class=HTMLResponse)
 async def get_adjust(request: Request, draft_id: str):
     draft = _load(request, draft_id)
+    blocked = _strict_back_gate(draft, "adjust", draft_id)
+    if blocked:
+        return blocked
     redirect = _gate(draft, "adjust", draft_id)
     if redirect:
         return redirect
@@ -757,6 +814,9 @@ async def post_adjust(request: Request, draft_id: str):
     from aose.engine.ability_mods import AdjustmentError, validate_ability_adjustments
 
     draft = _load(request, draft_id)
+    blocked = _strict_back_gate(draft, "adjust", draft_id)
+    if blocked:
+        return blocked
     data = request.app.state.game_data
     classes = [data.classes[cid] for cid in _class_ids(draft) if cid in data.classes]
     post_racial = _post_racial_abilities(draft, data)

@@ -117,6 +117,46 @@ def _drive_to_equipment(client, draft_id, strict=True):
                 data={"name": "G", "alignment": "law"})
 
 
+def test_strict_locks_rules_after_abilities(client):
+    draft_id = _new(client)
+    client.post(f"/wizard/{draft_id}/abilities/roll")
+    r = client.get(f"/wizard/{draft_id}/rules")
+    assert r.status_code == 303
+    assert r.headers["location"].endswith("/abilities")  # bounced forward
+    r2 = client.post(f"/wizard/{draft_id}/rules",
+                     data={"encumbrance": "basic", "creation_method": "advanced",
+                           "strict_mode": "on"})
+    assert r2.status_code == 303
+    assert not r2.headers["location"].endswith("/rules")
+
+
+def test_strict_locks_pre_hp_steps_after_hp(client):
+    draft_id = _new(client)
+    _drive_to_equipment(client, draft_id, strict=True)  # rolls HP
+    for step in ("rules", "abilities", "race", "class", "adjust"):
+        r = client.get(f"/wizard/{draft_id}/{step}")
+        assert r.status_code == 303, step
+    # The HP page itself stays reachable.
+    r = client.get(f"/wizard/{draft_id}/class_setup")
+    assert r.status_code == 200
+
+
+def test_breadcrumb_locks_rules_link_after_abilities(client):
+    draft_id = _new(client)
+    client.post(f"/wizard/{draft_id}/abilities/roll")
+    r = client.get(f"/wizard/{draft_id}/abilities")
+    assert f'href="/wizard/{draft_id}/rules"' not in r.text
+
+
+def test_non_strict_allows_back_navigation(client):
+    draft_id = _new(client)
+    _drive_to_equipment(client, draft_id, strict=False)
+    r = client.get(f"/wizard/{draft_id}/rules")
+    assert r.status_code == 200
+    r2 = client.get(f"/wizard/{draft_id}/abilities")
+    assert r2.status_code == 200
+
+
 def test_non_strict_allows_hp_reroll(client):
     draft_id = _new(client)
     _drive_to_equipment(client, draft_id, strict=False)
