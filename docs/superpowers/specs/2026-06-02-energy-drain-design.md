@@ -86,6 +86,15 @@ its *former* level (pre-drain) and *new* level (post-drain):
 
 Classes that were not touched keep their XP unchanged.
 
+**Midpoint is only valid for a single-level drain (`levels == 1`).** A
+multi-level drain would put the midpoint between non-adjacent thresholds, which
+can land *above* an intermediate level threshold and falsely offer an immediate
+"Level Up". The engine therefore raises `ValueError` for
+`xp_mode == "midpoint"` with `levels != 1` (route → HTTP 400), and the UI
+disables the Midpoint option, forcing *New level minimum*, whenever **Levels**
+> 1. With `levels == 1`, `former_level == new_level + 1`, so the midpoint is
+unambiguously halfway into the new (reduced) level's band.
+
 ### Death
 
 Triggered when `levels` exceeds the character's total remaining advancement
@@ -120,10 +129,11 @@ async def energy_drain(request, character_id,
                        xp_mode: str = Form("midpoint")):
 ```
 
-Load the spec (404 if missing), validate `levels >= 1` and
-`xp_mode in {"midpoint", "new_min"}` (400 otherwise), call the engine, save,
-and redirect to `/character/{character_id}` — mirroring the existing
-`grant_xp` / `level_up_class` routes.
+Load the spec (404 if missing), call the engine, save, and redirect to
+`/character/{character_id}` — mirroring the existing `grant_xp` /
+`level_up_class` routes. The engine validates inputs (`levels >= 1`, known
+`xp_mode`, and `midpoint` only when `levels == 1`); the route maps the engine's
+`ValueError` to HTTP 400.
 
 ## UI: sheet advancement section
 
@@ -132,7 +142,9 @@ Level-Up buttons, styled as a danger action:
 
 - a number input **Levels** (min 1, default 1),
 - a two-option **XP reset** selector — *Midpoint (halfway into lost level)* /
-  *New level minimum*,
+  *New level minimum*. A small inline script disables the Midpoint radio and
+  selects *New level minimum* whenever **Levels** > 1 (and re-enables it at
+  Levels == 1),
 - a **Drain** button with a JS `confirm()` ("Energy drain N level(s)? This is
   permanent.") because it is destructive and irreversible.
 
