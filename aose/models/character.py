@@ -40,6 +40,22 @@ class ContainerInstance(BaseModel):
     contents: list[str] = Field(default_factory=list)
 
 
+class SpellSlot(BaseModel):
+    """One memorized-spell slot in a caster's daily loadout.
+
+    A slot holds at most one spell of a fixed ``level``.  ``reversed`` is an
+    arcane-only choice fixed at memorization (divine slots always store False;
+    the normal/reversed choice for divine spells is made at cast time and not
+    persisted).  ``spent`` flips True when the slot is cast and resets on rest.
+    """
+    model_config = ConfigDict(extra="forbid")
+
+    level: int
+    spell_id: str | None = None
+    reversed: bool = False
+    spent: bool = False
+
+
 class ClassEntry(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -54,9 +70,10 @@ class ClassEntry(BaseModel):
     # Known spells (arcane spellbook).  Empty for divine casters, who know
     # their whole list automatically; see aose/engine/spells.py.
     spellbook: list[str] = Field(default_factory=list)
-    # Daily prepared / memorised loadout; duplicates allowed (memorise a spell
-    # twice with two slots).  Hard-capped per spell level by spell_slots.
-    prepared: list[str] = Field(default_factory=list)
+    # Daily memorized loadout as individual slots; duplicates allowed (two slots,
+    # same spell_id).  Hard-capped per spell level by spell_slots.  Replaces the
+    # old flat ``prepared`` list — each slot also tracks reversed/spent state.
+    slots: list[SpellSlot] = Field(default_factory=list)
 
     @model_validator(mode="before")
     @classmethod
@@ -79,6 +96,10 @@ class CharacterSpec(BaseModel):
     classes: list[ClassEntry] = Field(min_length=1)
     alignment: Literal["law", "neutral", "chaos"]
     gold: int = 0
+    # Play-state: hit points of damage taken.  Current HP is derived as
+    # max(0, max_hp − damage_taken); dead == current HP 0.  Tracks live max_hp
+    # shifts (e.g. a CON-altering magic item) without rewriting stored state.
+    damage_taken: int = 0
     # Items on the character's person — equipped items live here too.  Weight
     # in this list contributes to encumbrance.
     inventory: list[str] = Field(default_factory=list)

@@ -39,11 +39,11 @@ def test_loader_spell_lists_empty_when_absent(tmp_path):
     assert data.spell_lists == {}
 
 
-def test_class_entry_has_spellbook_and_prepared():
+def test_class_entry_has_spellbook_and_slots():
     from aose.models import ClassEntry
     e = ClassEntry(class_id="magic_user", level=1, hp_rolls=[3])
     assert e.spellbook == []
-    assert e.prepared == []
+    assert e.slots == []
 
 
 def test_class_entry_migrates_legacy_chosen_spells():
@@ -54,7 +54,7 @@ def test_class_entry_migrates_legacy_chosen_spells():
     e = ClassEntry(class_id="magic_user", chosen_spells=[])
     assert not hasattr(e, "chosen_spells")
     assert e.spellbook == []
-    assert e.prepared == []
+    assert e.slots == []
 
 
 def test_thorin_example_loads():
@@ -63,7 +63,8 @@ def test_thorin_example_loads():
     raw = json.loads((PROJECT_ROOT / "examples" / "thorin.json").read_text(encoding="utf-8"))
     spec = CharacterSpec.model_validate(raw)
     assert spec.classes[0].spellbook == []
-    assert spec.classes[0].prepared == []
+    assert spec.classes[0].slots == []
+    assert spec.damage_taken == 0
 
 
 def test_seed_spells_loaded_and_tagged():
