@@ -212,7 +212,15 @@ def test_equipment_get_seeds_starting_gold(client):
     draft = load_draft(draft_id, client._drafts_dir)
     assert 30 <= draft["gold"] <= 180
     assert draft["gold"] % 10 == 0
-    assert draft.get("gold_locked") is False
+    assert draft.get("gold_locked") is True
+
+
+def test_reroll_gold_route_removed(client):
+    """The reroll-gold endpoint no longer exists — starting gold is fixed."""
+    draft_id = _walk_to_equipment(client)
+    client.get(f"/wizard/{draft_id}/equipment")
+    r = client.post(f"/wizard/{draft_id}/equipment/reroll-gold")
+    assert r.status_code in (404, 405)
 
 
 def test_equipment_reroll_works_before_first_purchase(client):
