@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Make ability-score and starting-gold rolls deliberate player button presses (like HP), add a default-on `strict_mode` rule that locks rolls (off = free re-rolls), let a hopeless ability set re-roll under Strict Mode, and show both Blessed HP sets with the higher bolded.
+**Goal:** Make ability-score and starting-gold rolls deliberate player button presses (like HP), add a default-on `strict_mode` rule that locks rolls (off = free re-rolls) and gates back-navigation so rolls can't be laundered, let a hopeless ability set re-roll under Strict Mode, and show both Blessed HP sets with the higher bolded.
 
 **Architecture:** A new `RuleSet.strict_mode` flag gates the one-roll lock across abilities/HP/gold. Abilities and gold stop being auto-rolled at draft creation / page load and gain dedicated POST roll routes mirroring the existing `/hp/roll`. Blessed HP keeps both rolled sets on the draft (display-only, never persisted) so the template can bold the winner. All logic lives in the existing `aose/web/wizard.py`, `aose/engine/dice.py`, `aose/web/settings_routes.py`, `aose/models/ruleset.py`, and the wizard Jinja templates.
 
@@ -30,6 +30,11 @@
   keep matching the default; this is done in Task 1.
 - **Blessed sets are draft-only.** `draft["hp_blessed_sets"]` is display state;
   `CharacterSpec` has no such field, so it never reaches a saved character.
+- **Back-nav gates (Task 7) are Strict-only.** A `_strict_floor_index` raises a
+  navigation floor: abilities rolled locks `rules`; HP rolled locks everything
+  before `class_setup`. Enforced both in the breadcrumb (new `"locked"` state →
+  non-clickable) and via a `_strict_back_gate` redirect on the lockable GET/POST
+  handlers. Strict off → floor 0 → today's free back-navigation.
 
 ---
 
@@ -971,7 +976,219 @@ git commit -m "feat(wizard): strict-aware HP reroll and dual blessed-set display
 
 ---
 
-## Task 7: Full-suite verification and stragglers
+## Task 7: Strict-mode back-navigation gates
+
+**Files:**
+- Modify: `aose/web/wizard.py` — add `_strict_floor_index` + `_strict_back_gate` (near `_gate`, ~285-296), extend `_base_context` (249-282), and add a one-line guard to the GET/POST handlers of `rules`, `abilities` (GET + Continue POST + roll POST), `race`, `class`, `adjust`.
+- Modify: `aose/web/static/sheet.css` (after the `.wizard-steps li.done` rules, ~407)
+- Test: `tests/test_strict_mode.py`
+
+- [ ] **Step 1: Write the failing tests**
+
+Append to `tests/test_strict_mode.py` (reuses `_new`, `_force`,
+`_drive_to_equipment` defined in earlier tasks):
+
+```python
+def test_strict_locks_rules_after_abilities(client):
+    draft_id = _new(client)
+    client.post(f"/wizard/{draft_id}/abilities/roll")
+    r = client.get(f"/wizard/{draft_id}/rules")
+    assert r.status_code == 303
+    assert r.headers["location"].endswith("/abilities")  # bounced forward
+    r2 = client.post(f"/wizard/{draft_id}/rules",
+                     data={"encumbrance": "basic", "creation_method": "advanced",
+                           "strict_mode": "on"})
+    assert r2.status_code == 303
+    assert not r2.headers["location"].endswith("/rules")
+
+
+def test_strict_locks_pre_hp_steps_after_hp(client):
+    draft_id = _new(client)
+    _drive_to_equipment(client, draft_id, strict=True)  # rolls HP
+    for step in ("rules", "abilities", "race", "class", "adjust"):
+        r = client.get(f"/wizard/{draft_id}/{step}")
+        assert r.status_code == 303, step
+    # The HP page itself stays reachable.
+    r = client.get(f"/wizard/{draft_id}/class_setup")
+    assert r.status_code == 200
+
+
+def test_breadcrumb_locks_rules_link_after_abilities(client):
+    draft_id = _new(client)
+    client.post(f"/wizard/{draft_id}/abilities/roll")
+    r = client.get(f"/wizard/{draft_id}/abilities")
+    assert f'href="/wizard/{draft_id}/rules"' not in r.text
+
+
+def test_non_strict_allows_back_navigation(client):
+    draft_id = _new(client)
+    _drive_to_equipment(client, draft_id, strict=False)
+    r = client.get(f"/wizard/{draft_id}/rules")
+    assert r.status_code == 200
+    r2 = client.get(f"/wizard/{draft_id}/abilities")
+    assert r2.status_code == 200
+```
+
+- [ ] **Step 2: Run to verify it fails**
+
+Run: `.venv\Scripts\python.exe -m pytest tests/test_strict_mode.py -k "locks or back_navigation or breadcrumb" -q`
+Expected: FAIL — no back-gating yet (GET `/rules` returns 200; rules link present).
+
+- [ ] **Step 3: Add the floor + gate helpers**
+
+In `aose/web/wizard.py`, just below `_gate` (ends ~296), add:
+
+```python
+def _strict_floor_index(draft: dict[str, Any], steps: list[str]) -> int:
+    """Earliest step index navigable under Strict Mode (0 when Strict is off).
+
+    Rolling abilities locks the rules step; rolling HP locks every step before
+    the HP page (``class_setup``). The floor only ever rises."""
+    if not _ruleset_of(draft).strict_mode:
+        return 0
+    floor = 0
+    if "abilities" in draft:
+        floor = max(floor, steps.index("abilities"))
+    if _has_hp(draft):
+        floor = max(floor, steps.index("class_setup"))
+    return floor
+
+
+def _strict_back_gate(draft: dict[str, Any], step: str,
+                      draft_id: str) -> RedirectResponse | None:
+    """Redirect forward when *step* is below the Strict-Mode lock floor."""
+    steps = _wizard_steps(draft)
+    if step not in steps:
+        return None
+    if steps.index(step) < _strict_floor_index(draft, steps):
+        return _redirect(f"/wizard/{draft_id}/{_next_incomplete_step(draft)}")
+    return None
+```
+
+- [ ] **Step 4: Mark locked steps in the breadcrumb**
+
+In `_base_context` (249-282), compute the floor and use a `"locked"` state. After
+the `next_idx` block and before `step_states: list[dict] = []`, add:
+
+```python
+    floor_idx = _strict_floor_index(draft, steps)
+```
+
+Then change the `elif i < next_idx:` branch in the loop from:
+
+```python
+        elif i < next_idx:
+            state = "done"
+```
+
+to:
+
+```python
+        elif i < next_idx:
+            state = "locked" if i < floor_idx else "done"
+```
+
+- [ ] **Step 5: Guard the lockable handlers**
+
+Add this two-line guard immediately after the `draft = _load(request, draft_id)`
+line in each handler below, passing the handler's own step id:
+
+```python
+    blocked = _strict_back_gate(draft, "<step>", draft_id)
+    if blocked:
+        return blocked
+```
+
+Apply with the matching `<step>`:
+- `get_rules` and `post_rules` → `"rules"`
+- `get_abilities`, `post_abilities`, `post_abilities_roll` → `"abilities"`
+- `get_race` and `post_race` → `"race"`
+- `get_class` and `post_class` → `"class"`
+- `get_adjust` and `post_adjust` → `"adjust"`
+
+(For `get_race`/`get_class`/`get_adjust`, which already call `_gate(...)`, put the
+back-gate guard right after `_load`, before the existing `_gate` call. Do **not**
+add a guard to `class_setup`, `identity`, `equipment`, or `review` — those are at
+or above every floor.)
+
+- [ ] **Step 6: Style the locked breadcrumb step**
+
+In `aose/web/static/sheet.css`, after the `.wizard-steps li.done:hover` rule
+(~407), add:
+
+```css
+.wizard-steps li.locked {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+.wizard-steps li.locked .step-label::after {
+    content: " 🔒";
+    font-size: 0.85em;
+}
+```
+
+- [ ] **Step 7: Update the existing back-navigation tests**
+
+`tests/test_wizard_back_nav.py` documents *free* back-navigation and cascade
+clearing — its cascade tests deliberately change race/class *after* rolling HP,
+which the new gate blocks. That behaviour now requires Strict Mode off. Make
+these changes:
+
+1. Change the `client` fixture (line 37) to seed a non-strict ruleset:
+
+```python
+@pytest.fixture
+def client(tmp_path):
+    return _make_client(tmp_path, RuleSet(strict_mode=False))
+```
+
+2. In the two tests that build their own ruleset, add `strict_mode=False`:
+   - `test_changing_class_clears_hp_and_proficiencies` (168):
+     `_make_client(tmp_path, RuleSet(weapon_proficiency=True, strict_mode=False))`
+   - `test_changing_class_in_multiclass_combo_clears_downstream` (192):
+     `_make_client(tmp_path, RuleSet(multiclassing=True, strict_mode=False))`
+
+3. In `test_breadcrumb_link_renders_on_review_for_every_done_step` (105), replace
+   the gold-seeding GET with the roll route (gold no longer auto-seeds — Task 5):
+
+```python
+    client.post(f"/wizard/{draft_id}/equipment/roll-gold")  # roll gold
+    client.post(f"/wizard/{draft_id}/equipment")
+```
+
+4. Add a strict-on coverage test to the same file so the gated path is pinned:
+
+```python
+def test_strict_blocks_changing_race_after_hp(tmp_path):
+    client = _make_client(tmp_path, RuleSet())  # strict on (default)
+    draft_id = _start(client)
+    client.post(f"/wizard/{draft_id}/abilities", data={})
+    client.post(f"/wizard/{draft_id}/race", data={"race_id": "dwarf"})
+    client.post(f"/wizard/{draft_id}/class", data={"class_id": "fighter"})
+    client.post(f"/wizard/{draft_id}/hp/roll")
+    # Back to race is gated: the POST is bounced and race is unchanged.
+    r = client.post(f"/wizard/{draft_id}/race", data={"race_id": "human"})
+    assert r.status_code == 303
+    draft = load_draft(draft_id, client._drafts_dir)
+    assert draft["race_id"] == "dwarf"
+    assert draft.get("class_id") == "fighter"
+```
+
+- [ ] **Step 8: Run the gate tests + the back-nav file**
+
+Run: `.venv\Scripts\python.exe -m pytest tests/test_strict_mode.py tests/test_wizard_back_nav.py -q`
+Expected: PASS.
+
+- [ ] **Step 9: Commit**
+
+```bash
+git add aose/web/wizard.py aose/web/static/sheet.css tests/test_strict_mode.py tests/test_wizard_back_nav.py
+git commit -m "feat(wizard): strict-mode back-navigation gates"
+```
+
+---
+
+## Task 8: Full-suite verification and stragglers
 
 **Files:**
 - Possibly modify: any remaining test that assumed auto-rolled abilities/gold.
@@ -993,6 +1210,10 @@ For each failure, the cause is almost certainly one of:
     `POST /wizard/{id}/equipment/roll-gold` first.
   - A test POSTed `/rules` with a form lacking `strict_mode` and then asserted a
     roll lock — add `strict_mode="on"` to that form.
+  - A test navigated back to an earlier step (GET `/rules`, `/abilities`, etc.)
+    *after* rolling abilities/HP under default Strict Mode and expected `200` —
+    it now gets a `303` (Task 7 gate). Either assert the redirect, or turn Strict
+    off for that test (`strict_mode` absent from the `/rules` form).
 Apply the minimal fix and re-run.
 
 - [ ] **Step 3: Manual smoke test (optional but recommended)**
@@ -1003,13 +1224,17 @@ button → roll → Continue → … → Class Setup rolls HP once (locked) → 
 shows a Roll-gold button → roll → shop appears. Then repeat with Strict Mode off
 and confirm Roll-again / Re-roll HP / Re-roll gold buttons appear. With Human
 Racial Abilities on (Advanced + lift restrictions), confirm both HP sets show
-and the higher total is bold.
+and the higher total is bold. With Strict Mode on, after rolling abilities the
+Rules breadcrumb step shows a lock and is not clickable; after rolling HP every
+step before Class Setup is locked; with Strict Mode off all prior steps stay
+clickable.
 
 - [ ] **Step 4: Update CLAUDE.md "Current state" note**
 
 Add a short bullet under the current-state section of `CLAUDE.md` describing the
-manual rolls + `strict_mode` rule and the draft-only `hp_blessed_sets`. Keep it
-to a few lines, matching the existing style.
+manual rolls + `strict_mode` rule (per-roll locks + the two back-navigation
+gates) and the draft-only `hp_blessed_sets`. Keep it to a few lines, matching the
+existing style.
 
 - [ ] **Step 5: Final commit**
 
@@ -1025,12 +1250,17 @@ git commit -m "test+docs: finalize manual rolls + strict mode"
 - **Spec coverage:** strict_mode rule (Task 1), Blessed both-sets engine (Task 2)
   + storage/display (Task 6), manual abilities w/ hopeless reroll (Tasks 3-4),
   manual gold (Task 5), HP strict reroll (Task 6), draft-only blessed sets
-  (Task 6 — `hp_blessed_sets` never on `CharacterSpec`). All spec sections map
-  to a task.
+  (Task 6 — `hp_blessed_sets` never on `CharacterSpec`), strict back-navigation
+  gates (Task 7). All spec sections map to a task.
 - **Hopeless condition** is `subpar or bool(rock_bottom)` consistently in the
   roll route (Task 3 Step 6) and `get_abilities` (Task 3 Step 6).
 - **Function names** consistent: `roll_blessed_hp_sets` (defined Task 2, imported
-  + called Task 6), `post_abilities_roll`, `post_equipment_roll_gold`.
+  + called Task 6), `post_abilities_roll`, `post_equipment_roll_gold`,
+  `_strict_floor_index` + `_strict_back_gate` (defined + used in Task 7).
+- **Gate blast radius** handled: Task 7 Step 7 flips `test_wizard_back_nav.py` to
+  Strict-off (its cascade tests change race/class after HP, now gate-blocked) and
+  adds a strict-on coverage test; Task 8 triage lists back-nav `200`→`303` as a
+  known failure class.
 - **Checkbox default:** `strict_mode` rendered `checked` via the shared
   `_ruleset_fields.html` loop (no template edit needed); test form helpers
   updated in Task 1 to keep parity.

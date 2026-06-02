@@ -27,6 +27,9 @@ both results instead of silently discarding the loser.
    HP, and gold may be freely re-rolled.
 4. **Blessed HP** shows *both* rolled sets with their totals and **bolds the
    higher**, instead of keeping only the winner.
+5. **Strict back-navigation gates** — under Strict Mode, rolling abilities locks
+   the rules step, and rolling HP locks every step before the HP page, so a
+   player can't navigate back to manufacture a re-roll.
 
 Non-goals: the secondary-skill roll is untouched (keeps its existing always-on
 reroll button, unaffected by Strict Mode). No changes to how any rolled value
@@ -161,6 +164,47 @@ a `blessed_sets` structure: for each set, its per-class rolls and total, plus a
 total (ties bold the kept set). The HP section also gains a **Reroll HP** button
 shown when `not strict_mode` (replacing the "locked" message in that case).
 
+### 5. Strict back-navigation gates
+
+Manual rolls + per-roll locks aren't enough on their own: the wizard lets you
+click any *completed* breadcrumb step to navigate back, and several earlier
+steps cascade-clear later state when re-submitted. The sharpest exploit is the
+rules step itself — it's where Strict Mode is toggled, so a player could roll
+abilities, walk back to rules, turn Strict Mode off, and re-roll freely. Under
+Strict Mode we therefore add **lock floors** to back-navigation. (Strict Mode
+off keeps today's free back-navigation.)
+
+**Floor model.** A helper `_strict_floor_index(draft, steps)` returns the
+earliest step index the player may navigate to (0 when Strict Mode is off):
+
+- abilities rolled (`"abilities" in draft`) → floor rises to `index("abilities")`,
+  locking **rules**.
+- HP rolled (`_has_hp(draft)`) → floor rises to `index("class_setup")`, locking
+  **rules, abilities, race, class, adjust** (everything before the HP page).
+
+The floor only ever rises; `class_setup` and later steps are never gated.
+
+**Enforcement — two points:**
+
+1. **Breadcrumb.** `_base_context` assigns a new `"locked"` state to any
+   completed step whose index is below the floor (instead of `"done"`).
+   `wizard.html` already linkifies only `"done"` steps, so a locked step renders
+   as plain, non-clickable text; a small CSS rule (`.wizard-steps li.locked`)
+   plus a lock glyph distinguishes it from a not-yet-reached step.
+2. **Route guards.** A helper `_strict_back_gate(draft, step, draft_id)` returns
+   a redirect to `_next_incomplete_step(draft)` when `index(step) < floor`. It is
+   called at the top of the GET *and* POST handlers for every lockable step —
+   `rules`, `abilities` (GET, the Continue POST, and the roll POST), `race`,
+   `class`, `adjust` — so a typed URL or a crafted form submit is bounced forward
+   too, not just breadcrumb clicks.
+
+**Interaction with the hopeless reroll.** The hopeless-ability escape stays
+reachable *before* HP is rolled. Once HP is rolled, gate 2 locks the abilities
+page, so the escape is no longer reachable — intentional, and consistent with
+"no shenanigans." Visiting the abilities *page* after rolling abilities (but
+before HP) is still allowed (only rules is locked then); the existing per-roll
+strict lock already prevents an actual non-hopeless reroll there.
+
 ## Data shapes touched
 
 - `RuleSet`: `+ strict_mode: bool = True`.
@@ -182,5 +226,10 @@ shown when `not strict_mode` (replacing the "locked" message in that case).
 - **Blessed:** roll stores both sets; `_hp_context` exposes both totals with the
   higher flagged; tie keeps/bolds the first set; finalized character has no
   `hp_blessed_sets`.
+- **Back-navigation gates (Strict on):** after abilities, GET/POST `/rules`
+  redirects forward and the breadcrumb marks rules `locked`; after HP, GET/POST
+  of `rules`/`abilities`/`race`/`class`/`adjust` redirect forward and show
+  `locked`; `class_setup` and later stay reachable. **Strict off:** all prior
+  steps remain navigable (no redirect, no `locked`).
 - Update existing end-to-end wizard tests that assume auto-rolled abilities/gold
   (the main blast radius of this change).
