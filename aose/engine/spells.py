@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import Literal
 
 from aose.data.loader import GameData
-from aose.models import CharClass, ClassEntry, ClassLevelData, RuleSet, Spell
+from aose.models import CharClass, ClassEntry, ClassLevelData, RuleSet, Spell, SpellSlot
 
 CasterType = Literal["arcane", "divine"]
 
@@ -166,27 +166,78 @@ def forget(entry: ClassEntry, spell_id: str) -> ClassEntry:
     return entry.model_copy(update={"spellbook": book})
 
 
-def prepare(entry: ClassEntry, cls: CharClass, data: GameData,
-            spell_id: str) -> ClassEntry:
-    """Add a spell to the daily prepared loadout.
+# ── Slot memorization / casting / rest (play state) ────────────────────────
 
-    Enforces: spell is known (arcane spellbook / divine full list) and a free
-    slot exists at its level (hard cap)."""
+def _check_index(entry: ClassEntry, index: int) -> None:
+    if index < 0 or index >= len(entry.slots):
+        raise SpellError(f"No slot at index {index}")
+
+
+def _free_slots_at(entry: ClassEntry, cls: CharClass, level: int) -> int:
+    cap = memorizable_slots(entry, cls).get(level, 0)
+    used = sum(1 for s in entry.slots if s.level == level)
+    return cap - used
+
+
+def assign_slot(entry: ClassEntry, cls: CharClass, data: GameData, level: int,
+                spell_id: str, reversed: bool = False) -> ClassEntry:
+    """Memorize ``spell_id`` into a free slot at ``level``.
+
+    Enforces: spell known (arcane spellbook / divine accessible list),
+    ``spell.level == level``, a free slot exists at that level (cap from
+    ``memorizable_slots``), and ``reversed`` only for a reversible spell on an
+    arcane caster.  New slot starts unspent."""
     spell = _require_spell(data, spell_id)
+    if spell.level != level:
+        raise SpellError(f"{spell_id!r} is level {spell.level}, not {level}")
     known_ids = {s.id for s in known_spells(entry, cls, data)}
     if spell_id not in known_ids:
-        raise SpellError(f"{spell_id!r} is not known and cannot be prepared")
-    cap = memorizable_slots(entry, cls).get(spell.level, 0)
-    used = sum(1 for s in entry.prepared
-               if s in data.spells and data.spells[s].level == spell.level)
-    if used >= cap:
-        raise SpellError(f"No free level-{spell.level} slot (cap {cap})")
-    return entry.model_copy(update={"prepared": [*entry.prepared, spell_id]})
+        raise SpellError(f"{spell_id!r} is not known and cannot be memorized")
+    if _free_slots_at(entry, cls, level) <= 0:
+        cap = memorizable_slots(entry, cls).get(level, 0)
+        raise SpellError(f"No free level-{level} slot (cap {cap})")
+    if reversed and not (caster_type_of(cls, data) == "arcane" and spell.reversible):
+        raise SpellError(f"{spell_id!r} cannot be memorized reversed")
+    new = SpellSlot(level=level, spell_id=spell_id, reversed=reversed, spent=False)
+    return entry.model_copy(update={"slots": [*entry.slots, new]})
 
 
-def unprepare(entry: ClassEntry, spell_id: str) -> ClassEntry:
-    if spell_id not in entry.prepared:
-        raise SpellError(f"{spell_id!r} is not prepared")
-    prep = list(entry.prepared)
-    prep.remove(spell_id)
-    return entry.model_copy(update={"prepared": prep})
+def _set_slot(entry: ClassEntry, index: int, **changes) -> ClassEntry:
+    _check_index(entry, index)
+    slots = [s.model_copy(update=changes) if i == index else s
+             for i, s in enumerate(entry.slots)]
+    return entry.model_copy(update={"slots": slots})
+
+
+def cast_slot(entry: ClassEntry, index: int) -> ClassEntry:
+    """Mark a memorized slot spent.  Raises if empty or already spent."""
+    _check_index(entry, index)
+    slot = entry.slots[index]
+    if slot.spell_id is None:
+        raise SpellError(f"Slot {index} is empty")
+    if slot.spent:
+        raise SpellError(f"Slot {index} is already spent")
+    return _set_slot(entry, index, spent=True)
+
+
+def restore_slot(entry: ClassEntry, index: int) -> ClassEntry:
+    """Mark a single slot available again (undo / referee override)."""
+    return _set_slot(entry, index, spent=False)
+
+
+def clear_slot(entry: ClassEntry, index: int) -> ClassEntry:
+    """Remove a slot row entirely (un-memorize)."""
+    _check_index(entry, index)
+    slots = [s for i, s in enumerate(entry.slots) if i != index]
+    return entry.model_copy(update={"slots": slots})
+
+
+def restore_all_slots(entry: ClassEntry) -> ClassEntry:
+    """Re-memorize the same loadout: every slot becomes available."""
+    slots = [s.model_copy(update={"spent": False}) for s in entry.slots]
+    return entry.model_copy(update={"slots": slots})
+
+
+def clear_all_slots(entry: ClassEntry) -> ClassEntry:
+    """Drop the whole loadout, ready for a fresh pick."""
+    return entry.model_copy(update={"slots": []})

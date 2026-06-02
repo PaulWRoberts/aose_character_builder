@@ -100,12 +100,12 @@ def test_advanced_spell_books_is_wired():
 from aose.models import CharacterSpec, ClassEntry, RuleSet
 
 
-def _spec(class_id, level=1, abilities=None, spellbook=None, prepared=None, advanced=False):
+def _spec(class_id, level=1, abilities=None, spellbook=None, slots=None, advanced=False):
     ab = abilities or {"STR": 10, "INT": 13, "WIS": 13, "DEX": 10, "CON": 10, "CHA": 10}
     return CharacterSpec(
         name="T", abilities=ab, race_id="human",
         classes=[ClassEntry(class_id=class_id, level=level, hp_rolls=[3],
-                            spellbook=spellbook or [], prepared=prepared or [])],
+                            spellbook=spellbook or [], slots=slots or [])],
         alignment="neutral",
         ruleset=RuleSet(advanced_spell_books=advanced),
     )
@@ -234,51 +234,23 @@ def test_forget_removes():
     assert e.spellbook == ["magic_user_magic_missile", "magic_user_sleep"]  # original untouched
 
 
-def test_prepare_respects_known_and_slot_cap():
-    from aose.data.loader import GameData
-    from aose.engine import spells
-    data = GameData.load(DATA_DIR)
-    cls = data.classes["magic_user"]
-    e = ClassEntry(class_id="magic_user", level=1, spellbook=["magic_user_magic_missile"])
-    e2 = spells.prepare(e, cls, data, "magic_user_magic_missile")
-    assert e2.prepared == ["magic_user_magic_missile"]
-    with pytest.raises(spells.SpellError):
-        spells.prepare(e2, cls, data, "magic_user_magic_missile")   # exceeds the single slot
-    with pytest.raises(spells.SpellError):
-        spells.prepare(e, cls, data, "magic_user_sleep")            # not known
-
-
-def test_prepare_divine_from_full_list():
-    from aose.data.loader import GameData
-    from aose.engine import spells
-    data = GameData.load(DATA_DIR)
-    cls = data.classes["druid"]
-    e = ClassEntry(class_id="druid", level=1)
-    e2 = spells.prepare(e, cls, data, "faerie_fire")
-    assert e2.prepared == ["faerie_fire"]
-
-
-def test_unprepare_removes_one_instance():
-    from aose.engine import spells
-    e = ClassEntry(class_id="druid", level=1, prepared=["faerie_fire", "faerie_fire"])
-    e2 = spells.unprepare(e, "faerie_fire")
-    assert e2.prepared == ["faerie_fire"]
-
 
 def test_spells_view_arcane_shape():
     from aose.data.loader import GameData
+    from aose.models import SpellSlot
     from aose.sheet.view import build_sheet
     data = GameData.load(DATA_DIR)
-    spec = _spec("magic_user", spellbook=["magic_user_magic_missile"], prepared=["magic_user_magic_missile"])
+    spec = _spec("magic_user", spellbook=["magic_user_magic_missile"],
+                 slots=[SpellSlot(level=1, spell_id="magic_user_magic_missile")])
     sheet = build_sheet(spec, data)
     assert len(sheet.spells) == 1
     block = sheet.spells[0]
     assert block.caster_type == "arcane"
     assert block.can_learn is True
     assert [s.id for s in block.known] == ["magic_user_magic_missile"]
-    grp = block.prepared_groups[0]
-    assert grp.level == 1 and grp.slots == 1
-    assert [s.id for s in grp.prepared] == ["magic_user_magic_missile"]
+    grp = block.slot_groups[0]
+    assert grp.level == 1 and grp.cap == 1
+    assert len(grp.slots) == 1 and grp.slots[0].spell_id == "magic_user_magic_missile"
     assert any(s.id == "magic_user_read_magic" for s in block.learnable)
 
 
