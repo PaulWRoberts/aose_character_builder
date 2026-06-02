@@ -218,11 +218,7 @@ def _identity_complete(draft: dict[str, Any]) -> bool:
 
 
 def _next_incomplete_step(draft: dict[str, Any]) -> str:
-    # The rules step is "complete" once it has rolled abilities — at /new we
-    # seed only the ruleset, so a draft without abilities is mid-rules step.
-    if "abilities" not in draft:
-        return "rules"
-    if not draft.get("abilities_confirmed"):
+    if "abilities" not in draft or not draft.get("abilities_confirmed"):
         return "abilities"
     rs = _ruleset_of(draft)
     # In race-as-class mode, race_id is assigned by the class POST handler,
@@ -309,10 +305,8 @@ def _seed_draft_abilities(draft: dict[str, Any]) -> None:
 async def new_wizard(request: Request):
     draft_id = new_draft_id()
     ruleset = load_settings(request.app.state.settings_path)
-    # Abilities are rolled once here and locked. The rules step never changes
-    # them — _apply_rule_changes only re-seeds if the draft somehow lacks them.
+    # Abilities are rolled by the player on the abilities step, not here.
     draft: dict[str, Any] = {"ruleset": ruleset.model_dump()}
-    _seed_draft_abilities(draft)
     save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/rules")
 
@@ -354,9 +348,6 @@ def _apply_rule_changes(draft: dict[str, Any], old_rs: RuleSet, new_rs: RuleSet)
     draft["ruleset"] = new_rs.model_dump()
 
     if "abilities" not in draft:
-        # Safety re-seed only — abilities are normally rolled at draft creation.
-        _seed_draft_abilities(draft)
-        _clear_after_abilities(draft)
         return
 
     if new_rs.separate_race_class != old_rs.separate_race_class:
@@ -396,31 +387,50 @@ async def post_rules(request: Request, draft_id: str):
     return _redirect(f"/wizard/{draft_id}/{_next_incomplete_step(draft)}")
 
 
+@router.post("/{draft_id}/abilities/roll")
+async def post_abilities_roll(request: Request, draft_id: str):
+    draft = _load(request, draft_id)
+    if "abilities" in draft:
+        warn = ability_warnings(draft["abilities"])
+        hopeless = warn["subpar"] or bool(warn["rock_bottom"])
+        if _ruleset_of(draft).strict_mode and not hopeless:
+            raise HTTPException(400, "Ability scores are already rolled and locked.")
+    _clear_after_abilities(draft)
+    draft.pop("abilities_confirmed", None)
+    _seed_draft_abilities(draft)
+    save_draft(draft_id, draft, _drafts_dir(request))
+    return _redirect(f"/wizard/{draft_id}/abilities")
+
+
 @router.get("/{draft_id}/abilities", response_class=HTMLResponse)
 async def get_abilities(request: Request, draft_id: str):
     draft = _load(request, draft_id)
-    ability_rows = [
-        {
-            "name": ab.value,
-            "score": draft["abilities"][ab.value],
-            "modifier": ability_modifier(draft["abilities"][ab.value]),
-        }
-        for ab in ABILITY_ORDER
-    ]
     ctx = _base_context(request, draft_id, draft, "abilities")
-    ctx["ability_rows"] = ability_rows
-    ctx.update(ability_warnings(draft["abilities"]))  # subpar, rock_bottom
+    rolled = "abilities" in draft
+    ctx["abilities_rolled"] = rolled
+    if rolled:
+        ctx["ability_rows"] = [
+            {
+                "name": ab.value,
+                "score": draft["abilities"][ab.value],
+                "modifier": ability_modifier(draft["abilities"][ab.value]),
+            }
+            for ab in ABILITY_ORDER
+        ]
+        warn = ability_warnings(draft["abilities"])
+        ctx.update(warn)  # subpar, rock_bottom
+        hopeless = warn["subpar"] or bool(warn["rock_bottom"])
+        ctx["can_reroll"] = (not _ruleset_of(draft).strict_mode) or hopeless
     return templates.TemplateResponse(request, "wizard.html", ctx)
 
 
 @router.post("/{draft_id}/abilities")
 async def post_abilities(request: Request, draft_id: str):
     draft = _load(request, draft_id)
-    # Name moved to the Identity step; confirming abilities is now the step's
-    # completion marker. Abilities themselves are locked at draft creation.
+    if "abilities" not in draft:
+        return _redirect(f"/wizard/{draft_id}/abilities")
     draft["abilities_confirmed"] = True
     save_draft(draft_id, draft, _drafts_dir(request))
-    # Route via _next_incomplete_step so race-as-class drafts skip /race.
     return _redirect(f"/wizard/{draft_id}/{_next_incomplete_step(draft)}")
 
 
