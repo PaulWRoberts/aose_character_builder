@@ -88,3 +88,18 @@ def test_drain_multi_level_single_class_cascades(data):
     assert e.level == 2
     assert e.hp_rolls == [8, 5]            # two Hit Dice removed (LIFO)
     assert e.xp == 2000                    # fighter L2 threshold
+
+
+def test_drain_multi_class_targets_most_recently_leveled(data):
+    # Both at L3, neutral abilities (1.0x). magic_user L3 threshold (5000) >
+    # fighter L3 (4000), so the magic-user leveled most recently -> drained first.
+    spec = _spec(level=3, xp=6000, multi=True,
+                 hp_rolls=None)  # fighter [8,8,8], magic_user [4,4,4]
+    energy_drain(spec, data, levels=1, xp_mode="new_min")
+    levels = {e.class_id: e.level for e in spec.classes}
+    assert levels == {"fighter": 3, "magic_user": 2}
+    mu = next(e for e in spec.classes if e.class_id == "magic_user")
+    assert mu.hp_rolls == [4, 4]           # one Hit Die removed from the MU
+    assert mu.xp == 2500                   # magic_user L2 threshold
+    fighter = next(e for e in spec.classes if e.class_id == "fighter")
+    assert fighter.xp == 6000              # untouched class keeps its XP
