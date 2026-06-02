@@ -19,5 +19,6 @@ class RuleSet(BaseModel):
     variable_weapon_damage: bool = False
     advanced_spell_books: bool = False
     human_racial_abilities: bool = False
+    strict_mode: bool = True
 
     encumbrance: EncumbranceMode = "basic"

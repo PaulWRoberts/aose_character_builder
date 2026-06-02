@@ -52,7 +52,7 @@ def _start(client):
 
 # Bool rules that ship True in RuleSet() and ARE rendered as checkboxes.  The
 # creation method (separate_race_class) is now a radio, handled separately.
-_TRUE_DEFAULTS = ()
+_TRUE_DEFAULTS = ("strict_mode",)
 
 
 def _rules_form(**overrides):

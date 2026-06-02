@@ -57,7 +57,8 @@ _GOOD = {"STR": 13, "INT": 13, "WIS": 13, "DEX": 13, "CON": 13, "CHA": 13}
 
 def _rules_form(**overrides):
     """POST body for /rules matching RuleSet() defaults (Advanced)."""
-    data = {"encumbrance": "basic", "creation_method": "advanced"}
+    data = {"encumbrance": "basic", "creation_method": "advanced",
+            "strict_mode": "on"}
     for k, v in overrides.items():
         if v is None:
             data.pop(k, None)

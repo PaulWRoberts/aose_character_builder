@@ -24,6 +24,7 @@ RULE_LABELS = {
     "multiclassing": "Multiclassing",
     "advanced_spell_books": "Advanced Spell Books",
     "human_racial_abilities": "Human Racial Abilities",
+    "strict_mode": "Strict Mode",
 }
 
 # Rules whose engine/builder integration is fully wired up.  The settings
@@ -39,6 +40,7 @@ IMPLEMENTED_RULES = {
     "variable_weapon_damage",
     "advanced_spell_books",
     "human_racial_abilities",
+    "strict_mode",
 }
 
 # Choice-group rules that have full integration too.
@@ -62,6 +64,10 @@ RULE_GROUPS = [
          "attacks suffer −2 to hit."),
         ("secondary_skills",
          "Each character has a secondary skill (a non-adventuring trade)."),
+        ("strict_mode",
+         "Ability scores, hit points, and starting gold are locked after a "
+         "single roll (a hopeless ability set may always be re-rolled). Turn "
+         "off to allow free re-rolls."),
     ]),
     ("Survivability & Logistics", [
         ("reroll_1s_2s_hp_l1",
