@@ -73,7 +73,22 @@ _POST_RACIAL = {"STR": 12, "INT": 13, "WIS": 13, "DEX": 12, "CON": 12, "CHA": 10
 
 def test_validate_exact_two_to_one_passes(data):
     validate_ability_adjustments(
-        _POST_RACIAL, [data.classes["fighter"]], {"STR": 1, "INT": -1, "WIS": -1}
+        _POST_RACIAL, [data.classes["fighter"]], {"STR": 1, "INT": -2}
+    )
+
+
+def test_validate_odd_single_lower_fails(data):
+    # Balance is fine (freed 2 = 2x raised 1) but INT-1, WIS-1 each odd → illegal.
+    with pytest.raises(AdjustmentError):
+        validate_ability_adjustments(
+            _POST_RACIAL, [data.classes["fighter"]],
+            {"STR": 1, "INT": -1, "WIS": -1},
+        )
+
+
+def test_validate_even_single_lower_passes(data):
+    validate_ability_adjustments(
+        _POST_RACIAL, [data.classes["fighter"]], {"STR": 2, "INT": -4}
     )
 
 
@@ -86,10 +101,10 @@ def test_validate_waste_fails(data):
 
 
 def test_validate_lower_below_nine_fails(data):
-    scores = {**_POST_RACIAL, "INT": 9, "WIS": 13}
+    scores = {**_POST_RACIAL, "INT": 10}
     with pytest.raises(AdjustmentError):
         validate_ability_adjustments(
-            scores, [data.classes["fighter"]], {"STR": 1, "INT": -1, "WIS": -1}
+            scores, [data.classes["fighter"]], {"STR": 1, "INT": -2}
         )
 
 
@@ -97,7 +112,7 @@ def test_validate_raise_above_eighteen_fails(data):
     scores = {**_POST_RACIAL, "STR": 18}
     with pytest.raises(AdjustmentError):
         validate_ability_adjustments(
-            scores, [data.classes["fighter"]], {"STR": 1, "INT": -1, "WIS": -1}
+            scores, [data.classes["fighter"]], {"STR": 1, "INT": -2}
         )
 
 
@@ -129,11 +144,11 @@ def test_validate_empty_is_valid(data):
 def test_apply_adds_deltas():
     result = apply_ability_adjustments(
         {"STR": 12, "INT": 13, "WIS": 13, "DEX": 12, "CON": 12, "CHA": 10},
-        {"STR": 1, "INT": -1, "WIS": -1},
+        {"STR": 1, "INT": -2},
     )
     assert result["STR"] == 13
-    assert result["INT"] == 12
-    assert result["WIS"] == 12
+    assert result["INT"] == 11
+    assert result["WIS"] == 13
     assert result["DEX"] == 12
 
 
@@ -221,12 +236,21 @@ def test_adjust_post_valid_stores_and_advances(tmp_path):
     client = _make_client(tmp_path)
     draft_id = _drive_to_adjust(client)
     r = client.post(f"/wizard/{draft_id}/adjust", data={
-        "raise_STR": "1", "lower_INT": "1", "lower_WIS": "1",
+        "raise_STR": "1", "lower_INT": "2",
     })
     assert r.status_code == 303
     assert r.headers["location"].endswith("/class_setup")
     draft = load_draft(draft_id, client._drafts_dir)
-    assert draft["ability_adjustments"] == {"STR": 1, "INT": -1, "WIS": -1}
+    assert draft["ability_adjustments"] == {"STR": 1, "INT": -2}
+
+
+def test_adjust_post_odd_spread_rejected(tmp_path):
+    client = _make_client(tmp_path)
+    draft_id = _drive_to_adjust(client)
+    r = client.post(f"/wizard/{draft_id}/adjust", data={
+        "raise_STR": "1", "lower_INT": "1", "lower_WIS": "1",
+    })
+    assert r.status_code == 400
 
 
 def test_adjust_post_zero_is_valid(tmp_path):
@@ -242,7 +266,7 @@ def test_adjust_post_waste_rejected(tmp_path):
     client = _make_client(tmp_path)
     draft_id = _drive_to_adjust(client)
     r = client.post(f"/wizard/{draft_id}/adjust", data={
-        "raise_STR": "1", "lower_INT": "1", "lower_WIS": "2",
+        "raise_STR": "1", "lower_INT": "2", "lower_WIS": "2",
     })
     assert r.status_code == 400
 
@@ -252,7 +276,7 @@ def test_finalize_reflects_adjustment(tmp_path):
     client = _make_client(tmp_path)
     draft_id = _drive_to_adjust(client)
     client.post(f"/wizard/{draft_id}/adjust", data={
-        "raise_STR": "1", "lower_INT": "1", "lower_WIS": "1",
+        "raise_STR": "1", "lower_INT": "2",
     })
     client.post(f"/wizard/{draft_id}/hp/roll")
     client.post(f"/wizard/{draft_id}/hp")
@@ -263,15 +287,15 @@ def test_finalize_reflects_adjustment(tmp_path):
     char_id = r.headers["location"].split("/")[-1]
     saved = json.loads((client._characters_dir / f"{char_id}.json").read_text())
     assert saved["abilities"]["STR"] == 14  # 13 +1
-    assert saved["abilities"]["INT"] == 12  # 13 -1
-    assert saved["abilities"]["WIS"] == 12  # 13 -1
+    assert saved["abilities"]["INT"] == 11  # 13 -2
+    assert saved["abilities"]["WIS"] == 13  # unchanged
 
 
 def test_changing_class_clears_adjustment(tmp_path):
     client = _make_client(tmp_path)
     draft_id = _drive_to_adjust(client)
     client.post(f"/wizard/{draft_id}/adjust", data={
-        "raise_STR": "1", "lower_INT": "1", "lower_WIS": "1",
+        "raise_STR": "1", "lower_INT": "2",
     })
     # Re-pick a different class — the stored adjustment must be cleared.
     client.post(f"/wizard/{draft_id}/class", data={"class_id": "thief"})
@@ -286,12 +310,10 @@ from aose.engine.ability_mods import prime_requisite_xp_multiplier
 
 def test_raised_prime_increases_xp_multiplier(data):
     # Fighter prime is STR. Post-racial STR 15 → multiplier 1.05.
-    # Raise to 16 (lower INT+WIS) → multiplier 1.10.
+    # Raise to 16 (lower INT by 2) → multiplier 1.10.
     post_racial = {"STR": 15, "INT": 13, "WIS": 13, "DEX": 12, "CON": 12, "CHA": 10}
     before = prime_requisite_xp_multiplier(post_racial["STR"])
-    creation = apply_ability_adjustments(
-        post_racial, {"STR": 1, "INT": -1, "WIS": -1}
-    )
+    creation = apply_ability_adjustments(post_racial, {"STR": 1, "INT": -2})
     after = prime_requisite_xp_multiplier(creation["STR"])
     assert before == 1.05
     assert after == 1.10

@@ -107,6 +107,7 @@ def validate_ability_adjustments(post_racial: dict, classes,
     """Raise ``AdjustmentError`` unless every rule holds:
 
     * raised abilities ⊆ raisable; lowered ⊆ lowerable
+    * each lowered amount is even (−2 per +1, from a single score)
     * ``lowered_total == 2 * raised_total`` (exact, no waste)
     * each lowered post-value ≥ ``max(9, class requirement)``
     * each raised post-value ≤ 18
@@ -123,6 +124,13 @@ def validate_ability_adjustments(post_racial: dict, classes,
     bad_lower = set(lowered) - adj["lowerable"]
     if bad_lower:
         raise AdjustmentError(f"Cannot lower abilities: {sorted(bad_lower)}")
+
+    odd_lowers = sorted(a for a, amt in lowered.items() if amt % 2 != 0)
+    if odd_lowers:
+        raise AdjustmentError(
+            "Each lowered ability must drop by an even amount "
+            f"(2 points buys 1 raise): {odd_lowers}."
+        )
 
     raised_total = sum(raised.values())
     lowered_total = sum(lowered.values())
