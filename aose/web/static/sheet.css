@@ -941,22 +941,6 @@ button {
     color: #fff;
 }
 
-/* ── Drag-and-drop visual feedback ─────────────────────────────────── */
-
-[draggable="true"] {
-    cursor: grab;
-}
-
-[draggable="true"]:active {
-    cursor: grabbing;
-}
-
-.drag-over {
-    outline: 2px dashed #5b8f3e;
-    outline-offset: -2px;
-    background: #ecf3e0;
-}
-
 /* ── Magic items ─────────────────────────────────────────── */
 .magic-item-row { margin: 6px 0; padding: 4px 0; border-bottom: 1px dashed #ddd; }
 .magic-desc { margin-top: 3px; }
