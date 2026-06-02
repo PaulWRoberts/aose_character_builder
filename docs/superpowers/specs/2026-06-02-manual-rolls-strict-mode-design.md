@@ -71,13 +71,14 @@ changes button availability, never invalidates a chosen value.
 ### 2. Abilities — manual roll
 
 **Draft lifecycle change.** `/wizard/new` no longer pre-rolls abilities; it
-seeds only the ruleset. Because "abilities present" is currently the implicit
-marker for "rules step complete", introduce an explicit `rules_done` flag:
+seeds only the ruleset. No new "rules done" flag is needed — the only change is
+to route an abilities-less draft to the abilities step:
 
-- `post_rules` sets `draft["rules_done"] = True`.
-- `_next_incomplete_step`: first check becomes
-  `if not draft.get("rules_done"): return "rules"`, then
-  `if "abilities" not in draft or not draft.get("abilities_confirmed"): return "abilities"`.
+- `_next_incomplete_step`: the first check becomes
+  `if "abilities" not in draft or not draft.get("abilities_confirmed"): return "abilities"`
+  (was: abilities-missing → `"rules"`). `/wizard/new` still redirects to
+  `/rules`, and `post_rules` still redirects forward via `_next_incomplete_step`,
+  so the user starts on rules and advances to abilities to roll.
 - `_apply_rule_changes`: drop the "abilities missing → re-seed + clear" safety
   block; replace with an early `return` when abilities aren't rolled yet (no
   downstream exists to clear). The remaining rule-change cascades are unchanged.
@@ -163,9 +164,8 @@ shown when `not strict_mode` (replacing the "locked" message in that case).
 ## Data shapes touched
 
 - `RuleSet`: `+ strict_mode: bool = True`.
-- Draft dict: `+ rules_done: bool`, `+ hp_blessed_sets: list[list[int]]`
-  (draft-only display state). Abilities/gold keys unchanged in shape — only
-  *when* they are written changes.
+- Draft dict: `+ hp_blessed_sets: list[list[int]]` (draft-only display state).
+  Abilities/gold keys unchanged in shape — only *when* they are written changes.
 - `CharacterSpec`: **unchanged** (blessed sets never persist).
 
 ## Testing
@@ -176,8 +176,6 @@ shown when `not strict_mode` (replacing the "locked" message in that case).
   scores; second roll under Strict (non-hopeless) → 400; reroll allowed when
   Strict-off, when `subpar`, and when any score is 3; reroll clears downstream
   + `abilities_confirmed`; Continue blocked until rolled.
-- **Rules step:** `rules_done` drives `_next_incomplete_step` / breadcrumb
-  correctly.
 - **Gold:** equipment GET no longer auto-rolls; roll route stores gold; Strict
   locks immediately; non-strict allows reroll until first purchase.
 - **HP:** non-strict reroll allowed; Strict still locks (existing behaviour).
