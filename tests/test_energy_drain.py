@@ -204,3 +204,13 @@ def test_energy_drain_route_missing_character_404s(client):
     r = client.post("/character/nobody/energy-drain",
                     data={"levels": "1", "xp_mode": "new_min"})
     assert r.status_code == 404
+
+
+def test_sheet_renders_energy_drain_form(client):
+    _seed(client, level=3, xp=8000, hp_rolls=[8, 5, 6])
+    r = client.get("/character/test")
+    assert 'action="/character/test/energy-drain"' in r.text
+    assert 'name="levels"' in r.text
+    assert 'name="xp_mode"' in r.text
+    assert 'value="midpoint"' in r.text
+    assert 'value="new_min"' in r.text

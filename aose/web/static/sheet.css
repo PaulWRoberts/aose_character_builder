@@ -333,6 +333,14 @@ ul {
 
 .button.primary:hover, button.primary:hover { background: #5c4530; }
 
+.button.danger, button.danger {
+    background: #8a2c2c;
+    color: white;
+    border-color: #8a2c2c;
+}
+
+.button.danger:hover, button.danger:hover { background: #a13434; }
+
 button {
     padding: 8px 16px;
     border: 1px solid #4a3728;

@@ -247,6 +247,23 @@
                     </label>
                     <button type="submit">Grant</button>
                 </form>
+
+                <form method="post" action="/character/{{ character_id }}/energy-drain"
+                      class="energy-drain-form no-print"
+                      onsubmit="return confirm('Energy drain ' + this.levels.value + ' level(s)? This is permanent.');">
+                    <label class="energy-drain-label">Energy Drain
+                        <input type="number" name="levels" value="1" min="1"
+                               style="width:4em"
+                               oninput="var multi = Number(this.value) > 1;
+                                        var mid = document.getElementById('ed-midpoint');
+                                        var min = document.getElementById('ed-new-min');
+                                        mid.disabled = multi;
+                                        if (multi) min.checked = true;">
+                    </label>
+                    <label class="small"><input type="radio" id="ed-midpoint" name="xp_mode" value="midpoint"> Midpoint</label>
+                    <label class="small"><input type="radio" id="ed-new-min" name="xp_mode" value="new_min" checked> New level minimum</label>
+                    <button type="submit" class="danger">Drain</button>
+                </form>
             </section>
 
         </div>
