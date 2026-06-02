@@ -58,3 +58,39 @@ def hp_remainder(spec: CharacterSpec, data: GameData) -> Fraction:
     rolls + effective CON; nothing is stored."""
     total = _hp_total(spec, data)
     return total - int(total)
+
+
+# ── Play-state: current HP, damage, healing ────────────────────────────────
+
+def current_hp(spec: CharacterSpec, data: GameData) -> int:
+    """Current hit points: ``max(0, max_hp − damage_taken)``."""
+    return max(0, max_hp(spec, data) - spec.damage_taken)
+
+
+def is_dead(spec: CharacterSpec, data: GameData) -> bool:
+    """A character is dead when current HP is 0 (derived, not stored)."""
+    return current_hp(spec, data) == 0
+
+
+def apply_damage(spec: CharacterSpec, data: GameData, amount: int) -> int:
+    """Return the new ``damage_taken`` after taking ``amount`` (>=0) damage,
+    capped so current HP never drops below 0."""
+    if amount < 0:
+        raise ValueError("damage amount must be non-negative")
+    return min(max_hp(spec, data), spec.damage_taken + amount)
+
+
+def apply_healing(spec: CharacterSpec, data: GameData, amount: int) -> int:
+    """Return the new ``damage_taken`` after healing ``amount`` (>=0), floored
+    at 0 (current HP never exceeds max)."""
+    if amount < 0:
+        raise ValueError("healing amount must be non-negative")
+    return max(0, spec.damage_taken - amount)
+
+
+def set_current_hp(spec: CharacterSpec, data: GameData, value: int) -> int:
+    """Return the ``damage_taken`` that sets current HP to ``value``, clamped to
+    ``[0, max_hp]``."""
+    m = max_hp(spec, data)
+    clamped = max(0, min(m, value))
+    return m - clamped
