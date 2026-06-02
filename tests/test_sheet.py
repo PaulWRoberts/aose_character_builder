@@ -127,3 +127,24 @@ def test_sheet_flags_broken_speech_at_int_3():
     )
     sheet = build_sheet(spec, data)
     assert sheet.broken_speech is True
+
+
+def test_ability_row_breakdown_temp_only(data):
+    spec = make_spec(temp_ability_modifiers={"STR": -3})  # base STR 16 -> 13
+    sheet = build_sheet(spec, data)
+    row = next(r for r in sheet.abilities if r.ability == "STR")
+    assert row.base_score == 16
+    assert row.equip_delta == 0
+    assert row.temp_delta == -3
+    assert row.score == 13
+    assert row.modified is True
+
+
+def test_ability_row_breakdown_unmodified(data):
+    sheet = build_sheet(make_spec(), data)
+    row = next(r for r in sheet.abilities if r.ability == "INT")
+    assert row.base_score == 10
+    assert row.equip_delta == 0
+    assert row.temp_delta == 0
+    assert row.modified is False
+

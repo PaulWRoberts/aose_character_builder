@@ -15,7 +15,7 @@ from aose.engine.encumbrance import (
 )
 from aose.engine.languages import broken_speech, known_languages
 from aose.engine.leveling import ClassAdvancement, all_advancement
-from aose.engine.magic import effective_abilities
+from aose.engine.magic import active_modifiers, apply_modifiers, effective_abilities
 from aose.models import Ability, CharacterSpec, MagicItem, MagicItemInstance, RuleSet
 
 ABILITY_ORDER = [Ability.STR, Ability.INT, Ability.WIS, Ability.DEX, Ability.CON, Ability.CHA]
@@ -50,8 +50,11 @@ ENCUMBRANCE_DESCRIPTIONS = {
 
 class AbilityRow(BaseModel):
     ability: str
-    score: int
+    score: int            # final effective score (clamped)
     modifier: int
+    base_score: int = 0   # real underlying score
+    equip_delta: int = 0  # magic-effective minus base (works for add & set ops)
+    temp_delta: int = 0   # temporary modifier (signed)
     modified: bool = False
 
 
@@ -502,15 +505,26 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
     race = data.races[spec.race_id]
 
     eff = effective_abilities(spec, data)
-    abilities = [
-        AbilityRow(
-            ability=ab.value,
-            score=eff[ab],
-            modifier=ability_mods.ability_modifier(eff[ab]),
-            modified=(eff[ab] != spec.abilities[ab]),
+    mods = active_modifiers(spec, data)
+    abilities = []
+    for ab in ABILITY_ORDER:
+        base = spec.abilities[ab]
+        target = f"ability:{ab.value}"
+        after_equip = (
+            apply_modifiers(base, mods, target)
+            if any(m.target == target for m in mods)
+            else base
         )
-        for ab in ABILITY_ORDER
-    ]
+        final = eff[ab]
+        abilities.append(AbilityRow(
+            ability=ab.value,
+            score=final,
+            modifier=ability_mods.ability_modifier(final),
+            base_score=base,
+            equip_delta=after_equip - base,
+            temp_delta=spec.temp_ability_modifiers.get(ab, 0),
+            modified=(final != base),
+        ))
 
     desc_ac, asc_ac = armor_class.armor_class(spec, data)
     save_dict = saves.saving_throws(spec, data)
