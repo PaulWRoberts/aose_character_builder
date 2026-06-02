@@ -30,7 +30,12 @@ from aose.data.loader import GameData
 from aose.engine.ability_mods import ability_modifier
 from aose.engine.attack_bonus import thac0
 from aose.engine.magic import active_modifiers, effective_abilities
-from aose.engine.proficiency import is_proficient, is_specialised, penalty_for_classes
+from aose.engine.proficiency import (
+    base_weapon_id,
+    is_proficient,
+    is_specialised,
+    penalty_for_classes,
+)
 from aose.models import Ability, CharacterSpec, Weapon
 
 UNARMED_DAMAGE = "1d2"
@@ -96,10 +101,11 @@ def _profile_for(weapon: Weapon, spec: CharacterSpec, data: GameData,
     specialised = False
     if spec.ruleset.weapon_proficiency:
         classes = [data.classes[e.class_id] for e in spec.classes if e.class_id in data.classes]
-        proficient = is_proficient(weapon.id, spec)
+        base_id = base_weapon_id(weapon)   # magic variants count as their base type
+        proficient = is_proficient(base_id, spec)
         if not proficient:
             prof_pen = penalty_for_classes(classes)
-        specialised = is_specialised(weapon.id, spec)
+        specialised = is_specialised(base_id, spec)
     spec_hit = 1 if specialised else 0
     spec_dmg = 1 if specialised else 0
 

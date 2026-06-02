@@ -39,6 +39,7 @@ from aose.engine.magic import (
 from aose.engine.proficiency import (
     allowed_armor_ids,
     allowed_weapon_ids,
+    base_weapon_id,
     category_for_classes,
     shields_allowed,
     specialisation_allowed,
@@ -923,8 +924,11 @@ def _proficiency_context(draft: dict[str, Any], data) -> dict:
     allow_special = specialisation_allowed(classes)
     allowed = allowed_weapon_ids(classes, data)
     from aose.models import Weapon
+    # Proficiency is per base weapon type; magic variants (Sword +1, …) share
+    # their base weapon's proficiency, so only offer base weapons here.
     weapons = sorted(
-        (i for i in data.items.values() if isinstance(i, Weapon)),
+        (i for i in data.items.values()
+         if isinstance(i, Weapon) and base_weapon_id(i) == i.id),
         key=lambda w: w.name,
     )
     if allowed != "all":

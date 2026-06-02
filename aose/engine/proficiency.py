@@ -73,6 +73,23 @@ def proficiency_slots(cls: CharClass, level: int) -> int:
     return base_slot_count(combat_category(cls)) + improvements_through_level(cls, level)
 
 
+# ── Base weapon resolution (magic variants count as their mundane type) ──────
+
+def base_weapon_id(weapon: Weapon) -> str:
+    """The mundane weapon type a (possibly magical/variant) weapon counts as for
+    proficiency.  Variant weapons declare ``base_weapon``; a plain weapon is its
+    own base.  Proficiency is per weapon *type*, so a "Sword +1" is the same
+    proficiency as a "Sword"."""
+    return weapon.base_weapon or weapon.id
+
+
+def base_armor_id(armor: Armor) -> str:
+    """The mundane armour type a (possibly magical/variant) piece counts as for
+    class allowances.  Variant armour declares ``base_armor``; plain armour is
+    its own base, so "Chain Mail +1" is allowed wherever "Chain Mail" is."""
+    return armor.base_armor or armor.id
+
+
 # ── Per-character accounting ────────────────────────────────────────────────
 
 def is_proficient(weapon_id: str, spec: CharacterSpec) -> bool:

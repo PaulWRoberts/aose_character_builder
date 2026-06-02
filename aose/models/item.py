@@ -44,6 +44,8 @@ class Weapon(ItemBase):
     qualities: list[str] = Field(default_factory=list)
     magic_bonus: int = 0
     conditional_bonus: ConditionalBonus | None = None
+    base_weapon: str | None = None   # for magic/variant weapons: the mundane
+                                     # weapon id they count as for proficiency
 
 
 class Armor(ItemBase):
@@ -53,6 +55,8 @@ class Armor(ItemBase):
     is_shield: bool = False
     magic_bonus: int = 0
     weight_multiplier: float = 1.0   # 0.5 for enchanted armour
+    base_armor: str | None = None    # for magic/variant armour: the mundane
+                                     # armour id it counts as for class allowances
 
 
 class AdventuringGear(ItemBase):

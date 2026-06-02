@@ -14,6 +14,7 @@ from __future__ import annotations
 from typing import Literal
 
 from aose.data.loader import GameData
+from aose.engine.proficiency import base_armor_id, base_weapon_id
 from aose.models import Armor, Weapon
 
 Slot = Literal["armor", "shield"]
@@ -65,7 +66,7 @@ def equip(inventory: list[str], equipped: dict[str, str],
             if not allow_shields:
                 raise ValueError("This class cannot use a shield")
         else:
-            if allowed_armor != "all" and item_id not in allowed_armor:
+            if allowed_armor != "all" and base_armor_id(item) not in allowed_armor:
                 raise ValueError(f"This class cannot use {item.name!r}")
         slot = "shield" if item.is_shield else "armor"
         # Single-slot gear: replace whatever is currently in that slot.
@@ -73,7 +74,7 @@ def equip(inventory: list[str], equipped: dict[str, str],
         return new_eq, new_weapons
 
     if isinstance(item, Weapon):
-        if allowed_weapons != "all" and item_id not in allowed_weapons:
+        if allowed_weapons != "all" and base_weapon_id(item) not in allowed_weapons:
             raise ValueError(f"This class cannot use {item.name!r}")
         already_equipped = _count(equipped_weapons, item_id)
         if already_equipped >= owned:

@@ -120,6 +120,43 @@ def test_equip_unrestricted_by_default(data):
     assert weapons == ["sword"]
 
 
+# ── magic variants resolve to their base type for class allowances ──────────
+
+def test_equip_allows_magic_weapon_when_base_allowed(data):
+    # A class allowed "sword" can equip a Sword +1 (same base weapon type).
+    _eq, weapons = equip(["sword_plus_1"], {}, [], "sword_plus_1", data,
+                         allowed_weapons={"sword"})
+    assert weapons == ["sword_plus_1"]
+
+
+def test_equip_blocks_magic_weapon_when_base_disallowed(data):
+    with pytest.raises(ValueError, match="cannot use"):
+        equip(["sword_plus_1"], {}, [], "sword_plus_1", data,
+              allowed_weapons={"mace"})
+
+
+def test_equip_allows_magic_armor_when_base_allowed(data):
+    eq, _weapons = equip(["chain_mail_plus_1"], {}, [], "chain_mail_plus_1", data,
+                         allowed_armor={"chain_mail"})
+    assert eq["armor"] == "chain_mail_plus_1"
+
+
+def test_inventory_view_flags_magic_weapon_by_base_allowed(data):
+    view = inventory_view(
+        ["sword_plus_1"], [], {}, [], None, data,
+        allowed_weapons={"sword"}, allowed_armor=set(), allow_shields=False,
+    )
+    assert _carried_row(view, "sword_plus_1").class_allowed is True
+
+
+def test_inventory_view_flags_magic_weapon_by_base_disallowed(data):
+    view = inventory_view(
+        ["sword_plus_1"], [], {}, [], None, data,
+        allowed_weapons={"mace"}, allowed_armor=set(), allow_shields=False,
+    )
+    assert _carried_row(view, "sword_plus_1").class_allowed is False
+
+
 # ── drag-and-drop dispatcher enforcement ────────────────────────────────────
 
 from aose.web.move_dispatch import dispatch_move

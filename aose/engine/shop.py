@@ -109,13 +109,14 @@ def shop_categories(data: GameData) -> list[ShopCategory]:
 def _class_allows(item, allowed_weapons, allowed_armor, allow_shields) -> bool:
     """Whether the character's class may equip ``item`` given the allowance
     sets (or the ``"all"`` sentinel).  Non-equippable items are always True."""
+    from aose.engine.proficiency import base_armor_id, base_weapon_id
     from aose.models import Armor, Weapon  # local to avoid circular import
     if isinstance(item, Weapon):
-        return allowed_weapons == "all" or item.id in allowed_weapons
+        return allowed_weapons == "all" or base_weapon_id(item) in allowed_weapons
     if isinstance(item, Armor):
         if item.is_shield:
             return allow_shields
-        return allowed_armor == "all" or item.id in allowed_armor
+        return allowed_armor == "all" or base_armor_id(item) in allowed_armor
     return True
 
 
