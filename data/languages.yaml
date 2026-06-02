@@ -1,0 +1,25 @@
+alignment:
+  law: Lawful
+  neutral: Neutral
+  chaos: Chaotic
+additional:
+  - Bugbear
+  - Doppelgänger
+  - Dragon
+  - Dwarvish
+  - Elvish
+  - Gargoyle
+  - Gnoll
+  - Gnomish
+  - Goblin
+  - Halfling
+  - Harpy
+  - Hobgoblin
+  - Kobold
+  - Lizard man
+  - Medusa
+  - Minotaur
+  - Ogre
+  - Orcish
+  - Pixie
+  - Human dialect

@@ -91,6 +91,9 @@ class CharacterSpec(BaseModel):
     containers: list[ContainerInstance] = Field(default_factory=list)
     magic_items: list[MagicItemInstance] = Field(default_factory=list)
     secondary_skill: str | None = None
+    # Chosen *additional* languages only (INT-based picks).  Native (race) and
+    # alignment tongues are derived at display time, never stored here.
+    languages: list[str] = Field(default_factory=list)
     # Weapon Proficiency optional rule (per-weapon).  Specialised weapons must
     # also appear in weapon_proficiencies; specialisation costs a 2nd slot.
     weapon_proficiencies: list[str] = Field(default_factory=list)

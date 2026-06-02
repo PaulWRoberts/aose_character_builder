@@ -8,6 +8,7 @@ from .character_class import (
 )
 from .spell import Spell
 from .spell_list import SpellList
+from .language import LanguageData
 from .weapon_quality import WeaponQuality
 from .item import (
     Item,
@@ -34,6 +35,7 @@ __all__ = [
     "ClassFeature",
     "Spell",
     "SpellList",
+    "LanguageData",
     "WeaponQuality",
     "Item",
     "ItemBase",

@@ -99,3 +99,22 @@ def test_charclass_spell_lists_field():
         shields_allowed=True,
     )
     assert fighter.spell_lists == []
+
+
+def test_languages_loaded(data):
+    langs = data.languages
+    assert langs.alignment["law"] == "Lawful"
+    assert langs.alignment["neutral"] == "Neutral"
+    assert langs.alignment["chaos"] == "Chaotic"
+    assert "Elvish" in langs.additional
+    # UTF-8 diacritic survives the load round-trip.
+    assert "Doppelgänger" in langs.additional
+
+
+def test_character_spec_languages_defaults_empty():
+    from aose.models import CharacterSpec, ClassEntry
+    spec = CharacterSpec(
+        name="X", abilities={}, race_id="human",
+        classes=[ClassEntry(class_id="fighter")], alignment="law",
+    )
+    assert spec.languages == []
