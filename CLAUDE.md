@@ -61,10 +61,24 @@ override. Changing a rule mid-wizard applies targeted downstream clears
 Every flag in `RuleSet` is integrated end-to-end. The settings page never
 renders a "pending" badge — a regression test guards this.
 
-## Current state (2026-05-29)
+## Current state (2026-06-02)
 
-Spell selection just landed (11-task plan) on `feature/spell-selection`.
-All 577 tests pass. Magic items landed before it (18-task plan, on `main`).
+On-sheet play state just landed (9-task plan, on `main`). All 768 tests pass.
+
+- **On-sheet play state** — current HP via `CharacterSpec.damage_taken`
+  (current = `max(0, max_hp − damage_taken)`, dead derived from current 0;
+  `aose/engine/hp.py` gains `current_hp`/`is_dead`/`apply_damage`/`apply_healing`/
+  `set_current_hp`). Prepared spells are now `ClassEntry.slots: list[SpellSlot]`
+  (spell + reversed + spent), replacing the flat `prepared`; slot ops live in
+  `aose/engine/spells.py` (`assign_slot`/`cast_slot`/`restore_slot`/`clear_slot`/
+  `restore_all_slots`/`clear_all_slots`). Sheet routes: `/hp/{damage,heal,set}`,
+  `/spells/{assign,cast,restore,clear}`, `/rest/{night,full-day}` (full-day adds
+  1d3 healing; rest blocked when dead). Arcane reversed is fixed at memorize
+  time; divine reversed is a cast-time button only (not stored). Spec/plan:
+  `docs/superpowers/{specs,plans}/2026-06-02-on-sheet-character-state*`.
+
+Previous: Spell selection (11-task plan) on `feature/spell-selection`.
+Magic items (18-task plan) on `main`.
 
 Key concepts now live:
 

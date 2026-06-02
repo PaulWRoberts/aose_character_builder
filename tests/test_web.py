@@ -31,8 +31,8 @@ def test_sheet_renders(client):
     assert "Dwarf" in body
     assert "Fighter 1" in body
     assert "Lawful" in body
-    # Combat block
-    assert ">8<" in body  # max HP
+    # Combat block — current_hp / max_hp format (damage_taken=0 → current=max)
+    assert "8 / 8" in body  # current HP / max HP
     # THAC0 (default ruleset is descending AC)
     assert "THAC0" in body
     assert "19" in body
