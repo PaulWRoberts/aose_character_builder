@@ -61,3 +61,21 @@ def test_drain_one_level_midpoint_lands_in_new_band(data):
     assert e.level == 2
     # halfway between fighter L2 (2000) and L3 (4000) thresholds
     assert e.xp == 3000
+
+
+def test_drain_zero_levels_raises(data):
+    spec = _spec(level=3, xp=8000)
+    with pytest.raises(ValueError, match="at least 1"):
+        energy_drain(spec, data, levels=0, xp_mode="new_min")
+
+
+def test_drain_unknown_xp_mode_raises(data):
+    spec = _spec(level=3, xp=8000)
+    with pytest.raises(ValueError, match="unknown xp_mode"):
+        energy_drain(spec, data, levels=1, xp_mode="bogus")
+
+
+def test_drain_midpoint_multi_level_raises(data):
+    spec = _spec(level=3, xp=8000)
+    with pytest.raises(ValueError, match="single-level drain"):
+        energy_drain(spec, data, levels=2, xp_mode="midpoint")
