@@ -152,3 +152,55 @@ def test_drain_trims_inaccessible_spells(data):
     assert lvl2 not in e.spellbook         # 2nd-level spell no longer accessible
     assert lvl1 in e.spellbook
     assert all(slot.level == 1 for slot in e.slots)   # 2nd-level slot dropped
+
+
+# ── Route tests ────────────────────────────────────────────────────────────
+
+@pytest.fixture
+def client(tmp_path):
+    characters_dir = tmp_path / "characters"
+    drafts_dir = tmp_path / "drafts"
+    examples_dir = tmp_path / "examples"
+    examples_dir.mkdir()
+    settings_path = tmp_path / "settings.json"
+    save_settings(settings_path, RuleSet())
+    app = create_app(
+        data_dir=DATA_DIR,
+        characters_dir=characters_dir,
+        drafts_dir=drafts_dir,
+        examples_dir=examples_dir,
+        settings_path=settings_path,
+    )
+    c = TestClient(app, follow_redirects=False)
+    c._characters_dir = characters_dir
+    return c
+
+
+def _seed(client, **overrides):
+    spec = _spec(**overrides)
+    save_character("test", spec, client._characters_dir)
+    return spec
+
+
+def test_energy_drain_route_reduces_level(client):
+    _seed(client, level=3, xp=8000, hp_rolls=[8, 5, 6])
+    r = client.post("/character/test/energy-drain",
+                    data={"levels": "1", "xp_mode": "new_min"})
+    assert r.status_code == 303
+    assert r.headers["location"] == "/character/test"
+    spec = load_character("test", client._characters_dir)
+    assert spec.classes[0].level == 2
+    assert spec.classes[0].xp == 2000
+
+
+def test_energy_drain_route_midpoint_multi_level_400s(client):
+    _seed(client, level=3, xp=8000)
+    r = client.post("/character/test/energy-drain",
+                    data={"levels": "2", "xp_mode": "midpoint"})
+    assert r.status_code == 400
+
+
+def test_energy_drain_route_missing_character_404s(client):
+    r = client.post("/character/nobody/energy-drain",
+                    data={"levels": "1", "xp_mode": "new_min"})
+    assert r.status_code == 404

@@ -7,6 +7,7 @@ from fastapi.templating import Jinja2Templates
 from aose.characters.storage import list_character_ids, load_character, save_character
 from aose.engine import dice, hp, spells as spell_engine
 from aose.engine.equip import equip as _equip, unequip as _unequip
+from aose.engine.energy_drain import energy_drain as _energy_drain
 from aose.engine.leveling import grant_xp as _grant_xp, level_up as _level_up
 from aose.engine.magic import (
     NoCharges,
@@ -270,6 +271,24 @@ async def level_up_class(request: Request, character_id: str, class_id: str):
     spec = _load_spec_or_404(request, character_id)
     try:
         _level_up(spec, request.app.state.game_data, class_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/energy-drain")
+async def energy_drain_route(request: Request, character_id: str,
+                             levels: int = Form(...),
+                             xp_mode: str = Form("new_min")):
+    """Permanently drain experience levels LIFO (GM action). Removes the
+    matching Hit Dice and now-inaccessible spells, resets XP per ``xp_mode``,
+    and kills the character if the loss would drop them below level 1.
+    Returns 400 on invalid input (levels < 1, unknown xp_mode, or midpoint
+    with more than one level)."""
+    spec = _load_spec_or_404(request, character_id)
+    try:
+        _energy_drain(spec, request.app.state.game_data, levels, xp_mode)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     save_character(character_id, spec, request.app.state.characters_dir)
