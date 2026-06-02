@@ -46,5 +46,40 @@
         {% endfor %}
         </tbody>
     </table>
-    <button type="submit" class="primary">Next: Choose Alignment &rarr;</button>
+    <p id="adjust-balance" class="muted" aria-live="polite"></p>
+    <button type="submit" id="adjust-next" class="primary">Next: Choose Alignment &rarr;</button>
 </form>
+
+<script>
+(function () {
+    var lowers = Array.prototype.slice.call(document.querySelectorAll('.adjust-lower'));
+    var raises = Array.prototype.slice.call(document.querySelectorAll('.adjust-raise'));
+    var tally = document.getElementById('adjust-balance');
+    var next = document.getElementById('adjust-next');
+    if (!tally || !next) { return; }
+
+    function sum(els) {
+        return els.reduce(function (acc, el) { return acc + (parseInt(el.value, 10) || 0); }, 0);
+    }
+
+    function recompute() {
+        var freed = sum(lowers);
+        var spent = sum(raises);
+        var balanced = freed === 2 * spent;
+        next.disabled = !balanced;
+        if (freed === 0 && spent === 0) {
+            tally.textContent = 'No adjustments — leave as is, or trade points to raise a prime.';
+        } else if (balanced) {
+            tally.textContent = 'Balanced: ' + freed + ' points freed buy ' + spent + ' raised.';
+        } else {
+            tally.textContent = 'Unbalanced: ' + freed + ' points freed, ' + spent +
+                ' raised (need exactly 2 freed per 1 raised).';
+        }
+    }
+
+    lowers.concat(raises).forEach(function (el) {
+        el.addEventListener('change', recompute);
+    });
+    recompute();
+})();
+</script>
