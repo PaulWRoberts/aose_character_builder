@@ -5,7 +5,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from aose.characters import load_character, load_draft, save_character, save_draft
-from aose.models import CharacterSpec, ClassEntry, RuleSet
+from aose.models import CharacterSpec, ClassEntry, RuleSet, SpellSlot
 from aose.web.app import create_app
 
 PROJECT_ROOT = Path(__file__).parent.parent
@@ -29,13 +29,13 @@ def client(tmp_path):
     return c
 
 
-def _save_mu(client, spellbook=None, prepared=None, advanced=False):
+def _save_mu(client, spellbook=None, slots=None, advanced=False):
     spec = CharacterSpec(
         name="Mu", abilities={"STR": 10, "INT": 13, "WIS": 10,
                               "DEX": 10, "CON": 10, "CHA": 10},
         race_id="human",
         classes=[ClassEntry(class_id="magic_user", level=1, hp_rolls=[3],
-                            spellbook=spellbook or [], prepared=prepared or [])],
+                            spellbook=spellbook or [], slots=slots or [])],
         alignment="neutral", ruleset=RuleSet(advanced_spell_books=advanced),
     )
     save_character("mu", spec, client._characters_dir)
@@ -51,23 +51,6 @@ def test_sheet_learn_route(client):
     assert spec.classes[0].spellbook == ["magic_user_magic_missile"]
 
 
-def test_sheet_prepare_and_unprepare(client):
-    _save_mu(client, spellbook=["magic_user_magic_missile"])
-    client.post("/character/mu/spells/prepare",
-                data={"class_id": "magic_user", "spell_id": "magic_user_magic_missile"})
-    assert load_character("mu", client._characters_dir).classes[0].prepared == ["magic_user_magic_missile"]
-    client.post("/character/mu/spells/unprepare",
-                data={"class_id": "magic_user", "spell_id": "magic_user_magic_missile"})
-    assert load_character("mu", client._characters_dir).classes[0].prepared == []
-
-
-def test_sheet_prepare_over_cap_400(client):
-    _save_mu(client, spellbook=["magic_user_magic_missile"], prepared=["magic_user_magic_missile"])
-    r = client.post("/character/mu/spells/prepare",
-                    data={"class_id": "magic_user", "spell_id": "magic_user_magic_missile"})
-    assert r.status_code == 400
-
-
 def test_sheet_forget_route(client):
     _save_mu(client, spellbook=["magic_user_magic_missile"])
     client.post("/character/mu/spells/forget",
@@ -76,7 +59,8 @@ def test_sheet_forget_route(client):
 
 
 def test_sheet_renders_spells_section(client):
-    _save_mu(client, spellbook=["magic_user_magic_missile"], prepared=["magic_user_magic_missile"])
+    _save_mu(client, spellbook=["magic_user_magic_missile"],
+             slots=[SpellSlot(level=1, spell_id="magic_user_magic_missile")])
     r = client.get("/character/mu")
     assert r.status_code == 200
     assert "Magic Missile" in r.text

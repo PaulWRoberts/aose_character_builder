@@ -599,15 +599,17 @@ async def sheet_spell_forget(request: Request, character_id: str,
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
-@router.post("/character/{character_id}/spells/prepare")
-async def sheet_spell_prepare(request: Request, character_id: str,
-                              class_id: str = Form(...), spell_id: str = Form(...)):
+@router.post("/character/{character_id}/spells/assign")
+async def sheet_spell_assign(request: Request, character_id: str,
+                             class_id: str = Form(...), level: int = Form(...),
+                             spell_id: str = Form(...), reversed: str = Form("false")):
     spec = _load_spec_or_404(request, character_id)
     data = request.app.state.game_data
     idx = _find_class_entry(spec, class_id)
+    rev = reversed.lower() in ("true", "1", "on", "yes")
     try:
-        spec.classes[idx] = spell_engine.prepare(
-            spec.classes[idx], data.classes[class_id], data, spell_id,
+        spec.classes[idx] = spell_engine.assign_slot(
+            spec.classes[idx], data.classes[class_id], data, level, spell_id, rev,
         )
     except ValueError as e:
         raise HTTPException(400, str(e))
@@ -615,13 +617,39 @@ async def sheet_spell_prepare(request: Request, character_id: str,
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
-@router.post("/character/{character_id}/spells/unprepare")
-async def sheet_spell_unprepare(request: Request, character_id: str,
-                                class_id: str = Form(...), spell_id: str = Form(...)):
+@router.post("/character/{character_id}/spells/cast")
+async def sheet_spell_cast(request: Request, character_id: str,
+                           class_id: str = Form(...), slot_index: int = Form(...)):
     spec = _load_spec_or_404(request, character_id)
     idx = _find_class_entry(spec, class_id)
     try:
-        spec.classes[idx] = spell_engine.unprepare(spec.classes[idx], spell_id)
+        spec.classes[idx] = spell_engine.cast_slot(spec.classes[idx], slot_index)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/spells/restore")
+async def sheet_spell_restore(request: Request, character_id: str,
+                              class_id: str = Form(...), slot_index: int = Form(...)):
+    spec = _load_spec_or_404(request, character_id)
+    idx = _find_class_entry(spec, class_id)
+    try:
+        spec.classes[idx] = spell_engine.restore_slot(spec.classes[idx], slot_index)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/spells/clear")
+async def sheet_spell_clear(request: Request, character_id: str,
+                            class_id: str = Form(...), slot_index: int = Form(...)):
+    spec = _load_spec_or_404(request, character_id)
+    idx = _find_class_entry(spec, class_id)
+    try:
+        spec.classes[idx] = spell_engine.clear_slot(spec.classes[idx], slot_index)
     except ValueError as e:
         raise HTTPException(400, str(e))
     save_character(character_id, spec, request.app.state.characters_dir)
