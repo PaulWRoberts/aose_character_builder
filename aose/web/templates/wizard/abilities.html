@@ -1,32 +1,48 @@
 <h2>Step 1: Abilities</h2>
-<p class="muted">Rolled 3d6 in order — these scores are fixed for this character.</p>
+
+{% if not abilities_rolled %}
+<p class="muted">Roll <strong>3d6 in order</strong> for your six ability scores.
+   Once rolled they're fixed for this character.</p>
+<form method="post" action="/wizard/{{ draft_id }}/abilities/roll" class="inline-form">
+    <button type="submit" class="primary">Roll 3d6</button>
+</form>
+{% else %}
+<p class="muted">Rolled 3d6 in order.</p>
 
 {% if subpar %}
 <p class="creation-warning">
     <strong>Sub-par character:</strong> all six scores are 8 or lower. The rules
-    let you start over — use <em>Cancel</em> to abandon this character and begin a
-    new one if you'd like a fresh set of rolls. You may also proceed as-is.
+    let you start over &mdash; use <em>Roll again</em> below for a fresh set, or
+    proceed as-is.
 </p>
 {% endif %}
 {% if rock_bottom %}
 <p class="creation-note">
-    {% for name in rock_bottom %}{{ name }} is 3 — extremely low.{% if not loop.last %} {% endif %}{% endfor %}
+    {% for name in rock_bottom %}{{ name }} is 3 &mdash; extremely low.{% if not loop.last %} {% endif %}{% endfor %}
+    You may use <em>Roll again</em> for a fresh set.
 </p>
 {% endif %}
 
-<form method="post" action="/wizard/{{ draft_id }}/abilities" class="step-form">
-    <table class="abilities-roll">
-        <thead><tr><th>Ability</th><th>Score</th><th>Mod</th></tr></thead>
-        <tbody>
-        {% for ab in ability_rows %}
-            <tr>
-                <td>{{ ab.name }}</td>
-                <td class="num">{{ ab.score }}</td>
-                <td class="num">{{ "%+d"|format(ab.modifier) }}</td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
+<table class="abilities-roll">
+    <thead><tr><th>Ability</th><th>Score</th><th>Mod</th></tr></thead>
+    <tbody>
+    {% for ab in ability_rows %}
+        <tr>
+            <td>{{ ab.name }}</td>
+            <td class="num">{{ ab.score }}</td>
+            <td class="num">{{ "%+d"|format(ab.modifier) }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
 
+{% if can_reroll %}
+<form method="post" action="/wizard/{{ draft_id }}/abilities/roll" class="inline-form">
+    <button type="submit">Roll again</button>
+</form>
+{% endif %}
+
+<form method="post" action="/wizard/{{ draft_id }}/abilities" class="step-form">
     <button type="submit" class="primary">Continue &rarr;</button>
 </form>
+{% endif %}

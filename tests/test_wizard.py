@@ -34,20 +34,25 @@ def _start_draft(client) -> str:
     return parts[1]
 
 
-def test_new_creates_draft_with_abilities(client, tmp_path):
+def test_new_does_not_pre_roll_abilities(client, tmp_path):
     draft_id = _start_draft(client)
     draft = load_draft(draft_id, tmp_path / "drafts")
-    assert set(draft["abilities"].keys()) == {"STR", "INT", "WIS", "DEX", "CON", "CHA"}
-    assert all(3 <= s <= 18 for s in draft["abilities"].values())
+    assert "abilities" not in draft
 
 
-def test_abilities_page_renders(client):
+def test_abilities_page_shows_roll_button_before_rolling(client):
     draft_id = _start_draft(client)
     r = client.get(f"/wizard/{draft_id}/abilities")
     assert r.status_code == 200
     assert "Abilities" in r.text
-    # Reroll affordance is gone — abilities are locked at draft creation.
-    assert "Re-roll" not in r.text
+    assert f'/wizard/{draft_id}/abilities/roll' in r.text
+
+
+def test_abilities_page_shows_scores_after_rolling(client):
+    draft_id = _start_draft(client)
+    client.post(f"/wizard/{draft_id}/abilities/roll")
+    r = client.get(f"/wizard/{draft_id}/abilities")
+    assert "Continue" in r.text
 
 
 def _override_abilities(tmp_path, draft_id, abilities):
