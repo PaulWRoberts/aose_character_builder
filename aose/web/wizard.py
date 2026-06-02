@@ -171,14 +171,14 @@ def _casts_at_level_1(cls) -> bool:
 def _clear_after_abilities(draft: dict[str, Any]) -> None:
     for k in ("race_id", "class_id", "class_ids", "ability_adjustments",
               "hp_roll", "hp_rolls", "proficiencies",
-              "spellcasting", "spellbooks", "spells_done"):
+              "spellcasting", "spellbooks", "spells_done", "languages"):
         draft.pop(k, None)
 
 
 def _clear_after_race(draft: dict[str, Any]) -> None:
     for k in ("class_id", "class_ids", "ability_adjustments",
               "hp_roll", "hp_rolls", "proficiencies",
-              "spellcasting", "spellbooks", "spells_done"):
+              "spellcasting", "spellbooks", "spells_done", "languages"):
         draft.pop(k, None)
 
 
@@ -186,7 +186,7 @@ def _clear_after_class(draft: dict[str, Any]) -> None:
     # A class change can invalidate the chosen alignment (e.g. picking paladin
     # after choosing chaos). name and secondary_skill don't depend on class.
     for k in ("ability_adjustments", "hp_roll", "hp_rolls", "proficiencies",
-              "spellcasting", "spellbooks", "spells_done", "alignment"):
+              "spellcasting", "spellbooks", "spells_done", "alignment", "languages"):
         draft.pop(k, None)
 
 
@@ -375,6 +375,7 @@ def _apply_rule_changes(draft: dict[str, Any], old_rs: RuleSet, new_rs: RuleSet)
         draft.pop("hp_roll", None)
         draft.pop("hp_rolls", None)
         draft.pop("ability_adjustments", None)
+        draft.pop("languages", None)
 
     if new_rs.weapon_proficiency != old_rs.weapon_proficiency:
         draft.pop("proficiencies", None)
@@ -745,6 +746,7 @@ async def post_adjust(request: Request, draft_id: str):
         raise HTTPException(400, str(e))
 
     draft["ability_adjustments"] = adjustments
+    draft.pop("languages", None)  # final INT may have changed
     save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/{_next_incomplete_step(draft)}")
 
