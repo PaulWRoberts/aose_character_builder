@@ -1033,3 +1033,61 @@ def test_owned_magic_panel_renders(tmp_path):
     assert "/equipment/equip-magic" in page
     assert "/equipment/use-charge" in page
     assert "/equipment/magic-note" in page
+
+
+def test_effective_abilities_temp_stacks_with_magic_set():
+    from aose.engine.magic import effective_abilities
+    from aose.models import Ability, MagicItemInstance
+    fake = _fake_magic_data()
+    spec = _minimal_spec(
+        abilities={"STR": 9, "INT": 12, "WIS": 11, "DEX": 13, "CON": 12, "CHA": 10},
+        magic_items=[MagicItemInstance(instance_id="i", catalog_id="gauntlets", equipped=True)],
+        temp_ability_modifiers={"STR": -2},   # 18 (set) - 2 = 16
+    )
+    assert effective_abilities(spec, fake)[Ability.STR] == 16
+
+
+def test_effective_abilities_temp_clamps_high():
+    from aose.engine.magic import effective_abilities
+    from aose.models import Ability
+    fake = _fake_magic_data()
+    spec = _minimal_spec(
+        abilities={"STR": 17, "INT": 12, "WIS": 11, "DEX": 13, "CON": 12, "CHA": 10},
+        temp_ability_modifiers={"STR": 5},    # 22 -> clamp 18
+    )
+    assert effective_abilities(spec, fake)[Ability.STR] == 18
+
+
+def test_effective_abilities_temp_clamps_low():
+    from aose.engine.magic import effective_abilities
+    from aose.models import Ability
+    fake = _fake_magic_data()
+    spec = _minimal_spec(
+        abilities={"STR": 6, "INT": 12, "WIS": 11, "DEX": 13, "CON": 12, "CHA": 10},
+        temp_ability_modifiers={"STR": -10},  # -4 -> clamp 3
+    )
+    assert effective_abilities(spec, fake)[Ability.STR] == 3
+
+
+def test_set_temp_ability_modifier_sets_and_replaces():
+    from aose.engine.magic import set_temp_ability_modifier
+    from aose.models import Ability
+    temp = set_temp_ability_modifier({}, Ability.STR, -2)
+    assert temp == {Ability.STR: -2}
+    temp = set_temp_ability_modifier(temp, Ability.STR, 3)   # replaces, not stacks
+    assert temp == {Ability.STR: 3}
+
+
+def test_set_temp_ability_modifier_zero_clears_key():
+    from aose.engine.magic import set_temp_ability_modifier
+    from aose.models import Ability
+    temp = set_temp_ability_modifier({Ability.STR: -2, Ability.DEX: 1}, Ability.STR, 0)
+    assert temp == {Ability.DEX: 1}
+
+
+def test_set_temp_ability_modifier_does_not_mutate_input():
+    from aose.engine.magic import set_temp_ability_modifier
+    from aose.models import Ability
+    original = {Ability.STR: -2}
+    set_temp_ability_modifier(original, Ability.DEX, 1)
+    assert original == {Ability.STR: -2}

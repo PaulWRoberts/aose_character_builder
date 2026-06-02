@@ -67,14 +67,36 @@ def active_modifiers(spec: CharacterSpec, data: GameData) -> list[Modifier]:
 
 
 def effective_abilities(spec: CharacterSpec, data: GameData) -> dict[Ability, int]:
-    """``spec.abilities`` with every ``ability:*`` modifier applied."""
+    """``spec.abilities`` with magic ``ability:*`` modifiers and temporary
+    per-ability modifiers applied, then clamped to [3, 18].
+
+    Order per ability: base -> magic modifiers (unclamped, as authored in
+    seed data) -> + temp delta -> clamp(3, 18).  Clamping applies to every
+    ability so an effective score can never sit outside the legal range.
+    """
     mods = active_modifiers(spec, data)
-    scores = dict(spec.abilities)
+    temp = spec.temp_ability_modifiers
+    scores: dict[Ability, int] = {}
     for ab in Ability:
+        base = spec.abilities[ab]
         target = f"ability:{ab.value}"
-        if any(m.target == target for m in mods):
-            scores[ab] = apply_modifiers(scores[ab], mods, target)
+        val = apply_modifiers(base, mods, target) if any(m.target == target for m in mods) else base
+        val += temp.get(ab, 0)
+        scores[ab] = max(3, min(18, val))
     return scores
+
+
+def set_temp_ability_modifier(temp: dict[Ability, int], ability: Ability,
+                              value: int) -> dict[Ability, int]:
+    """Return a new temp-modifier dict with ``ability`` set to ``value``.
+
+    A single modifier per ability (replaces any prior).  ``value == 0`` removes
+    the key so only meaningful modifiers are stored.  Does not mutate ``temp``.
+    """
+    updated = {k: v for k, v in temp.items() if k != ability}
+    if value != 0:
+        updated[ability] = value
+    return updated
 
 
 def carry_capacity_bonus(spec: CharacterSpec, data: GameData) -> int:
