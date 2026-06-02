@@ -10,7 +10,7 @@
      - magic_items_view    list[MagicItemView]  (instances + inventory-magic rows)
 #}
 
-<div data-equipment-url-prefix="{{ target_url_prefix }}">
+<div>
 <div class="equipment-header">
     <span class="gold-display">Gold: <strong>{{ gold }} gp</strong></span>
 
@@ -76,7 +76,7 @@
 
 {% macro inv_table(rows, target_url_prefix, state, label, weight_note) %}
 {% if rows %}
-<h4 class="inv-section-head" data-target="{{ state }}">{{ label }} {% if weight_note %}<span class="muted small">{{ weight_note }}</span>{% endif %}</h4>
+<h4 class="inv-section-head">{{ label }} {% if weight_note %}<span class="muted small">{{ weight_note }}</span>{% endif %}</h4>
 <table class="inventory-table">
     <thead>
         <tr>
@@ -88,7 +88,7 @@
     </thead>
     <tbody>
     {% for row in rows %}
-        <tr class="inv-row" draggable="true" data-source="{{ state }}" data-item-id="{{ row.id }}">
+        <tr class="inv-row" data-item-id="{{ row.id }}">
             <td>{{ row.name }}</td>
             <td class="num">{{ row.count }}</td>
             <td class="num">{{ (row.weight_cn * row.count) }}&nbsp;cn</td>
@@ -103,7 +103,7 @@
 {% macro container_table(state, label) %}
 {% set bags = inventory_view.containers | selectattr("state", "equalto", state) | list %}
 {% if bags %}
-<h4 class="inv-section-head" data-target="{{ state }}">{{ label }} containers</h4>
+<h4 class="inv-section-head">{{ label }} containers</h4>
 <table class="inventory-table containers-table">
     <thead>
         <tr>
@@ -117,8 +117,7 @@
     {% for c in bags %}
         <tr class="container-row"
             data-instance-id="{{ c.instance_id }}"
-            data-state="{{ c.state }}"
-            draggable="true">
+            data-state="{{ c.state }}">
             <td>
                 <button type="button" class="container-toggle" aria-expanded="true"
                         aria-controls="cnt-{{ c.instance_id }}">&#9662;</button>
@@ -156,9 +155,7 @@
         {% for row in c.contents %}
         <tr class="container-child" id="cnt-{{ c.instance_id }}"
             data-instance-id="{{ c.instance_id }}"
-            data-item-id="{{ row.id }}"
-            data-source="container:{{ c.instance_id }}"
-            draggable="true">
+            data-item-id="{{ row.id }}">
             <td><span class="indent">&#8627;</span> {{ row.name }}</td>
             <td class="num">{{ row.count }}</td>
             <td class="num">{{ row.weight_cn * row.count }} cn</td>
