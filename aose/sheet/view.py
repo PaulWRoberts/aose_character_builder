@@ -13,6 +13,7 @@ from aose.engine.encumbrance import (
     encumbrance_table,
     weight_band,
 )
+from aose.engine.languages import broken_speech, known_languages
 from aose.engine.leveling import ClassAdvancement, all_advancement
 from aose.engine.magic import effective_abilities
 from aose.models import Ability, CharacterSpec, MagicItem, MagicItemInstance, RuleSet
@@ -152,6 +153,7 @@ class CharacterSheet(BaseModel):
     saves: list[SheetSave]
 
     languages: list[str]
+    broken_speech: bool              # INT 3 — speaks only in broken sentences
     movement_base: int               # effective exploration move (after encumbrance)
     movement_encounter: int          # = movement_base // 3
     movement_unencumbered: int       # race base, for "before encumbrance" reference
@@ -504,7 +506,8 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
         thac0=attack_bonus.thac0(spec, data),
         attack_bonus=attack_bonus.attack_bonus(spec, data),
         saves=save_rows,
-        languages=race.languages,
+        languages=known_languages(spec.languages, race, spec.alignment, data.languages),
+        broken_speech=broken_speech(spec.abilities[Ability.INT]),
         movement_base=effective_movement(spec, data),
         movement_encounter=effective_movement(spec, data) // 3,
         movement_unencumbered=race.base_movement,

@@ -247,6 +247,9 @@
             <section class="section">
                 <h2>Languages</h2>
                 <p>{{ sheet.languages | join(", ") if sheet.languages else "—" }}</p>
+                {% if sheet.broken_speech %}
+                <p class="muted small">Speaks only in broken sentences (INT 3).</p>
+                {% endif %}
             </section>
 
             {% if sheet.secondary_skill %}

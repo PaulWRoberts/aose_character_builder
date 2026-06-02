@@ -90,3 +90,40 @@ def test_build_sheet_enabled_rules_listed(data):
     assert "Ascending AC" in sheet.enabled_optional_rules
     assert "Secondary Skills" in sheet.enabled_optional_rules
     assert "Multiclassing" not in sheet.enabled_optional_rules
+
+
+def test_sheet_composes_native_alignment_and_chosen_languages():
+    from pathlib import Path
+    from aose.data.loader import GameData
+    from aose.models import CharacterSpec, ClassEntry
+    from aose.sheet.view import build_sheet
+
+    data = GameData.load(Path(__file__).parent.parent / "data")
+    spec = CharacterSpec(
+        name="Linguist",
+        abilities={"STR": 10, "INT": 16, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
+        race_id="human", classes=[ClassEntry(class_id="fighter")],
+        alignment="law", languages=["Dragon", "Ogre"],
+    )
+    sheet = build_sheet(spec, data)
+    assert "common" in sheet.languages          # native
+    assert "Lawful" in sheet.languages          # alignment tongue
+    assert "Dragon" in sheet.languages and "Ogre" in sheet.languages
+    assert sheet.broken_speech is False
+
+
+def test_sheet_flags_broken_speech_at_int_3():
+    from pathlib import Path
+    from aose.data.loader import GameData
+    from aose.models import CharacterSpec, ClassEntry
+    from aose.sheet.view import build_sheet
+
+    data = GameData.load(Path(__file__).parent.parent / "data")
+    spec = CharacterSpec(
+        name="Grog",
+        abilities={"STR": 13, "INT": 3, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
+        race_id="human", classes=[ClassEntry(class_id="fighter")],
+        alignment="neutral",
+    )
+    sheet = build_sheet(spec, data)
+    assert sheet.broken_speech is True
