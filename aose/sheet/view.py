@@ -114,10 +114,22 @@ class SpellEntryView(BaseModel):
     reversible: bool
 
 
+class SlotView(BaseModel):
+    index: int          # index into ClassEntry.slots (for cast/clear/restore)
+    spell_id: str
+    name: str
+    display_name: str   # reverse name when reversed
+    level: int
+    reversible: bool
+    reversed: bool
+    spent: bool
+
+
 class SpellLevelGroup(BaseModel):
     level: int
-    slots: int
-    prepared: list[SpellEntryView]
+    cap: int                  # memorizable slots at this level
+    free: int                 # cap − filled
+    slots: list[SlotView]     # filled slots at this level
 
 
 class SpellClassView(BaseModel):
@@ -126,7 +138,7 @@ class SpellClassView(BaseModel):
     caster_type: str            # "arcane" | "divine"
     can_learn: bool             # arcane only
     known: list[SpellEntryView]
-    prepared_groups: list[SpellLevelGroup]
+    slot_groups: list[SpellLevelGroup]
     learnable: list[SpellEntryView]
 
 
@@ -144,6 +156,8 @@ class CharacterSheet(BaseModel):
     abilities: list[AbilityRow]
 
     max_hp: int
+    current_hp: int
+    is_dead: bool
     ac_descending: int
     ac_ascending: int
     use_ascending: bool
@@ -431,10 +445,17 @@ def _spell_entry(spell) -> SpellEntryView:
     )
 
 
+def _slot_display_name(spell, reversed: bool) -> str:
+    if reversed:
+        return spell.reverse_name or f"{spell.name} (reversed)"
+    return spell.name
+
+
 def spells_view(spec: CharacterSpec, data: GameData) -> list[SpellClassView]:
     """One block per casting class entry; shared by the live sheet and the
     wizard review.  Arcane blocks expose learnable spells; divine know their
-    whole accessible list."""
+    whole accessible list.  Memorized spells are grouped into per-level slot
+    rows (filled slots + free count)."""
     out: list[SpellClassView] = []
     for entry in spec.classes:
         cls = data.classes[entry.class_id]
@@ -442,22 +463,36 @@ def spells_view(spec: CharacterSpec, data: GameData) -> list[SpellClassView]:
         if ctype is None:
             continue
         known = spell_engine.known_spells(entry, cls, data)
-        slots = spell_engine.memorizable_slots(entry, cls)
+        caps = spell_engine.memorizable_slots(entry, cls)
         groups: list[SpellLevelGroup] = []
-        for level in sorted(slots):
-            prepared_here = [
-                _spell_entry(data.spells[s]) for s in entry.prepared
-                if s in data.spells and data.spells[s].level == level
+        for level in sorted(caps):
+            filled = [
+                SlotView(
+                    index=i,
+                    spell_id=slot.spell_id,
+                    name=data.spells[slot.spell_id].name,
+                    display_name=_slot_display_name(data.spells[slot.spell_id], slot.reversed),
+                    level=slot.level,
+                    reversible=data.spells[slot.spell_id].reversible,
+                    reversed=slot.reversed,
+                    spent=slot.spent,
+                )
+                for i, slot in enumerate(entry.slots)
+                if slot.spell_id is not None
+                and slot.level == level
+                and slot.spell_id in data.spells
             ]
-            groups.append(SpellLevelGroup(level=level, slots=slots[level],
-                                          prepared=prepared_here))
+            groups.append(SpellLevelGroup(
+                level=level, cap=caps[level],
+                free=caps[level] - len(filled), slots=filled,
+            ))
         out.append(SpellClassView(
             class_id=entry.class_id,
             class_name=cls.name,
             caster_type=ctype,
             can_learn=(ctype == "arcane"),
             known=[_spell_entry(s) for s in known],
-            prepared_groups=groups,
+            slot_groups=groups,
             learnable=[_spell_entry(s) for s in spell_engine.learnable_spells(entry, cls, data)],
         ))
     return out
@@ -500,6 +535,8 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
         advancement=advancement_rows,
         abilities=abilities,
         max_hp=hp.max_hp(spec, data),
+        current_hp=hp.current_hp(spec, data),
+        is_dead=hp.is_dead(spec, data),
         ac_descending=desc_ac,
         ac_ascending=asc_ac,
         use_ascending=spec.ruleset.ascending_ac,

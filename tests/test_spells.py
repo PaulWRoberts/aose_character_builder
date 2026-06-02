@@ -254,6 +254,30 @@ def test_spells_view_arcane_shape():
     assert any(s.id == "magic_user_read_magic" for s in block.learnable)
 
 
+def test_spells_view_groups_slots_by_level():
+    from aose.data.loader import GameData
+    from aose.models import SpellSlot
+    from aose.sheet.view import spells_view
+    data = GameData.load(DATA_DIR)
+    spec = _spec(
+        "magic_user",
+        spellbook=["magic_user_magic_missile"],
+        slots=[SpellSlot(level=1, spell_id="magic_user_magic_missile", spent=True)],
+    )
+    blocks = spells_view(spec, data)
+    block = blocks[0]
+    assert block.caster_type == "arcane"
+    grp = block.slot_groups[0]
+    assert grp.level == 1
+    assert grp.cap == 1
+    assert grp.free == 0
+    assert len(grp.slots) == 1
+    sv = grp.slots[0]
+    assert sv.spell_id == "magic_user_magic_missile"
+    assert sv.spent is True
+    assert sv.index == 0
+
+
 def test_spells_view_divine_shape():
     from aose.data.loader import GameData
     from aose.sheet.view import build_sheet
