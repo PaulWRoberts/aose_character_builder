@@ -80,7 +80,6 @@ from aose.models import (
     RuleSet,
 )
 from aose.sheet.view import magic_items_view
-from aose.web.move_dispatch import dispatch_move
 from aose.web.settings_routes import (
     ADVANCED_OPTIONS_GROUP,
     CHOICE_GROUPS,
@@ -1663,43 +1662,6 @@ async def wiz_magic_note(request: Request, draft_id: str,
     draft["magic_items"] = [m.model_dump() for m in items]
     save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/equipment")
-
-
-@router.post("/{draft_id}/equipment/move")
-async def equipment_move(request: Request, draft_id: str,
-                         source: str = Form(...),
-                         target: str = Form(...),
-                         item_id: str = Form(""),
-                         instance_id: str = Form("")):
-    draft = _load(request, draft_id)
-    game_data = request.app.state.game_data
-
-    class _DraftShim:
-        pass
-
-    shim = _DraftShim()
-    shim.inventory = draft.get("inventory", [])
-    shim.stashed = draft.get("stashed", [])
-    shim.equipped = draft.get("equipped", {})
-    shim.equipped_weapons = draft.get("equipped_weapons", [])
-    shim.containers = [ContainerInstance.model_validate(c)
-                       for c in draft.get("containers", [])]
-    classes = [game_data.classes[cid] for cid in _class_ids(draft)
-               if cid in game_data.classes]
-    try:
-        dispatch_move(shim, source, target, item_id, instance_id, game_data,
-                      allowed_weapons=allowed_weapon_ids(classes, game_data),
-                      allowed_armor=allowed_armor_ids(classes, game_data),
-                      allow_shields=shields_allowed(classes))
-    except ValueError as e:
-        raise HTTPException(400, str(e))
-    draft["inventory"] = shim.inventory
-    draft["stashed"] = shim.stashed
-    draft["equipped"] = shim.equipped
-    draft["equipped_weapons"] = shim.equipped_weapons
-    draft["containers"] = [c.model_dump() for c in shim.containers]
-    save_draft(draft_id, draft, request.app.state.drafts_dir)
-    return RedirectResponse(f"/wizard/{draft_id}/equipment", status_code=303)
 
 
 @router.post("/{draft_id}/equipment/remove")
