@@ -55,6 +55,60 @@ def test_abilities_page_shows_scores_after_rolling(client):
     assert "Continue" in r.text
 
 
+def test_roll_stores_per_die_results_on_draft(client, tmp_path):
+    draft_id = _start_draft(client)
+    client.post(f"/wizard/{draft_id}/abilities/roll")
+    draft = load_draft(draft_id, tmp_path / "drafts")
+    dice = draft["ability_dice"]
+    assert set(dice) == set(draft["abilities"])
+    for name, score in draft["abilities"].items():
+        assert len(dice[name]) == 3
+        assert all(1 <= d <= 6 for d in dice[name])
+        assert sum(dice[name]) == score
+
+
+def test_abilities_page_shows_individual_dice(client, tmp_path):
+    draft_id = _start_draft(client)
+    client.post(f"/wizard/{draft_id}/abilities/roll")
+    draft = load_draft(draft_id, tmp_path / "drafts")
+    str_dice = draft["ability_dice"]["STR"]
+    r = client.get(f"/wizard/{draft_id}/abilities")
+    assert " + ".join(str(d) for d in str_dice) in r.text
+
+
+def test_per_die_results_not_persisted_to_character(client, tmp_path):
+    draft_id = _start_draft(client)
+    _override_abilities(tmp_path, draft_id, {
+        "STR": 15, "INT": 11, "WIS": 12, "DEX": 13, "CON": 14, "CHA": 10
+    })
+    client.post(f"/wizard/{draft_id}/abilities", data={})
+    client.post(f"/wizard/{draft_id}/race", data={"race_id": "dwarf"})
+    client.post(f"/wizard/{draft_id}/class", data={"class_id": "fighter"})
+    client.post(f"/wizard/{draft_id}/adjust", data={})
+    client.post(f"/wizard/{draft_id}/hp/roll")
+    client.post(f"/wizard/{draft_id}/hp")
+    client.post(f"/wizard/{draft_id}/identity", data={"name": "Thorin", "alignment": "law"})
+    client.post(f"/wizard/{draft_id}/finalize")
+    char_text = (tmp_path / "characters" / "thorin.json").read_text()
+    assert "ability_dice" not in char_text
+
+
+def test_race_and_class_pages_show_ability_summary(client, tmp_path):
+    draft_id = _start_draft(client)
+    _override_abilities(tmp_path, draft_id, {
+        "STR": 15, "INT": 11, "WIS": 12, "DEX": 13, "CON": 14, "CHA": 10
+    })
+    client.post(f"/wizard/{draft_id}/abilities", data={})
+
+    r = client.get(f"/wizard/{draft_id}/race")
+    assert "ability-strip" in r.text
+    assert "15" in r.text  # STR score visible on the race step
+
+    client.post(f"/wizard/{draft_id}/race", data={"race_id": "dwarf"})
+    r = client.get(f"/wizard/{draft_id}/class")
+    assert "ability-strip" in r.text
+
+
 def _override_abilities(tmp_path, draft_id, abilities):
     draft = load_draft(draft_id, tmp_path / "drafts")
     draft["abilities"] = abilities

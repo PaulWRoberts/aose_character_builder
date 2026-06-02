@@ -25,7 +25,7 @@ from aose.engine.ability_mods import (
 from aose.engine.alignment import allowed_alignments as _allowed_alignments
 from aose.engine import spells as spell_engine
 from aose.engine.dice import (
-    roll_3d6_in_order,
+    roll_3d6_in_order_detailed,
     roll_blessed_hp_sets,
     roll_first_level_hp,
     roll_hp,
@@ -328,9 +328,15 @@ def _seed_draft_abilities(draft: dict[str, Any]) -> None:
 
     Abilities are always 3d6 down the line — there are no alternate methods,
     and the roll is locked once the draft exists.
+
+    The individual dice are stashed in ``draft["ability_dice"]`` (draft-only,
+    never persisted to the character) so the abilities step can show what each
+    die rolled.
     """
-    values = roll_3d6_in_order()
-    draft["abilities"] = dict(zip([a.value for a in ABILITY_ORDER], values))
+    names = [a.value for a in ABILITY_ORDER]
+    dice = roll_3d6_in_order_detailed()
+    draft["abilities"] = {name: sum(d) for name, d in zip(names, dice)}
+    draft["ability_dice"] = {name: d for name, d in zip(names, dice)}
 
 
 @router.get("/new")
@@ -453,11 +459,13 @@ async def get_abilities(request: Request, draft_id: str):
     rolled = "abilities" in draft
     ctx["abilities_rolled"] = rolled
     if rolled:
+        ability_dice = draft.get("ability_dice", {})
         ctx["ability_rows"] = [
             {
                 "name": ab.value,
                 "score": draft["abilities"][ab.value],
                 "modifier": ability_modifier(draft["abilities"][ab.value]),
+                "dice": ability_dice.get(ab.value),
             }
             for ab in ABILITY_ORDER
         ]
@@ -479,6 +487,18 @@ async def post_abilities(request: Request, draft_id: str):
     draft["abilities_confirmed"] = True
     save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/{_next_incomplete_step(draft)}")
+
+
+def _ability_summary(abilities: dict[str, int]) -> list[dict[str, int | str]]:
+    """Six-entry strip (name/score/modifier) for the race & class step header."""
+    return [
+        {
+            "name": ab.value,
+            "score": abilities[ab.value],
+            "modifier": ability_modifier(abilities[ab.value]),
+        }
+        for ab in ABILITY_ORDER
+    ]
 
 
 def _meets_ability_requirements(reqs: dict[Ability, int], abilities: dict[str, int]) -> bool:
@@ -549,6 +569,7 @@ async def get_race(request: Request, draft_id: str):
         })
     ctx = _base_context(request, draft_id, draft, "race")
     ctx["races"] = races
+    ctx["ability_summary"] = _ability_summary(abilities)
     return templates.TemplateResponse(request, "wizard.html", ctx)
 
 
@@ -654,6 +675,7 @@ async def get_class(request: Request, draft_id: str):
     ctx["selected_count"] = len(_class_ids(draft))
     ctx["race_name"] = race_name
     ctx["race_as_class_mode"] = not ruleset.separate_race_class
+    ctx["ability_summary"] = _ability_summary(abilities)
     return templates.TemplateResponse(request, "wizard.html", ctx)
 
 

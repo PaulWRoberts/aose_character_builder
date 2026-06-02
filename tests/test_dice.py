@@ -5,6 +5,7 @@ import pytest
 from aose.engine.dice import (
     roll,
     roll_3d6_in_order,
+    roll_3d6_in_order_detailed,
     roll_hp,
 )
 
@@ -43,6 +44,21 @@ def test_roll_3d6_deterministic_with_seed():
     a = roll_3d6_in_order(random.Random(42))
     b = roll_3d6_in_order(random.Random(42))
     assert a == b
+
+
+def test_roll_3d6_detailed_returns_six_triples():
+    rolls = roll_3d6_in_order_detailed(random.Random(0))
+    assert len(rolls) == 6
+    for dice in rolls:
+        assert len(dice) == 3
+        assert all(1 <= d <= 6 for d in dice)
+
+
+def test_roll_3d6_detailed_sums_match_in_order():
+    seed = 7
+    detailed = roll_3d6_in_order_detailed(random.Random(seed))
+    scores = roll_3d6_in_order(random.Random(seed))
+    assert [sum(dice) for dice in detailed] == scores
 
 
 # ── roll_hp: reroll 1s & 2s ──────────────────────────────────────────────

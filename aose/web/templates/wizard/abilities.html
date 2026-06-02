@@ -24,11 +24,12 @@
 {% endif %}
 
 <table class="abilities-roll">
-    <thead><tr><th>Ability</th><th>Score</th><th>Mod</th></tr></thead>
+    <thead><tr><th>Ability</th><th>Dice</th><th>Score</th><th>Mod</th></tr></thead>
     <tbody>
     {% for ab in ability_rows %}
         <tr>
             <td>{{ ab.name }}</td>
+            <td class="muted">{% if ab.dice %}{{ ab.dice | join(" + ") }}{% endif %}</td>
             <td class="num">{{ ab.score }}</td>
             <td class="num">{{ "%+d"|format(ab.modifier) }}</td>
         </tr>

@@ -476,6 +476,18 @@ button {
 
 .abilities-roll td, .abilities-roll th { padding: 6px 18px; }
 
+.ability-strip {
+    width: auto;
+    margin: 12px 0 18px;
+    border-collapse: collapse;
+}
+.ability-strip th, .ability-strip td {
+    padding: 4px 14px;
+    text-align: center;
+    border: 1px solid var(--border, #ccc);
+}
+.ability-strip th { font-size: 0.85em; text-transform: uppercase; }
+
 .card-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));

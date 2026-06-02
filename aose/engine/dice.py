@@ -22,6 +22,18 @@ def roll_3d6_in_order(rng: Optional[random.Random] = None) -> list[int]:
     return [sum(r.randint(1, 6) for _ in range(3)) for _ in range(6)]
 
 
+def roll_3d6_in_order_detailed(
+    rng: Optional[random.Random] = None,
+) -> list[list[int]]:
+    """Like :func:`roll_3d6_in_order` but keeps the individual dice.
+
+    Returns six lists of three d6 results (the score is their sum). Used by the
+    wizard to show what each die rolled; this detail is draft-only and never
+    persisted to the character."""
+    r = rng or random.Random()
+    return [[r.randint(1, 6) for _ in range(3)] for _ in range(6)]
+
+
 def roll_blessed_hp_sets(
     hit_dice: list[str],
     *,

@@ -1,0 +1,19 @@
+{# Compact strip of the character's six ability scores, shown on the race and
+   class steps to inform the choice. Expects `ability_summary`: a list of
+   {name, score, modifier}. #}
+{% if ability_summary %}
+<table class="ability-strip">
+    <tbody>
+        <tr>
+        {% for ab in ability_summary %}
+            <th>{{ ab.name }}</th>
+        {% endfor %}
+        </tr>
+        <tr>
+        {% for ab in ability_summary %}
+            <td class="num">{{ ab.score }} <span class="muted">({{ "%+d"|format(ab.modifier) }})</span></td>
+        {% endfor %}
+        </tr>
+    </tbody>
+</table>
+{% endif %}

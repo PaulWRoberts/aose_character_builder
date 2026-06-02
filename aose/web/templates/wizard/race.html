@@ -1,6 +1,8 @@
 <h2>Step 2: Choose Race</h2>
 <p class="muted">Greyed-out races require ability scores you don't have.</p>
 
+{% include "wizard/_ability_summary.html" %}
+
 <form method="post" action="/wizard/{{ draft_id }}/race" class="step-form">
     <div class="card-grid">
     {% for race in races %}

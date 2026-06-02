@@ -12,6 +12,8 @@
    Picking a single class is still fine.</p>
 {% endif %}
 
+{% include "wizard/_ability_summary.html" %}
+
 <form method="post" action="/wizard/{{ draft_id }}/class" class="step-form">
     <div class="card-grid">
     {% for cls in classes %}
