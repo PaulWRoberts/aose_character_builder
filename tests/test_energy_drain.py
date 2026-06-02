@@ -125,3 +125,30 @@ def test_drain_exhausting_all_classes_kills_multi(data):
     assert all(len(e.hp_rolls) == 1 for e in spec.classes)
     from aose.engine.hp import is_dead
     assert is_dead(spec, data) is True
+
+
+def _arcane_spell_at_level(data, level):
+    """An arbitrary magic_user spell id at the given spell level, from seed data."""
+    for s in sorted(data.spells.values(), key=lambda s: s.id):
+        if s.level == level and "magic_user" in s.spell_lists:
+            return s.id
+    raise AssertionError(f"no magic_user level-{level} spell in seed data")
+
+
+def test_drain_trims_inaccessible_spells(data):
+    from aose.models import SpellSlot
+    lvl1 = _arcane_spell_at_level(data, 1)
+    lvl2 = _arcane_spell_at_level(data, 2)
+    # Magic-user level 3 can cast 2nd-level spells; level 1 cannot.
+    spec = _spec(level=3, xp=99000, hp_rolls=[4, 3, 2])
+    spec.classes[0] = spec.classes[0].model_copy(update={
+        "class_id": "magic_user",
+        "spellbook": [lvl1, lvl2],
+        "slots": [SpellSlot(level=1, spell_id=lvl1), SpellSlot(level=2, spell_id=lvl2)],
+    })
+    energy_drain(spec, data, levels=2, xp_mode="new_min")  # -> magic_user L1
+    e = spec.classes[0]
+    assert e.level == 1
+    assert lvl2 not in e.spellbook         # 2nd-level spell no longer accessible
+    assert lvl1 in e.spellbook
+    assert all(slot.level == 1 for slot in e.slots)   # 2nd-level slot dropped
