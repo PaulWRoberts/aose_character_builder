@@ -341,3 +341,19 @@ def test_adjust_context_legal_options(data):
     assert [o["final"] for o in rows["INT"]["lower_options"]] == [13, 11, 9]
     assert [o["amount"] for o in rows["INT"]["lower_options"]] == [0, 2, 4]
     assert rows["INT"]["raise_options"] == []  # not a prime → not raisable
+
+
+# ── Task 3: template renders selects ──────────────────────────────────────
+
+def test_adjust_get_renders_select_options(tmp_path):
+    client = _make_client(tmp_path)
+    draft_id = _drive_to_adjust(client)  # STR/INT/WIS = 13, fighter
+    r = client.get(f"/wizard/{draft_id}/adjust")
+    assert r.status_code == 200
+    # INT lowerable: even resulting scores are options, odd ones never are.
+    assert '<select name="lower_INT"' in r.text
+    assert '<option value="2"' in r.text   # → 11
+    assert '<option value="4"' in r.text   # → 9
+    # STR raisable via a select, not a freeform number input.
+    assert '<select name="raise_STR"' in r.text
+    assert 'type="number"' not in r.text

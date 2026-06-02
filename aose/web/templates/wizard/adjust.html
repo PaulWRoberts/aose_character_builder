@@ -19,14 +19,26 @@
                 <td class="num">{{ row.score }}</td>
                 <td class="num">
                     {% if row.raisable %}
-                    <input type="number" name="raise_{{ row.name }}" min="0"
-                           value="{{ row.raise_val }}" step="1">
+                    <select name="raise_{{ row.name }}" class="adjust-raise">
+                        {% for opt in row.raise_options %}
+                        <option value="{{ opt.amount }}"
+                            {% if opt.amount == row.raise_val %}selected{% endif %}>
+                            {{ opt.final }}{% if opt.amount == 0 %} (no change){% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
                     {% else %}&mdash;{% endif %}
                 </td>
                 <td class="num">
                     {% if row.lowerable %}
-                    <input type="number" name="lower_{{ row.name }}" min="0"
-                           value="{{ row.lower_val }}" step="1">
+                    <select name="lower_{{ row.name }}" class="adjust-lower">
+                        {% for opt in row.lower_options %}
+                        <option value="{{ opt.amount }}"
+                            {% if opt.amount == row.lower_val %}selected{% endif %}>
+                            {{ opt.final }}{% if opt.amount == 0 %} (no change){% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
                     <span class="muted">(floor {{ row.floor }})</span>
                     {% else %}&mdash;{% endif %}
                 </td>
