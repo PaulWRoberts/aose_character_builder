@@ -23,20 +23,32 @@
                 <h2>Abilities</h2>
                 <table class="abilities">
                     <thead>
-                        <tr><th>Ability</th><th>Score</th><th>Mod</th></tr>
+                        <tr><th>Ability</th><th>Score</th><th>Mod</th><th>Temp</th></tr>
                     </thead>
                     <tbody>
                     {% for ab in sheet.abilities %}
                         <tr>
                             <td>{{ ab.ability }}</td>
-                            <td class="num">{{ ab.score }}{% if ab.modified %}<span class="ability-modified" title="Modified by a magic item">*</span>{% endif %}</td>
+                            <td class="num">{{ ab.score }}{% if ab.modified %}<span class="ability-modified" title="Modified — see breakdown below">*</span>{% endif %}</td>
                             <td class="num">{{ "%+d"|format(ab.modifier) }}</td>
+                            <td>
+                                <form method="post" action="/character/{{ character_id }}/abilities/temp-modifier" class="temp-mod-form">
+                                    <input type="hidden" name="ability" value="{{ ab.ability }}">
+                                    <input type="number" name="value" value="{{ ab.temp_delta }}" step="1" class="temp-mod-input" aria-label="Temporary {{ ab.ability }} modifier">
+                                    <button type="submit">Set</button>
+                                </form>
+                            </td>
                         </tr>
                     {% endfor %}
                     </tbody>
                 </table>
-                {% if sheet.abilities | selectattr("modified") | list %}
-                <p class="small muted">* modified by a magic item</p>
+                {% set modified_rows = sheet.abilities | selectattr("modified") | list %}
+                {% if modified_rows %}
+                <ul class="small muted ability-breakdown">
+                    {% for ab in modified_rows %}
+                    <li>{{ ab.ability }}: base {{ ab.base_score }}{% if ab.equip_delta %}, equipment {{ "%+d"|format(ab.equip_delta) }}{% endif %}{% if ab.temp_delta %}, temporary {{ "%+d"|format(ab.temp_delta) }}{% endif %} &rarr; {{ ab.score }}</li>
+                    {% endfor %}
+                </ul>
                 {% endif %}
             </section>
 
