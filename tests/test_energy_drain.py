@@ -103,3 +103,25 @@ def test_drain_multi_class_targets_most_recently_leveled(data):
     assert mu.xp == 2500                   # magic_user L2 threshold
     fighter = next(e for e in spec.classes if e.class_id == "fighter")
     assert fighter.xp == 6000              # untouched class keeps its XP
+
+
+def test_drain_below_level_one_kills_single_class(data):
+    spec = _spec(level=2, xp=5000, hp_rolls=[8, 5])
+    energy_drain(spec, data, levels=3, xp_mode="new_min")  # only 1 level to lose
+    e = spec.classes[0]
+    assert e.level == 1
+    assert e.hp_rolls == [8]               # back to the creation roll only
+    assert e.xp == 0
+    from aose.engine.hp import current_hp, is_dead
+    assert current_hp(spec, data) == 0
+    assert is_dead(spec, data) is True
+
+
+def test_drain_exhausting_all_classes_kills_multi(data):
+    spec = _spec(level=2, xp=5000, multi=True)  # fighter+MU both L2
+    energy_drain(spec, data, levels=5, xp_mode="new_min")
+    assert [e.level for e in spec.classes] == [1, 1]
+    assert all(e.xp == 0 for e in spec.classes)
+    assert all(len(e.hp_rolls) == 1 for e in spec.classes)
+    from aose.engine.hp import is_dead
+    assert is_dead(spec, data) is True
