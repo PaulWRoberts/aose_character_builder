@@ -82,15 +82,13 @@ def test_sheet_html_renders_encumbrance_description(tmp_path):
 # Abilities are always 3d6 in order (no method choice)
 # ════════════════════════════════════════════════════════════════════════════
 
-def test_new_wizard_rolls_3d6_in_order(tmp_path):
+def test_new_wizard_does_not_pre_roll_abilities(tmp_path):
+    """Abilities are rolled by the player on the abilities step, not at draft creation."""
     client = _make_client(tmp_path, RuleSet())
     r = client.get("/wizard/new")
     draft_id = r.headers["location"].split("/")[2]
     draft = load_draft(draft_id, client._drafts_dir)
-    assert set(draft["abilities"]) == {"STR", "INT", "WIS", "DEX", "CON", "CHA"}
-    for v in draft["abilities"].values():
-        assert 3 <= v <= 18
-    # No arrange pool is ever seeded.
+    assert "abilities" not in draft
     assert "abilities_pool" not in draft
 
 

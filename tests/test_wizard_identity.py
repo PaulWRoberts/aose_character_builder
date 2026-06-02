@@ -201,7 +201,7 @@ def test_identity_requires_skill_when_rule_on(tmp_path):
 # ── class change clears alignment but keeps name + secondary_skill ─────────
 
 def test_class_change_clears_alignment_keeps_name_and_skill(tmp_path):
-    client = _make_client(tmp_path, RuleSet(secondary_skills=True))
+    client = _make_client(tmp_path, RuleSet(secondary_skills=True, strict_mode=False))
     draft_id = _drive_to_identity(client)
     client.get(f"/wizard/{draft_id}/identity")  # auto-rolls skill
     client.post(

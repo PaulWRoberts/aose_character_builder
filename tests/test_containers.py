@@ -630,6 +630,7 @@ def test_wizard_buy_creates_container_in_draft(tmp_path):
 def test_wizard_add_creates_container_without_spending_gold(tmp_path):
     client = _make_client(tmp_path)
     draft_id = _walk_to_equipment(client)
+    client.post(f"/wizard/{draft_id}/equipment/roll-gold")
     before_gold = load_draft(draft_id, client._drafts_dir)["gold"]
     r = client.post(f"/wizard/{draft_id}/equipment/add", data={"item_id": "bag_of_holding"})
     assert r.status_code == 303

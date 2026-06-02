@@ -63,7 +63,21 @@ renders a "pending" badge — a regression test guards this.
 
 ## Current state (2026-06-02)
 
-On-sheet play state just landed (9-task plan, on `main`). All 768 tests pass.
+Manual rolls + Strict Mode just landed (8-task plan, on `main`). All 788 tests pass.
+
+- **Manual rolls + Strict Mode** — abilities, HP, and starting gold all require
+  a deliberate Roll button press (like HP already did). A new `RuleSet.strict_mode`
+  flag (default `True`) locks each roll after one press; off = free re-rolls.
+  A hopeless ability set (`subpar` OR any score is 3) re-enables the Roll button
+  under Strict Mode. Two back-navigation gates: rolling abilities locks the rules
+  step; rolling HP locks every step before the HP page (`class_setup`) — prevents
+  laundering rolls by navigating back. Gates show a `locked` breadcrumb state (🔒).
+  Strict off → today's free back-navigation. `draft["hp_blessed_sets"]` (draft-only,
+  never persisted to `CharacterSpec`) stores both Blessed HP sets so the Class Setup
+  page can bold the higher. Spec/plan:
+  `docs/superpowers/{specs,plans}/2026-06-02-manual-rolls-strict-mode*`.
+
+On-sheet play state previously landed (9-task plan). All 788 tests pass.
 
 - **On-sheet play state** — current HP via `CharacterSpec.damage_taken`
   (current = `max(0, max_hp − damage_taken)`, dead derived from current 0;

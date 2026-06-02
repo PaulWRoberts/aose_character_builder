@@ -135,7 +135,7 @@ def test_finalized_character_keeps_languages(tmp_path):
 # ── Downstream clears ─────────────────────────────────────────────────────────
 
 def test_languages_cleared_when_race_changes(tmp_path):
-    client = _make_client(tmp_path)
+    client = _make_client(tmp_path, RuleSet(strict_mode=False))
     draft_id = _drive_to_identity(client, HIGH_INT)
     client.post(
         f"/wizard/{draft_id}/identity",
@@ -148,7 +148,7 @@ def test_languages_cleared_when_race_changes(tmp_path):
 
 
 def test_languages_cleared_when_adjustments_change(tmp_path):
-    client = _make_client(tmp_path)
+    client = _make_client(tmp_path, RuleSet(strict_mode=False))
     draft_id = _drive_to_identity(client, HIGH_INT)
     client.post(
         f"/wizard/{draft_id}/identity",

@@ -52,7 +52,7 @@ def _start(client):
 
 # Bool rules that ship True in RuleSet() and ARE rendered as checkboxes.  The
 # creation method (separate_race_class) is now a radio, handled separately.
-_TRUE_DEFAULTS = ("strict_mode",)
+_TRUE_DEFAULTS = ()
 
 
 def _rules_form(**overrides):
@@ -123,12 +123,13 @@ def test_get_rules_prefills_from_settings(tmp_path):
 
 # ── POST /rules: no-op preserves abilities ────────────────────────────────
 
-def test_post_rules_unchanged_does_not_reroll(client):
+def test_post_rules_does_not_seed_abilities(client):
+    """Re-posting rules must never seed abilities — the player rolls on the abilities step."""
     draft_id = _start(client)
-    abilities_before = load_draft(draft_id, client._drafts_dir)["abilities"]
+    assert "abilities" not in load_draft(draft_id, client._drafts_dir)
     r = client.post(f"/wizard/{draft_id}/rules", data=_rules_form())
     assert r.status_code == 303
-    assert load_draft(draft_id, client._drafts_dir)["abilities"] == abilities_before
+    assert "abilities" not in load_draft(draft_id, client._drafts_dir)
 
 
 def test_post_rules_advances_to_abilities(client):

@@ -398,6 +398,11 @@ def test_flag_toggle_clears_hp_and_adjustments(tmp_path):
     _drive_to_class_setup(client, draft_id, race="human", flag=True)
     client.post(f"/wizard/{draft_id}/hp/roll")
     assert "hp_roll" in load_draft(draft_id, client._drafts_dir)
+    # Disable strict mode so the rules step is navigable (this test checks
+    # cascade clearing, not strict-mode enforcement).
+    draft = load_draft(draft_id, client._drafts_dir)
+    draft["ruleset"]["strict_mode"] = False
+    save_draft(draft_id, draft, client._drafts_dir)
     # Turn the flag off — Blessed eligibility + post-racial scores changed.
     client.post(f"/wizard/{draft_id}/rules",
                 data=_rules_form(lift_demihuman_restrictions="on"))  # flag now off

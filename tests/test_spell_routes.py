@@ -87,6 +87,7 @@ def _start_caster_draft(client, class_id, int_score=13, advanced=False):
 def test_wizard_skips_spells_for_noncaster(client):
     r = client.get("/wizard/new")
     draft_id = r.headers["location"].rsplit("/", 2)[1]
+    client.post(f"/wizard/{draft_id}/abilities/roll")
     client.post(f"/wizard/{draft_id}/abilities", data={})
     client.post(f"/wizard/{draft_id}/race", data={"race_id": "human"})
     client.post(f"/wizard/{draft_id}/class", data={"class_id": "fighter"})

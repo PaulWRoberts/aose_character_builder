@@ -243,7 +243,7 @@ def test_review_page_includes_skill(client):
         f"/wizard/{draft_id}/identity",
         data={"name": "Gloin", "alignment": "law", "secondary_skill": "Cartographer"},
     )
-    client.get(f"/wizard/{draft_id}/equipment")
+    client.post(f"/wizard/{draft_id}/equipment/roll-gold")
     client.post(f"/wizard/{draft_id}/equipment")
     r = client.get(f"/wizard/{draft_id}/review")
     assert "Cartographer" in r.text
