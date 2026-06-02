@@ -775,6 +775,41 @@ def _identity_alignment_options(draft: dict[str, Any], data) -> list[dict]:
     ]
 
 
+def _languages_context(draft: dict[str, Any], data) -> dict:
+    """Languages section state for the Identity page: native list (from race),
+    the alignment tongue for the *current* draft alignment (if chosen yet), the
+    INT-gated additional pickers, and the broken-speech note."""
+    from aose.engine.languages import (
+        additional_language_count,
+        alignment_language,
+        available_additional,
+        broken_speech,
+        native_languages,
+    )
+
+    race = data.races[draft["race_id"]]
+    final_int = _creation_abilities(draft, data)["INT"]
+    native = native_languages(race)
+
+    already = set(native)
+    align_tongue = None
+    alignment = draft.get("alignment")
+    if alignment in data.languages.alignment:
+        align_tongue = alignment_language(alignment, data.languages)
+        already.add(align_tongue)
+
+    chosen = draft.get("languages", [])
+    options = available_additional(data.languages, already)
+    return {
+        "native_languages": native,
+        "alignment_language": align_tongue,
+        "language_slots": additional_language_count(final_int),
+        "language_options": options,
+        "chosen_languages": chosen,
+        "broken_speech": broken_speech(final_int),
+    }
+
+
 @router.get("/{draft_id}/identity", response_class=HTMLResponse)
 async def get_identity(request: Request, draft_id: str):
     draft = _load(request, draft_id)
@@ -798,6 +833,7 @@ async def get_identity(request: Request, draft_id: str):
             save_draft(draft_id, draft, _drafts_dir(request))
         ctx["skills"] = skills
         ctx["current_skill"] = draft.get("secondary_skill")
+    ctx.update(_languages_context(draft, data))
     return templates.TemplateResponse(request, "wizard.html", ctx)
 
 
@@ -834,8 +870,21 @@ async def post_identity(request: Request, draft_id: str):
             raise HTTPException(400, f"Unknown skill: {secondary_skill!r}")
         draft["secondary_skill"] = secondary_skill
 
+    from aose.engine.languages import LanguageError, validate_languages
+
+    chosen_languages = list(dict.fromkeys(form.getlist("language")))
+    race = data.races[draft["race_id"]]
+    final_int = _creation_abilities(draft, data)["INT"]
+    try:
+        validate_languages(
+            chosen_languages, race, alignment, final_int, data.languages,
+        )
+    except LanguageError as e:
+        raise HTTPException(400, str(e))
+
     draft["name"] = name
     draft["alignment"] = alignment
+    draft["languages"] = chosen_languages
     save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/{_next_incomplete_step(draft)}")
 
@@ -1587,6 +1636,7 @@ def _draft_to_spec(draft: dict[str, Any], data) -> CharacterSpec:
         classes=classes,
         alignment=draft["alignment"],
         secondary_skill=draft.get("secondary_skill"),
+        languages=list(draft.get("languages", [])),
         weapon_proficiencies=list((draft.get("proficiencies") or {}).get("weapons", [])),
         weapon_specialisations=list((draft.get("proficiencies") or {}).get("specialisations", [])),
         gold=draft.get("gold", 0),

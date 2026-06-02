@@ -35,6 +35,29 @@
     </fieldset>
     {% endif %}
 
+    <fieldset class="field">
+        <legend>Languages</legend>
+        <p class="muted small">Native: {{ native_languages | join(", ") }}</p>
+        {% if alignment_language %}
+        <p class="muted small">Alignment tongue: {{ alignment_language }}</p>
+        {% endif %}
+        {% if broken_speech %}
+        <p class="muted small">Your character speaks only in broken sentences (INT 3) — no additional languages.</p>
+        {% endif %}
+        {% if language_slots > 0 %}
+        <p class="muted small">You may choose up to {{ language_slots }} additional language(s). Choosing fewer is allowed.</p>
+        <div class="checkbox-stack">
+        {% for lang in language_options %}
+            <label class="checkbox-row">
+                <input type="checkbox" name="language" value="{{ lang }}"
+                       {% if lang in chosen_languages %}checked{% endif %}>
+                <span>{{ lang }}</span>
+            </label>
+        {% endfor %}
+        </div>
+        {% endif %}
+    </fieldset>
+
     <button type="submit" class="primary">Next: Equipment &rarr;</button>
 </form>
 
