@@ -1,11 +1,26 @@
 <h2>Equipment</h2>
+
+{% if not gold_rolled %}
+<p class="muted">Roll your starting gold (<strong>3d6 &times; 10 gp</strong>),
+   then buy what you need from the shop.</p>
+<form method="post" action="/wizard/{{ draft_id }}/equipment/roll-gold" class="inline-form">
+    <button type="submit" class="primary">Roll starting gold</button>
+</form>
+{% else %}
 <p class="muted">
-    Your starting gold was rolled once with 3d6 &times; 10 and is now fixed.
+    {% if gold_locked %}Your starting gold is fixed.{% else %}Your starting gold
+    can still be re-rolled until you buy something.{% endif %}
     Buy what you need from the shop below.
 </p>
+{% if not gold_locked %}
+<form method="post" action="/wizard/{{ draft_id }}/equipment/roll-gold" class="inline-form">
+    <button type="submit">Re-roll gold</button>
+</form>
+{% endif %}
 
 {% include "_equipment_ui.html" %}
 
 <form method="post" action="/wizard/{{ draft_id }}/equipment" class="step-form">
     <button type="submit" class="primary">Next: Review &rarr;</button>
 </form>
+{% endif %}

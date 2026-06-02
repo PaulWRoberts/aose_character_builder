@@ -184,6 +184,7 @@ def _walk_to_equipment(client):
         "separate_race_class": "on",
         "demihuman_level_limits": "on",
         "demihuman_class_restrictions": "on",
+        "strict_mode": "on",
     })
     draft = load_draft(draft_id, client._drafts_dir)
     draft["abilities"] = {"STR": 15, "INT": 11, "WIS": 12, "DEX": 13, "CON": 14, "CHA": 10}
@@ -205,22 +206,25 @@ def test_equipment_accessible_after_identity(client):
     assert r.status_code == 200
 
 
-def test_equipment_get_seeds_starting_gold(client):
+def test_equipment_get_does_not_auto_roll_gold(client):
     draft_id = _walk_to_equipment(client)
     r = client.get(f"/wizard/{draft_id}/equipment")
     assert r.status_code == 200
     draft = load_draft(draft_id, client._drafts_dir)
-    assert 30 <= draft["gold"] <= 180
-    assert draft["gold"] % 10 == 0
-    assert draft.get("gold_locked") is True
+    assert "gold" not in draft
+    assert f"/wizard/{draft_id}/equipment/roll-gold" in r.text
 
 
-def test_reroll_gold_route_removed(client):
-    """The reroll-gold endpoint no longer exists — starting gold is fixed."""
+def test_roll_gold_route_sets_and_locks_gold_in_strict(client):
     draft_id = _walk_to_equipment(client)
-    client.get(f"/wizard/{draft_id}/equipment")
-    r = client.post(f"/wizard/{draft_id}/equipment/reroll-gold")
-    assert r.status_code in (404, 405)
+    r = client.post(f"/wizard/{draft_id}/equipment/roll-gold")
+    assert r.status_code == 303
+    draft = load_draft(draft_id, client._drafts_dir)
+    assert 30 <= draft["gold"] <= 180 and draft["gold"] % 10 == 0
+    assert draft["gold_locked"] is True
+    # Strict default: a second roll is rejected.
+    r2 = client.post(f"/wizard/{draft_id}/equipment/roll-gold")
+    assert r2.status_code == 400
 
 
 def test_buy_locks_starting_gold_roll(client):
@@ -394,7 +398,7 @@ def test_sheet_renders_add_button_alongside_buy(client):
 
 def test_wizard_add_route_grants_item_without_spending_gold(client):
     draft_id = _walk_to_equipment(client)
-    client.get(f"/wizard/{draft_id}/equipment")  # seeds gold (already locked)
+    client.post(f"/wizard/{draft_id}/equipment/roll-gold")  # roll gold first
     before_gold = load_draft(draft_id, client._drafts_dir)["gold"]
     r = client.post(f"/wizard/{draft_id}/equipment/add", data={"item_id": "torch"})
     assert r.status_code == 303

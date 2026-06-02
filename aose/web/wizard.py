@@ -1236,17 +1236,24 @@ async def get_equipment(request: Request, draft_id: str):
     redirect = _gate(draft, "equipment", draft_id)
     if redirect:
         return redirect
-    # First visit: roll starting gold once and lock it immediately.
-    # Subsequent visits keep whatever the user has (partially spent etc.).
-    if "gold" not in draft:
-        draft["gold"] = roll_starting_gold()
-        draft.setdefault("inventory", [])
-        draft["gold_locked"] = True  # rolled once, locked immediately — no reroll
-        save_draft(draft_id, draft, _drafts_dir(request))
     ctx = _base_context(request, draft_id, draft, "equipment")
     ctx.update(_equipment_context(draft, request.app.state.game_data))
+    ctx["gold_rolled"] = "gold" in draft
     ctx["target_url_prefix"] = f"/wizard/{draft_id}/equipment"
     return templates.TemplateResponse(request, "wizard.html", ctx)
+
+
+@router.post("/{draft_id}/equipment/roll-gold")
+async def post_equipment_roll_gold(request: Request, draft_id: str):
+    draft = _load(request, draft_id)
+    if draft.get("gold_locked"):
+        raise HTTPException(400, "Starting gold is already rolled and locked.")
+    draft["gold"] = roll_starting_gold()
+    draft.setdefault("inventory", [])
+    # Strict locks immediately; otherwise the first purchase locks it (buy route).
+    draft["gold_locked"] = _ruleset_of(draft).strict_mode
+    save_draft(draft_id, draft, _drafts_dir(request))
+    return _redirect(f"/wizard/{draft_id}/equipment")
 
 
 @router.post("/{draft_id}/equipment/buy")

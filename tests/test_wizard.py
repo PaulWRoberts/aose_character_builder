@@ -104,8 +104,9 @@ def test_full_wizard_flow_creates_character(client, tmp_path):
     assert r.status_code == 303
     assert r.headers["location"] == f"/wizard/{draft_id}/equipment"
 
-    # Visit equipment to roll starting gold, then continue to review.
-    client.get(f"/wizard/{draft_id}/equipment")  # seeds gold on first GET
+    # Roll starting gold (now a deliberate button press), then continue.
+    r = client.post(f"/wizard/{draft_id}/equipment/roll-gold")
+    assert r.status_code == 303
     r = client.post(f"/wizard/{draft_id}/equipment")
     assert r.status_code == 303
     assert r.headers["location"] == f"/wizard/{draft_id}/review"

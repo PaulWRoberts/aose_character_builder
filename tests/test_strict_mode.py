@@ -101,6 +101,33 @@ def test_non_strict_allows_ability_reroll(client):
     assert r.status_code == 303  # strict off (checkbox absent) -> free reroll
 
 
+def _drive_to_equipment(client, draft_id, strict=True):
+    form = {"encumbrance": "basic", "creation_method": "advanced"}
+    if strict:
+        form["strict_mode"] = "on"
+    client.post(f"/wizard/{draft_id}/rules", data=form)
+    _force(client, draft_id, {"STR": 13, "INT": 12, "WIS": 11,
+                              "DEX": 13, "CON": 13, "CHA": 12})
+    client.post(f"/wizard/{draft_id}/abilities", data={})
+    client.post(f"/wizard/{draft_id}/race", data={"race_id": "human"})
+    client.post(f"/wizard/{draft_id}/class", data={"class_id": "fighter"})
+    client.post(f"/wizard/{draft_id}/adjust", data={})
+    client.post(f"/wizard/{draft_id}/hp/roll")
+    client.post(f"/wizard/{draft_id}/identity",
+                data={"name": "G", "alignment": "law"})
+
+
+def test_non_strict_gold_reroll_until_purchase(client):
+    draft_id = _new(client)
+    _drive_to_equipment(client, draft_id, strict=False)
+    client.post(f"/wizard/{draft_id}/equipment/roll-gold")
+    d = load_draft(draft_id, client._drafts)
+    assert d["gold_locked"] is False
+    # Non-strict: re-roll allowed while unlocked.
+    r = client.post(f"/wizard/{draft_id}/equipment/roll-gold")
+    assert r.status_code == 303
+
+
 def test_ability_reroll_clears_downstream_and_confirmation(client):
     draft_id = _new(client)
     client.post(f"/wizard/{draft_id}/rules",
