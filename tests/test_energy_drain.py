@@ -79,3 +79,12 @@ def test_drain_midpoint_multi_level_raises(data):
     spec = _spec(level=3, xp=8000)
     with pytest.raises(ValueError, match="single-level drain"):
         energy_drain(spec, data, levels=2, xp_mode="midpoint")
+
+
+def test_drain_multi_level_single_class_cascades(data):
+    spec = _spec(level=4, xp=99000, hp_rolls=[8, 5, 6, 7])
+    energy_drain(spec, data, levels=2, xp_mode="new_min")
+    e = spec.classes[0]
+    assert e.level == 2
+    assert e.hp_rolls == [8, 5]            # two Hit Dice removed (LIFO)
+    assert e.xp == 2000                    # fighter L2 threshold
