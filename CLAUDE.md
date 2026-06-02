@@ -116,9 +116,9 @@ Key concepts now live:
   `stash_container` / `unstash_container` / `remove_container` /
   `buy_container` / `inventory_view` (returns a `containers` list).
   Sheet + wizard share routes (`/stow`, `/take-out`, `/stash-container`,
-  `/unstash-container`, `/remove-container`, and a unified `/move`
-  drag-and-drop dispatcher in `aose/web/move_dispatch.py`). UI: inline
-  collapsible container rows + `inventory_dnd.js` (vanilla HTML5 DnD).
+  `/unstash-container`, `/remove-container`). UI: inline collapsible container
+  rows; moves are button/dropdown-only (`inventory.js` handles collapse only —
+  drag-and-drop was removed 2026-06-02).
   Spec/plan: `docs/superpowers/{specs,plans}/2026-05-27-container-items*`.
 - **Magic items** — data-driven. A `Modifier` value type
   (`aose/models/modifier.py`: `target` / `op` add|set|set_min|set_max / `value`)
