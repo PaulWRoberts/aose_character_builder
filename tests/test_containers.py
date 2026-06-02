@@ -627,14 +627,15 @@ def test_wizard_buy_creates_container_in_draft(tmp_path):
     assert draft["gold"] == 95
 
 
-def test_wizard_add_creates_container_without_locking_gold(tmp_path):
+def test_wizard_add_creates_container_without_spending_gold(tmp_path):
     client = _make_client(tmp_path)
     draft_id = _walk_to_equipment(client)
+    before_gold = load_draft(draft_id, client._drafts_dir)["gold"]
     r = client.post(f"/wizard/{draft_id}/equipment/add", data={"item_id": "bag_of_holding"})
     assert r.status_code == 303
     draft = load_draft(draft_id, client._drafts_dir)
     assert len(draft["containers"]) == 1
-    assert draft.get("gold_locked") is False
+    assert draft["gold"] == before_gold  # Add is free
 
 
 def test_sheet_stow_endpoint(tmp_path):

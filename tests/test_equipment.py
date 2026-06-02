@@ -223,18 +223,6 @@ def test_reroll_gold_route_removed(client):
     assert r.status_code in (404, 405)
 
 
-def test_equipment_reroll_works_before_first_purchase(client):
-    draft_id = _walk_to_equipment(client)
-    client.get(f"/wizard/{draft_id}/equipment")
-    before = load_draft(draft_id, client._drafts_dir)["gold"]
-    for _ in range(10):
-        client.post(f"/wizard/{draft_id}/equipment/reroll-gold")
-        after = load_draft(draft_id, client._drafts_dir)["gold"]
-        if after != before:
-            return
-    pytest.fail("Gold reroll never changed value across 10 tries")
-
-
 def test_buy_locks_starting_gold_roll(client):
     draft_id = _walk_to_equipment(client)
     client.get(f"/wizard/{draft_id}/equipment")
@@ -248,17 +236,6 @@ def test_buy_locks_starting_gold_roll(client):
     assert draft["gold_locked"] is True
     assert draft["gold"] == 49
     assert draft["inventory"] == ["torch"]
-
-
-def test_reroll_after_lock_is_rejected(client):
-    draft_id = _walk_to_equipment(client)
-    client.get(f"/wizard/{draft_id}/equipment")
-    draft = load_draft(draft_id, client._drafts_dir)
-    draft["gold"] = 50
-    save_draft(draft_id, draft, client._drafts_dir)
-    client.post(f"/wizard/{draft_id}/equipment/buy", data={"item_id": "torch"})
-    r = client.post(f"/wizard/{draft_id}/equipment/reroll-gold")
-    assert r.status_code == 400
 
 
 def test_buy_rejects_when_short(client):
@@ -415,18 +392,15 @@ def test_sheet_renders_add_button_alongside_buy(client):
     assert ">Add</button>" in r.text
 
 
-def test_wizard_add_route_does_not_lock_gold(client):
+def test_wizard_add_route_grants_item_without_spending_gold(client):
     draft_id = _walk_to_equipment(client)
-    client.get(f"/wizard/{draft_id}/equipment")  # seeds gold
-    # Adding for free shouldn't lock the starting-roll
+    client.get(f"/wizard/{draft_id}/equipment")  # seeds gold (already locked)
+    before_gold = load_draft(draft_id, client._drafts_dir)["gold"]
     r = client.post(f"/wizard/{draft_id}/equipment/add", data={"item_id": "torch"})
     assert r.status_code == 303
     draft = load_draft(draft_id, client._drafts_dir)
     assert draft["inventory"] == ["torch"]
-    assert draft.get("gold_locked") is False
-    # Re-roll should still work
-    r = client.post(f"/wizard/{draft_id}/equipment/reroll-gold")
-    assert r.status_code == 303
+    assert draft["gold"] == before_gold  # Add is free
 
 
 # â"€â"€ Shop search box â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
