@@ -170,3 +170,31 @@ def test_sheet_renders_slot_cast_button(client):
     assert "Magic Missile" in r.text
     assert "/character/mu/spells/cast" in r.text
     assert "/character/mu/rest/night" in r.text
+
+
+def test_temp_ability_modifier_route_sets(client):
+    _save_fighter(client)
+    r = client.post("/character/bran/abilities/temp-modifier",
+                    data={"ability": "STR", "value": -2})
+    assert r.status_code == 303
+    from aose.models import Ability
+    spec = load_character("bran", client._characters_dir)
+    assert spec.temp_ability_modifiers[Ability.STR] == -2
+
+
+def test_temp_ability_modifier_route_zero_clears(client):
+    from aose.models import CharacterSpec, ClassEntry
+    from aose.characters import save_character
+    spec = CharacterSpec(
+        name="Bran",
+        abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
+        race_id="human",
+        classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[12])],
+        alignment="neutral",
+        temp_ability_modifiers={"STR": -2},
+    )
+    save_character("bran", spec, client._characters_dir)
+    client.post("/character/bran/abilities/temp-modifier",
+                data={"ability": "STR", "value": 0})
+    reloaded = load_character("bran", client._characters_dir)
+    assert reloaded.temp_ability_modifiers == {}

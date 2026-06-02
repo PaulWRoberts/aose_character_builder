@@ -18,6 +18,7 @@ from aose.engine.magic import (
     remove_magic as _remove_magic,
     reset_charges as _reset_charges,
     set_magic_note as _set_magic_note,
+    set_temp_ability_modifier as _set_temp_ability_modifier,
     unequip_magic as _unequip_magic,
     use_charge as _use_charge,
 )
@@ -239,6 +240,24 @@ async def hp_set(request: Request, character_id: str, value: int = Form(...)):
     spec = _load_spec_or_404(request, character_id)
     data = request.app.state.game_data
     spec.damage_taken = hp.set_current_hp(spec, data, value)
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/abilities/temp-modifier")
+async def abilities_temp_modifier(request: Request, character_id: str,
+                                  ability: str = Form(...), value: int = Form(...)):
+    """Set (or clear, when value is 0) a temporary modifier on one ability.
+    Replaces any prior modifier for that ability; never touches the real score."""
+    from aose.models import Ability
+    spec = _load_spec_or_404(request, character_id)
+    try:
+        ab = Ability(ability)
+    except ValueError:
+        raise HTTPException(400, f"Unknown ability {ability!r}")
+    spec.temp_ability_modifiers = _set_temp_ability_modifier(
+        spec.temp_ability_modifiers, ab, value,
+    )
     save_character(character_id, spec, request.app.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
