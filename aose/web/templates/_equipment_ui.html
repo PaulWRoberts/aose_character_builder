@@ -2,10 +2,9 @@
    live character sheet's equipment section.  Caller must supply:
      - target_url_prefix   e.g. "/wizard/{id}/equipment" or "/character/{id}/equipment"
      - gold                int
-     - gold_locked         bool   (re-roll button hidden when true)
+     - gold_locked         bool   (true once a purchase locks the gold; always true in the wizard)
      - inventory_view      InventoryView  (three sections: equipped / carried / stashed + containers)
      - shop                list[ShopCategory]
-     - show_gold_reroll    bool   (wizard only — for the starting-gold reroll)
      - show_gold_grant     bool   (sheet only — for the +/- gold form)
      - gold_grant_url      str    (sheet only — POST target for the grant form)
      - magic_items_view    list[MagicItemView]  (instances + inventory-magic rows)
@@ -14,13 +13,6 @@
 <div data-equipment-url-prefix="{{ target_url_prefix }}">
 <div class="equipment-header">
     <span class="gold-display">Gold: <strong>{{ gold }} gp</strong></span>
-    {% if show_gold_reroll and not gold_locked %}
-    <form method="post" action="{{ target_url_prefix }}/reroll-gold" class="inline-form">
-        <button type="submit">Re-roll Starting Gold</button>
-    </form>
-    {% elif show_gold_reroll and gold_locked %}
-    <span class="muted small">Starting roll locked &mdash; a purchase has been made.</span>
-    {% endif %}
 
     {% if show_gold_grant %}
     <form method="post" action="{{ gold_grant_url }}" class="grant-gold-form inline-form">

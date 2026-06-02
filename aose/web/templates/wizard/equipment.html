@@ -1,13 +1,10 @@
 <h2>Equipment</h2>
 <p class="muted">
-    Your starting gold was rolled with 3d6 &times; 10.  Buy what you need from
-    the shop below.  Re-roll until you make your first purchase; afterwards
-    the roll locks in.
+    Your starting gold was rolled once with 3d6 &times; 10 and is now fixed.
+    Buy what you need from the shop below.
 </p>
 
-{% with show_gold_reroll = true %}
 {% include "_equipment_ui.html" %}
-{% endwith %}
 
 <form method="post" action="/wizard/{{ draft_id }}/equipment" class="step-form">
     <button type="submit" class="primary">Next: Review &rarr;</button>
