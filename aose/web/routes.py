@@ -654,3 +654,46 @@ async def sheet_spell_clear(request: Request, character_id: str,
         raise HTTPException(400, str(e))
     save_character(character_id, spec, request.app.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+# ── Rest ──────────────────────────────────────────────────────────────────
+
+def _apply_rest_mode(entry, mode: str):
+    """Apply a rest spell-option to one class entry.
+
+    restore → un-spend the existing loadout; clear → drop it; keep → unchanged.
+    Non-casters have no slots, so every mode is a no-op for them."""
+    if mode == "restore":
+        return spell_engine.restore_all_slots(entry)
+    if mode == "clear":
+        return spell_engine.clear_all_slots(entry)
+    if mode == "keep":
+        return entry
+    raise HTTPException(400, f"Unknown rest mode {mode!r}")
+
+
+@router.post("/character/{character_id}/rest/night")
+async def rest_night(request: Request, character_id: str, mode: str = Form("restore")):
+    spec = _load_spec_or_404(request, character_id)
+    data = request.app.state.game_data
+    if hp.is_dead(spec, data):
+        raise HTTPException(400, "A dead character cannot rest")
+    spec.classes = [_apply_rest_mode(e, mode) for e in spec.classes]
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/rest/full-day")
+async def rest_full_day(request: Request, character_id: str,
+                        mode: str = Form("restore"), heal_amount: int = Form(...)):
+    spec = _load_spec_or_404(request, character_id)
+    data = request.app.state.game_data
+    if hp.is_dead(spec, data):
+        raise HTTPException(400, "A dead character cannot rest")
+    spec.classes = [_apply_rest_mode(e, mode) for e in spec.classes]
+    try:
+        spec.damage_taken = hp.apply_healing(spec, data, heal_amount)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
