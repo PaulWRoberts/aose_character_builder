@@ -100,6 +100,12 @@ class CharacterSpec(BaseModel):
     # max(0, max_hp − damage_taken); dead == current HP 0.  Tracks live max_hp
     # shifts (e.g. a CON-altering magic item) without rewriting stored state.
     damage_taken: int = 0
+    # Play-state: temporary per-ability score adjustments set on the live sheet.
+    # Signed deltas keyed by Ability; only non-zero entries are stored. They
+    # stack with magic-item ability modifiers and clamp the final effective
+    # score to [3, 18] (see aose/engine/magic.py). The real `abilities` are
+    # never altered.
+    temp_ability_modifiers: dict[Ability, int] = Field(default_factory=dict)
     # Items on the character's person — equipped items live here too.  Weight
     # in this list contributes to encumbrance.
     inventory: list[str] = Field(default_factory=list)

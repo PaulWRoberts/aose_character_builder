@@ -39,3 +39,28 @@ def test_character_requires_at_least_one_class():
             classes=[],
             alignment="law",
         )
+
+
+def test_character_spec_temp_ability_modifiers_default_empty():
+    from aose.models import ClassEntry
+    spec = CharacterSpec(
+        name="T",
+        abilities={"STR": 12, "INT": 12, "WIS": 11, "DEX": 12, "CON": 12, "CHA": 10},
+        race_id="human",
+        classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[6])],
+        alignment="law",
+    )
+    assert spec.temp_ability_modifiers == {}
+
+
+def test_character_spec_temp_ability_modifiers_keyed_by_ability_enum():
+    from aose.models import Ability, ClassEntry
+    spec = CharacterSpec(
+        name="T",
+        abilities={"STR": 12, "INT": 12, "WIS": 11, "DEX": 12, "CON": 12, "CHA": 10},
+        race_id="human",
+        classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[6])],
+        alignment="law",
+        temp_ability_modifiers={"STR": -2},
+    )
+    assert spec.temp_ability_modifiers[Ability.STR] == -2
