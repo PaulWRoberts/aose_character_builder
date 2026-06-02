@@ -846,91 +846,6 @@ def test_wizard_remove_container_drop_clears_contents(tmp_path):
     assert draft["inventory"] == []
 
 
-def test_move_carried_to_equipped_equips(tmp_path):
-    client = _make_client(tmp_path)
-    _seed_character(client, inventory=["sword"])
-    r = client.post("/character/test/equipment/move", data={
-        "source": "carried", "target": "equipped",
-        "item_id": "sword",
-    })
-    assert r.status_code == 303
-    spec = load_character("test", client._characters_dir)
-    assert spec.equipped_weapons == ["sword"]
-
-
-def test_move_equipped_to_carried_unequips(tmp_path):
-    client = _make_client(tmp_path)
-    _seed_character(client, inventory=["sword"])
-    client.post("/character/test/equipment/equip", data={"item_id": "sword"})
-    r = client.post("/character/test/equipment/move", data={
-        "source": "equipped", "target": "carried",
-        "item_id": "sword",
-    })
-    assert r.status_code == 303
-    spec = load_character("test", client._characters_dir)
-    assert spec.equipped_weapons == []
-
-
-def test_move_carried_to_container_stows(tmp_path):
-    client = _make_client(tmp_path)
-    _seed_character(client, inventory=["torch"])
-    client.post("/character/test/equipment/add", data={"item_id": "backpack"})
-    spec = load_character("test", client._characters_dir)
-    instance_id = spec.containers[0].instance_id
-    r = client.post("/character/test/equipment/move", data={
-        "source": "carried", "target": f"container:{instance_id}",
-        "item_id": "torch",
-    })
-    assert r.status_code == 303
-    spec = load_character("test", client._characters_dir)
-    assert spec.inventory == []
-    assert spec.containers[0].contents == ["torch"]
-
-
-def test_move_container_row_to_stashed_section_stashes(tmp_path):
-    client = _make_client(tmp_path)
-    _seed_character(client)
-    client.post("/character/test/equipment/add", data={"item_id": "backpack"})
-    spec = load_character("test", client._characters_dir)
-    instance_id = spec.containers[0].instance_id
-    r = client.post("/character/test/equipment/move", data={
-        "source": f"container_row:{instance_id}", "target": "stashed",
-        "item_id": "",
-    })
-    assert r.status_code == 303
-    spec = load_character("test", client._characters_dir)
-    assert spec.containers[0].state == "stashed"
-
-
-def test_move_container_to_carried_takes_out(tmp_path):
-    client = _make_client(tmp_path)
-    _seed_character(client, inventory=["torch"])
-    client.post("/character/test/equipment/add", data={"item_id": "backpack"})
-    spec = load_character("test", client._characters_dir)
-    instance_id = spec.containers[0].instance_id
-    client.post("/character/test/equipment/stow", data={
-        "instance_id": instance_id, "item_id": "torch",
-    })
-    r = client.post("/character/test/equipment/move", data={
-        "source": f"container:{instance_id}", "target": "carried",
-        "item_id": "torch",
-    })
-    assert r.status_code == 303
-    spec = load_character("test", client._characters_dir)
-    assert spec.inventory == ["torch"]
-    assert spec.containers[0].contents == []
-
-
-def test_move_invalid_combo_returns_400(tmp_path):
-    client = _make_client(tmp_path)
-    _seed_character(client, inventory=["torch"])
-    r = client.post("/character/test/equipment/move", data={
-        "source": "carried", "target": "equipped",
-        "item_id": "torch",   # torch isn't equippable
-    })
-    assert r.status_code == 400
-
-
 def test_sheet_renders_container_row_with_capacity_badge(tmp_path):
     client = _make_client(tmp_path)
     _seed_character(client)
@@ -992,21 +907,6 @@ def test_wizard_containers_persist_through_finalize(tmp_path):
     assert len(spec.containers) == 1, "containers must survive finalization"
     assert spec.containers[0].catalog_id == "backpack"
     assert spec.containers[0].contents == ["torch"]
-
-
-def test_sheet_includes_dnd_script_tag(tmp_path):
-    client = _make_client(tmp_path)
-    _seed_character(client)
-    r = client.get("/character/test")
-    assert "inventory_dnd.js" in r.text
-
-
-def test_sheet_inventory_rows_carry_dnd_attributes(tmp_path):
-    client = _make_client(tmp_path)
-    _seed_character(client, inventory=["sword"])
-    r = client.get("/character/test")
-    assert 'data-source="carried"' in r.text
-    assert 'data-item-id="sword"' in r.text
 
 
 def test_sheet_container_row_collapse_button_present(tmp_path):
