@@ -79,3 +79,21 @@ def test_roll_hp_invalid_notation_raises():
     with pytest.raises(ValueError):
         roll_hp("not a die")
 
+
+def test_roll_blessed_hp_sets_returns_two_complete_sets():
+    from aose.engine.dice import roll_blessed_hp_sets
+    probe = random.Random(7)
+    a = [probe.randint(1, 8), probe.randint(1, 4)]
+    b = [probe.randint(1, 8), probe.randint(1, 4)]
+    set_a, set_b = roll_blessed_hp_sets(["1d8", "1d4"], min_die=1,
+                                        rng=random.Random(7))
+    assert set_a == a
+    assert set_b == b
+
+
+def test_roll_blessed_hp_sets_respects_min_die():
+    from aose.engine.dice import roll_blessed_hp_sets
+    set_a, set_b = roll_blessed_hp_sets(["1d8", "1d4"], min_die=3,
+                                        rng=random.Random(123))
+    assert all(v >= 3 for v in set_a + set_b)
+

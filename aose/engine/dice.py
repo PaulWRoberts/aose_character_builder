@@ -22,6 +22,21 @@ def roll_3d6_in_order(rng: Optional[random.Random] = None) -> list[int]:
     return [sum(r.randint(1, 6) for _ in range(3)) for _ in range(6)]
 
 
+def roll_blessed_hp_sets(
+    hit_dice: list[str],
+    *,
+    min_die: int = 1,
+    rng: Optional[random.Random] = None,
+) -> tuple[list[int], list[int]]:
+    """Roll two complete first-level HP sets (one die per class each) for the
+    Human Blessed ability. Returns ``(set_a, set_b)`` in draw order; the caller
+    decides which to keep (larger sum, ties keep ``set_a``)."""
+    r = rng or random.Random()
+    set_a = [roll_hp(hd, r, min_die=min_die) for hd in hit_dice]
+    set_b = [roll_hp(hd, r, min_die=min_die) for hd in hit_dice]
+    return set_a, set_b
+
+
 def roll_first_level_hp(
     hit_dice: list[str],
     *,
@@ -45,8 +60,7 @@ def roll_first_level_hp(
 
     if not blessed:
         return one_set()
-    set_a = one_set()
-    set_b = one_set()
+    set_a, set_b = roll_blessed_hp_sets(hit_dice, min_die=min_die, rng=r)
     return set_a if sum(set_a) >= sum(set_b) else set_b
 
 
