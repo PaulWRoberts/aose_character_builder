@@ -24,7 +24,12 @@ from aose.engine.ability_mods import (
 )
 from aose.engine.alignment import allowed_alignments as _allowed_alignments
 from aose.engine import spells as spell_engine
-from aose.engine.dice import roll_3d6_in_order, roll_first_level_hp, roll_hp
+from aose.engine.dice import (
+    roll_3d6_in_order,
+    roll_blessed_hp_sets,
+    roll_first_level_hp,
+    roll_hp,
+)
 from aose.engine.equip import equip as _equip, unequip as _unequip
 from aose.engine.magic import (
     add_free_magic_item,
@@ -1038,6 +1043,15 @@ def _hp_context(draft: dict[str, Any], data) -> dict:
             total = max(1, draft["hp_roll"] + con_mod)
 
     blessed = (draft.get("race_id") == "human" and ruleset.human_racial_abilities)
+    blessed_sets = None
+    raw_sets = draft.get("hp_blessed_sets")
+    if raw_sets and len(raw_sets) == 2:
+        totals = [sum(s) for s in raw_sets]
+        higher_idx = 0 if totals[0] >= totals[1] else 1
+        blessed_sets = [
+            {"rolls": s, "total": t, "higher": (i == higher_idx)}
+            for i, (s, t) in enumerate(zip(raw_sets, totals))
+        ]
     return {
         "is_multi": is_multi,
         "hp_class_name": " / ".join(c.name for c in classes),
@@ -1048,6 +1062,8 @@ def _hp_context(draft: dict[str, Any], data) -> dict:
         "reroll_rule": ruleset.reroll_1s_2s_hp_l1,
         "blessed": blessed,
         "hp_done": (total is not None),
+        "blessed_sets": blessed_sets,
+        "can_reroll_hp": not ruleset.strict_mode,
     }
 
 
@@ -1082,20 +1098,24 @@ async def get_class_setup(request: Request, draft_id: str):
 @router.post("/{draft_id}/hp/roll")
 async def post_hp_roll(request: Request, draft_id: str):
     draft = _load(request, draft_id)
-    if _has_hp(draft):
-        # HP is rolled once and locked (like abilities and gold). To change it
-        # the player cancels and starts over.
+    ruleset = _ruleset_of(draft)
+    if _has_hp(draft) and ruleset.strict_mode:
         raise HTTPException(400, "Hit points are already rolled and locked.")
     data = request.app.state.game_data
-    ruleset = _ruleset_of(draft)
     ids = _class_ids(draft)
     classes = [data.classes[cid] for cid in ids]
+    hit_dice = [c.hit_die for c in classes]
 
     blessed = (draft.get("race_id") == "human" and ruleset.human_racial_abilities)
     min_die = 3 if ruleset.reroll_1s_2s_hp_l1 else 1
-    rolls = roll_first_level_hp(
-        [c.hit_die for c in classes], blessed=blessed, min_die=min_die,
-    )
+
+    if blessed:
+        set_a, set_b = roll_blessed_hp_sets(hit_dice, min_die=min_die)
+        rolls = set_a if sum(set_a) >= sum(set_b) else set_b
+        draft["hp_blessed_sets"] = [set_a, set_b]
+    else:
+        rolls = roll_first_level_hp(hit_dice, blessed=False, min_die=min_die)
+        draft.pop("hp_blessed_sets", None)
 
     if len(ids) == 1:
         draft["hp_roll"] = rolls[0]

@@ -117,6 +117,14 @@ def _drive_to_equipment(client, draft_id, strict=True):
                 data={"name": "G", "alignment": "law"})
 
 
+def test_non_strict_allows_hp_reroll(client):
+    draft_id = _new(client)
+    _drive_to_equipment(client, draft_id, strict=False)
+    # _drive_to_equipment already rolled HP once; a second roll must be allowed.
+    r = client.post(f"/wizard/{draft_id}/hp/roll")
+    assert r.status_code == 303
+
+
 def test_non_strict_gold_reroll_until_purchase(client):
     draft_id = _new(client)
     _drive_to_equipment(client, draft_id, strict=False)

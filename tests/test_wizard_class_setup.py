@@ -267,22 +267,37 @@ def test_hp_locked_after_first_roll(tmp_path):
 
 
 def test_blessed_human_hp_uses_two_sets(tmp_path, monkeypatch):
-    # With the flag on for a human, the roll handler must call the helper with
-    # blessed=True. Patch the helper to capture the kwarg.
     import aose.web.wizard as wiz
     captured = {}
-    real = wiz.roll_first_level_hp
+    real = wiz.roll_blessed_hp_sets
 
-    def spy(hit_dice, *, blessed, min_die, rng=None):
-        captured["blessed"] = blessed
-        return real(hit_dice, blessed=blessed, min_die=min_die, rng=rng)
+    def spy(hit_dice, *, min_die, rng=None):
+        captured["called"] = True
+        return real(hit_dice, min_die=min_die, rng=rng)
 
-    monkeypatch.setattr(wiz, "roll_first_level_hp", spy)
+    monkeypatch.setattr(wiz, "roll_blessed_hp_sets", spy)
     client = _make_client(tmp_path)
     draft_id = _new_draft(client)
     _drive_to_class_setup(client, draft_id, race="human", flag=True)
     client.post(f"/wizard/{draft_id}/hp/roll")
-    assert captured["blessed"] is True
+    assert captured.get("called") is True
+
+
+def test_hp_context_exposes_both_blessed_sets(tmp_path):
+    from aose.web.wizard import _hp_context
+    client = _make_client(tmp_path)
+    draft_id = _new_draft(client)
+    _drive_to_class_setup(client, draft_id, race="human", flag=True)
+    client.post(f"/wizard/{draft_id}/hp/roll")
+    draft = load_draft(draft_id, client._drafts_dir)
+    assert "hp_blessed_sets" in draft
+    ctx = _hp_context(draft, GameData.load(DATA_DIR))
+    sets = ctx["blessed_sets"]
+    assert len(sets) == 2
+    # Exactly one set is flagged higher, and it has the >= total.
+    higher = [s for s in sets if s["higher"]]
+    assert len(higher) == 1
+    assert higher[0]["total"] == max(s["total"] for s in sets)
 
 
 def test_non_human_not_blessed(tmp_path, monkeypatch):

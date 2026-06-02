@@ -35,9 +35,25 @@
     </div>
     {% endif %}
 
+    {% if blessed_sets %}
+    <div class="blessed-sets">
+        <p class="muted small">Blessed &mdash; rolled twice, keeping the better:</p>
+        {% for s in blessed_sets %}
+        <div class="stat-row">
+            <span>Set {{ loop.index }} ({{ s.rolls|join(', ') }}){% if s.higher %} &mdash; kept{% endif %}</span>
+            <span class="stat-big">{% if s.higher %}<strong>{{ s.total }}</strong>{% else %}{{ s.total }}{% endif %}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
     {% if not hp_done %}
     <form method="post" action="/wizard/{{ draft_id }}/hp/roll" class="inline-form">
         <button type="submit">Roll HP</button>
+    </form>
+    {% elif can_reroll_hp %}
+    <form method="post" action="/wizard/{{ draft_id }}/hp/roll" class="inline-form">
+        <button type="submit">Re-roll HP</button>
     </form>
     {% else %}
     <p class="muted small">Hit points are locked. To re-roll, cancel and start over.</p>
