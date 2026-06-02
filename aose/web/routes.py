@@ -5,7 +5,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 
 from aose.characters.storage import list_character_ids, load_character, save_character
-from aose.engine import spells as spell_engine
+from aose.engine import hp, spells as spell_engine
 from aose.engine.equip import equip as _equip, unequip as _unequip
 from aose.engine.leveling import grant_xp as _grant_xp, level_up as _level_up
 from aose.engine.magic import (
@@ -205,6 +205,39 @@ async def grant_gold(request: Request, character_id: str, amount: int = Form(...
     thing in OSE, even if the GM claws back some treasure."""
     spec = _load_spec_or_404(request, character_id)
     spec.gold = max(0, spec.gold + amount)
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/hp/damage")
+async def hp_damage(request: Request, character_id: str, amount: int = Form(...)):
+    spec = _load_spec_or_404(request, character_id)
+    data = request.app.state.game_data
+    try:
+        spec.damage_taken = hp.apply_damage(spec, data, amount)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/hp/heal")
+async def hp_heal(request: Request, character_id: str, amount: int = Form(...)):
+    spec = _load_spec_or_404(request, character_id)
+    data = request.app.state.game_data
+    try:
+        spec.damage_taken = hp.apply_healing(spec, data, amount)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/hp/set")
+async def hp_set(request: Request, character_id: str, value: int = Form(...)):
+    spec = _load_spec_or_404(request, character_id)
+    data = request.app.state.game_data
+    spec.damage_taken = hp.set_current_hp(spec, data, value)
     save_character(character_id, spec, request.app.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
