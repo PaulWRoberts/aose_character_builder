@@ -30,7 +30,7 @@ class Enchantment(BaseModel):
 
     id: str
     name_template: str                       # .format(base=base.name) → display name
-    kind: Literal["weapon", "armor", "shield"]
+    kind: Literal["weapon", "armor", "shield", "ammunition"]
     applies_to: AppliesTo
     magic_bonus: int = 0                      # to-hit & damage (weapons); AC (armour/shield)
     conditional_bonus: ConditionalBonus | None = None   # weapons only

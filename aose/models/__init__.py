@@ -16,6 +16,7 @@ from .item import (
     Weapon,
     Armor,
     AdventuringGear,
+    Ammunition,
     Container,
     ConditionalBonus,
     MagicItem,
@@ -25,7 +26,7 @@ from .item import (
 from .modifier import Modifier
 from .enchantment import AppliesTo, Enchantment
 from .character import (
-    CharacterSpec, ClassEntry, ContainerInstance, EnchantedInstance,
+    AmmoStack, CharacterSpec, ClassEntry, ContainerInstance, EnchantedInstance,
     MagicItemInstance, SpellSlot,
 )
 
@@ -46,6 +47,7 @@ __all__ = [
     "Weapon",
     "Armor",
     "AdventuringGear",
+    "Ammunition",
     "Container",
     "ConditionalBonus",
     "MagicItem",
@@ -54,6 +56,7 @@ __all__ = [
     "Modifier",
     "AppliesTo",
     "Enchantment",
+    "AmmoStack",
     "CharacterSpec",
     "ClassEntry",
     "ContainerInstance",

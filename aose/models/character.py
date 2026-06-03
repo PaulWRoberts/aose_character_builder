@@ -46,6 +46,20 @@ class EnchantedInstance(BaseModel):
     note: str = ""
 
 
+class AmmoStack(BaseModel):
+    """A stack of one kind of ammunition the character owns.  Stacks with the
+    same (base_id, enchantment_id) combine; counts are adjusted manually (no
+    automatic per-shot consumption).  ``enchantment_id`` set => magic ammo,
+    resolved like an EnchantedInstance to confer its bonus to a loaded launcher.
+    """
+    model_config = ConfigDict(extra="forbid")
+
+    instance_id: str                       # uuid4 hex
+    base_id: str                           # references an Ammunition item
+    enchantment_id: str | None = None      # references an Enchantment (kind ammunition)
+    count: int = 0
+
+
 class ContainerInstance(BaseModel):
     """A specific container the character owns — per-instance state, separate
     from the catalog ``Container`` item.  Items inside ``contents`` are not in
@@ -138,6 +152,9 @@ class CharacterSpec(BaseModel):
     containers: list[ContainerInstance] = Field(default_factory=list)
     magic_items: list[MagicItemInstance] = Field(default_factory=list)
     enchanted: list[EnchantedInstance] = Field(default_factory=list)
+    # Ammunition stacks (counts), plus which stack is loaded into each launcher.
+    ammo: list[AmmoStack] = Field(default_factory=list)
+    loaded_ammo: dict[str, str] = Field(default_factory=dict)  # weapon_key -> AmmoStack.instance_id
     secondary_skill: str | None = None
     # Chosen *additional* languages only (INT-based picks).  Native (race) and
     # alignment tongues are derived at display time, never stored here.
