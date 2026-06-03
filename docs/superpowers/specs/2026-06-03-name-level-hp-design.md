@@ -113,9 +113,9 @@ level boundary must restore the character's prior HP exactly.
   `name_level` entries; `energy_drain` back across the boundary restores max HP
   exactly and does not consume a real die.
 - **Data:** every class loads with the new `name_level` / `hp_after_name_level`
-  fields; `hit_dice` is gone from `ClassLevelData` and all YAML. Update the two
-  tests that construct `ClassLevelData(hit_dice=…)`
-  (`tests/test_demihuman_rules.py`, and any other) plus `import/cribs/class.md`.
+  fields; `hit_dice` is gone from `ClassLevelData` and all YAML. Update the one
+  test that constructs `ClassLevelData(hit_dice=…)`
+  (`tests/test_demihuman_rules.py:118`) plus the `import/cribs/class.md` crib.
 
 ## Assumptions / non-goals
 
