@@ -406,3 +406,21 @@ def test_level_up_at_name_level_minus_one_still_rolls(data):
     assert spec.classes[0].level == 9
     assert len(spec.classes[0].hp_rolls) == 9
     assert 1 <= result <= 8
+
+
+def test_level_up_then_drain_round_trips_max_hp(data):
+    # Start at name level (9 rolls), record max HP, level to 10 (+2 fixed),
+    # then drain back to 9. Max HP must return to the original value and the
+    # roll list must be intact.
+    spec = _fighter_spec(9, [8] * 9)
+    spec.classes[0].xp = 360000
+    before = max_hp(spec, data)          # 81
+
+    level_up(spec, data, "fighter")      # -> L10, +2 fixed, no roll
+    assert max_hp(spec, data) == before + 2
+
+    from aose.engine.energy_drain import energy_drain
+    energy_drain(spec, data, 1, "new_min")   # -> L9
+    assert spec.classes[0].level == 9
+    assert spec.classes[0].hp_rolls == [8] * 9
+    assert max_hp(spec, data) == before
