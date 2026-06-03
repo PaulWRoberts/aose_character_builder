@@ -88,3 +88,54 @@ def compatible_bases(ench: Enchantment, data: GameData) -> list:
            if isinstance(item, (Weapon, Armor)) and is_compatible(item, ench)]
     out.sort(key=lambda i: i.name)
     return out
+
+
+def resolve_weapon(base: Weapon, ench: Enchantment, instance_id: str) -> Weapon:
+    """Synthetic ``Weapon`` = base combat stats + enchantment bonus.  ``id`` is
+    namespaced by the instance id so attack profiles are stable and unique;
+    ``base_weapon`` makes proficiency count the weapon as its base type."""
+    return Weapon(
+        id=f"ench:{instance_id}",
+        name=ench.name_template.format(base=base.name),
+        category=base.category,
+        cost_gp=0,
+        weight_cn=base.weight_cn,
+        magic=True,
+        item_type="weapon",
+        damage=base.damage,
+        hands=base.hands,
+        versatile=base.versatile,
+        melee=base.melee,
+        ranged=base.ranged,
+        range_short=base.range_short,
+        range_medium=base.range_medium,
+        range_long=base.range_long,
+        qualities=list(base.qualities),
+        groups=list(base.groups),
+        magic_bonus=ench.magic_bonus,
+        conditional_bonus=ench.conditional_bonus,
+        base_weapon=base.id,
+    )
+
+
+def resolve_armor(base: Armor, ench: Enchantment, instance_id: str) -> Armor:
+    """Synthetic ``Armor`` = base defence stats + enchantment bonus.  Enchanted
+    armour is half-weight (``weight_multiplier=0.5``); ``base_armor`` makes class
+    allowances count it as its base type."""
+    return Armor(
+        id=f"ench:{instance_id}",
+        name=ench.name_template.format(base=base.name),
+        category=base.category,
+        cost_gp=0,
+        weight_cn=base.weight_cn,
+        magic=True,
+        item_type="armor",
+        ac_descending=base.ac_descending,
+        ac_bonus=base.ac_bonus,
+        movement_impact=base.movement_impact,
+        is_shield=base.is_shield,
+        groups=list(base.groups),
+        magic_bonus=ench.magic_bonus,
+        weight_multiplier=0.5,
+        base_armor=base.id,
+    )

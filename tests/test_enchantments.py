@@ -251,3 +251,58 @@ def test_compatible_bases_lists_matches():
     ench = _ench("sword_plus_1", "weapon", ["sword"])
     ids = {b.id for b in compatible_bases(ench, d)}
     assert ids == {"short_sword"}
+
+
+def test_resolve_weapon_carries_base_stats_and_ench_bonus():
+    from aose.engine.enchant import resolve_weapon
+    from aose.models import Enchantment, Weapon, WeaponDamage
+    base = Weapon(id="long_sword", name="Long Sword", category="weapons",
+                  item_type="weapon", cost_gp=10, weight_cn=60,
+                  damage=WeaponDamage(default="1d6", variable="1d8"),
+                  qualities=["melee"], groups=["sword"])
+    ench = Enchantment(id="sword_vs_undead", name_template="{base} +1, +3 vs Undead",
+                       kind="weapon", applies_to={"include": ["sword"]},
+                       magic_bonus=1, conditional_bonus={"vs": "undead", "bonus": 2})
+    w = resolve_weapon(base, ench, "abc123")
+    assert isinstance(w, Weapon)
+    assert w.name == "Long Sword +1, +3 vs Undead"
+    assert w.magic_bonus == 1
+    assert w.conditional_bonus.vs == "undead"
+    assert w.damage.variable == "1d8"
+    assert w.base_weapon == "long_sword"     # proficiency counts as base type
+    assert w.id == "ench:abc123"
+    assert w.qualities == ["melee"]
+
+
+def test_resolve_armor_half_weight_and_base_armor():
+    from aose.engine.enchant import resolve_armor
+    from aose.models import Armor, Enchantment
+    base = Armor(id="chain_mail", name="Chain Mail", category="armor",
+                 item_type="armor", cost_gp=40, weight_cn=400, ac_descending=5,
+                 movement_impact="metal", groups=["metal_armour"])
+    ench = Enchantment(id="armour_plus_1", name_template="{base} +1",
+                       kind="armor", applies_to={"include": ["any_armour"]},
+                       magic_bonus=1)
+    a = resolve_armor(base, ench, "xyz")
+    assert isinstance(a, Armor)
+    assert a.name == "Chain Mail +1"
+    assert a.magic_bonus == 1
+    assert a.ac_descending == 5            # base AC; magic_bonus applied downstream
+    assert a.weight_multiplier == 0.5      # half-weight enchanted armour
+    assert a.base_armor == "chain_mail"
+    assert a.movement_impact == "metal"
+    assert a.id == "ench:xyz"
+
+
+def test_resolve_shield_carries_ac_bonus():
+    from aose.engine.enchant import resolve_armor
+    from aose.models import Armor, Enchantment
+    base = Armor(id="shield", name="Shield", category="armor", item_type="armor",
+                 cost_gp=10, weight_cn=100, ac_descending=0, is_shield=True, ac_bonus=1)
+    ench = Enchantment(id="shield_plus_1", name_template="{base} +1",
+                       kind="shield", applies_to={"include": ["any_shield"]},
+                       magic_bonus=1)
+    a = resolve_armor(base, ench, "s1")
+    assert a.is_shield is True
+    assert a.ac_bonus == 1
+    assert a.magic_bonus == 1
