@@ -525,3 +525,32 @@ def test_unequipped_enchanted_weapon_absent_from_attacks(data):
     spec.enchanted = add_free_enchanted([], "short_sword", "sword_plus_1_t11b", d)  # not equipped
     names = {p.name for p in attack_profiles(spec, d)}
     assert not any(n.startswith("Short Sword +1") for n in names)
+
+
+def test_enchanted_weapon_weight_counts(data):
+    import copy
+    from aose.engine.encumbrance import carried_weight_cn
+    from aose.engine.enchant import add_free_enchanted
+    from aose.models import Enchantment, RuleSet
+    d = copy.deepcopy(data)
+    d.enchantments["sword_plus_1_t12"] = Enchantment(
+        id="sword_plus_1_t12", name_template="{base} +1", kind="weapon",
+        applies_to={"include": ["sword"]}, magic_bonus=1)
+    spec = _minimal_spec(ruleset=RuleSet(encumbrance="detailed"))
+    base_weight = d.items["short_sword"].weight_cn
+    spec.enchanted = add_free_enchanted([], "short_sword", "sword_plus_1_t12", d)
+    assert carried_weight_cn(spec, d) == base_weight
+
+
+def test_enchanted_armour_half_weight(data):
+    import copy
+    from aose.engine.encumbrance import carried_weight_cn
+    from aose.engine.enchant import add_free_enchanted
+    from aose.models import Enchantment, RuleSet
+    d = copy.deepcopy(data)
+    d.enchantments["armour_plus_1_t12"] = Enchantment(
+        id="armour_plus_1_t12", name_template="{base} +1", kind="armor",
+        applies_to={"include": ["any_armour"]}, magic_bonus=1)
+    spec = _minimal_spec(ruleset=RuleSet(encumbrance="detailed"))
+    spec.enchanted = add_free_enchanted([], "chain_mail", "armour_plus_1_t12", d)
+    assert carried_weight_cn(spec, d) == 200   # 400 × 0.5

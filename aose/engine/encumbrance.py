@@ -120,6 +120,16 @@ def carried_weight_cn(spec: CharacterSpec, data: GameData) -> int:
         if catalog is not None:
             total += catalog.weight_cn
 
+    from aose.engine.enchant import resolve_instance
+    for inst in spec.enchanted:
+        resolved = resolve_instance(inst, data)
+        if resolved is None:
+            continue
+        if isinstance(resolved, Armor):
+            total += int(resolved.weight_cn * resolved.weight_multiplier)
+        else:
+            total += resolved.weight_cn
+
     return total
 
 
