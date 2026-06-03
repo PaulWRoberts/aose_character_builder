@@ -118,6 +118,116 @@ def resolve_weapon(base: Weapon, ench: Enchantment, instance_id: str) -> Weapon:
     )
 
 
+def _kind_of_instance(inst: EnchantedInstance, data: GameData) -> str | None:
+    ench = data.enchantments.get(inst.enchantment_id)
+    return ench.kind if ench else None
+
+
+def _index(items: list[EnchantedInstance], instance_id: str) -> int:
+    for i, m in enumerate(items):
+        if m.instance_id == instance_id:
+            return i
+    raise UnknownEnchantment(f"No enchanted instance {instance_id!r}")
+
+
+def new_enchanted_instance(base_id: str, enchantment_id: str, data: GameData,
+                           rng: random.Random | None = None) -> EnchantedInstance:
+    """Create a fresh EnchantedInstance.  Validates the base exists, the
+    enchantment exists, and the two are compatible.  Rolls ``charge_dice`` or
+    seeds ``max_charges``."""
+    base = data.items.get(base_id)
+    if not isinstance(base, (Weapon, Armor)):
+        raise ValueError(f"{base_id!r} is not a base weapon or armour")
+    ench = data.enchantments.get(enchantment_id)
+    if ench is None:
+        raise UnknownEnchantment(f"{enchantment_id!r} is not an enchantment")
+    if not is_compatible(base, ench):
+        raise IncompatibleBase(f"{base_id!r} is not compatible with {enchantment_id!r}")
+    charges_max: int | None = None
+    if ench.charge_dice:
+        charges_max = roll(ench.charge_dice, rng)
+    elif ench.max_charges is not None:
+        charges_max = ench.max_charges
+    return EnchantedInstance(
+        instance_id=uuid.uuid4().hex,
+        base_id=base_id,
+        enchantment_id=enchantment_id,
+        equipped=False,
+        charges_max=charges_max,
+        charges_remaining=charges_max,
+    )
+
+
+def add_free_enchanted(items: list[EnchantedInstance], base_id: str,
+                       enchantment_id: str, data: GameData) -> list[EnchantedInstance]:
+    return [*items, new_enchanted_instance(base_id, enchantment_id, data)]
+
+
+def equip(items: list[EnchantedInstance], instance_id: str) -> list[EnchantedInstance]:
+    idx = _index(items, instance_id)
+    updated = items[idx].model_copy(update={"equipped": True})
+    return [*items[:idx], updated, *items[idx + 1:]]
+
+
+def unequip(items: list[EnchantedInstance], instance_id: str) -> list[EnchantedInstance]:
+    idx = _index(items, instance_id)
+    updated = items[idx].model_copy(update={"equipped": False})
+    return [*items[:idx], updated, *items[idx + 1:]]
+
+
+def use_charge(items: list[EnchantedInstance], instance_id: str) -> list[EnchantedInstance]:
+    idx = _index(items, instance_id)
+    inst = items[idx]
+    if inst.charges_remaining is None or inst.charges_remaining <= 0:
+        raise NoCharges(f"{inst.enchantment_id!r} has no charges left")
+    updated = inst.model_copy(update={"charges_remaining": inst.charges_remaining - 1})
+    return [*items[:idx], updated, *items[idx + 1:]]
+
+
+def reset_charges(items: list[EnchantedInstance], instance_id: str) -> list[EnchantedInstance]:
+    idx = _index(items, instance_id)
+    updated = items[idx].model_copy(update={"charges_remaining": items[idx].charges_max})
+    return [*items[:idx], updated, *items[idx + 1:]]
+
+
+def remove(items: list[EnchantedInstance], instance_id: str) -> list[EnchantedInstance]:
+    idx = _index(items, instance_id)
+    return [*items[:idx], *items[idx + 1:]]
+
+
+def set_note(items: list[EnchantedInstance], instance_id: str, note: str) -> list[EnchantedInstance]:
+    idx = _index(items, instance_id)
+    updated = items[idx].model_copy(update={"note": note})
+    return [*items[:idx], updated, *items[idx + 1:]]
+
+
+def resolve_instance(inst: EnchantedInstance, data: GameData):
+    """Resolve one instance to its synthetic Weapon/Armor, or None if its base
+    or enchantment is missing from the catalog."""
+    base = data.items.get(inst.base_id)
+    ench = data.enchantments.get(inst.enchantment_id)
+    if ench is None or not isinstance(base, (Weapon, Armor)):
+        return None
+    if ench.kind == "weapon":
+        return resolve_weapon(base, ench, inst.instance_id)
+    return resolve_armor(base, ench, inst.instance_id)
+
+
+def equipped_enchanted(spec, data: GameData, kind: str) -> list:
+    """Resolved synthetic items for every EQUIPPED enchanted instance of the
+    given ``kind`` (``weapon`` / ``armor`` / ``shield``)."""
+    out = []
+    for inst in spec.enchanted:
+        if not inst.equipped:
+            continue
+        if _kind_of_instance(inst, data) != kind:
+            continue
+        resolved = resolve_instance(inst, data)
+        if resolved is not None:
+            out.append(resolved)
+    return out
+
+
 def resolve_armor(base: Armor, ench: Enchantment, instance_id: str) -> Armor:
     """Synthetic ``Armor`` = base defence stats + enchantment bonus.  Enchanted
     armour is half-weight (``weight_multiplier=0.5``); ``base_armor`` makes class

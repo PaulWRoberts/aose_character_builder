@@ -306,3 +306,96 @@ def test_resolve_shield_carries_ac_bonus():
     assert a.is_shield is True
     assert a.ac_bonus == 1
     assert a.magic_bonus == 1
+
+
+def _lifecycle_data():
+    from aose.data.loader import GameData
+    from aose.models import Enchantment
+    d = GameData(items={
+        "short_sword": _wpn("short_sword", groups=["sword"]),
+        "battle_axe": _wpn("battle_axe", groups=["axe"]),
+    })
+    d.enchantments = {
+        "sword_plus_1": Enchantment(
+            id="sword_plus_1", name_template="{base} +1", kind="weapon",
+            applies_to={"include": ["sword"]}, magic_bonus=1),
+        "charged_trident": Enchantment(
+            id="charged_trident", name_template="{base} of Fish Command",
+            kind="weapon", applies_to={"include": ["any_weapon"]},
+            charge_dice="2d6"),
+    }
+    return d
+
+
+def test_new_enchanted_instance_validates_compat():
+    from aose.engine.enchant import new_enchanted_instance, IncompatibleBase
+    d = _lifecycle_data()
+    inst = new_enchanted_instance("short_sword", "sword_plus_1", d)
+    assert inst.base_id == "short_sword"
+    assert inst.enchantment_id == "sword_plus_1"
+    assert inst.equipped is False
+    assert len(inst.instance_id) >= 16
+    with pytest.raises(IncompatibleBase):
+        new_enchanted_instance("battle_axe", "sword_plus_1", d)  # axe vs sword-only
+
+
+def test_new_enchanted_instance_rolls_charges():
+    import random as _r
+    from aose.engine.enchant import new_enchanted_instance
+    d = _lifecycle_data()
+    inst = new_enchanted_instance("short_sword", "charged_trident", d, rng=_r.Random(1))
+    assert inst.charges_max == inst.charges_remaining
+    assert 2 <= inst.charges_max <= 12
+
+
+def test_new_enchanted_instance_unknown_raises():
+    from aose.engine.enchant import new_enchanted_instance, UnknownEnchantment
+    d = _lifecycle_data()
+    with pytest.raises(UnknownEnchantment):
+        new_enchanted_instance("short_sword", "nope", d)
+    with pytest.raises(ValueError):
+        new_enchanted_instance("missing_base", "sword_plus_1", d)
+
+
+def test_add_equip_unequip_remove_roundtrip():
+    from aose.engine.enchant import (
+        add_free_enchanted, equip, unequip, remove, set_note)
+    d = _lifecycle_data()
+    items = add_free_enchanted([], "short_sword", "sword_plus_1", d)
+    iid = items[0].instance_id
+    items = equip(items, iid)
+    assert items[0].equipped is True
+    items = unequip(items, iid)
+    assert items[0].equipped is False
+    items = set_note(items, iid, "hoard")
+    assert items[0].note == "hoard"
+    items = remove(items, iid)
+    assert items == []
+
+
+def test_use_and_reset_charges():
+    from aose.engine.enchant import (
+        add_free_enchanted, use_charge, reset_charges, NoCharges)
+    d = _lifecycle_data()
+    items = add_free_enchanted([], "short_sword", "charged_trident", d)
+    iid = items[0].instance_id
+    start = items[0].charges_remaining
+    for _ in range(start):
+        items = use_charge(items, iid)
+    assert items[0].charges_remaining == 0
+    with pytest.raises(NoCharges):
+        use_charge(items, iid)
+    items = reset_charges(items, iid)
+    assert items[0].charges_remaining == start
+
+
+def test_equipped_enchanted_resolves_by_kind():
+    from aose.engine.enchant import add_free_enchanted, equip, equipped_enchanted
+    d = _lifecycle_data()
+    items = add_free_enchanted([], "short_sword", "sword_plus_1", d)
+    items = equip(items, items[0].instance_id)
+    spec = _minimal_spec(enchanted=items)
+    weapons = equipped_enchanted(spec, d, "weapon")
+    assert len(weapons) == 1
+    assert weapons[0].magic_bonus == 1
+    assert equipped_enchanted(spec, d, "armor") == []
