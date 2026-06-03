@@ -109,6 +109,20 @@ def test_rings_loaded(data):
     assert data.items["ring_wishes_2_4"].charge_dice == "1d3+1"
 
 
+def test_rods_staves_wands_loaded(data):
+    assert data.items["rod_striking"].charge_dice == "1d10"
+    assert data.items["staff_striking"].charge_dice == "3d10"
+    assert data.items["wand_fire_balls"].charge_dice == "2d10"
+    assert data.items["rod_absorption"].max_charges == 50
+    assert data.items["rod_absorption"].charge_dice is None
+    assert data.items["rod_cancellation"].max_charges == 1
+    assert data.items["rod_immovable"].charge_dice is None
+    assert data.items["staff_healing"].charge_dice is None
+    rsw = [i for i in data.items.values()
+           if isinstance(i, MagicItem) and i.category == "magic_rods_staves_wands"]
+    assert len(rsw) == 35
+
+
 def test_rolled_modifier_rolls_into_extra_modifiers():
     """A MagicItem.rolled_modifiers entry becomes a concrete per-instance
     extra_modifier with a rolled value when the instance is created."""

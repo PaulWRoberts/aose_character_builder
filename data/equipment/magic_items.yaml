@@ -247,6 +247,499 @@
     traps in the 10' square examined. Concentration required (cannot move).
     May be used at most once per turn.
 
+# ─── Rods, Staves, Wands ──────────────────────────────────────────────────────
+
+- id: rod_immovable
+  item_type: magic
+  name: Immovable Rod
+  category: magic_rods_staves_wands
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    A 4' length of metal which can anchor itself to a point in space. In
+    combat: attacks as a +2 magic item, doing 1d6 damage (may be hurled
+    5'–20' / 21'–40' / 41'–60'). Anchoring: a command word anchors the rod
+    to its current position (unmovable except by a wish; gravity does not
+    move it). A second command word releases it. No charges; unlimited use.
+
+- id: rod_absorption
+  item_type: magic
+  name: Rod of Absorption
+  category: magic_rods_staves_wands
+  cost_gp: 0
+  magic: true
+  equippable: false
+  max_charges: 50
+  description: |-
+    Usable by spell casters only (divine or arcane). Absorbs spells cast at
+    the character (1 charge per spell level), negating their effect and
+    storing energy levels. Stored energy may be spent to cast memorised
+    spells (spells are not lost from memory when cast this way). Total: 50
+    charges.
+
+- id: rod_cancellation
+  item_type: magic
+  name: Rod of Cancellation
+  category: magic_rods_staves_wands
+  cost_gp: 0
+  magic: true
+  equippable: false
+  max_charges: 1
+  description: |-
+    Drains the enchantment from a magic item that is touched. In combat:
+    requires an attack roll against AC 9 [10] (adjusted if actively used).
+    Effect: the touched item becomes utterly non-magical. One use only.
+
+- id: rod_captivation
+  item_type: magic
+  name: Rod of Captivation
+  category: magic_rods_staves_wands
+  cost_gp: 0
+  magic: true
+  equippable: false
+  charge_dice: "1d10"
+  description: |-
+    Beguiles all intelligent creatures (including animal intelligence) within
+    20'. Creatures of human-level intelligence may save vs spells (-2 penalty)
+    to resist. Charmed creatures regard the character as a trusted friend and
+    ally and obey commands (not suicidal or obviously harmful; contradicting
+    nature/alignment may be ignored). Duration: 1 turn per charge.
+
+- id: rod_lordly_might
+  item_type: magic
+  name: Rod of Lordly Might
+  category: magic_rods_staves_wands
+  cost_gp: 0
+  magic: true
+  equippable: false
+  charge_dice: "1d10"
+  description: |-
+    A thick metal rod with a spherical head and 8 studs along the shaft.
+    Usable by non-spell-casting martial characters (e.g. fighters) only.
+    In combat: wields as a mace +2; STR < 16 incurs -2 to attack rolls.
+    Studs (each uses 1 charge unless noted): (a) Paralysis — save vs spells
+    or paralysed 6 turns; (b) Fear — cone 60'×30', save vs spells or flee
+    10 rounds; (c) Life drain — 2d4 melee damage, wielder gains same HP;
+    (d) Flaming sword +1 (no charge); (e) Battle axe +3 (no charge);
+    (f) Spear +2 (no charge); (g) Ladder up to 50' long (no charge);
+    (h) Orientation — current elevation and north direction (no charge).
+    Once all charges expended, studs a–e no longer function.
+
+- id: rod_parrying
+  item_type: magic
+  name: Rod of Parrying
+  category: magic_rods_staves_wands
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    A 5' metal rod providing offensive and defensive melee capability.
+    Attacking: attacks as +2 magic item, doing 1d8 damage. Parrying:
+    instead of attacking, gain +4 AC bonus vs melee attacks for one round
+    (cannot parry while retreating). No charges; unlimited use.
+
+- id: rod_resurrection
+  item_type: magic
+  name: Rod of Resurrection
+  category: magic_rods_staves_wands
+  cost_gp: 0
+  magic: true
+  equippable: false
+  charge_dice: "1d10"
+  description: |-
+    Usable by divine spell casters only. Restores a deceased person within
+    120' to life with full hit points (dead up to 100 years). Charges per
+    use depend on the subject's race: Human 1, Half-elf 2, Halfling 2,
+    Dwarf/Gnome 3, Elf 4, Half-orc 4, Other 4. May be used at most once
+    per day.
+
+- id: rod_striking
+  item_type: magic
+  name: Rod of Striking
+  category: magic_rods_staves_wands
+  cost_gp: 0
+  magic: true
+  equippable: false
+  charge_dice: "1d10"
+  description: |-
+    A rod which can be used as a weapon and is especially potent against
+    constructs and chaotic extra-planar monsters. Attacks as +3 magic item,
+    doing 1d8 damage. Against constructs: each hit expends one charge and
+    inflicts double damage; natural 20 destroys the construct instantly.
+    Against chaotic extra-planar monsters: natural 20 expends one charge and
+    inflicts triple damage.
+
+- id: staff_commanding
+  item_type: magic
+  name: Staff of Commanding
+  category: magic_rods_staves_wands
+  cost_gp: 0
+  magic: true
+  equippable: false
+  charge_dice: "3d10"
+  description: |-
+    Grants the power to control animals, humans, and plants (each costs one
+    charge). Animals: controls 1d6 normal or 1 giant animal (not magical/
+    intelligent); no save; broken if user moves or attacks. Humans: charm a
+    human within 60' (save vs spells -2); up to 6 HD; lasts indefinitely.
+    Plants: all plants in a 10' square up to 60' distant; lasts while
+    concentrating.
+
+- id: staff_dispelling
+  item_type: magic
+  name: Staff of Dispelling
+  category: magic_rods_staves_wands
+  cost_gp: 0
+  magic: true
+  equippable: false
+  charge_dice: "3d10"
+  description: |-
+    Dispels any magical effect which is touched. Spells: if the original
+    caster is above 9th level, 5% chance per level difference of failure.
+    One-use magic items are destroyed; permanent items are rendered
+    non-magical for 1d4 rounds.
+
+- id: staff_healing
+  item_type: magic
+  name: Staff of Healing
+  category: magic_rods_staves_wands
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    Usable by divine spell casters only. Heals 1d6+1 hit points with each
+    use. Effective on any individual at most once per day. No charges;
+    unlimited use.
+
+- id: staff_power
+  item_type: magic
+  name: Staff of Power
+  category: magic_rods_staves_wands
+  cost_gp: 0
+  magic: true
+  equippable: false
+  charge_dice: "3d10"
+  description: |-
+    Usable by arcane spell casters only. Melee: 2d6 damage on a hit (1
+    charge). Cone of cold: 60' long, 30' wide, 8d6 damage (save vs spells
+    for half). Spells (each 1 charge): continual light, fire ball (8d6),
+    lightning bolt (8d6), telekinesis (up to 2,400 coins of weight).
+
+- id: staff_snakes
+  item_type: magic
+  name: Staff of Snakes
+  category: magic_rods_staves_wands
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    Usable by divine spell casters only. In melee: +1 magic bonus to attacks
+    and damage. On a successful hit against a human-sized (or smaller)
+    creature: speak the command word to transform the staff into a serpent
+    that coils around the victim (save vs spells or immobilised 1d4 turns).
+    Snake: AC 5 [14], HD 3 (20hp), MV 60' (20'). When released, snake
+    returns and reverts to staff form (healed of damage). If the snake is
+    killed it does not revert. No charges; unlimited use.
+
+- id: staff_striking
+  item_type: magic
+  name: Staff of Striking
+  category: magic_rods_staves_wands
+  cost_gp: 0
+  magic: true
+  equippable: false
+  charge_dice: "3d10"
+  description: |-
+    Used as a magical melee weapon. Expending one charge inflicts 2d6 damage
+    on a successful hit. Only one charge may be spent per strike.
+
+- id: staff_swarming_insects
+  item_type: magic
+  name: Staff of Swarming Insects
+  category: magic_rods_staves_wands
+  cost_gp: 0
+  magic: true
+  equippable: false
+  charge_dice: "3d10"
+  description: |-
+    Usable by divine spell casters only. Summons a swarm of biting insects
+    onto a target within 60' + 10' per level of the wielder. The target
+    cannot act for 1 round and suffers 6 damage + 1 per level of the
+    wielder. Creatures larger than human-sized or with natural AC better
+    than 5 [14] are unaffected.
+
+- id: staff_of_the_healer
+  item_type: magic
+  name: Staff of the Healer
+  category: magic_rods_staves_wands
+  cost_gp: 0
+  magic: true
+  equippable: false
+  charge_dice: "3d10"
+  description: |-
+    Usable by divine spell casters only. Each use (1 charge) has one of
+    three effects: (a) Cure wounds: 3d6+3 hit points; (b) Cure disease;
+    (c) Cure blindness. Each function may be used up to twice per day. A
+    single subject can only be affected once per day.
+
+- id: staff_withering
+  item_type: magic
+  name: Staff of Withering
+  category: magic_rods_staves_wands
+  cost_gp: 0
+  magic: true
+  equippable: false
+  charge_dice: "3d10"
+  description: |-
+    Usable by divine spell casters only. Creatures hit by the staff are
+    magically aged 10 years; living creatures die upon reaching their natural
+    lifespan. Long-lived species ignore some ageing (elves: 200 years;
+    dwarves: 50 years, etc.). Undead are unaffected.
+
+- id: staff_wizardry
+  item_type: magic
+  name: Staff of Wizardry
+  category: magic_rods_staves_wands
+  cost_gp: 0
+  magic: true
+  equippable: false
+  charge_dice: "3d10"
+  description: |-
+    Usable by arcane spell casters only. In melee: +1 magic bonus to attacks
+    and damage. Striking: 2d6 damage (1 charge). Cone of cold: 60'×30',
+    8d6 (save vs spells for half). Paralysation cone: 60'×30', paralysed
+    6 turns (save vs spells to avoid). Spells (1 charge each): conjure
+    elemental (8 HD), continual light, fire ball (8d6), invisibility,
+    lightning bolt (8d6), pass-wall, telekinesis (2,400 coins), web.
+    Whirlwind (1 charge): 70' tall, 20'/10' wide, lasts 3 rounds, 2d6
+    damage; creatures < 2 HD swept aside (save vs death to avoid).
+    Sacrifice: break the staff to release a 30' radius fireball inflicting
+    8 damage per remaining charge (wielder also suffers this damage).
+
+- id: staff_of_the_woodlands
+  item_type: magic
+  name: Staff of the Woodlands
+  category: magic_rods_staves_wands
+  cost_gp: 0
+  magic: true
+  equippable: false
+  charge_dice: "3d10"
+  description: |-
+    Usable by divine spell casters with druidic magic only. Melee: acts as
+    a +2 staff. Animate tree (1 charge): a large tree within 30' comes alive
+    under the wielder's control (AC 2 [17], HD 8, Att 2×fist 2d6, MV 30').
+    Spells (1 charge each): animal friendship, speak with animals, wall of
+    thorns.
+
+- id: wand_cold
+  item_type: magic
+  name: Wand of Cold
+  category: magic_rods_staves_wands
+  cost_gp: 0
+  magic: true
+  equippable: false
+  charge_dice: "2d10"
+  description: |-
+    Conjures a cone of freezing energy 60' long and 30' wide at the far end.
+    Creatures caught in the cone suffer 6d6 damage (save vs wands for half).
+
+- id: wand_enemy_detection
+  item_type: magic
+  name: Wand of Enemy Detection
+  category: magic_rods_staves_wands
+  cost_gp: 0
+  magic: true
+  equippable: false
+  charge_dice: "2d10"
+  description: |-
+    Expending a charge causes enemies within 60' to be haloed in a fiery
+    glow. Even concealed or invisible enemies are affected.
+
+- id: wand_fear
+  item_type: magic
+  name: Wand of Fear
+  category: magic_rods_staves_wands
+  cost_gp: 0
+  magic: true
+  equippable: false
+  charge_dice: "2d10"
+  description: |-
+    Conjures a cone of magical energy 60' long and 30' wide at the far end.
+    Creatures in the cone flee from the wielder at maximum speed for 30
+    rounds (save vs wands negates).
+
+- id: wand_fire_balls
+  item_type: magic
+  name: Wand of Fire Balls
+  category: magic_rods_staves_wands
+  cost_gp: 0
+  magic: true
+  equippable: false
+  charge_dice: "2d10"
+  description: |-
+    Conjures fire balls. A streak of flame shoots to an area up to 240'
+    distant, detonating in a 40' diameter sphere of fire. Creatures caught
+    suffer 6d6 damage (save vs wands for half).
+
+- id: wand_illusion
+  item_type: magic
+  name: Wand of Illusion
+  category: magic_rods_staves_wands
+  cost_gp: 0
+  magic: true
+  equippable: false
+  charge_dice: "2d10"
+  description: |-
+    Manifests an illusion of the character's choosing (as the magic-user
+    spell phantasmal force). Concentration required to maintain the illusion;
+    the wielder may move at up to half speed. Concentration breaks if the
+    wielder attacks, casts a spell, or is successfully attacked.
+
+- id: wand_lightning_bolts
+  item_type: magic
+  name: Wand of Lightning Bolts
+  category: magic_rods_staves_wands
+  cost_gp: 0
+  magic: true
+  equippable: false
+  charge_dice: "2d10"
+  description: |-
+    Conjures a lightning bolt: point of origin up to 180' distant; bolt is
+    60' long and 5' wide. Creatures struck suffer 6d6 damage (save vs wands
+    for half). If the bolt hits a solid barrier before its full length, it
+    bounces back towards the wielder for the remaining distance.
+
+- id: wand_magic_detection
+  item_type: magic
+  name: Wand of Magic Detection
+  category: magic_rods_staves_wands
+  cost_gp: 0
+  magic: true
+  equippable: false
+  charge_dice: "2d10"
+  description: |-
+    Expending a charge causes magic items within 20' to be haloed with light.
+    Concealed items also glow, but the light might not be visible.
+
+- id: wand_magic_missiles
+  item_type: magic
+  name: Wand of Magic Missiles
+  category: magic_rods_staves_wands
+  cost_gp: 0
+  magic: true
+  equippable: false
+  charge_dice: "2d10"
+  description: |-
+    Shoots magic missiles that hit unerringly. Each charge conjures a missile
+    that hits a foe within 150', inflicting 1d6+1 damage. Up to 2 charges
+    may be expended in a single round.
+
+- id: wand_metal_detection
+  item_type: magic
+  name: Wand of Metal Detection
+  category: magic_rods_staves_wands
+  cost_gp: 0
+  magic: true
+  equippable: false
+  charge_dice: "2d10"
+  description: |-
+    Expending a charge causes the wand to point towards metal within 20'.
+    The type of metal is revealed. Only masses of at least 1,000 coins in
+    weight are detected.
+
+- id: wand_negation
+  item_type: magic
+  name: Wand of Negation
+  category: magic_rods_staves_wands
+  cost_gp: 0
+  magic: true
+  equippable: false
+  charge_dice: "2d10"
+  description: |-
+    Negates the effects of another wand or staff for one round. The wielder
+    must declare intent before rolling initiative and target a specific wand
+    or staff.
+
+- id: wand_paralysation
+  item_type: magic
+  name: Wand of Paralysation
+  category: magic_rods_staves_wands
+  cost_gp: 0
+  magic: true
+  equippable: false
+  charge_dice: "2d10"
+  description: |-
+    Conjures a cone of paralysing energy 60' long and 30' wide at the far
+    end. Creatures in the cone are paralysed for 6 turns (save vs wands
+    negates).
+
+- id: wand_polymorph
+  item_type: magic
+  name: Wand of Polymorph
+  category: magic_rods_staves_wands
+  cost_gp: 0
+  magic: true
+  equippable: false
+  charge_dice: "2d10"
+  description: |-
+    The wielder or another creature within 60' transforms into another type
+    of creature (as the magic-user spells polymorph self and polymorph
+    others). An unwilling subject may save vs wands to negate.
+
+- id: wand_radiance
+  item_type: magic
+  name: Wand of Radiance
+  category: magic_rods_staves_wands
+  cost_gp: 0
+  magic: true
+  equippable: false
+  charge_dice: "2d10"
+  description: |-
+    Three light-bringing effects: Light (1 charge): 15' radius light, 6
+    turns, from a location within 120'. Continual light (2 charges):
+    permanent 30' radius light from a location within 120'. Burst of
+    sunlight (3 charges): momentary flash within 120'; undead within 40'
+    suffer 6d6 damage; viewers must save vs wands or be blinded for 1 round.
+
+- id: wand_secret_door_detection
+  item_type: magic
+  name: Wand of Secret Door Detection
+  category: magic_rods_staves_wands
+  cost_gp: 0
+  magic: true
+  equippable: false
+  charge_dice: "2d10"
+  description: |-
+    Reveals the location of any secret door within 20'.
+
+- id: wand_summoning
+  item_type: magic
+  name: Wand of Summoning
+  category: magic_rods_staves_wands
+  cost_gp: 0
+  magic: true
+  equippable: false
+  charge_dice: "2d10"
+  description: |-
+    Summons monsters to do the character's bidding. 1st level monsters:
+    1 charge summons 2d4. 2nd level: 2 charges summon 1d6. 3rd level:
+    3 charges summon 1d4. Type determined randomly (e.g. wandering monster
+    tables). Arrive in 1d4 rounds; attack enemies as directed or follow
+    commands if a language is shared. Disappear after 1 round per character
+    level.
+
+- id: wand_trap_detection
+  item_type: magic
+  name: Wand of Trap Detection
+  category: magic_rods_staves_wands
+  cost_gp: 0
+  magic: true
+  equippable: false
+  charge_dice: "2d10"
+  description: |-
+    Reveals the location of all traps within 20'.
+
 # ─── Potions ──────────────────────────────────────────────────────────────────
 
 - id: potion_clairaudience
