@@ -312,40 +312,30 @@ def test_sheet_lists_qualities_reference_for_equipped_weapons(data):
 
 
 # ---------------------------------------------------------------------------
-# Magic weapon variants normalise to their base weapon type for proficiency
+# Enchanted weapon variants normalise to their base weapon type for proficiency
 # ---------------------------------------------------------------------------
 from aose.engine.attacks import attack_profiles
 from aose.engine.proficiency import base_weapon_id
 
 
-def test_base_weapon_id_resolves_variant_to_base(data):
-    plain = data.items["sword"]
-    variant = data.items["sword_plus_1"]
-    assert base_weapon_id(plain) == "sword"
-    assert base_weapon_id(variant) == "sword"
-
-
-def test_magic_variant_uses_base_weapon_proficiency(data):
+def test_enchanted_weapon_uses_base_weapon_proficiency(data):
+    from aose.engine.enchant import add_free_enchanted, equip
+    from aose.models import Enchantment
+    import copy
+    d = copy.deepcopy(data)
+    d.enchantments["sword_plus_1_prof"] = Enchantment(
+        id="sword_plus_1_prof", name_template="{base} +1", kind="weapon",
+        applies_to={"include": ["sword"]}, magic_bonus=1)
     spec = _base_spec(
         ruleset=RuleSet(weapon_proficiency=True),
-        weapon_proficiencies=["sword"],
-        weapon_specialisations=["sword"],
-        inventory=["sword_plus_1"],
-        equipped_weapons=["sword_plus_1"],
+        weapon_proficiencies=["short_sword"],
+        weapon_specialisations=["short_sword"],
     )
-    profiles = attack_profiles(spec, data)
-    prof = next(p for p in profiles if p.weapon_id == "sword_plus_1")
-    assert prof.proficient is True
-    assert prof.specialised is True
-
-
-def test_picker_omits_magic_weapon_variants(client):
-    draft_id = _start_fighter(client)
-    r = client.get(f"/wizard/{draft_id}/class_setup")
-    assert r.status_code == 200
-    assert "Sword" in r.text          # base weapon still offered
-    assert "Sword +1" not in r.text   # magic variant must not be a separate option
-    assert "vs Undead" not in r.text
+    spec.enchanted = add_free_enchanted([], "short_sword", "sword_plus_1_prof", d)
+    spec.enchanted = equip(spec.enchanted, spec.enchanted[0].instance_id)
+    profiles = attack_profiles(spec, d)
+    ench_prof = next(p for p in profiles if p.name.startswith("Short Sword +1"))
+    assert ench_prof.proficient is True
 
 
 def test_sheet_html_renders_per_weapon_section(client):

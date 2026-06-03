@@ -578,6 +578,13 @@ def test_seed_generic_plus1_excludes_swords(data):
     assert is_compatible(axe, ench)
 
 
+def test_resolved_enchanted_weapon_keeps_base_for_proficiency(data):
+    from aose.engine.enchant import resolve_instance, new_enchanted_instance
+    inst = new_enchanted_instance("short_sword", "sword_plus_1", data)
+    resolved = resolve_instance(inst, data)
+    assert resolved.base_weapon == "short_sword"
+
+
 def test_enchanted_items_view_rows(data):
     import copy
     from aose.sheet.view import enchanted_items_view
