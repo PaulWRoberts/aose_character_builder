@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from .ability import Ability
 from .modifier import Modifier
 from .ruleset import RuleSet
+from .valuable import GemStack, JewelleryPiece
 
 
 class MagicItemInstance(BaseModel):
@@ -183,6 +184,10 @@ class CharacterSpec(BaseModel):
     loaded_ammo: dict[str, str] = Field(default_factory=dict)  # weapon_key -> AmmoStack.instance_id
     # Owned spell books / scrolls (custom contents).  Not in `inventory`.
     spell_sources: list[SpellSource] = Field(default_factory=list)
+    # Owned treasure — gems (stacked by value+label) and jewellery (individual).
+    # Weightless; free to acquire; never in `inventory`.
+    gems: list[GemStack] = Field(default_factory=list)
+    jewellery: list[JewelleryPiece] = Field(default_factory=list)
     secondary_skill: str | None = None
     # Chosen *additional* languages only (INT-based picks).  Native (race) and
     # alignment tongues are derived at display time, never stored here.
