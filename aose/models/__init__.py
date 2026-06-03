@@ -29,6 +29,7 @@ from .character import (
     AmmoStack, CharacterSpec, ClassEntry, ContainerInstance, EnchantedInstance,
     MagicItemInstance, SpellSlot, SpellSource, SpellSourceEntry,
 )
+from .valuable import GemStack, JewelleryPiece
 
 __all__ = [
     "Ability",
@@ -66,4 +67,6 @@ __all__ = [
     "SpellSlot",
     "SpellSource",
     "SpellSourceEntry",
+    "GemStack",
+    "JewelleryPiece",
 ]

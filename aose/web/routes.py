@@ -74,6 +74,8 @@ from aose.engine.proficiency import (
 )
 from aose.engine import spell_sources as spell_source_engine
 from aose.engine.spell_sources import SpellSourceError
+from aose.engine import valuables as valuables_engine
+from aose.engine.valuables import ValuableError
 from aose.models import Ability, Ammunition
 from aose.sheet.view import build_sheet, spell_source_add_options
 
@@ -998,5 +1000,134 @@ async def ammo_unload(request: Request, character_id: str,
                       weapon_key: str = Form(...)):
     spec = _load_spec_or_404(request, character_id)
     spec.loaded_ammo = _unload_ammo(spec.loaded_ammo, weapon_key)
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+def _truthy(value: str) -> bool:
+    return str(value).lower() in ("1", "true", "on", "yes")
+
+
+@router.post("/character/{character_id}/gems/add")
+async def sheet_gem_add(request: Request, character_id: str):
+    # Read form manually: the template sends two "value" fields (dropdown + custom
+    # number).  Take the last non-empty one so the custom box overrides the dropdown
+    # when filled, and the dropdown wins when the custom box is left blank.
+    spec = _load_spec_or_404(request, character_id)
+    form = await request.form()
+    raw_values = [v for v in form.getlist("value") if str(v).strip()]
+    try:
+        value = int(raw_values[-1]) if raw_values else 0
+        count = int(form.get("count", 1) or 1)
+        label = str(form.get("label", "") or "")
+        spec.gems = valuables_engine.add_gem(spec.gems, value, count, label)
+    except ValuableError as e:
+        raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/gems/adjust")
+async def sheet_gem_adjust(request: Request, character_id: str,
+                           instance_id: str = Form(...), delta: int = Form(...)):
+    spec = _load_spec_or_404(request, character_id)
+    try:
+        spec.gems = valuables_engine.adjust_gem_count(spec.gems, instance_id, delta)
+    except ValuableError as e:
+        raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/gems/sell")
+async def sheet_gem_sell(request: Request, character_id: str,
+                         instance_id: str = Form(...)):
+    spec = _load_spec_or_404(request, character_id)
+    try:
+        spec.gems, spec.gold = valuables_engine.sell_gem(
+            spec.gems, spec.gold, instance_id)
+    except ValuableError as e:
+        raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/gems/sell-all")
+async def sheet_gem_sell_all(request: Request, character_id: str,
+                             instance_id: str = Form(...)):
+    spec = _load_spec_or_404(request, character_id)
+    try:
+        spec.gems, spec.gold = valuables_engine.sell_gem_all(
+            spec.gems, spec.gold, instance_id)
+    except ValuableError as e:
+        raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/gems/remove")
+async def sheet_gem_remove(request: Request, character_id: str,
+                           instance_id: str = Form(...)):
+    spec = _load_spec_or_404(request, character_id)
+    try:
+        spec.gems = valuables_engine.remove_gem(spec.gems, instance_id)
+    except ValuableError as e:
+        raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/jewellery/add")
+async def sheet_jewellery_add(request: Request, character_id: str,
+                              mode: str = Form("set"), value: int = Form(0),
+                              damaged: str = Form(""), label: str = Form("")):
+    spec = _load_spec_or_404(request, character_id)
+    if mode == "random":
+        value = valuables_engine.roll_jewellery_value()
+    try:
+        spec.jewellery = valuables_engine.add_jewellery(
+            spec.jewellery, value, _truthy(damaged), label)
+    except ValuableError as e:
+        raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/jewellery/toggle-damaged")
+async def sheet_jewellery_toggle_damaged(request: Request, character_id: str,
+                                         instance_id: str = Form(...),
+                                         damaged: str = Form("")):
+    spec = _load_spec_or_404(request, character_id)
+    try:
+        spec.jewellery = valuables_engine.set_jewellery_damaged(
+            spec.jewellery, instance_id, _truthy(damaged))
+    except ValuableError as e:
+        raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/jewellery/sell")
+async def sheet_jewellery_sell(request: Request, character_id: str,
+                               instance_id: str = Form(...)):
+    spec = _load_spec_or_404(request, character_id)
+    try:
+        spec.jewellery, spec.gold = valuables_engine.sell_jewellery(
+            spec.jewellery, spec.gold, instance_id)
+    except ValuableError as e:
+        raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/jewellery/remove")
+async def sheet_jewellery_remove(request: Request, character_id: str,
+                                 instance_id: str = Form(...)):
+    spec = _load_spec_or_404(request, character_id)
+    try:
+        spec.jewellery = valuables_engine.remove_jewellery(
+            spec.jewellery, instance_id)
+    except ValuableError as e:
+        raise HTTPException(400, str(e))
     save_character(character_id, spec, request.app.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)

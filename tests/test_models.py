@@ -88,3 +88,25 @@ def test_spell_source_round_trips():
         alignment="neutral",
     )
     assert bare.spell_sources == []
+
+
+def test_valuable_models_defaults():
+    from aose.models import GemStack, JewelleryPiece, CharacterSpec
+
+    g = GemStack(instance_id="abc", value=100)
+    assert g.count == 1
+    assert g.label == ""
+
+    j = JewelleryPiece(instance_id="def", value=700)
+    assert j.damaged is False
+    assert j.label == ""
+
+    spec = CharacterSpec(
+        name="T",
+        abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
+        race_id="human",
+        classes=[{"class_id": "fighter", "level": 1, "hp_rolls": [8]}],
+        alignment="neutral",
+    )
+    assert spec.gems == []
+    assert spec.jewellery == []

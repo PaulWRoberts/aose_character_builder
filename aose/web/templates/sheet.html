@@ -590,6 +590,127 @@
             </section>
             <script src="/static/spell_source_add.js"></script>
 
+            <section class="section">
+                <h2>Gems &amp; Jewellery</h2>
+
+                <h3>Gems</h3>
+                {% for g in sheet.valuables.gems %}
+                <div class="valuable">
+                    <strong>{{ g.value }} gp</strong> × {{ g.count }}
+                    {% if g.label %}<span class="small muted">{{ g.label }}</span>{% endif %}
+                    <span class="small muted">= {{ g.stack_value }} gp</span>
+                    <form method="post" class="no-print inline"
+                          action="/character/{{ character_id }}/gems/sell">
+                        <input type="hidden" name="instance_id" value="{{ g.instance_id }}">
+                        <button type="submit" class="link-button">sell one</button>
+                    </form>
+                    <form method="post" class="no-print inline"
+                          action="/character/{{ character_id }}/gems/sell-all">
+                        <input type="hidden" name="instance_id" value="{{ g.instance_id }}">
+                        <button type="submit" class="link-button">sell all</button>
+                    </form>
+                    <form method="post" class="no-print inline"
+                          action="/character/{{ character_id }}/gems/adjust">
+                        <input type="hidden" name="instance_id" value="{{ g.instance_id }}">
+                        <input type="hidden" name="delta" value="1">
+                        <button type="submit" class="link-button">+1</button>
+                    </form>
+                    <form method="post" class="no-print inline"
+                          action="/character/{{ character_id }}/gems/adjust">
+                        <input type="hidden" name="instance_id" value="{{ g.instance_id }}">
+                        <input type="hidden" name="delta" value="-1">
+                        <button type="submit" class="link-button">−1</button>
+                    </form>
+                    <form method="post" class="no-print inline"
+                          action="/character/{{ character_id }}/gems/remove">
+                        <input type="hidden" name="instance_id" value="{{ g.instance_id }}">
+                        <button type="submit" class="link-button">drop</button>
+                    </form>
+                </div>
+                {% else %}
+                <p class="small muted">No gems.</p>
+                {% endfor %}
+
+                <details class="no-print">
+                    <summary>Add a gem</summary>
+                    <form method="post" action="/character/{{ character_id }}/gems/add">
+                        <label>Value:
+                            <select name="value">
+                                <option value="10">10 gp</option>
+                                <option value="50">50 gp</option>
+                                <option value="100" selected>100 gp</option>
+                                <option value="500">500 gp</option>
+                                <option value="1000">1,000 gp</option>
+                            </select>
+                        </label>
+                        <label>or custom gp:
+                            <input type="number" name="value" min="1"
+                                   placeholder="overrides dropdown">
+                        </label>
+                        <label>Count:
+                            <input type="number" name="count" min="1" value="1">
+                        </label>
+                        <label>Label (optional):
+                            <input type="text" name="label" placeholder="e.g. ruby">
+                        </label>
+                        <button type="submit" class="primary">Add gem</button>
+                    </form>
+                </details>
+
+                <h3>Jewellery</h3>
+                {% for j in sheet.valuables.jewellery %}
+                <div class="valuable">
+                    <strong>{{ j.effective_value }} gp</strong>
+                    {% if j.damaged %}<span class="small muted">(damaged — full {{ j.value }})</span>{% endif %}
+                    {% if j.label %}<span class="small muted">{{ j.label }}</span>{% endif %}
+                    <form method="post" class="no-print inline"
+                          action="/character/{{ character_id }}/jewellery/toggle-damaged">
+                        <input type="hidden" name="instance_id" value="{{ j.instance_id }}">
+                        <input type="hidden" name="damaged" value="{{ 'false' if j.damaged else 'true' }}">
+                        <button type="submit" class="link-button">
+                            {{ 'mark intact' if j.damaged else 'mark damaged' }}</button>
+                    </form>
+                    <form method="post" class="no-print inline"
+                          action="/character/{{ character_id }}/jewellery/sell">
+                        <input type="hidden" name="instance_id" value="{{ j.instance_id }}">
+                        <button type="submit" class="link-button">sell</button>
+                    </form>
+                    <form method="post" class="no-print inline"
+                          action="/character/{{ character_id }}/jewellery/remove">
+                        <input type="hidden" name="instance_id" value="{{ j.instance_id }}">
+                        <button type="submit" class="link-button">drop</button>
+                    </form>
+                </div>
+                {% else %}
+                <p class="small muted">No jewellery.</p>
+                {% endfor %}
+
+                <details class="no-print">
+                    <summary>Add jewellery</summary>
+                    <form method="post" action="/character/{{ character_id }}/jewellery/add">
+                        <label>Value:
+                            <select name="mode">
+                                <option value="random">Random (3d6 × 100)</option>
+                                <option value="set">Set value</option>
+                            </select>
+                        </label>
+                        <label>gp (if set):
+                            <input type="number" name="value" min="1">
+                        </label>
+                        <label>Label (optional):
+                            <input type="text" name="label" placeholder="e.g. gold necklace">
+                        </label>
+                        <label>Damaged:
+                            <input type="checkbox" name="damaged" value="true">
+                        </label>
+                        <button type="submit" class="primary">Add jewellery</button>
+                    </form>
+                </details>
+
+                <p class="small muted">Total treasure value:
+                    <strong>{{ sheet.valuables.total_value }} gp</strong></p>
+            </section>
+
             <section class="section no-print">
                 <h2>Rest</h2>
                 {% if sheet.is_dead %}
