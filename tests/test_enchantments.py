@@ -554,3 +554,25 @@ def test_enchanted_armour_half_weight(data):
     spec = _minimal_spec(ruleset=RuleSet(encumbrance="detailed"))
     spec.enchanted = add_free_enchanted([], "chain_mail", "armour_plus_1_t12", d)
     assert carried_weight_cn(spec, d) == 200   # 400 × 0.5
+
+
+def test_seed_enchantments_load(data):
+    e = data.enchantments
+    assert "generic_plus_1" in e
+    assert e["generic_plus_1"].applies_to.exclude == ["sword"]
+    assert "sword_plus_1_vs_undead" in e
+    assert e["sword_plus_1_vs_undead"].conditional_bonus.vs == "undead"
+    assert "luck_blade" in e
+    assert e["luck_blade"].modifiers[0].target == "save:all"
+    assert "armour_plus_1" in e and e["armour_plus_1"].kind == "armor"
+    assert "shield_plus_1" in e and e["shield_plus_1"].kind == "shield"
+    assert e["trident_fish_command"].charge_dice is not None
+
+
+def test_seed_generic_plus1_excludes_swords(data):
+    from aose.engine.enchant import is_compatible
+    ench = data.enchantments["generic_plus_1"]
+    assert not is_compatible(data.items["short_sword"], ench)   # sword excluded
+    axe = next(i for i in data.items.values()
+               if getattr(i, "groups", None) and "axe" in i.groups)
+    assert is_compatible(axe, ench)
