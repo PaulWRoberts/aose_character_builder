@@ -155,6 +155,44 @@ def test_misc_count_and_descriptions(data):
     assert all(i.cost_gp == 0 and i.magic for i in misc)
 
 
+def test_everything_loads_without_error():
+    GameData.load(DATA_DIR)
+
+
+def test_sword_enchantment_composes_on_bastard_sword_and_lightsaber(data):
+    from aose.engine.enchant import compatible_bases
+    bases = {b.id for b in compatible_bases(data.enchantments["sword_plus_1"], data)}
+    assert {"bastard_sword", "lightsaber", "short_sword", "sword",
+            "two_handed_sword"} <= bases
+
+
+def test_generic_weapon_plus1_not_on_swords(data):
+    from aose.engine.enchant import is_compatible
+    assert not is_compatible(data.items["short_sword"],
+                             data.enchantments["generic_plus_1"])
+    assert is_compatible(data.items["battle_axe"],
+                         data.enchantments["generic_plus_1"])
+
+
+def test_ring_passive_modifier_changes_ac_on_sheet(tmp_path):
+    # A worn Ring of Protection +1 lowers (improves) descending AC by 1.
+    from aose.engine.armor_class import armor_class
+    from aose.engine.magic import add_free_magic_item, equip_magic
+    from aose.models import CharacterSpec, ClassEntry
+    d = GameData.load(DATA_DIR)
+    spec = CharacterSpec(
+        name="R", abilities={"STR": 12, "INT": 12, "WIS": 11,
+                             "DEX": 10, "CON": 12, "CHA": 10},
+        race_id="human", classes=[ClassEntry(class_id="fighter")], alignment="law",
+    )
+    base_ac, _ = armor_class(spec, d)
+    spec.magic_items = add_free_magic_item(spec.magic_items, "ring_protection_plus_1", d)
+    iid = spec.magic_items[0].instance_id
+    spec.magic_items = equip_magic(spec.magic_items, iid, d)
+    worn_ac, _ = armor_class(spec, d)
+    assert worn_ac == base_ac - 1   # descending AC improves by 1
+
+
 def test_rolled_modifier_rolls_into_extra_modifiers():
     """A MagicItem.rolled_modifiers entry becomes a concrete per-instance
     extra_modifier with a rolled value when the instance is created."""

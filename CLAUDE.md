@@ -63,6 +63,24 @@ renders a "pending" badge — a regression test guards this.
 
 ## Current state (2026-06-03)
 
+Magic-item compendium bulk import (Phase 2) just landed (10-task plan, on `main`). All 882 tests pass.
+
+- **Phase 2 bulk import** — every item from the AOSE Advanced magic-item markdown
+  sources translated into book-faithful YAML game data with full descriptions.
+  One code addition: `RolledModifier` value type (`aose/models/modifier.py`) + a
+  `MagicItem.rolled_modifiers` field; `new_magic_instance` rolls the dice at
+  acquisition time and populates `extra_modifiers` — used by **Bracers of Armour**
+  (AC `8 − 1d4`, rolled when the GM grants the item). Files added/extended:
+  `data/enchantments.yaml` (all sword/weapon/armour/shield enchantments +
+  already-merged ammo enchantments); `data/equipment/magic_items.yaml` (26
+  potions, 19 rings, 35 rods/staves/wands, ~130 miscellaneous items);
+  `data/equipment/adventuring_gear.yaml` (re-imported with descriptions);
+  `data/equipment/containers.yaml` (descriptions + Bag of Holding `magic: true`).
+  Gloves of Dexterity and Periapt of Proof Against Poison carry `# TODO:` data
+  comments (effects not yet modelled). Sword +3, Defender encoded with
+  `magic_bonus: 3` only; AC-transfer option is description-only per user
+  confirmation. Spec/plan: `docs/superpowers/{specs,plans}/2026-06-02-magic-item-import*`.
+
 Ammunition just landed (9-task plan, on `feature/ammunition`).
 
 - **Ammunition** — ammo is **not** a weapon. A new `Ammunition` item variant
