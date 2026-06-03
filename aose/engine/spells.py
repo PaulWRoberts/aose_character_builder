@@ -149,6 +149,11 @@ def learn(entry: ClassEntry, cls: CharClass, data: GameData, ruleset: RuleSet,
     not already known; and (standard rules) the per-level spellbook cap."""
     if caster_type_of(cls, data) != "arcane":
         raise SpellError(f"{cls.id!r} is not an arcane caster; nothing to learn")
+    if ruleset.advanced_spell_books:
+        raise SpellError(
+            "under advanced rules, spells must be copied from a source "
+            "(use a spell book or scroll), not learned freely"
+        )
     spell = _require_spell(data, spell_id)
     if not _on_class_lists(spell, cls):
         raise SpellError(f"{spell_id!r} is not on {cls.id!r}'s spell list")

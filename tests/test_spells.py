@@ -204,8 +204,20 @@ def test_learn_standard_caps_at_memorizable():
     cls = data.classes["magic_user"]
     with pytest.raises(spells.SpellError):
         spells.learn(e, cls, data, RuleSet(), "magic_user_sleep")
-    e3 = spells.learn(e, cls, data, RuleSet(advanced_spell_books=True), "magic_user_sleep")
-    assert set(e3.spellbook) == {"magic_user_magic_missile", "magic_user_sleep"}
+    # Under the advanced rule, learn() is copy-only and refuses free adds.
+    with pytest.raises(spells.SpellError):
+        spells.learn(e, cls, data, RuleSet(advanced_spell_books=True), "magic_user_sleep")
+
+
+def test_learn_rejected_under_advanced_rule():
+    from aose.data.loader import GameData
+    from aose.engine import spells
+    data = GameData.load(DATA_DIR)
+    e = ClassEntry(class_id="magic_user", level=1, spellbook=[])
+    cls = data.classes["magic_user"]
+    with pytest.raises(spells.SpellError):
+        spells.learn(e, cls, data, RuleSet(advanced_spell_books=True),
+                     "magic_user_magic_missile")
 
 
 def test_learn_rejects_divine():
