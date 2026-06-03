@@ -61,9 +61,37 @@ override. Changing a rule mid-wizard applies targeted downstream clears
 Every flag in `RuleSet` is integrated end-to-end. The settings page never
 renders a "pending" badge — a regression test guards this.
 
-## Current state (2026-06-02)
+## Current state (2026-06-03)
 
-Magic item enchantment composition just landed (19-task plan, on `main`). All 834 tests pass.
+Ammunition just landed (9-task plan, on `feature/ammunition`).
+
+- **Ammunition** — ammo is **not** a weapon. A new `Ammunition` item variant
+  (`item_type: ammunition`, `groups`, `bundle_count`, `weight_cn: 0` always —
+  the listed missile-weapon weight already includes its ammo + container, so
+  ammo never touches `encumbrance.py`) holds the buyable mundane table
+  (`data/equipment/ammunition.yaml`: arrows quiver-of-20, bolts case-of-30,
+  silver-tipped arrow, free sling stones). Launchers gained `Weapon.accepts_ammo`
+  (non-empty ⇔ "needs ammo"; bows `[arrow]`, crossbow `[crossbow_bolt]`, sling
+  `[sling_stone]`; thrown weapons incl. javelin stay empty). Per-character
+  `CharacterSpec.ammo: list[AmmoStack]` ({instance_id, base_id, enchantment_id,
+  count}; stacks combine on `(base_id, enchantment_id)`; counts adjusted manually
+  — no auto "shooting") + `loaded_ammo: dict[weapon_key, instance_id]` (weapon_key
+  = the resolved weapon `.id`, i.e. catalog id or `ench:<instance_id>`). **Magic
+  ammo is enchantment composition**: `Enchantment.kind` now includes
+  `ammunition` (+ `any_ammunition` wildcard), so `arrows_plus_1/2`,
+  `arrow_slaying`, `crossbow_bolts_plus_1/2`, `sling_bullet_impact` compose onto
+  any matching base (e.g. `silver_arrow` takes `arrow_slaying`). Cycle-free
+  `aose/engine/ammo.py` owns stacks/loading/bonus (`buy_ammo`/`add_free_ammo`/
+  `adjust_count`/`remove_ammo`/`load`/`unload`/`loaded_stack`/`loaded_bonus`/
+  `is_unloaded`/`resolve_ammo`). `aose/engine/attacks.py` adds the loaded ammo's
+  `magic_bonus` to a launcher's to-hit/damage **additively** with the weapon's
+  own bonus (a +1 arrow in a +1 bow = +2) and flags an empty launcher
+  `unloaded`. Sheet + wizard share routes (`/ammo/{add,adjust,remove,load,
+  unload}`; mundane buy via the existing `/equipment/buy`, special-cased; magic
+  ammo is sheet-only Add). Spec/plan:
+  `docs/superpowers/{specs,plans}/2026-06-02-ammunition*`.
+
+Magic item enchantment composition previously landed (19-task plan, on `main`). All 834 tests pass.
 
 - **Enchantment composition model** — magic weapons/armour are no longer stored as
   hand-authored catalog entries. A `Enchantment` registry (`data/enchantments.yaml` →

@@ -473,3 +473,18 @@ def test_wizard_ammo_carries_into_character(tmp_path):
     assert len(spec.ammo) == 1
     assert spec.ammo[0].count == 20
     assert spec.loaded_ammo.get("short_bow") == iid
+
+
+def test_spec_verification_spotchecks():
+    """Spec "Verification" spot-checks against the real data dir."""
+    d = GameData.load(DATA_DIR)
+    from aose.engine.ammo import accepts, buy_ammo
+    from aose.engine.enchant import is_compatible
+    # silver_arrow + arrow_slaying compatible
+    assert is_compatible(d.items["silver_arrow"], d.enchantments["arrow_slaying"])
+    # buying two quivers combines to 40 for 10 gp
+    stacks, gold = buy_ammo([], 100, "arrow", d)
+    stacks, gold = buy_ammo(stacks, gold, "arrow", d)
+    assert len(stacks) == 1 and stacks[0].count == 40 and gold == 90
+    # a launcher accepts its ammo
+    assert accepts(d.items["crossbow"], d.items["crossbow_bolt"])
