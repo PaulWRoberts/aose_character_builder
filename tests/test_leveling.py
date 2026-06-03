@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 
 from aose.characters import load_character, save_character, save_settings
 from aose.data.loader import GameData
+from aose.engine.hp import max_hp, hp_remainder
 from aose.engine.leveling import (
     all_advancement,
     class_advancement,
@@ -318,3 +319,68 @@ def test_full_grant_then_level_flow(client):
     assert spec.classes[0].level == 2
     r = client.get("/character/test")
     assert "Fighter 2" in r.text  # class summary
+
+
+# ── Name-level HP: fixed step, no CON ────────────────────────────────────────
+
+def _fighter_spec(level, hp_rolls, con=14, ruleset=None):
+    return CharacterSpec(
+        name="Vala",
+        abilities={"STR": 12, "INT": 12, "WIS": 12, "DEX": 12, "CON": con, "CHA": 10},
+        race_id="dwarf",
+        classes=[ClassEntry(class_id="fighter", level=level, xp=0, hp_rolls=hp_rolls)],
+        alignment="law",
+        ruleset=ruleset or RuleSet(),
+    )
+
+
+def test_max_hp_at_name_level_unchanged(data):
+    # L9 fighter, CON 14 (+1): 9 rolled events of 8 each + 1 CON each = 9*9 = 81.
+    spec = _fighter_spec(9, [8] * 9)
+    assert max_hp(spec, data) == 81
+
+
+def test_max_hp_one_level_past_name_adds_fixed_step_no_con(data):
+    # L10 fighter: still 9 rolls (none added past name level) + fixed (10-9)*2 = 2.
+    spec = _fighter_spec(10, [8] * 9)
+    assert max_hp(spec, data) == 83  # 81 + 2
+
+
+def test_fixed_step_ignores_con(data):
+    # Same as above but CON 18 (+3). Rolled part = 9*(8+3)=99; fixed still +2.
+    spec = _fighter_spec(10, [8] * 9, con=18)
+    assert max_hp(spec, data) == 101  # 99 + 2 (no CON on the fixed step)
+
+
+def test_max_hp_at_class_max_full_fixed_run(data):
+    # L14 fighter: 9 rolls + (14-9)*2 = 10 fixed. CON +1 -> 9*9 + 10 = 91.
+    spec = _fighter_spec(14, [8] * 9)
+    assert max_hp(spec, data) == 91
+
+
+def test_defensive_cap_ignores_overlong_hp_rolls(data):
+    # A stale character with 14 rolls at L14 must still count only 9 rolls.
+    spec = _fighter_spec(14, [8] * 14)
+    assert max_hp(spec, data) == 91  # identical to the 9-roll case
+
+
+def test_multiclass_fixed_step_divides_and_tracks_fraction(data):
+    # Fighter L10 (step 2) + magic_user L10 (step 1), each 9 rolls of value 2.
+    # Rolled: creation event sum=4 -> 4/2+1=3; then 8 fighter + 8 MU single
+    #   events of 2 each -> (2/2 + 1)=2 apiece, 16 events -> 32; rolled total 35.
+    # Fixed: ((10-9)*2 + (10-9)*1) / 2 = 3/2 = 1.5.
+    # Total 36.5 -> max_hp 36, remainder 1/2.
+    from fractions import Fraction
+    spec = CharacterSpec(
+        name="Twin",
+        abilities={"STR": 12, "INT": 12, "WIS": 12, "DEX": 12, "CON": 14, "CHA": 10},
+        race_id="elf",
+        classes=[
+            ClassEntry(class_id="fighter", level=10, xp=0, hp_rolls=[2] * 9),
+            ClassEntry(class_id="magic_user", level=10, xp=0, hp_rolls=[2] * 9),
+        ],
+        alignment="neutral",
+        ruleset=RuleSet(multiclassing=True),
+    )
+    assert max_hp(spec, data) == 36
+    assert hp_remainder(spec, data) == Fraction(1, 2)
