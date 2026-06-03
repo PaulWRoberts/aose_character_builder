@@ -667,6 +667,48 @@ def test_add_enchanted_incompatible_400(tmp_path):
     assert r.status_code == 400
 
 
+def test_sheet_renders_enchanted_add_picker(tmp_path):
+    client = _make_client(tmp_path)
+    _seed(client)
+    page = client.get("/character/test").text
+    assert "Add Enchanted Item" in page
+    assert "/equipment/add-enchanted" in page
+
+
+def test_sheet_renders_owned_enchanted_controls(tmp_path):
+    client = _make_client(tmp_path)
+    _seed(client)
+    client.post("/character/test/equipment/add-enchanted",
+                data={"base_id": "short_sword", "enchantment_id": "sword_plus_1"})
+    page = client.get("/character/test").text
+    assert "Short Sword +1" in page
+    assert "/equipment/equip-enchanted" in page
+    assert "/equipment/remove-enchanted" in page
+
+
+def test_wizard_exposes_no_magic_or_enchanted_acquisition(tmp_path):
+    client = _make_client(tmp_path)
+    from aose.characters import load_draft, save_draft
+    r = client.get("/wizard/new")
+    draft_id = r.headers["location"].split("/")[2]
+    client.post(f"/wizard/{draft_id}/rules", data={
+        "ability_roll_method": "3d6_in_order", "encumbrance": "basic",
+        "separate_race_class": "on", "demihuman_level_limits": "on",
+        "demihuman_class_restrictions": "on"})
+    draft = load_draft(draft_id, client._drafts_dir)
+    draft["abilities"] = {"STR": 15, "INT": 11, "WIS": 12, "DEX": 13, "CON": 14, "CHA": 10}
+    save_draft(draft_id, draft, client._drafts_dir)
+    client.post(f"/wizard/{draft_id}/abilities", data={})
+    client.post(f"/wizard/{draft_id}/race", data={"race_id": "dwarf"})
+    client.post(f"/wizard/{draft_id}/class", data={"class_id": "fighter"})
+    client.post(f"/wizard/{draft_id}/hp/roll")
+    client.post(f"/wizard/{draft_id}/hp")
+    client.post(f"/wizard/{draft_id}/identity", data={"name": "Tester", "alignment": "law"})
+    page = client.get(f"/wizard/{draft_id}/equipment").text
+    assert "Add Enchanted Item" not in page
+    assert "/equipment/add-enchanted" not in page
+
+
 def test_enchanted_equip_charge_note_remove_roundtrip(tmp_path):
     client = _make_client(tmp_path)
     _seed(client)

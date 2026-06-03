@@ -245,6 +245,107 @@
 </table>
 {% endif %}
 
+{% if magic_acquisition %}
+{% if enchanted_rows %}
+<h3 class="subhead">Enchanted Items</h3>
+<table class="inventory-table magic-items-table">
+  <thead><tr><th>Item</th><th>State</th><th>Charges</th><th>Note</th><th>Actions</th></tr></thead>
+  <tbody>
+  {% for mi in enchanted_rows %}
+    <tr class="magic-item-row">
+      <td>
+        <strong>{{ mi.name }}</strong>
+        {% for chip in mi.modifier_summary %}<span class="modifier-chip">{{ chip }}</span>{% endfor %}
+      </td>
+      <td>
+        {% if mi.equipped %}
+        <form method="post" action="{{ target_url_prefix }}/unequip-enchanted" class="inline-form">
+          <input type="hidden" name="instance_id" value="{{ mi.instance_id }}">
+          <button type="submit">Unequip</button>
+        </form>
+        {% else %}
+        <form method="post" action="{{ target_url_prefix }}/equip-enchanted" class="inline-form">
+          <input type="hidden" name="instance_id" value="{{ mi.instance_id }}">
+          <button type="submit">Equip</button>
+        </form>
+        {% endif %}
+      </td>
+      <td class="charges">
+        {% if mi.charges_remaining is not none %}
+          {{ mi.charges_remaining }} / {{ mi.charges_max }}
+          <form method="post" action="{{ target_url_prefix }}/enchanted/use-charge" class="inline-form">
+            <input type="hidden" name="instance_id" value="{{ mi.instance_id }}">
+            <button type="submit" {% if mi.charges_remaining == 0 %}disabled{% endif %}>Use</button>
+          </form>
+          <form method="post" action="{{ target_url_prefix }}/enchanted/reset-charges" class="inline-form">
+            <input type="hidden" name="instance_id" value="{{ mi.instance_id }}">
+            <button type="submit">Reset</button>
+          </form>
+        {% else %}<span class="muted small">—</span>{% endif %}
+      </td>
+      <td>
+        <form method="post" action="{{ target_url_prefix }}/enchanted-note" class="inline-form">
+          <input type="hidden" name="instance_id" value="{{ mi.instance_id }}">
+          <input type="text" name="note" value="{{ mi.note }}" placeholder="note…">
+          <button type="submit">Save</button>
+        </form>
+      </td>
+      <td>
+        <form method="post" action="{{ target_url_prefix }}/remove-enchanted" class="inline-form">
+          <input type="hidden" name="instance_id" value="{{ mi.instance_id }}">
+          <button type="submit">Remove</button>
+        </form>
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{% if enchant_choices %}
+<h3 class="subhead">Add Enchanted Item</h3>
+<form method="post" action="{{ target_url_prefix }}/add-enchanted" class="enchant-add-form">
+  <label>Enchantment
+    <select name="enchantment_id" id="ench-select">
+      {% for c in enchant_choices %}
+      <option value="{{ c.id }}">{{ c.name_template.replace("{base}", "…") }} ({{ c.kind }})</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>Base item
+    <select name="base_id" id="ench-base-select">
+      {% for c in enchant_choices %}
+        {% for b in c.bases %}
+        <option value="{{ b.id }}" data-ench="{{ c.id }}">{{ b.name }}</option>
+        {% endfor %}
+      {% endfor %}
+    </select>
+  </label>
+  <button type="submit">Add (GM grant)</button>
+</form>
+<script>
+  (function () {
+    var ench = document.getElementById('ench-select');
+    var base = document.getElementById('ench-base-select');
+    if (!ench || !base) return;
+    function sync() {
+      var id = ench.value;
+      var first = null;
+      var opts = base.querySelectorAll('option');
+      for (var i = 0; i < opts.length; i++) {
+        var ok = opts[i].getAttribute('data-ench') === id;
+        opts[i].hidden = !ok;
+        if (ok && first === null) first = opts[i];
+      }
+      if (first) base.value = first.value;
+    }
+    ench.addEventListener('change', sync);
+    sync();
+  })();
+</script>
+{% endif %}
+{% endif %}
+
 <h3 class="subhead">Shop</h3>
 <input type="text" id="shop-search" class="shop-search"
        placeholder="Search items by name…"
