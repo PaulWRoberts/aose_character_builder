@@ -27,7 +27,7 @@ from .modifier import Modifier, RolledModifier
 from .enchantment import AppliesTo, Enchantment
 from .character import (
     AmmoStack, CharacterSpec, ClassEntry, ContainerInstance, EnchantedInstance,
-    MagicItemInstance, SpellSlot,
+    MagicItemInstance, SpellSlot, SpellSource, SpellSourceEntry,
 )
 
 __all__ = [
@@ -64,4 +64,6 @@ __all__ = [
     "EnchantedInstance",
     "MagicItemInstance",
     "SpellSlot",
+    "SpellSource",
+    "SpellSourceEntry",
 ]

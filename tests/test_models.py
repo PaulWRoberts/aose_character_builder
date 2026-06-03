@@ -64,3 +64,27 @@ def test_character_spec_temp_ability_modifiers_keyed_by_ability_enum():
         temp_ability_modifiers={"STR": -2},
     )
     assert spec.temp_ability_modifiers[Ability.STR] == -2
+
+
+def test_spell_source_round_trips():
+    from aose.models import CharacterSpec, ClassEntry, SpellSource, SpellSourceEntry
+    src = SpellSource(
+        instance_id="abc", kind="scroll", caster_type="arcane", name="Found Scroll",
+        entries=[SpellSourceEntry(spell_id="magic_user_magic_missile"),
+                 SpellSourceEntry(spell_id="magic_user_sleep", copy_failed=True)],
+    )
+    spec = CharacterSpec(
+        name="X", abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
+        race_id="human", classes=[ClassEntry(class_id="magic_user", level=1)],
+        alignment="neutral", spell_sources=[src],
+    )
+    reloaded = CharacterSpec.model_validate(spec.model_dump())
+    assert reloaded.spell_sources[0].kind == "scroll"
+    assert reloaded.spell_sources[0].entries[1].copy_failed is True
+    # default is an empty list
+    bare = CharacterSpec(
+        name="Y", abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
+        race_id="human", classes=[ClassEntry(class_id="magic_user", level=1)],
+        alignment="neutral",
+    )
+    assert bare.spell_sources == []

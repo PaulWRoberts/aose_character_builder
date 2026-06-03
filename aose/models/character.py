@@ -74,6 +74,32 @@ class ContainerInstance(BaseModel):
     contents: list[str] = Field(default_factory=list)
 
 
+class SpellSourceEntry(BaseModel):
+    """One spell recorded in a SpellSource document.  ``copy_failed`` is set when
+    an Advanced-rule copy attempt from THIS source failed — it bars retrying the
+    same spell from this source only, never from any other source, and is never
+    recorded on the character."""
+    model_config = ConfigDict(extra="forbid")
+
+    spell_id: str
+    copy_failed: bool = False
+
+
+class SpellSource(BaseModel):
+    """A physical document the character owns — an arcane spell book or a magic
+    scroll — with custom contents chosen at acquisition (Add-only, sheet).  Not
+    stored in ``inventory``; carries its own existence like ContainerInstance.
+    Scroll spells are expended (the entry removed) when cast; spell books are
+    never expended.  ``caster_type`` is always ``arcane`` for a spellbook."""
+    model_config = ConfigDict(extra="forbid")
+
+    instance_id: str                              # uuid4 hex
+    kind: Literal["spellbook", "scroll"]
+    caster_type: Literal["arcane", "divine"]
+    name: str = ""                                # optional label
+    entries: list[SpellSourceEntry] = Field(default_factory=list)
+
+
 class SpellSlot(BaseModel):
     """One memorized-spell slot in a caster's daily loadout.
 
@@ -155,6 +181,8 @@ class CharacterSpec(BaseModel):
     # Ammunition stacks (counts), plus which stack is loaded into each launcher.
     ammo: list[AmmoStack] = Field(default_factory=list)
     loaded_ammo: dict[str, str] = Field(default_factory=dict)  # weapon_key -> AmmoStack.instance_id
+    # Owned spell books / scrolls (custom contents).  Not in `inventory`.
+    spell_sources: list[SpellSource] = Field(default_factory=list)
     secondary_skill: str | None = None
     # Chosen *additional* languages only (INT-based picks).  Native (race) and
     # alignment tongues are derived at display time, never stored here.
