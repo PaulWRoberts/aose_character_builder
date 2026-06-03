@@ -6,6 +6,9 @@
   weight_cn: 80
   capacity_cn: 400
   weight_multiplier: 1.0
+  description: |-
+    Has two straps and can be worn on the back, keeping the hands free.
+    Holds up to 400 coins.
 
 - id: sack_small
   name: Sack, Small
@@ -15,6 +18,8 @@
   weight_cn: 5
   capacity_cn: 200
   weight_multiplier: 1.0
+  description: |-
+    Can hold up to 200 coins.
 
 - id: sack_large
   name: Sack, Large
@@ -24,6 +29,8 @@
   weight_cn: 20
   capacity_cn: 600
   weight_multiplier: 1.0
+  description: |-
+    Can hold up to 600 coins.
 
 - id: saddle_bags
   name: Saddle Bags
@@ -33,6 +40,8 @@
   weight_cn: 50
   capacity_cn: 300
   weight_multiplier: 1.0
+  description: |-
+    Leather bags designed to hang over a horse's saddle. Hold up to 300 coins.
 
 - id: bag_of_holding
   name: Bag of Holding
@@ -40,5 +49,13 @@
   item_type: container
   cost_gp: 0
   weight_cn: 0
+  magic: true
   capacity_cn: 10000
   weight_multiplier: 0.06
+  description: |-
+    A normal-looking small sack that can magically hold large objects and
+    weights.
+
+    Size: Objects of up to 10'×5'×3' can fit inside the bag.
+
+    Weight: Up to 10,000 coins of weight can be placed in the bag.
