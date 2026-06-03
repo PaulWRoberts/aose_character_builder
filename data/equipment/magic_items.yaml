@@ -1,0 +1,328 @@
+# Magic items (Phase-2 import): potions, rings, rods/staves/wands, misc.
+# All MagicItem variants. cost_gp: 0 (Add-only, GM grant). Descriptions are
+# transcribed verbatim from import/markdown/magic-items/*.md.
+
+# ─── Potions ──────────────────────────────────────────────────────────────────
+
+- id: potion_clairaudience
+  item_type: magic
+  name: Potion of Clairaudience
+  category: magic_potions
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    Enables the character to hear through the ears of another creature.
+    Range: The other creature must be within 60'.
+    Obstructions: Lead blocks the effect.
+    Duration: 1d6+6 turns.
+
+- id: potion_clairvoyance
+  item_type: magic
+  name: Potion of Clairvoyance
+  category: magic_potions
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    Enables the character to see through the eyes of another creature.
+    Range: The other creature must be within 60'.
+    Obstructions: Lead blocks the effect.
+    Duration: 1d6+6 turns.
+
+- id: potion_control_animal
+  item_type: magic
+  name: Potion of Control Animal
+  category: magic_potions
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    Allows the character to control the actions of normal or giant (but not
+    magical) animals. Affects up to 3d6 Hit Dice. Concentration required;
+    only creatures in visual range can be controlled. When the effect ends,
+    affected animals move away. Duration: 1d6+6 turns.
+
+- id: potion_control_dragon
+  item_type: magic
+  name: Potion of Control Dragon
+  category: magic_potions
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    Allows the character to control 1–3 dragons of a specific type (chosen by
+    the referee). Spell casting cannot be commanded. When the effect ends,
+    affected dragons have a hostile reaction. Duration: 1d6+6 turns.
+
+- id: potion_control_giant
+  item_type: magic
+  name: Potion of Control Giant
+  category: magic_potions
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    Allows the character to control 1–4 giants of a specific type (chosen by
+    the referee). Duration: 1d6+6 turns.
+
+- id: potion_control_human
+  item_type: magic
+  name: Potion of Control Human
+  category: magic_potions
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    A charm may be placed upon a human within 60'. One target may be charmed
+    per round. The subject may save vs spells to resist. Up to 6 Hit Dice of
+    humans may be charmed; normal humans count as ½ HD. Charmed individuals
+    regard the character as a trusted friend and obey commands, as long as
+    these are not obviously harmful or against their alignment.
+    Duration: 1d6+6 turns.
+
+- id: potion_control_plant
+  item_type: magic
+  name: Potion of Control Plant
+  category: magic_potions
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    Affects all plants (including plant monsters) in a 30' square area up to
+    60' distant. Affected plants may be commanded to move around and can be
+    used to entangle creatures in the area. Duration: 1d6+6 turns.
+
+- id: potion_control_undead
+  item_type: magic
+  name: Potion of Control Undead
+  category: magic_potions
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    Allows the character to control up to 3d6 Hit Dice of undead. When the
+    effect ends, affected undead have a hostile reaction.
+    Duration: 1d6+6 turns.
+
+- id: potion_delusion
+  item_type: magic
+  name: Potion of Delusion
+  category: magic_potions
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    A character who drinks this potion believes they are under the effects of
+    another type of potion (determined by the referee). The referee should
+    try to trick the player into believing the character is under the other
+    potion's effect, only revealing the truth at some vital juncture.
+
+- id: potion_diminution
+  item_type: magic
+  name: Potion of Diminution
+  category: magic_potions
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    The character shrinks to 6" high. While shrunk: unable to harm creatures
+    larger than 1' tall; can slip through narrow spaces; only 10% chance of
+    being spotted while motionless. Duration: 1d6+6 turns.
+
+- id: potion_esp
+  item_type: magic
+  name: Potion of ESP
+  category: magic_potions
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    Grants the power of reading thoughts. Works as the magic-user spell ESP.
+    Duration: 1d6+6 turns.
+
+- id: potion_fire_resistance
+  item_type: magic
+  name: Potion of Fire Resistance
+  category: magic_potions
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    Grants protection against fire. Unharmed by non-magical heat or fire.
+    +2 bonus to saving throws vs fire-based magical or breath attacks.
+    Fire-based damage reduced by 1 per die (minimum 1 per die).
+    Duration: 1d6+6 turns.
+
+- id: potion_flying
+  item_type: magic
+  name: Potion of Flying
+  category: magic_potions
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    Grants the ability to fly through the air at up to 360' (120'). Free
+    movement in any direction, including levitation and hovering.
+    Duration: 1d6+6 turns.
+
+- id: potion_gaseous_form
+  item_type: magic
+  name: Potion of Gaseous Form
+  category: magic_potions
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    The character's body becomes a cloud of vapour. Equipment and clothing
+    drops to the floor. The character may move as gas through small cracks in
+    stone walls, wooden objects, etc. Attacking is not possible. AC is -2
+    [21]; non-magical weapons cannot harm the character.
+    Duration: 1d6+6 turns.
+
+- id: potion_giant_strength
+  item_type: magic
+  name: Potion of Giant Strength
+  category: magic_potions
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    Grants the strength of a frost giant. Attacks with weapons inflict double
+    damage. The character may throw boulders for 3d6 damage (range up to
+    200'). Not cumulative with other magic items augmenting strength.
+    Duration: 1d6+6 turns.
+
+- id: potion_growth
+  item_type: magic
+  name: Potion of Growth
+  category: magic_potions
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    The character doubles in size. Their increased strength means melee
+    attacks deal double damage. Duration: 1d6+6 turns.
+
+- id: potion_healing
+  item_type: magic
+  name: Potion of Healing
+  category: magic_potions
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    Has one of two effects on the character who drinks it:
+    1. Healing a living subject: Restores 1d6+1 hit points of damage. This
+       cannot grant more hit points than the subject's normal maximum.
+    2. Curing paralysis: Paralysing effects are negated.
+
+- id: potion_heroism
+  item_type: magic
+  name: Potion of Heroism
+  category: magic_potions
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    Normal humans and combat-focused, non-magic-using class characters
+    temporarily gain additional levels. Normal human: gain 4th level fighter
+    abilities. 1st–3rd level: gain 3 levels. 4th–7th level: gain 2 levels.
+    8th–10th level: gain 1 level. 11th+: no effect. All abilities of the
+    additional levels are gained, including extra hit points. Damage suffered
+    is first deducted from the pool of additional hit points.
+    Duration: 1d6+6 turns.
+
+- id: potion_invisibility
+  item_type: magic
+  name: Potion of Invisibility
+  category: magic_potions
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    The character becomes invisible, as the magic-user spell invisibility.
+    At the referee's discretion, may be consumed in six smaller doses with
+    reduced duration. Duration: 1d6+6 turns.
+
+- id: potion_invulnerability
+  item_type: magic
+  name: Potion of Invulnerability
+  category: magic_potions
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    Magically protects the character from harm. +2 AC bonus; +2 bonus to all
+    saving throws. If more than one is consumed in a week, the effects invert
+    (-2 to AC and saves). Duration: 1d6+6 turns.
+
+- id: potion_levitation
+  item_type: magic
+  name: Potion of Levitation
+  category: magic_potions
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    The character gains the ability to move up and down through the air at
+    will. Vertical: mentally directed at up to 60' per round. Horizontal:
+    the character can push against solid objects to move laterally. A normal
+    amount of weight can be carried. Duration: 1d6+6 turns.
+
+- id: potion_longevity
+  item_type: magic
+  name: Potion of Longevity
+  category: magic_potions
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    Instantly and permanently causes the character to become 10 years younger.
+
+- id: potion_poison
+  item_type: magic
+  name: Potion of Poison
+  category: magic_potions
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    Appears the same as any other potion. Effect: causes death (save vs
+    poison). Even a sip has the full effect.
+
+- id: potion_polymorph_self
+  item_type: magic
+  name: Potion of Polymorph Self
+  category: magic_potions
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    The character transforms into another being of their choice, as the
+    magic-user spell polymorph self. Duration: 1d6+6 turns.
+
+- id: potion_speed
+  item_type: magic
+  name: Potion of Speed
+  category: magic_potions
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    The character's movements and actions are magically accelerated.
+    Movement rate is doubled. Attacks per round are doubled. Other actions
+    may be performed at double speed. Duration: 1d6+6 turns.
+
+- id: potion_treasure_finding
+  item_type: magic
+  name: Potion of Treasure Finding
+  category: magic_potions
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    Grants the ability to sense treasure up to 360' away. The character
+    gains awareness of the direction and distance of treasure. Concentration
+    required. The largest treasure hoard within range is sensed. Lead blocks
+    the magic. Duration: 1d6+6 turns.

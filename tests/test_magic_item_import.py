@@ -86,6 +86,16 @@ def test_weapon_enchantment_composes_on_base(data):
     assert resolved.base_weapon == "battle_axe"
 
 
+def test_potions_loaded(data):
+    potions = [i for i in data.items.values()
+               if isinstance(i, MagicItem) and i.category == "magic_potions"]
+    assert len(potions) == 26
+    heal = data.items["potion_healing"]
+    assert heal.magic is True and heal.equippable is False
+    assert heal.cost_gp == 0 and heal.description
+    assert heal.modifiers == [] and heal.charge_dice is None
+
+
 def test_rolled_modifier_rolls_into_extra_modifiers():
     """A MagicItem.rolled_modifiers entry becomes a concrete per-instance
     extra_modifier with a rolled value when the instance is created."""
