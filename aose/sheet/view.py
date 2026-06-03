@@ -3,6 +3,7 @@ from pydantic import BaseModel, Field
 from aose.data.loader import GameData
 from aose.engine import ability_mods, armor_class, attack_bonus, hp, saves, spells as spell_engine
 from aose.engine import spell_sources as spell_source_engine
+from aose.engine import valuables as valuables_engine
 from aose.engine.attacks import AttackProfile, attack_profiles
 from aose.engine.encumbrance import (
     EncumbranceTable,
@@ -190,6 +191,28 @@ class SpellSourceAddOptions(BaseModel):
     divine_spells: list[SpellEntryView]          # scroll divine: all divine spells
 
 
+class GemRow(BaseModel):
+    instance_id: str
+    value: int
+    count: int
+    label: str
+    stack_value: int
+
+
+class JewelleryRow(BaseModel):
+    instance_id: str
+    value: int           # full value
+    damaged: bool
+    label: str
+    effective_value: int
+
+
+class ValuablesView(BaseModel):
+    gems: list[GemRow]
+    jewellery: list[JewelleryRow]
+    total_value: int
+
+
 class CharacterSheet(BaseModel):
     name: str
     race_name: str
@@ -239,6 +262,8 @@ class CharacterSheet(BaseModel):
     magic_items: list[MagicItemView]
     spells: list[SpellClassView]
     spell_sources: list[SpellSourceView] = Field(default_factory=list)
+    valuables: ValuablesView = Field(default_factory=lambda: ValuablesView(
+        gems=[], jewellery=[], total_value=0))
     ammo: list[AmmoRow] = Field(default_factory=list)
     ammo_load_options: dict[str, list[AmmoOption]] = Field(default_factory=dict)
 
@@ -681,6 +706,31 @@ def spell_source_add_options(data: GameData) -> SpellSourceAddOptions:
     )
 
 
+def valuables_view(spec: CharacterSpec) -> ValuablesView:
+    """Gem stacks + jewellery pieces with computed values, plus the section
+    total.  Weightless — never touches encumbrance."""
+    gems = [
+        GemRow(
+            instance_id=g.instance_id, value=g.value, count=g.count,
+            label=g.label, stack_value=valuables_engine.gem_stack_value(g),
+        )
+        for g in spec.gems
+    ]
+    jewellery = [
+        JewelleryRow(
+            instance_id=j.instance_id, value=j.value, damaged=j.damaged,
+            label=j.label, effective_value=valuables_engine.jewellery_value(j),
+        )
+        for j in spec.jewellery
+    ]
+    gems.sort(key=lambda r: (-r.value, r.label))
+    jewellery.sort(key=lambda r: (-r.value, r.label))
+    return ValuablesView(
+        gems=gems, jewellery=jewellery,
+        total_value=valuables_engine.total_value(spec),
+    )
+
+
 def ammo_view(spec, data: GameData) -> tuple[list[AmmoRow], dict[str, list[AmmoOption]]]:
     """Build ammo rows and per-launcher load options.  ``spec`` may be a
     ``CharacterSpec`` or a draft-like object that has ``.ammo``,
@@ -800,6 +850,7 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
         magic_items=_magic_items(spec, data) + enchanted_items_view(spec.enchanted, data),
         spells=spells_view(spec, data),
         spell_sources=spell_sources_view(spec, data),
+        valuables=valuables_view(spec),
         ammo=ammo_rows,
         ammo_load_options=ammo_options,
         enabled_optional_rules=_enabled_optional_rules(spec.ruleset),

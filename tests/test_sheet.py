@@ -148,3 +148,35 @@ def test_ability_row_breakdown_unmodified(data):
     assert row.temp_delta == 0
     assert row.modified is False
 
+
+
+def test_valuables_view_and_zero_weight():
+    from pathlib import Path
+    from aose.data.loader import GameData
+    from aose.engine import valuables as v
+    from aose.engine.encumbrance import carried_weight_cn
+    from aose.models import CharacterSpec
+    from aose.sheet.view import build_sheet
+
+    data = GameData.load(Path(__file__).parent.parent / "data")
+    spec = CharacterSpec(
+        name="T",
+        abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
+        race_id="human",
+        classes=[{"class_id": "fighter", "level": 1, "hp_rolls": [8]}],
+        alignment="neutral",
+    )
+    baseline_weight = carried_weight_cn(spec, data)
+    spec.gems = v.add_gem([], 100, count=2, label="ruby")
+    spec.jewellery = v.add_jewellery([], 700)
+    spec.jewellery = v.add_jewellery(spec.jewellery, 200, damaged=True)
+
+    sheet = build_sheet(spec, data)
+    assert sheet.valuables.total_value == 1000  # 200 + 700 + 100
+    assert len(sheet.valuables.gems) == 1
+    assert sheet.valuables.gems[0].stack_value == 200
+    assert len(sheet.valuables.jewellery) == 2
+    damaged_row = next(j for j in sheet.valuables.jewellery if j.damaged)
+    assert damaged_row.effective_value == 100
+    # Valuables never contribute weight.
+    assert carried_weight_cn(spec, data) == baseline_weight
