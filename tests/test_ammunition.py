@@ -386,3 +386,90 @@ def test_add_magic_ammo_and_remove(tmp_path):
     assert r.status_code == 303
     spec = load_character(cid, client._characters_dir)
     assert spec.ammo == []
+
+
+# ── Wizard test ───────────────────────────────────────────────────────────
+
+def _wizard_client(tmp_path):
+    """Create a TestClient with a fresh wizard-capable app."""
+    characters_dir = tmp_path / "characters"
+    drafts_dir = tmp_path / "drafts"
+    examples_dir = tmp_path / "examples"
+    examples_dir.mkdir(parents=True)
+    from aose.characters import save_settings
+    from aose.models import RuleSet
+    settings_path = tmp_path / "settings.json"
+    save_settings(settings_path, RuleSet())
+    app = create_app(data_dir=DATA_DIR, characters_dir=characters_dir,
+                     drafts_dir=drafts_dir, examples_dir=examples_dir,
+                     settings_path=settings_path)
+    client = TestClient(app, follow_redirects=False)
+    client._characters_dir = characters_dir
+    client._drafts_dir = drafts_dir
+    return client
+
+
+def _drive_wizard_to_equipment(client, tmp_path) -> str:
+    """Drive a wizard draft through all steps up to equipment; return draft_id."""
+    from aose.characters.drafts import load_draft, save_draft
+    r = client.get("/wizard/new")
+    assert r.status_code == 303
+    draft_id = r.headers["location"].strip("/").split("/")[1]
+
+    # Force abilities
+    draft = load_draft(draft_id, tmp_path / "drafts")
+    draft["abilities"] = {"STR": 15, "INT": 11, "WIS": 12, "DEX": 13, "CON": 14, "CHA": 10}
+    save_draft(draft_id, draft, tmp_path / "drafts")
+
+    client.post(f"/wizard/{draft_id}/abilities", data={})
+    client.post(f"/wizard/{draft_id}/race", data={"race_id": "human"})
+    client.post(f"/wizard/{draft_id}/class", data={"class_id": "fighter"})
+    client.post(f"/wizard/{draft_id}/adjust", data={})
+    client.post(f"/wizard/{draft_id}/hp/roll")
+    client.post(f"/wizard/{draft_id}/hp")
+    client.post(f"/wizard/{draft_id}/identity", data={"name": "Archer", "alignment": "law"})
+    # Roll starting gold
+    client.post(f"/wizard/{draft_id}/equipment/roll-gold")
+    return draft_id
+
+
+def test_wizard_ammo_carries_into_character(tmp_path):
+    """Buy a bow + quiver in the wizard, load the ammo, finalize; assert
+    the saved CharacterSpec has the ammo stack and loaded_ammo entry."""
+    from aose.characters.drafts import load_draft, save_draft
+    client = _wizard_client(tmp_path)
+    draft_id = _drive_wizard_to_equipment(client, tmp_path)
+
+    # Give enough gold for a bow + quiver
+    draft = load_draft(draft_id, tmp_path / "drafts")
+    draft["gold"] = 100
+    save_draft(draft_id, draft, tmp_path / "drafts")
+
+    # Buy a bow (regular item → goes to inventory)
+    r = client.post(f"/wizard/{draft_id}/equipment/buy", data={"item_id": "short_bow"})
+    assert r.status_code == 303
+
+    # Buy a quiver of arrows (ammunition → goes to ammo stacks)
+    r = client.post(f"/wizard/{draft_id}/equipment/buy", data={"item_id": "arrow"})
+    assert r.status_code == 303
+
+    # Load the arrow stack into the bow
+    draft = load_draft(draft_id, tmp_path / "drafts")
+    assert len(draft.get("ammo", [])) == 1
+    iid = draft["ammo"][0]["instance_id"]
+    r = client.post(f"/wizard/{draft_id}/ammo/load",
+                    data={"weapon_key": "short_bow", "instance_id": iid})
+    assert r.status_code == 303
+
+    # Finalize
+    client.post(f"/wizard/{draft_id}/equipment")  # advance to review
+    r = client.post(f"/wizard/{draft_id}/finalize")
+    assert r.status_code == 303
+
+    # Verify the saved character has ammo + loaded_ammo
+    location = r.headers["location"]  # e.g. "/character/archer"
+    char_id = location.strip("/").split("/")[-1]
+    spec = load_character(char_id, client._characters_dir)
+    assert len(spec.ammo) == 1
+    assert spec.ammo[0].count == 20
+    assert spec.loaded_ammo.get("short_bow") == iid

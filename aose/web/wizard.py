@@ -30,6 +30,15 @@ from aose.engine.dice import (
     roll_first_level_hp,
     roll_hp,
 )
+from aose.engine.ammo import (
+    buy_ammo,
+    load as _load_ammo,
+    unload as _unload_ammo,
+    adjust_count as _adjust_ammo,
+    remove_ammo as _remove_ammo,
+    InsufficientGold as _AmmoInsufficientGold,
+    UnknownAmmo as _UnknownAmmo,
+)
 from aose.engine.equip import equip as _equip, unequip as _unequip
 from aose.engine.magic import (
     add_free_magic_item,
@@ -73,6 +82,8 @@ from aose.engine.shop import (
 )
 from aose.models import (
     Ability,
+    AmmoStack,
+    Ammunition,
     CharacterSpec,
     ClassEntry,
     ContainerInstance,
@@ -1303,6 +1314,10 @@ def _draft_magic(draft: dict[str, Any]) -> list[MagicItemInstance]:
     return [MagicItemInstance.model_validate(m) for m in draft.get("magic_items", [])]
 
 
+def _draft_ammo(draft: dict[str, Any]) -> list[AmmoStack]:
+    return [AmmoStack.model_validate(a) for a in draft.get("ammo", [])]
+
+
 def _equipment_context(draft: dict[str, Any], game_data) -> dict:
     """Build the rendering context for the equipment partial — shared between
     the wizard equipment step and the live character sheet."""
@@ -1315,6 +1330,35 @@ def _equipment_context(draft: dict[str, Any], game_data) -> dict:
     ]
     classes = [game_data.classes[cid] for cid in _class_ids(draft)
                if cid in game_data.classes]
+    # Build ammo view rows and load-options from draft state
+    ammo_stacks = _draft_ammo(draft)
+    from aose.engine.ammo import accepts, resolve_ammo
+    from aose.sheet.view import AmmoOption, AmmoRow
+
+    ammo_rows = []
+    for s in ammo_stacks:
+        view = resolve_ammo(s, game_data)
+        ammo_rows.append(AmmoRow(instance_id=s.instance_id, name=view["name"],
+                                 count=s.count, magic=s.enchantment_id is not None))
+
+    # Load options keyed by weapon_id for each equipped launcher
+    from aose.models import Ammunition as _Ammunition, Weapon as _Weapon
+    load_options = {}
+    for wid in set(equipped_weapons):
+        weapon = game_data.items.get(wid)
+        if not isinstance(weapon, _Weapon) or not weapon.accepts_ammo:
+            continue
+        opts = []
+        for s in ammo_stacks:
+            base = game_data.items.get(s.base_id)
+            if isinstance(base, _Ammunition) and accepts(weapon, base):
+                v = resolve_ammo(s, game_data)
+                opts.append(AmmoOption(instance_id=s.instance_id, name=v["name"],
+                                       count=s.count))
+        if opts:
+            load_options[wid] = opts
+
+    draft_id = draft.get("_draft_id", "")
     return {
         "gold": draft.get("gold", 0),
         "gold_locked": draft.get("gold_locked", False),
@@ -1330,6 +1374,8 @@ def _equipment_context(draft: dict[str, Any], game_data) -> dict:
         "enchant_choices": [],
         "shop": shop_categories(game_data),
         "remove_modes": REMOVE_MODES,
+        "ammo_rows": ammo_rows,
+        "ammo_load_options": load_options,
     }
 
 
@@ -1343,6 +1389,7 @@ async def get_equipment(request: Request, draft_id: str):
     ctx.update(_equipment_context(draft, request.app.state.game_data))
     ctx["gold_rolled"] = "gold" in draft
     ctx["target_url_prefix"] = f"/wizard/{draft_id}/equipment"
+    ctx["ammo_url_prefix"] = f"/wizard/{draft_id}"
     return templates.TemplateResponse(request, "wizard.html", ctx)
 
 
@@ -1366,7 +1413,13 @@ async def post_equipment_buy(request: Request, draft_id: str, item_id: str = For
     item = data.items.get(item_id)
     from aose.models import Container
     try:
-        if isinstance(item, Container):
+        if isinstance(item, Ammunition):
+            new_ammo, new_gold = buy_ammo(
+                _draft_ammo(draft), draft.get("gold", 0), item_id, data,
+            )
+            draft["ammo"] = [a.model_dump() for a in new_ammo]
+            draft["gold"] = new_gold
+        elif isinstance(item, Container):
             containers_raw = draft.get("containers", [])
             containers = [ContainerInstance.model_validate(c) for c in containers_raw]
             new_containers, new_gold = buy_container(
@@ -1381,7 +1434,7 @@ async def post_equipment_buy(request: Request, draft_id: str, item_id: str = For
             draft["inventory"] = new_inventory
             draft["gold"] = new_gold
         draft["gold_locked"] = True  # first purchase locks the starting-gold roll
-    except (UnknownItem, InsufficientGold, ValueError) as e:
+    except (UnknownItem, InsufficientGold, _AmmoInsufficientGold, ValueError) as e:
         raise HTTPException(400, str(e))
     save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/equipment")
@@ -1588,6 +1641,54 @@ async def equipment_remove_container(request: Request, draft_id: str,
     return _redirect(f"/wizard/{draft_id}/equipment")
 
 
+@router.post("/{draft_id}/ammo/load")
+async def wiz_ammo_load(request: Request, draft_id: str,
+                        weapon_key: str = Form(...), instance_id: str = Form(...)):
+    draft = _load(request, draft_id)
+    draft["loaded_ammo"] = _load_ammo(dict(draft.get("loaded_ammo", {})), weapon_key, instance_id)
+    save_draft(draft_id, draft, _drafts_dir(request))
+    return _redirect(f"/wizard/{draft_id}/equipment")
+
+
+@router.post("/{draft_id}/ammo/unload")
+async def wiz_ammo_unload(request: Request, draft_id: str,
+                          weapon_key: str = Form(...)):
+    draft = _load(request, draft_id)
+    draft["loaded_ammo"] = _unload_ammo(dict(draft.get("loaded_ammo", {})), weapon_key)
+    save_draft(draft_id, draft, _drafts_dir(request))
+    return _redirect(f"/wizard/{draft_id}/equipment")
+
+
+@router.post("/{draft_id}/ammo/adjust")
+async def wiz_ammo_adjust(request: Request, draft_id: str,
+                          instance_id: str = Form(...), delta: int = Form(...)):
+    draft = _load(request, draft_id)
+    try:
+        new_ammo = _adjust_ammo(_draft_ammo(draft), instance_id, delta)
+    except _UnknownAmmo as e:
+        raise HTTPException(400, str(e))
+    draft["ammo"] = [a.model_dump() for a in new_ammo]
+    live = {a["instance_id"] for a in draft["ammo"]}
+    draft["loaded_ammo"] = {k: v for k, v in draft.get("loaded_ammo", {}).items() if v in live}
+    save_draft(draft_id, draft, _drafts_dir(request))
+    return _redirect(f"/wizard/{draft_id}/equipment")
+
+
+@router.post("/{draft_id}/ammo/remove")
+async def wiz_ammo_remove(request: Request, draft_id: str,
+                          instance_id: str = Form(...)):
+    draft = _load(request, draft_id)
+    try:
+        new_ammo = _remove_ammo(_draft_ammo(draft), instance_id)
+    except _UnknownAmmo as e:
+        raise HTTPException(400, str(e))
+    draft["ammo"] = [a.model_dump() for a in new_ammo]
+    live = {a["instance_id"] for a in draft["ammo"]}
+    draft["loaded_ammo"] = {k: v for k, v in draft.get("loaded_ammo", {}).items() if v in live}
+    save_draft(draft_id, draft, _drafts_dir(request))
+    return _redirect(f"/wizard/{draft_id}/equipment")
+
+
 @router.post("/{draft_id}/equipment/equip-magic")
 async def wiz_equip_magic(request: Request, draft_id: str, instance_id: str = Form(...)):
     draft = _load(request, draft_id)
@@ -1751,6 +1852,8 @@ def _draft_to_spec(draft: dict[str, Any], data) -> CharacterSpec:
         enchanted=[
             EnchantedInstance.model_validate(e) for e in draft.get("enchanted", [])
         ],
+        ammo=[AmmoStack.model_validate(a) for a in draft.get("ammo", [])],
+        loaded_ammo=dict(draft.get("loaded_ammo", {})),
         ruleset=ruleset,
     )
 
