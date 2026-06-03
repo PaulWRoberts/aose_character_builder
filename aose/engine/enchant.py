@@ -34,7 +34,7 @@ class NoCharges(ValueError):
     pass
 
 
-_WILDCARDS = {"any_weapon", "any_armour", "any_shield"}
+_WILDCARDS = {"any_weapon", "any_armour", "any_shield", "any_ammunition"}
 
 
 def _is_weapon(base) -> bool:
@@ -49,6 +49,11 @@ def _is_shield(base) -> bool:
     return isinstance(base, Armor) and base.is_shield
 
 
+def _is_ammunition(base) -> bool:
+    from aose.models import Ammunition
+    return isinstance(base, Ammunition)
+
+
 def matches(base, token: str) -> bool:
     """A base item matches ``token`` if it is the kind wildcard for the base's
     nature, equals the base id, or appears in ``base.groups``."""
@@ -58,6 +63,8 @@ def matches(base, token: str) -> bool:
         return _is_armour(base)
     if token == "any_shield":
         return _is_shield(base)
+    if token == "any_ammunition":
+        return _is_ammunition(base)
     if token == base.id:
         return True
     return token in getattr(base, "groups", [])
@@ -68,6 +75,7 @@ def _nature_matches_kind(base, kind: str) -> bool:
         (kind == "weapon" and _is_weapon(base))
         or (kind == "armor" and _is_armour(base))
         or (kind == "shield" and _is_shield(base))
+        or (kind == "ammunition" and _is_ammunition(base))
     )
 
 
@@ -112,6 +120,7 @@ def resolve_weapon(base: Weapon, ench: Enchantment, instance_id: str) -> Weapon:
         range_long=base.range_long,
         qualities=list(base.qualities),
         groups=list(base.groups),
+        accepts_ammo=list(base.accepts_ammo),
         magic_bonus=ench.magic_bonus,
         conditional_bonus=ench.conditional_bonus,
         base_weapon=base.id,
