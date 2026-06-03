@@ -86,3 +86,42 @@ def test_armor_shield_ac_bonus():
     a = Armor(id="shield", name="Shield", category="armor", item_type="armor",
               cost_gp=10, weight_cn=100, ac_descending=0, is_shield=True, ac_bonus=1)
     assert a.ac_bonus == 1
+
+
+def _minimal_spec(**overrides):
+    from aose.models import CharacterSpec, ClassEntry, RuleSet
+    base = dict(
+        name="Tester",
+        abilities={"STR": 12, "INT": 12, "WIS": 11, "DEX": 12, "CON": 12, "CHA": 10},
+        race_id="human",
+        classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[6])],
+        alignment="law",
+        ruleset=RuleSet(),
+    )
+    base.update(overrides)
+    return CharacterSpec(**base)
+
+
+def test_enchanted_instance_defaults():
+    from aose.models import EnchantedInstance
+    inst = EnchantedInstance(instance_id="i1", base_id="long_sword",
+                             enchantment_id="plus_1")
+    assert inst.equipped is False
+    assert inst.charges_max is None
+    assert inst.charges_remaining is None
+    assert inst.extra_modifiers == []
+    assert inst.note == ""
+
+
+def test_character_spec_defaults_enchanted_empty():
+    spec = _minimal_spec()
+    assert spec.enchanted == []
+
+
+def test_character_spec_accepts_enchanted():
+    from aose.models import EnchantedInstance
+    spec = _minimal_spec(enchanted=[
+        EnchantedInstance(instance_id="i1", base_id="long_sword",
+                          enchantment_id="plus_1", equipped=True),
+    ])
+    assert spec.enchanted[0].equipped is True

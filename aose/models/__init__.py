@@ -24,7 +24,10 @@ from .item import (
 )
 from .modifier import Modifier
 from .enchantment import AppliesTo, Enchantment
-from .character import CharacterSpec, ClassEntry, ContainerInstance, MagicItemInstance, SpellSlot
+from .character import (
+    CharacterSpec, ClassEntry, ContainerInstance, EnchantedInstance,
+    MagicItemInstance, SpellSlot,
+)
 
 __all__ = [
     "Ability",
@@ -54,6 +57,7 @@ __all__ = [
     "CharacterSpec",
     "ClassEntry",
     "ContainerInstance",
+    "EnchantedInstance",
     "MagicItemInstance",
     "SpellSlot",
 ]

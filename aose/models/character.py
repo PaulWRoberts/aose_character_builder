@@ -26,6 +26,26 @@ class MagicItemInstance(BaseModel):
     note: str = ""                                                 # escape hatch
 
 
+class EnchantedInstance(BaseModel):
+    """A specific magic weapon/armour the character owns, modelled as a
+    composition of a base catalog item + a reusable ``Enchantment``.  Resolved
+    to a synthetic ``Weapon``/``Armor`` at display time by
+    ``aose/engine/enchant.py``; nothing composed is persisted.  Not stored in
+    ``inventory``/``equipped``/``equipped_weapons`` — carries its own
+    ``equipped`` bool.  Passive enchantment modifiers apply only while equipped.
+    """
+    model_config = ConfigDict(extra="forbid")
+
+    instance_id: str                  # uuid4 hex
+    base_id: str                      # references a Weapon or Armor
+    enchantment_id: str               # references an Enchantment
+    equipped: bool = False
+    charges_max: int | None = None
+    charges_remaining: int | None = None
+    extra_modifiers: list[Modifier] = Field(default_factory=list)  # escape hatch
+    note: str = ""
+
+
 class ContainerInstance(BaseModel):
     """A specific container the character owns — per-instance state, separate
     from the catalog ``Container`` item.  Items inside ``contents`` are not in
@@ -117,6 +137,7 @@ class CharacterSpec(BaseModel):
     equipped_weapons: list[str] = Field(default_factory=list)
     containers: list[ContainerInstance] = Field(default_factory=list)
     magic_items: list[MagicItemInstance] = Field(default_factory=list)
+    enchanted: list[EnchantedInstance] = Field(default_factory=list)
     secondary_skill: str | None = None
     # Chosen *additional* languages only (INT-based picks).  Native (race) and
     # alignment tongues are derived at display time, never stored here.
