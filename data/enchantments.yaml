@@ -52,13 +52,17 @@
     Charges: The sword grants a total of 1d4 wishes.
 
 - id: trident_fish_command
-  name_template: "{base} of Fish Command"
+  name_template: "{base} +1, Fish Command"
   kind: weapon
   applies_to:
     include: [trident]
   magic_bonus: 1
-  charge_dice: "2d6"
-  description: "Commands fish/sea creatures while charges remain."
+  charge_dice: "1d4+16"
+  description: |-
+    A trident enchanted with the power to empathically control fish.
+    Commanding fish: A command word causes all fish within 60' to save vs spells
+    or be charmed (1 charge). Charmed fish obey empathic commands while they can
+    see the trident. Schools may be treated as a single entity.
 
 - id: armour_plus_1
   name_template: "{base} +1"
@@ -513,3 +517,286 @@
     Used against chaotic creatures: Inflicts double damage.
     Used by other lawful characters: Functions as a +1 sword only.
     Touching by non-lawful characters inflicts 1d6/2d6 damage per round.
+
+# Weapon (non-sword, non-ammunition) enchantments
+- id: axe_plus_1
+  name_template: "{base} +1"
+  kind: weapon
+  applies_to: {include: [axe]}
+  magic_bonus: 1
+  description: "+1 to attack and damage rolls."
+
+- id: axe_plus_2
+  name_template: "{base} +2"
+  kind: weapon
+  applies_to: {include: [axe]}
+  magic_bonus: 2
+  description: "+2 to attack and damage rolls."
+
+- id: bow_plus_1
+  name_template: "{base} +1"
+  kind: weapon
+  applies_to: {include: [bow]}
+  magic_bonus: 1
+  description: "+1 to attack and damage rolls."
+
+- id: crossbow_distance
+  name_template: "{base} +1, Distance"
+  kind: weapon
+  applies_to: {include: [crossbow]}
+  magic_bonus: 1
+  description: |-
+    An enchanted crossbow which can fire up to double the normal range.
+    Ranges: 5'–160' / 161'–320' / 321'–480'.
+
+- id: crossbow_speed
+  name_template: "{base} +1, Speed"
+  kind: weapon
+  applies_to: {include: [crossbow]}
+  magic_bonus: 1
+  description: |-
+    An enchanted crossbow which can fire with great rapidity.
+    With optional reload rule: The crossbow can be reloaded so rapidly that it
+    may fire every round in combat.
+    Otherwise: The crossbow always attacks first in the round, as if the wielder
+    had won initiative.
+
+- id: crossbow_accuracy
+  name_template: "{base} +2, Accuracy"
+  kind: weapon
+  applies_to: {include: [crossbow]}
+  magic_bonus: 2
+  description: |-
+    An enchanted crossbow which can fire with precision, even at long range.
+    Attack rolls at long range: The normal -1 range modifier does not apply.
+
+- id: dagger_plus_1
+  name_template: "{base} +1"
+  kind: weapon
+  applies_to: {include: [dagger]}
+  magic_bonus: 1
+  description: "+1 to attack and damage rolls."
+
+- id: dagger_buckle
+  name_template: "{base} +1, Buckle"
+  kind: weapon
+  applies_to: {include: [dagger]}
+  magic_bonus: 1
+  description: |-
+    An ornamental belt buckle which can transform into a magical dagger.
+    Activating: The owner grasps the buckle and wills it to become a dagger.
+    Returning: Touch the blade to the belt and will it to transform back.
+
+- id: dagger_throwing
+  name_template: "{base} +1, Throwing"
+  kind: weapon
+  applies_to: {include: [dagger]}
+  magic_bonus: 1
+  description: |-
+    A finely balanced dagger ideal for use as a missile weapon.
+    Range: Double the normal throwing range: 5'–20' / 21'–40' / 41'–60'.
+    Damage: When used as a missile weapon, inflicts double damage on a hit.
+
+- id: dagger_venomous
+  name_template: "{base} +1, Venomous"
+  kind: weapon
+  applies_to: {include: [dagger]}
+  magic_bonus: 1
+  description: |-
+    A dagger that magically injects venom into the victim when it strikes true.
+    Natural 20: Injects venom (save vs death or die instantly).
+
+- id: dagger_plus_2_vs_goblinoids
+  name_template: "{base} +2, +3 vs Goblinoids"
+  kind: weapon
+  applies_to: {include: [dagger]}
+  magic_bonus: 2
+  conditional_bonus: {vs: "orcs, goblins, and kobolds", bonus: 1}
+  description: "+2 normally; +3 to attack and damage versus orcs, goblins, and kobolds."
+
+- id: dagger_biter
+  name_template: "{base} +2, Biter"
+  kind: weapon
+  applies_to: {include: [dagger]}
+  magic_bonus: 2
+  description: |-
+    A broad-bladed dagger with special properties in the hands of a demihuman
+    of smaller than human size.
+    Length: The blade lengthens to that of a short sword, inflicting 1d6+2 damage.
+    Against wood or stone: On a successful hit, inflicts maximum damage.
+
+- id: javelin_of_lightning
+  name_template: "{base} of Lightning"
+  kind: weapon
+  applies_to: {include: [javelin]}
+  magic_bonus: 0
+  description: |-
+    A magical javelin which explodes in a stroke of lightning when it hits.
+    On a successful hit: Explodes in a 5'-wide, 30'-long stroke of lightning.
+    All within the area suffer 20 electrical damage (save vs spells for half;
+    the target who was hit may not save). The javelin is consumed on use.
+
+- id: javelin_of_seeking
+  name_template: "{base} of Seeking"
+  kind: weapon
+  applies_to: {include: [javelin]}
+  magic_bonus: 0
+  description: |-
+    A magical javelin which can launch itself at a target on command.
+    Command word: The javelin flies to seek the indicated target (up to 90').
+    Seeking: Can fly around obstacles; attack roll with +6 bonus.
+    On a successful hit: Inflicts 1d4+6 damage.
+    Once only: May only be launched once; afterwards a normal javelin.
+
+- id: mace_plus_1
+  name_template: "{base} +1"
+  kind: weapon
+  applies_to: {include: [mace]}
+  magic_bonus: 1
+  description: "+1 to attack and damage rolls."
+
+- id: mace_disrupting
+  name_template: "{base} +1, Disrupting"
+  kind: weapon
+  applies_to: {include: [mace]}
+  magic_bonus: 1
+  description: |-
+    A mace enchanted as a powerful bane against undead monsters.
+    Touched by a chaotic character: Inflicts 5d4 damage to that character.
+    Used against undead: On a successful hit, inflicts double damage and the
+    undead must save vs death or be instantly annihilated.
+
+- id: mace_plus_2
+  name_template: "{base} +2"
+  kind: weapon
+  applies_to: {include: [mace]}
+  magic_bonus: 2
+  description: "+2 to attack and damage rolls."
+
+- id: mace_plus_3
+  name_template: "{base} +3"
+  kind: weapon
+  applies_to: {include: [mace]}
+  magic_bonus: 3
+  description: "+3 to attack and damage rolls."
+
+- id: sling_plus_1
+  name_template: "{base} +1"
+  kind: weapon
+  applies_to: {include: [sling]}
+  magic_bonus: 1
+  description: "+1 to attack and damage rolls."
+
+- id: spear_backbiter
+  name_template: "{base} -1, Backbiter"
+  kind: weapon
+  applies_to: {include: [spear]}
+  magic_bonus: -1
+  cursed: true
+  description: |-
+    A cursed spear which attacks its wielder.
+    Natural 1: On an attack roll of natural 1, the spear inflicts damage on its
+    wielder instead. Cannot be discarded once used; removable only with magic.
+
+- id: spear_plus_1
+  name_template: "{base} +1"
+  kind: weapon
+  applies_to: {include: [spear]}
+  magic_bonus: 1
+  description: "+1 to attack and damage rolls."
+
+- id: spear_plus_2
+  name_template: "{base} +2"
+  kind: weapon
+  applies_to: {include: [spear]}
+  magic_bonus: 2
+  description: "+2 to attack and damage rolls."
+
+- id: spear_plus_3
+  name_template: "{base} +3"
+  kind: weapon
+  applies_to: {include: [spear]}
+  magic_bonus: 3
+  description: "+3 to attack and damage rolls."
+
+- id: staff_growing
+  name_template: "{base} +1, Growing"
+  kind: weapon
+  applies_to: {include: [staff]}
+  magic_bonus: 1
+  description: |-
+    A staff of sturdy wood, banded with iron at each tip, which can grow and
+    shrink on command.
+    Size: The staff can be any length between 6' and 12'.
+    Reach: The wielder can attack foes at up to the staff's length distant.
+
+- id: trident_yearning
+  name_template: "{base} -2, Yearning"
+  kind: weapon
+  applies_to: {include: [trident]}
+  magic_bonus: -2
+  cursed: true
+  description: |-
+    A cursed trident which causes the bearer to yearn for deep water.
+    Curse: The wielder is instantly compelled to seek the nearest body of water
+    deep enough to submerge in. The trident grants no ability to breathe
+    underwater.
+
+- id: trident_submission
+  name_template: "{base} +1, Submission"
+  kind: weapon
+  applies_to: {include: [trident]}
+  magic_bonus: 1
+  charge_dice: "1d4+16"
+  description: |-
+    A trident enchanted with the power to demoralise foes.
+    Successful hits: Target must save vs spells or be demoralised (1 charge).
+    Demoralised: Must make a morale check or surrender; lasts 2d4 rounds.
+
+- id: trident_warning
+  name_template: "{base} +2, Warning"
+  kind: weapon
+  applies_to: {include: [trident]}
+  magic_bonus: 2
+  charge_dice: "1d6+18"
+  description: |-
+    An enchanted trident which warns the wielder of marine predators.
+    Detecting: Detects all hostile marine predators within 240' (1 charge, 1
+    round). Includes those which are hunting.
+
+- id: war_hammer_plus_1
+  name_template: "{base} +1"
+  kind: weapon
+  applies_to: {include: [war_hammer]}
+  magic_bonus: 1
+  description: "+1 to attack and damage rolls."
+
+- id: war_hammer_plus_2
+  name_template: "{base} +2"
+  kind: weapon
+  applies_to: {include: [war_hammer]}
+  magic_bonus: 2
+  description: "+2 to attack and damage rolls."
+
+- id: war_hammer_dwarven_thrower
+  name_template: "{base} +3, Dwarven Thrower"
+  kind: weapon
+  applies_to: {include: [war_hammer]}
+  magic_bonus: 3
+  description: |-
+    In the hands of a dwarf, may function as a thrown missile weapon.
+    Range: 60'. After being thrown, returns to the wielder's hands.
+
+- id: war_hammer_thunderbolts
+  name_template: "{base} +3, Thunderbolts"
+  kind: weapon
+  applies_to: {include: [war_hammer]}
+  magic_bonus: 3
+  description: |-
+    A war hammer of unusually large size and weight.
+    Minimum STR: Only characters of 17 STR or higher can wield the hammer.
+    Hurling: May be hurled as a missile weapon (range 60'). On a successful hit
+    when hurled, a great clap of thunder rings out, stunning all within 30'
+    (save vs paralysis or unable to move/act for 3 rounds).
+    After hurling: Returns to the wielder's hands.
+    Frequency: May be hurled at most 3 times per turn.

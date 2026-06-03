@@ -66,6 +66,26 @@ def test_sword_enchantments(data):
     assert e["luck_blade"].modifiers[0].target == "save:all"
 
 
+def test_weapon_enchantments(data):
+    e = data.enchantments
+    assert e["axe_plus_2"].magic_bonus == 2 and e["axe_plus_2"].applies_to.include == ["axe"]
+    assert e["war_hammer_dwarven_thrower"].magic_bonus == 3
+    assert e["spear_backbiter"].cursed is True and e["spear_backbiter"].magic_bonus == -1
+    cb = e["dagger_plus_2_vs_goblinoids"]
+    assert cb.magic_bonus == 2 and cb.conditional_bonus.bonus == 1
+    assert e["trident_fish_command"].charge_dice == "1d4+16"
+    assert e["trident_warning"].charge_dice == "1d6+18"
+    assert e["javelin_of_seeking"].applies_to.include == ["javelin"]
+
+
+def test_weapon_enchantment_composes_on_base(data):
+    from aose.engine.enchant import new_enchanted_instance, resolve_instance
+    inst = new_enchanted_instance("battle_axe", "axe_plus_1", data)
+    resolved = resolve_instance(inst, data)
+    assert resolved.magic_bonus == 1
+    assert resolved.base_weapon == "battle_axe"
+
+
 def test_rolled_modifier_rolls_into_extra_modifiers():
     """A MagicItem.rolled_modifiers entry becomes a concrete per-instance
     extra_modifier with a rolled value when the instance is created."""
