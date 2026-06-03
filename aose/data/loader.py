@@ -7,6 +7,7 @@ from pydantic import BaseModel, TypeAdapter
 
 from aose.models import (
     CharClass,
+    Enchantment,
     Item,
     LanguageData,
     Race,
@@ -117,6 +118,26 @@ def _load_languages(data_dir: Path) -> LanguageData:
     return LanguageData.model_validate(raw)
 
 
+def _load_enchantments(data_dir: Path) -> dict[str, Enchantment]:
+    """Read ``enchantments.yaml`` (a list of mappings) into an id-keyed dict.
+
+    Returns an empty dict when the file is absent so minimal test fixtures
+    (a bare data dir) still load.
+    """
+    path = data_dir / "enchantments.yaml"
+    if not path.exists():
+        return {}
+    with path.open("r", encoding="utf-8") as f:
+        raw = yaml.safe_load(f) or []
+    if not isinstance(raw, list):
+        raise ValueError("enchantments.yaml must be a YAML list of mappings")
+    result: dict[str, Enchantment] = {}
+    for obj in raw:
+        parsed = Enchantment.model_validate(obj)
+        result[parsed.id] = parsed
+    return result
+
+
 def _load_weapon_qualities(data_dir: Path) -> dict[str, WeaponQuality]:
     """Read ``equipment/weapon_qualities.yaml`` (a list of mappings) into an
     id-keyed dict.  Returns an empty dict when absent (minimal fixtures)."""
@@ -144,6 +165,7 @@ class GameData:
     qualities: dict[str, WeaponQuality] = field(default_factory=dict)
     secondary_skills: list[str] = field(default_factory=list)
     languages: LanguageData = field(default_factory=LanguageData)
+    enchantments: dict[str, Enchantment] = field(default_factory=dict)
 
     @classmethod
     def load(cls, data_dir: Path) -> "GameData":
@@ -156,4 +178,5 @@ class GameData:
             qualities=_load_weapon_qualities(data_dir),
             secondary_skills=_load_secondary_skills(data_dir),
             languages=_load_languages(data_dir),
+            enchantments=_load_enchantments(data_dir),
         )

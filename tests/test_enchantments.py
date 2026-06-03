@@ -125,3 +125,24 @@ def test_character_spec_accepts_enchanted():
                           enchantment_id="plus_1", equipped=True),
     ])
     assert spec.enchanted[0].equipped is True
+
+
+def test_loader_reads_enchantments(tmp_path):
+    from aose.data.loader import GameData
+    (tmp_path / "enchantments.yaml").write_text(
+        "- id: plus_1\n"
+        "  name_template: \"{base} +1\"\n"
+        "  kind: weapon\n"
+        "  applies_to: {include: [any_weapon]}\n"
+        "  magic_bonus: 1\n",
+        encoding="utf-8",
+    )
+    data = GameData.load(tmp_path)
+    assert "plus_1" in data.enchantments
+    assert data.enchantments["plus_1"].magic_bonus == 1
+
+
+def test_loader_enchantments_absent_is_empty(tmp_path):
+    from aose.data.loader import GameData
+    data = GameData.load(tmp_path)
+    assert data.enchantments == {}
