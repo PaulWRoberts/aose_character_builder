@@ -499,6 +499,97 @@
             </section>
             {% endif %}
 
+            <section class="section">
+                <h2>Spell Books &amp; Scrolls</h2>
+                {% for src in sheet.spell_sources %}
+                <div class="spell-source">
+                    <h3>{{ src.name }}
+                        <span class="small muted">({{ src.kind }} · {{ src.caster_type }})</span>
+                        <form method="post" class="no-print inline"
+                              action="/character/{{ character_id }}/spell-sources/remove">
+                            <input type="hidden" name="instance_id" value="{{ src.instance_id }}">
+                            <button type="submit" class="link-button">remove</button>
+                        </form>
+                    </h3>
+                    <ul>
+                        {% for e in src.entries %}
+                        <li {% if e.copy_failed %}class="muted" style="text-decoration: line-through"{% endif %}>
+                            <strong>{{ e.name }}</strong> <span class="small muted">(L{{ e.level }})</span>
+                            {% if e.copy_failed %}<span class="small muted">— copy failed here</span>{% endif %}
+                            {% if e.can_cast %}
+                            <form method="post" class="no-print inline"
+                                  action="/character/{{ character_id }}/spell-sources/cast">
+                                <input type="hidden" name="instance_id" value="{{ src.instance_id }}">
+                                <input type="hidden" name="spell_id" value="{{ e.spell_id }}">
+                                <button type="submit" class="link-button">cast</button>
+                            </form>
+                            {% endif %}
+                            {% if e.can_copy and src.arcane_class_id %}
+                            <form method="post" class="no-print inline"
+                                  action="/character/{{ character_id }}/spell-sources/copy">
+                                <input type="hidden" name="instance_id" value="{{ src.instance_id }}">
+                                <input type="hidden" name="class_id" value="{{ src.arcane_class_id }}">
+                                <input type="hidden" name="spell_id" value="{{ e.spell_id }}">
+                                <button type="submit" class="link-button">copy to spell book</button>
+                            </form>
+                            {% endif %}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% else %}
+                <p class="small muted">No spell books or scrolls yet.</p>
+                {% endfor %}
+
+                <details class="no-print">
+                    <summary>Add a spell book or scroll</summary>
+                    <form method="post" action="/character/{{ character_id }}/spell-sources/add"
+                          id="spell-source-add-form">
+                        <label>Type:
+                            <select name="kind" id="ss-kind">
+                                <option value="spellbook">Spell Book (arcane)</option>
+                                <option value="scroll">Spell Scroll</option>
+                            </select>
+                        </label>
+                        <label>Magic:
+                            <select name="caster_type" id="ss-caster-type">
+                                <option value="arcane">Arcane</option>
+                                <option value="divine">Divine</option>
+                            </select>
+                        </label>
+                        <label id="ss-list-label">Spell list:
+                            <select name="list_id" id="ss-list">
+                                {% for grp in spell_source_add_options.arcane_lists %}
+                                <option value="{{ grp.list_id }}">{{ grp.label }}</option>
+                                {% endfor %}
+                            </select>
+                        </label>
+                        <label>Name (optional):
+                            <input type="text" name="name" placeholder="e.g. Rival's grimoire">
+                        </label>
+                        <label>Spells (choose one or more):
+                            <select name="spell_ids" id="ss-spells" multiple size="10">
+                                {% for grp in spell_source_add_options.arcane_lists %}
+                                {% for s in grp.spells %}
+                                <option value="{{ s.id }}"
+                                        data-caster="arcane" data-list="{{ grp.list_id }}">
+                                    {{ s.name }} (L{{ s.level }})
+                                </option>
+                                {% endfor %}
+                                {% endfor %}
+                                {% for s in spell_source_add_options.divine_spells %}
+                                <option value="{{ s.id }}" data-caster="divine" data-list="">
+                                    {{ s.name }} (L{{ s.level }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </label>
+                        <button type="submit" class="primary">Add to inventory</button>
+                    </form>
+                </details>
+            </section>
+            <script src="/static/spell_source_add.js"></script>
+
             <section class="section no-print">
                 <h2>Rest</h2>
                 {% if sheet.is_dead %}

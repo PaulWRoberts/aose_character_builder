@@ -190,3 +190,16 @@ def test_copy_route_rejected_under_standard_rule(client):
                     data={"instance_id": src.instance_id,
                           "class_id": "magic_user", "spell_id": "magic_user_sleep"})
     assert r.status_code == 400
+
+
+def test_sheet_renders_spell_sources_section(client):
+    _save_mu(client, advanced=True)
+    src = _add_scroll(client, ["magic_user_magic_missile"])
+    r = client.get("/character/mu")
+    assert r.status_code == 200
+    assert "Spell Books &amp; Scrolls" in r.text or "Spell Books & Scrolls" in r.text
+    assert "Magic Missile" in r.text
+    # cast action present (arcane caster, arcane scroll)
+    assert "/spell-sources/cast" in r.text
+    # copy action present (advanced rule, spell not yet known)
+    assert "/spell-sources/copy" in r.text
