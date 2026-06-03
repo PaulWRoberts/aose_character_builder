@@ -23,7 +23,7 @@ from .item import (
     Poison,
     WeaponDamage,
 )
-from .modifier import Modifier
+from .modifier import Modifier, RolledModifier
 from .enchantment import AppliesTo, Enchantment
 from .character import (
     AmmoStack, CharacterSpec, ClassEntry, ContainerInstance, EnchantedInstance,
@@ -54,6 +54,7 @@ __all__ = [
     "Poison",
     "WeaponDamage",
     "Modifier",
+    "RolledModifier",
     "AppliesTo",
     "Enchantment",
     "AmmoStack",

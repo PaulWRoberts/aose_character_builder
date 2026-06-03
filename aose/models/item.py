@@ -2,7 +2,7 @@ from typing import Annotated, Literal, Union
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from .modifier import Modifier
+from .modifier import Modifier, RolledModifier
 
 
 class ItemBase(BaseModel):
@@ -84,6 +84,7 @@ class MagicItem(ItemBase):
     item_type: Literal["magic"]
     equippable: bool = False
     modifiers: list[Modifier] = Field(default_factory=list)
+    rolled_modifiers: list[RolledModifier] = Field(default_factory=list)
     max_charges: int | None = None     # fixed charge ceiling, OR…
     charge_dice: str | None = None     # …rolled at acquisition (e.g. "2d6")
 

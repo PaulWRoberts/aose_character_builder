@@ -16,7 +16,7 @@ import uuid
 
 from aose.data.loader import GameData
 from aose.engine.dice import roll
-from aose.models import Ability, CharacterSpec, MagicItem, MagicItemInstance, Modifier
+from aose.models import Ability, CharacterSpec, MagicItem, MagicItemInstance, Modifier, RolledModifier
 
 
 class UnknownMagicItem(ValueError):
@@ -121,7 +121,8 @@ def needs_instance(item) -> bool:
     """Whether a catalog item must be tracked as a MagicItemInstance (because
     it carries mutable per-instance state: equippable or charged)."""
     return isinstance(item, MagicItem) and (
-        item.equippable or item.max_charges is not None or item.charge_dice is not None
+        item.equippable or item.max_charges is not None
+        or item.charge_dice is not None or bool(item.rolled_modifiers)
     )
 
 
@@ -148,12 +149,17 @@ def new_magic_instance(catalog_id: str, data: GameData,
         charges_max = roll(item.charge_dice, rng)
     elif item.max_charges is not None:
         charges_max = item.max_charges
+    extra: list[Modifier] = [
+        Modifier(target=rm.target, op=rm.op, value=roll(rm.dice, rng))
+        for rm in item.rolled_modifiers
+    ]
     return MagicItemInstance(
         instance_id=uuid.uuid4().hex,
         catalog_id=catalog_id,
         equipped=False,
         charges_max=charges_max,
         charges_remaining=charges_max,
+        extra_modifiers=extra,
     )
 
 

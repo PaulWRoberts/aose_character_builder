@@ -26,3 +26,16 @@ class Modifier(BaseModel):
     target: str
     op: Literal["add", "set", "set_min", "set_max"]
     value: int
+
+
+class RolledModifier(BaseModel):
+    """A modifier whose value is rolled when the item *instance* is created
+    (e.g. Bracers of Armour: AC 8 − 1d4).  At acquisition,
+    ``new_magic_instance`` rolls ``dice`` and appends a concrete
+    ``Modifier{target, op, value}`` to the instance's ``extra_modifiers``.
+    """
+    model_config = ConfigDict(extra="forbid")
+
+    target: str
+    op: Literal["add", "set", "set_min", "set_max"]
+    dice: str
