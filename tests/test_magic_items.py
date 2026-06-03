@@ -398,7 +398,7 @@ def _with_magic(data):
     d.items["shield_plus_1"] = Armor(
         id="shield_plus_1", name="Shield +1", category="magic_armour",
         item_type="armor", cost_gp=0, weight_cn=100, ac_descending=9,
-        is_shield=True, magic=True, magic_bonus=1, weight_multiplier=0.5,
+        is_shield=True, ac_bonus=1, magic=True, magic_bonus=1, weight_multiplier=0.5,
     )
     d.items["sword_plus_1"] = Weapon(
         id="sword_plus_1", name="Sword +1", category="magic_swords",

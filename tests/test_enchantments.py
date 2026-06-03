@@ -146,3 +146,34 @@ def test_loader_enchantments_absent_is_empty(tmp_path):
     from aose.data.loader import GameData
     data = GameData.load(tmp_path)
     assert data.enchantments == {}
+
+
+import pytest as _pytest
+
+
+@_pytest.fixture(scope="module")
+def data():
+    from aose.data.loader import GameData
+    return GameData.load(DATA_DIR)
+
+
+def test_mundane_shield_ac_bonus_from_data(data):
+    from aose.models import Armor
+    shield = data.items["shield"]
+    assert isinstance(shield, Armor)
+    assert shield.is_shield is True
+    assert shield.ac_bonus == 1
+
+
+def test_mundane_shield_still_minus_one_ac(data):
+    from aose.engine.armor_class import armor_class
+    spec = _minimal_spec(abilities={"STR": 12, "INT": 12, "WIS": 11,
+                                    "DEX": 10, "CON": 12, "CHA": 10})
+    spec.inventory = ["shield"]
+    spec.equipped = {"shield": "shield"}
+    desc, _ = armor_class(spec, data)
+    assert desc == 8   # unarmoured 9, shield bonus 1
+
+
+def test_base_swords_carry_sword_group(data):
+    assert "sword" in data.items["short_sword"].groups

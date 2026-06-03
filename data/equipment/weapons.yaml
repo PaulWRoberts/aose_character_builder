@@ -11,6 +11,7 @@
   damage: { default: "1d6", variable: "1d8" }
   hands: 2
   qualities: [melee, slow, two_handed]
+  groups: [axe]
 
 - id: club
   item_type: weapon
@@ -64,6 +65,7 @@
   range_medium: 20
   range_long: 30
   qualities: [melee, missile]
+  groups: [axe]
 
 - id: javelin
   item_type: weapon
@@ -149,6 +151,7 @@
   damage: { default: "1d6", variable: "1d6" }
   hands: 1
   qualities: [melee]
+  groups: [sword]
 
 - id: silver_dagger
   item_type: weapon
@@ -213,6 +216,7 @@
   damage: { default: "1d6", variable: "1d8" }
   hands: 1
   qualities: [melee]
+  groups: [sword]
 
 - id: two_handed_sword
   item_type: weapon
@@ -223,6 +227,7 @@
   damage: { default: "1d6", variable: "1d10" }
   hands: 2
   qualities: [melee, slow, two_handed]
+  groups: [sword]
 
 - id: war_hammer
   item_type: weapon
@@ -233,3 +238,36 @@
   damage: { default: "1d6", variable: "1d6" }
   hands: 1
   qualities: [blunt, melee]
+
+- id: bastard_sword
+  item_type: weapon
+  name: Bastard Sword
+  category: weapons
+  cost_gp: 15
+  weight_cn: 80
+  damage: { default: "1d6", variable: "1d8" }
+  hands: 1
+  qualities: [melee]
+  groups: [sword]
+
+- id: lightsaber
+  item_type: weapon
+  name: Lightsaber
+  category: weapons
+  cost_gp: 0
+  weight_cn: 30
+  damage: { default: "1d6", variable: "1d8" }
+  hands: 1
+  qualities: [melee]
+  groups: [sword]      # matches sword enchantments by TAG, not by name
+
+- id: trident
+  item_type: weapon
+  name: Trident
+  category: weapons
+  cost_gp: 5
+  weight_cn: 50
+  damage: { default: "1d6", variable: "1d6" }
+  hands: 1
+  qualities: [melee]
+  groups: [trident]

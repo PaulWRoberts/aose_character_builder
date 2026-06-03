@@ -8,6 +8,7 @@
   weight_cn: 200
   ac_descending: 7
   movement_impact: leather
+  groups: [leather_armour]
 
 - id: chain_mail
   item_type: armor
@@ -17,6 +18,7 @@
   weight_cn: 400
   ac_descending: 5
   movement_impact: metal
+  groups: [metal_armour]
 
 - id: plate_mail
   item_type: armor
@@ -26,6 +28,7 @@
   weight_cn: 500
   ac_descending: 3
   movement_impact: metal
+  groups: [metal_armour]
 
 - id: shield
   item_type: armor
@@ -33,6 +36,7 @@
   category: armor
   cost_gp: 10
   weight_cn: 100
-  ac_descending: 0   # shields apply a -1 to AC; treated additively at the sheet layer
+  ac_descending: 0
+  ac_bonus: 1        # the -1-to-AC shield bonus, formerly a code constant
   movement_impact: none
   is_shield: true

@@ -5,7 +5,6 @@ from .ability_mods import ability_modifier
 from .magic import active_modifiers, effective_abilities
 
 UNARMORED_AC_DESCENDING = 9
-SHIELD_AC_BONUS = 1
 
 
 def armor_class(spec: CharacterSpec, data: GameData) -> tuple[int, int]:
@@ -31,7 +30,7 @@ def armor_class(spec: CharacterSpec, data: GameData) -> tuple[int, int]:
     if shield_id and shield_id in data.items:
         item = data.items[shield_id]
         if isinstance(item, Armor) and item.is_shield:
-            shield_bonus = SHIELD_AC_BONUS + item.magic_bonus
+            shield_bonus = item.ac_bonus + item.magic_bonus
 
     ac_add = sum(m.value for m in mods if m.target == "ac" and m.op == "add")
     descending = base - dex_mod - shield_bonus - ac_add
