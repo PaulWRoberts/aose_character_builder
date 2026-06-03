@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from aose.data.loader import GameData
 from aose.engine import ability_mods, armor_class, attack_bonus, hp, saves, spells as spell_engine
@@ -109,6 +109,19 @@ class MagicItemView(BaseModel):
     modifier_summary: list[str]
 
 
+class AmmoRow(BaseModel):
+    instance_id: str
+    name: str
+    count: int
+    magic: bool
+
+
+class AmmoOption(BaseModel):
+    instance_id: str
+    name: str
+    count: int
+
+
 class SpellEntryView(BaseModel):
     id: str
     name: str
@@ -193,6 +206,8 @@ class CharacterSheet(BaseModel):
 
     magic_items: list[MagicItemView]
     spells: list[SpellClassView]
+    ammo: list[AmmoRow] = Field(default_factory=list)
+    ammo_load_options: dict[str, list[AmmoOption]] = Field(default_factory=dict)
 
     enabled_optional_rules: list[str]
     encumbrance_mode: str
@@ -540,6 +555,39 @@ def spells_view(spec: CharacterSpec, data: GameData) -> list[SpellClassView]:
     return out
 
 
+def ammo_view(spec, data: GameData) -> tuple[list[AmmoRow], dict[str, list[AmmoOption]]]:
+    """Build ammo rows and per-launcher load options.  ``spec`` may be a
+    ``CharacterSpec`` or a draft-like object that has ``.ammo``,
+    ``.loaded_ammo``, and ``.equipped_weapons``."""
+    from aose.engine.ammo import accepts, resolve_ammo
+    from aose.models import Ammunition, Weapon
+
+    ammo_rows = []
+    for s in spec.ammo:
+        view = resolve_ammo(s, data)
+        ammo_rows.append(AmmoRow(instance_id=s.instance_id, name=view["name"],
+                                 count=s.count, magic=s.enchantment_id is not None))
+
+    # Build per-launcher load options from attack profiles
+    attacks = attack_profiles(spec, data)
+    load_options: dict[str, list[AmmoOption]] = {}
+    for prof in attacks:
+        weapon = data.items.get(prof.weapon_id)
+        if weapon is None or not isinstance(weapon, Weapon) or not weapon.accepts_ammo:
+            continue
+        opts = []
+        for s in spec.ammo:
+            base = data.items.get(s.base_id)
+            if isinstance(base, Ammunition) and accepts(weapon, base):
+                v = resolve_ammo(s, data)
+                opts.append(AmmoOption(instance_id=s.instance_id, name=v["name"],
+                                       count=s.count))
+        if opts:
+            load_options[prof.weapon_id] = opts
+
+    return ammo_rows, load_options
+
+
 def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
     race = data.races[spec.race_id]
 
@@ -575,6 +623,9 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
 
     next_level, xp_to_next = _xp_to_next(spec, data)
     advancement_rows = all_advancement(spec, data)
+
+    attacks = attack_profiles(spec, data)
+    ammo_rows, ammo_options = ammo_view(spec, data)
 
     return CharacterSheet(
         name=spec.name,
@@ -615,13 +666,15 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
         class_features=_class_features(spec, data),
         equipped=_equipped(spec, data),
         inventory=_inventory(spec, data),
-        attacks=attack_profiles(spec, data),
+        attacks=attacks,
         secondary_skill=spec.secondary_skill,
         proficiencies=_proficiency_view(spec, data),
         weapon_proficiency_active=spec.ruleset.weapon_proficiency,
         weapon_qualities_reference=_weapon_qualities_reference(spec, data),
         magic_items=_magic_items(spec, data) + enchanted_items_view(spec.enchanted, data),
         spells=spells_view(spec, data),
+        ammo=ammo_rows,
+        ammo_load_options=ammo_options,
         enabled_optional_rules=_enabled_optional_rules(spec.ruleset),
         encumbrance_mode=spec.ruleset.encumbrance,
         encumbrance_description=ENCUMBRANCE_DESCRIPTIONS.get(

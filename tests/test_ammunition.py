@@ -293,3 +293,16 @@ def test_ammo_enchantments_load():
     assert d.enchantments["arrows_plus_1"].magic_bonus == 1
     assert d.enchantments["crossbow_bolts_plus_2"].magic_bonus == 2
     assert d.enchantments["sling_bullet_impact"].applies_to.include == ["sling_stone"]
+
+
+def test_sheet_exposes_ammo_section():
+    from aose.sheet.view import build_sheet
+    d = GameData.load(DATA_DIR)
+    spec = _bow_spec(loaded=True, ench=True)
+    sheet = build_sheet(spec, d)
+    names = [row.name for row in sheet.ammo]
+    assert any("+1" in n for n in names)
+    assert sheet.ammo[0].count == 20
+    # the bow launcher offers the loaded stack as an option
+    opts = sheet.ammo_load_options["short_bow"]
+    assert any(o.instance_id == "a" for o in opts)
