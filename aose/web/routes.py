@@ -9,6 +9,18 @@ from aose.engine import dice, hp, spells as spell_engine
 from aose.engine.equip import equip as _equip, unequip as _unequip
 from aose.engine.energy_drain import energy_drain as _energy_drain
 from aose.engine.leveling import grant_xp as _grant_xp, level_up as _level_up
+from aose.engine.enchant import (
+    IncompatibleBase,
+    NoCharges as _EnchNoCharges,
+    UnknownEnchantment,
+    add_free_enchanted as _add_free_enchanted,
+    equip as _equip_enchanted,
+    remove as _remove_enchanted,
+    reset_charges as _reset_ench_charges,
+    set_note as _set_enchanted_note,
+    unequip as _unequip_enchanted,
+    use_charge as _use_ench_charge,
+)
 from aose.engine.magic import (
     NoCharges,
     NotEquippable,
@@ -61,6 +73,23 @@ templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 _PRINT_CSS = (STATIC_DIR / "print.css").read_text(encoding="utf-8")
 
 
+def _enchant_choices(game_data):
+    """Picker data: each enchantment with its compatible base items, sorted by kind then id."""
+    from aose.engine.enchant import compatible_bases
+    out = []
+    for ench in sorted(game_data.enchantments.values(), key=lambda e: (e.kind, e.id)):
+        bases = compatible_bases(ench, game_data)
+        if not bases:
+            continue
+        out.append({
+            "id": ench.id,
+            "name_template": ench.name_template,
+            "kind": ench.kind,
+            "bases": [{"id": b.id, "name": b.name} for b in bases],
+        })
+    return out
+
+
 def _character_summaries(characters_dir: Path):
     summaries = []
     for cid in list_character_ids(characters_dir):
@@ -108,7 +137,12 @@ async def character_sheet(request: Request, character_id: str):
                 allowed_armor=allowed_armor_ids(classes, game_data),
                 allow_shields=shields_allowed(classes),
             ),
-            "magic_items_view": sheet.magic_items,
+            "magic_items_view": [v for v in sheet.magic_items
+                                 if v.instance_id not in {e.instance_id for e in spec.enchanted}],
+            "enchanted_rows": [v for v in sheet.magic_items
+                               if v.instance_id in {e.instance_id for e in spec.enchanted}],
+            "magic_acquisition": True,
+            "enchant_choices": _enchant_choices(game_data),
             "shop": shop_categories(game_data),
             "remove_modes": REMOVE_MODES,
             "target_url_prefix": f"/character/{character_id}/equipment",
@@ -572,6 +606,95 @@ async def equipment_magic_note(request: Request, character_id: str,
     spec = _load_spec_or_404(request, character_id)
     try:
         spec.magic_items = _set_magic_note(spec.magic_items, instance_id, note)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+# ── Enchanted item actions (sheet-only) ────────────────────────────────────
+
+@router.post("/character/{character_id}/equipment/add-enchanted")
+async def equipment_add_enchanted(request: Request, character_id: str,
+                                  base_id: str = Form(...),
+                                  enchantment_id: str = Form(...)):
+    spec = _load_spec_or_404(request, character_id)
+    try:
+        spec.enchanted = _add_free_enchanted(
+            spec.enchanted, base_id, enchantment_id, request.app.state.game_data)
+    except (UnknownEnchantment, IncompatibleBase, ValueError) as e:
+        raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/equipment/equip-enchanted")
+async def equipment_equip_enchanted(request: Request, character_id: str,
+                                    instance_id: str = Form(...)):
+    spec = _load_spec_or_404(request, character_id)
+    try:
+        spec.enchanted = _equip_enchanted(spec.enchanted, instance_id)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/equipment/unequip-enchanted")
+async def equipment_unequip_enchanted(request: Request, character_id: str,
+                                      instance_id: str = Form(...)):
+    spec = _load_spec_or_404(request, character_id)
+    try:
+        spec.enchanted = _unequip_enchanted(spec.enchanted, instance_id)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/equipment/enchanted/use-charge")
+async def equipment_enchanted_use_charge(request: Request, character_id: str,
+                                         instance_id: str = Form(...)):
+    spec = _load_spec_or_404(request, character_id)
+    try:
+        spec.enchanted = _use_ench_charge(spec.enchanted, instance_id)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/equipment/enchanted/reset-charges")
+async def equipment_enchanted_reset_charges(request: Request, character_id: str,
+                                            instance_id: str = Form(...)):
+    spec = _load_spec_or_404(request, character_id)
+    try:
+        spec.enchanted = _reset_ench_charges(spec.enchanted, instance_id)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/equipment/remove-enchanted")
+async def equipment_remove_enchanted(request: Request, character_id: str,
+                                     instance_id: str = Form(...)):
+    spec = _load_spec_or_404(request, character_id)
+    try:
+        spec.enchanted = _remove_enchanted(spec.enchanted, instance_id)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/equipment/enchanted-note")
+async def equipment_enchanted_note(request: Request, character_id: str,
+                                   instance_id: str = Form(...),
+                                   note: str = Form("")):
+    spec = _load_spec_or_404(request, character_id)
+    try:
+        spec.enchanted = _set_enchanted_note(spec.enchanted, instance_id, note)
     except ValueError as e:
         raise HTTPException(400, str(e))
     save_character(character_id, spec, request.app.state.characters_dir)

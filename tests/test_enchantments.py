@@ -616,3 +616,77 @@ def test_build_sheet_includes_enchanted_rows(data):
     spec.enchanted = equip(spec.enchanted, spec.enchanted[0].instance_id)
     sheet = build_sheet(spec, d)
     assert any(v.name == "Short Sword +1" for v in sheet.magic_items)
+
+
+from fastapi.testclient import TestClient
+
+from aose.characters import load_character, save_character, save_settings
+from aose.web.app import create_app
+
+
+def _make_client(tmp_path, ruleset=None):
+    from aose.models import RuleSet
+    characters_dir = tmp_path / "characters"
+    drafts_dir = tmp_path / "drafts"
+    examples_dir = tmp_path / "examples"
+    examples_dir.mkdir(parents=True)
+    settings_path = tmp_path / "settings.json"
+    save_settings(settings_path, ruleset or RuleSet())
+    app = create_app(data_dir=DATA_DIR, characters_dir=characters_dir,
+                     drafts_dir=drafts_dir, examples_dir=examples_dir,
+                     settings_path=settings_path)
+    client = TestClient(app, follow_redirects=False)
+    client._characters_dir = characters_dir
+    client._drafts_dir = drafts_dir
+    return client
+
+
+def _seed(client, **overrides):
+    save_character("test", _minimal_spec(**overrides), client._characters_dir)
+    return "test"
+
+
+def test_add_enchanted_creates_instance(tmp_path):
+    client = _make_client(tmp_path)
+    _seed(client)
+    r = client.post("/character/test/equipment/add-enchanted",
+                    data={"base_id": "short_sword", "enchantment_id": "sword_plus_1"})
+    assert r.status_code == 303
+    spec = load_character("test", client._characters_dir)
+    assert len(spec.enchanted) == 1
+    assert spec.enchanted[0].base_id == "short_sword"
+    assert spec.enchanted[0].enchantment_id == "sword_plus_1"
+
+
+def test_add_enchanted_incompatible_400(tmp_path):
+    client = _make_client(tmp_path)
+    _seed(client)
+    # battle_axe has groups:[axe], sword_plus_1 requires [sword] — incompatible
+    r = client.post("/character/test/equipment/add-enchanted",
+                    data={"base_id": "battle_axe", "enchantment_id": "sword_plus_1"})
+    assert r.status_code == 400
+
+
+def test_enchanted_equip_charge_note_remove_roundtrip(tmp_path):
+    client = _make_client(tmp_path)
+    _seed(client)
+    client.post("/character/test/equipment/add-enchanted",
+                data={"base_id": "trident", "enchantment_id": "trident_fish_command"})
+    spec = load_character("test", client._characters_dir)
+    iid = spec.enchanted[0].instance_id
+    client.post("/character/test/equipment/equip-enchanted", data={"instance_id": iid})
+    spec = load_character("test", client._characters_dir)
+    assert spec.enchanted[0].equipped is True
+    start = spec.enchanted[0].charges_remaining
+    client.post("/character/test/equipment/enchanted/use-charge", data={"instance_id": iid})
+    spec = load_character("test", client._characters_dir)
+    assert spec.enchanted[0].charges_remaining == start - 1
+    client.post("/character/test/equipment/enchanted/reset-charges", data={"instance_id": iid})
+    client.post("/character/test/equipment/enchanted-note",
+                data={"instance_id": iid, "note": "from the deep"})
+    spec = load_character("test", client._characters_dir)
+    assert spec.enchanted[0].note == "from the deep"
+    client.post("/character/test/equipment/unequip-enchanted", data={"instance_id": iid})
+    client.post("/character/test/equipment/remove-enchanted", data={"instance_id": iid})
+    spec = load_character("test", client._characters_dir)
+    assert spec.enchanted == []
