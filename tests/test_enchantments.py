@@ -576,3 +576,43 @@ def test_seed_generic_plus1_excludes_swords(data):
     axe = next(i for i in data.items.values()
                if getattr(i, "groups", None) and "axe" in i.groups)
     assert is_compatible(axe, ench)
+
+
+def test_enchanted_items_view_rows(data):
+    import copy
+    from aose.sheet.view import enchanted_items_view
+    from aose.engine.enchant import add_free_enchanted, equip
+    from aose.models import Enchantment
+    d = copy.deepcopy(data)
+    d.enchantments["luck_blade_t14"] = Enchantment(
+        id="luck_blade_t14", name_template="{base} of Luck", kind="weapon",
+        applies_to={"include": ["sword"]}, magic_bonus=1,
+        modifiers=[{"target": "save:all", "op": "add", "value": 1}],
+        description="Lucky.")
+    items = add_free_enchanted([], "short_sword", "luck_blade_t14", d)
+    items = equip(items, items[0].instance_id)
+    rows = enchanted_items_view(items, d)
+    assert len(rows) == 1
+    row = rows[0]
+    assert row.instance_id == items[0].instance_id
+    assert row.name == "Short Sword of Luck"
+    assert row.equipped is True
+    assert row.equippable is True
+    assert "+1 all saves" in row.modifier_summary
+    assert row.description == "Lucky."
+
+
+def test_build_sheet_includes_enchanted_rows(data):
+    import copy
+    from aose.sheet.view import build_sheet
+    from aose.engine.enchant import add_free_enchanted, equip
+    from aose.models import Enchantment
+    d = copy.deepcopy(data)
+    d.enchantments["sword_plus_1_t14"] = Enchantment(
+        id="sword_plus_1_t14", name_template="{base} +1", kind="weapon",
+        applies_to={"include": ["sword"]}, magic_bonus=1)
+    spec = _minimal_spec()
+    spec.enchanted = add_free_enchanted([], "short_sword", "sword_plus_1_t14", d)
+    spec.enchanted = equip(spec.enchanted, spec.enchanted[0].instance_id)
+    sheet = build_sheet(spec, d)
+    assert any(v.name == "Short Sword +1" for v in sheet.magic_items)

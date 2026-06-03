@@ -313,6 +313,45 @@ def _magic_items(spec: CharacterSpec, data: GameData) -> list[MagicItemView]:
     return magic_items_view(spec.magic_items, spec.inventory, data)
 
 
+def enchanted_items_view(enchanted, data: GameData) -> list[MagicItemView]:
+    """Build Magic-Items rows for EnchantedInstance items.  Each resolves to a
+    synthetic weapon/armour for its display name; the summary combines the
+    enchantment's magic_bonus, passive modifiers, and per-instance
+    extra_modifiers.  All enchanted items are equippable."""
+    from aose.engine.enchant import resolve_instance
+    views: list[MagicItemView] = []
+    for inst in enchanted:
+        ench = data.enchantments.get(inst.enchantment_id)
+        resolved = resolve_instance(inst, data)
+        name = resolved.name if resolved is not None else inst.enchantment_id
+        summary: list[str] = []
+        if ench is not None and ench.magic_bonus:
+            if ench.kind == "weapon":
+                summary.append(f"+{ench.magic_bonus} to hit & damage")
+                if ench.conditional_bonus:
+                    summary.append(
+                        f"+{ench.magic_bonus + ench.conditional_bonus.bonus}"
+                        f" vs {ench.conditional_bonus.vs}")
+            else:
+                summary.append(f"+{ench.magic_bonus} AC")
+        if ench is not None:
+            summary += [_summarize_modifier(m) for m in ench.modifiers]
+        summary += [_summarize_modifier(m) for m in inst.extra_modifiers]
+        views.append(MagicItemView(
+            instance_id=inst.instance_id,
+            catalog_id=inst.base_id,
+            name=name,
+            description=ench.description if ench is not None else None,
+            equippable=True,
+            equipped=inst.equipped,
+            charges_remaining=inst.charges_remaining,
+            charges_max=inst.charges_max,
+            note=inst.note,
+            modifier_summary=summary,
+        ))
+    return views
+
+
 def _class_summary(spec: CharacterSpec, data: GameData) -> str:
     parts = []
     for entry in spec.classes:
@@ -581,7 +620,7 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
         proficiencies=_proficiency_view(spec, data),
         weapon_proficiency_active=spec.ruleset.weapon_proficiency,
         weapon_qualities_reference=_weapon_qualities_reference(spec, data),
-        magic_items=_magic_items(spec, data),
+        magic_items=_magic_items(spec, data) + enchanted_items_view(spec.enchanted, data),
         spells=spells_view(spec, data),
         enabled_optional_rules=_enabled_optional_rules(spec.ruleset),
         encumbrance_mode=spec.ruleset.encumbrance,
