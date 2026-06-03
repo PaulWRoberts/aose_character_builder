@@ -54,7 +54,10 @@ def apply_modifiers(base: int, mods: list[Modifier], target: str) -> int:
 
 
 def active_modifiers(spec: CharacterSpec, data: GameData) -> list[Modifier]:
-    """Catalog modifiers + extra_modifiers from every EQUIPPED magic item."""
+    """Catalog modifiers + extra_modifiers from every EQUIPPED magic item, plus
+    enchantment modifiers + extra_modifiers from every EQUIPPED enchanted
+    instance.  ``magic_bonus``/``conditional_bonus`` are NOT modifiers — they
+    are consumed directly by attacks/AC."""
     out: list[Modifier] = []
     for inst in spec.magic_items:
         if not inst.equipped:
@@ -62,6 +65,13 @@ def active_modifiers(spec: CharacterSpec, data: GameData) -> list[Modifier]:
         catalog = data.items.get(inst.catalog_id)
         if isinstance(catalog, MagicItem):
             out.extend(catalog.modifiers)
+        out.extend(inst.extra_modifiers)
+    for inst in spec.enchanted:
+        if not inst.equipped:
+            continue
+        ench = data.enchantments.get(inst.enchantment_id)
+        if ench is not None:
+            out.extend(ench.modifiers)
         out.extend(inst.extra_modifiers)
     return out
 

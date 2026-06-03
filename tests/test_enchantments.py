@@ -399,3 +399,35 @@ def test_equipped_enchanted_resolves_by_kind():
     assert len(weapons) == 1
     assert weapons[0].magic_bonus == 1
     assert equipped_enchanted(spec, d, "armor") == []
+
+
+def test_active_modifiers_collect_enchanted_passives(data):
+    import copy
+    from aose.engine.magic import active_modifiers
+    from aose.engine.enchant import add_free_enchanted, equip
+    from aose.models import Enchantment, Modifier
+    d = copy.deepcopy(data)
+    d.enchantments["luck_blade_t9"] = Enchantment(
+        id="luck_blade_t9", name_template="{base} of Luck", kind="weapon",
+        applies_to={"include": ["any_weapon"]}, magic_bonus=1,
+        modifiers=[Modifier(target="save:all", op="add", value=1)])
+    items = add_free_enchanted([], "short_sword", "luck_blade_t9", d)
+    items = equip(items, items[0].instance_id)
+    spec = _minimal_spec(enchanted=items)
+    mods = active_modifiers(spec, d)
+    assert any(m.target == "save:all" for m in mods)
+
+
+def test_active_modifiers_ignore_unequipped_enchanted(data):
+    import copy
+    from aose.engine.magic import active_modifiers
+    from aose.engine.enchant import add_free_enchanted
+    from aose.models import Enchantment, Modifier
+    d = copy.deepcopy(data)
+    d.enchantments["luck_blade_t9b"] = Enchantment(
+        id="luck_blade_t9b", name_template="{base} of Luck", kind="weapon",
+        applies_to={"include": ["any_weapon"]},
+        modifiers=[Modifier(target="save:all", op="add", value=1)])
+    items = add_free_enchanted([], "short_sword", "luck_blade_t9b", d)  # not equipped
+    spec = _minimal_spec(enchanted=items)
+    assert active_modifiers(spec, d) == []
