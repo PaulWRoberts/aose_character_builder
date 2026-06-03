@@ -49,6 +49,23 @@ def test_armour_shield_enchantments(data):
     assert ac9.modifiers[0].value == 9
 
 
+def test_sword_enchantments(data):
+    e = data.enchantments
+    assert e["short_sword_of_quickness"].magic_bonus == 2
+    assert e["short_sword_of_quickness"].applies_to.include == ["short_sword"]
+    vsdrag = e["sword_plus_1_vs_dragons"]
+    assert vsdrag.magic_bonus == 1 and vsdrag.conditional_bonus.bonus == 2
+    assert e["sword_minus_1_berserker"].cursed is True
+    assert e["sword_minus_1_berserker"].magic_bonus == -1
+    assert e["sword_energy_drain"].charge_dice == "1d4+4"
+    assert e["sword_nine_lives_stealer"].max_charges == 9
+    assert e["sword_holy_avenger"].modifiers[0].target == "save:spells"
+    assert e["sword_holy_avenger"].modifiers[0].value == 4
+    assert e["sword_defender"].magic_bonus == 3 and e["sword_defender"].modifiers == []
+    assert e["luck_blade"].charge_dice == "1d4"
+    assert e["luck_blade"].modifiers[0].target == "save:all"
+
+
 def test_rolled_modifier_rolls_into_extra_modifiers():
     """A MagicItem.rolled_modifiers entry becomes a concrete per-instance
     extra_modifier with a rolled value when the instance is created."""

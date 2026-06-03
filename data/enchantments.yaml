@@ -27,22 +27,29 @@
   description: "+1 normally; +3 to attack and damage versus undead."
 
 - id: short_sword_of_quickness
-  name_template: "{base} of Quickness"
+  name_template: "{base} +2, Quickness"
   kind: weapon
   applies_to:
     include: [short_sword]
-  magic_bonus: 1
-  description: "Always wins initiative; +1 to attack and damage."
+  magic_bonus: 2
+  description: |-
+    Enables the bearer to strike with great speed.
+    Initiative: When attacking with the sword, the wielder always strikes first
+    in the round, as if they had won initiative.
 
 - id: luck_blade
-  name_template: "{base} of Luck"
+  name_template: "{base} +1, Luck Blade"
   kind: weapon
   applies_to:
     include: [sword]
   magic_bonus: 1
   modifiers:
     - {target: "save:all", op: add, value: 1}
-  description: "+1 to attack and damage; +1 to all saving throws while held."
+  charge_dice: "1d4"
+  description: |-
+    Grants the wielder protection and a number of wishes.
+    Protection: +1 bonus to all saves.
+    Charges: The sword grants a total of 1d4 wishes.
 
 - id: trident_fish_command
   name_template: "{base} of Fish Command"
@@ -202,3 +209,307 @@
     All tests indicate a +1 bonus, but in deadly combat the curse sets the
     bearer's base Armour Class to 9 [10] (before Dexterity). Cannot be removed
     without magic.
+
+# Sword enchantments
+- id: sword_minus_1_berserker
+  name_template: "{base} -1, Berserker"
+  kind: weapon
+  applies_to: {include: [sword]}
+  magic_bonus: -1
+  cursed: true
+  description: |-
+    When used in battle, causes the wielder to go into a berserk rage.
+    Indiscriminate attack: The wielder attacks the closest creature, whether
+    friend or foe. If killed, the wielder attacks the next nearest.
+    Ending the rage: Only if the wielder dies or slays all within 60'.
+    Cannot be discarded once used in combat; removable only with magic.
+
+- id: sword_minus_1_cursed
+  name_template: "{base} -1, Cursed"
+  kind: weapon
+  applies_to: {include: [sword]}
+  magic_bonus: -1
+  cursed: true
+  description: |-
+    Applies a -1 penalty to both attack rolls and damage rolls.
+    Cannot be discarded once used in combat; removable only with magic.
+
+- id: sword_minus_2_cursed
+  name_template: "{base} -2, Cursed"
+  kind: weapon
+  applies_to: {include: [sword]}
+  magic_bonus: -2
+  cursed: true
+  description: |-
+    Applies a -2 penalty to both attack rolls and damage rolls.
+    Cannot be discarded once used in combat; removable only with magic.
+
+- id: sword_plus_1_vs_lycanthropes
+  name_template: "{base} +1, +2 vs Lycanthropes"
+  kind: weapon
+  applies_to: {include: [sword]}
+  magic_bonus: 1
+  conditional_bonus: {vs: lycanthropes, bonus: 1}
+  description: "+1 normally; +2 to attack and damage versus lycanthropes."
+
+- id: sword_plus_1_vs_spell_users
+  name_template: "{base} +1, +2 vs Spell Users"
+  kind: weapon
+  applies_to: {include: [sword]}
+  magic_bonus: 1
+  conditional_bonus: {vs: spell users, bonus: 1}
+  description: "+1 normally; +2 to attack and damage versus spell users."
+
+- id: sword_plus_1_vs_dragons
+  name_template: "{base} +1, +3 vs Dragons"
+  kind: weapon
+  applies_to: {include: [sword]}
+  magic_bonus: 1
+  conditional_bonus: {vs: dragons, bonus: 2}
+  description: "+1 normally; +3 to attack and damage versus dragons."
+
+- id: sword_plus_1_vs_enchanted
+  name_template: "{base} +1, +3 vs Enchanted Creatures"
+  kind: weapon
+  applies_to: {include: [sword]}
+  magic_bonus: 1
+  conditional_bonus: {vs: enchanted creatures, bonus: 2}
+  description: "+1 normally; +3 to attack and damage versus enchanted creatures."
+
+- id: sword_plus_1_vs_regenerating
+  name_template: "{base} +1, +3 vs Regenerating Creatures"
+  kind: weapon
+  applies_to: {include: [sword]}
+  magic_bonus: 1
+  conditional_bonus: {vs: regenerating creatures, bonus: 2}
+  description: "+1 normally; +3 to attack and damage versus regenerating creatures."
+
+- id: sword_plus_1_vs_reptiles
+  name_template: "{base} +1, +3 vs Reptiles"
+  kind: weapon
+  applies_to: {include: [sword]}
+  magic_bonus: 1
+  conditional_bonus: {vs: reptiles, bonus: 2}
+  description: "+1 normally; +3 to attack and damage versus reptiles."
+
+- id: sword_plus_1_vs_shapechangers
+  name_template: "{base} +1, +3 vs Shape Changers"
+  kind: weapon
+  applies_to: {include: [sword]}
+  magic_bonus: 1
+  conditional_bonus: {vs: shape changers, bonus: 2}
+  description: "+1 normally; +3 to attack and damage versus shape changers."
+
+- id: sword_dragon_slayer
+  name_template: "{base} +1, Dragon Slayer"
+  kind: weapon
+  applies_to: {include: [sword]}
+  magic_bonus: 1
+  description: |-
+    Deadly to dragons, especially those of a specific type.
+    Dragon type: Chosen randomly (e.g. red dragons, white dragons, etc.).
+    Used against specific type: Acts as a +3 sword and inflicts double damage.
+    Used against other dragons: Acts as a +3 sword.
+
+- id: sword_energy_drain
+  name_template: "{base} +1, Energy Drain"
+  kind: weapon
+  applies_to: {include: [sword]}
+  magic_bonus: 1
+  charge_dice: "1d4+4"
+  description: |-
+    Drains the life energy of its victims.
+    On a successful hit: The wielder may command the sword to drain the victim's
+    life energy, causing permanent loss of one experience level (or Hit Die).
+    Charges: The sword may drain a total of 1d4+4 levels, then becomes a
+    normal +1 sword.
+
+- id: sword_flaming
+  name_template: "{base} +1, Flaming"
+  kind: weapon
+  applies_to: {include: [sword]}
+  magic_bonus: 1
+  description: |-
+    Bursts into flames on command. When flaming: casts light in 30' radius;
+    can set things alight (treated as a torch); inflicts fire damage.
+    Grants an attack bonus: +2 vs trolls and bird-like creatures; +3 vs
+    treants and undead. Blazes until commanded to cease.
+
+- id: sword_frost_brand
+  name_template: "{base} +1, Frost Brand"
+  kind: weapon
+  applies_to: {include: [sword]}
+  magic_bonus: 1
+  description: |-
+    Grants special benefits against fire and fire creatures.
+    In extreme cold, casts light in 30' radius.
+    +3 against fire-using or fire-dwelling creatures.
+    50% chance to extinguish a 10' radius area when thrust into fire.
+    Wielder: unharmed by non-magical fire; +2 saves vs fire attacks; fire
+    damage reduced by 1 per die (minimum 1).
+
+- id: sword_giant_slayer
+  name_template: "{base} +1, Giant Slayer"
+  kind: weapon
+  applies_to: {include: [sword]}
+  magic_bonus: 1
+  description: |-
+    Deadly to giants and giant-kin (e.g. ogres, ettins, etc.).
+    Used against giant-kin: Acts as a +3 sword.
+    Used against true giants: Acts as a +3 sword and inflicts double damage.
+
+- id: sword_light
+  name_template: "{base} +1, Light"
+  kind: weapon
+  applies_to: {include: [sword]}
+  magic_bonus: 1
+  description: "On command, produces light in a 30' radius."
+
+- id: sword_locate_objects
+  name_template: "{base} +1, Locate Objects"
+  kind: weapon
+  applies_to: {include: [sword]}
+  magic_bonus: 1
+  description: |-
+    Grants the wielder the ability to detect the presence of objects within
+    120', as the magic-user spell locate object. May be used once per day.
+
+- id: sword_sharpness
+  name_template: "{base} +1, Sharpness"
+  kind: weapon
+  applies_to: {include: [sword]}
+  magic_bonus: 1
+  description: |-
+    An incredibly sharp blade which can sever extremities.
+    Severing: On a natural 18, 19, or 20 attack roll, one extremity is severed.
+    Against larger-than-human targets: only 19 or 20; against stone/metal: only 20.
+
+- id: sword_sun_blade
+  name_template: "{base} +1, Sun Blade"
+  kind: weapon
+  applies_to: {include: [sword]}
+  magic_bonus: 1
+  description: |-
+    A sword of pristine, shining silver effective against darkness.
+    Used against shades: Acts as a +3 sword vs incorporeal shadow creatures.
+    Once per day: whirl the blade to conjure a 60' radius globe of golden
+    light lasting 1 turn, affecting daylight-sensitive creatures as full
+    daylight.
+
+- id: sword_wishes
+  name_template: "{base} +1, Wishes"
+  kind: weapon
+  applies_to: {include: [sword]}
+  magic_bonus: 1
+  charge_dice: "1d4"
+  description: |-
+    Has the power to grant the wielder's wishes.
+    Charges: The sword grants a total of 1d4 wishes, spoken aloud.
+
+- id: sword_wounding
+  name_template: "{base} +1, Wounding"
+  kind: weapon
+  applies_to: {include: [sword]}
+  magic_bonus: 1
+  description: |-
+    Inflicts vicious, bleeding wounds.
+    Bleeding: After being hit, the target suffers 1 extra damage per round
+    (up to 10 rounds). Multiple wounds stack. Bandaging stops bleeding.
+    Damage cannot be healed by magic or regeneration.
+    Constructs and bloodless creatures are unaffected.
+
+- id: sword_plus_2
+  name_template: "{base} +2"
+  kind: weapon
+  applies_to: {include: [sword]}
+  magic_bonus: 2
+  description: "+2 to attack and damage rolls."
+
+- id: sword_charm_person
+  name_template: "{base} +2, Charm Person"
+  kind: weapon
+  applies_to: {include: [sword]}
+  magic_bonus: 2
+  description: |-
+    Grants the wielder the ability to charm other people, as the magic-user
+    spell charm person. May be used up to three times a week.
+
+- id: sword_dancing
+  name_template: "{base} +2, Dancing"
+  kind: weapon
+  applies_to: {include: [sword]}
+  magic_bonus: 2
+  description: |-
+    A sword with the power to attack of its own accord.
+    Activating: The wielder must attack with it for 4 consecutive rounds first.
+    Dancing: The sword attacks for 4 rounds using the owner's THAC0, then
+    returns to hand. Range: within 30' of owner.
+
+- id: sword_nine_lives_stealer
+  name_template: "{base} +2, Nine Lives Stealer"
+  kind: weapon
+  applies_to: {include: [sword]}
+  magic_bonus: 2
+  max_charges: 9
+  description: |-
+    Has the power to suck the soul out of living creatures.
+    Natural 20: Target must save vs spells or die instantly (soul stolen).
+    Charges: Can steal nine souls total, then becomes a normal +2 sword.
+    Non-living creatures are unaffected.
+
+- id: sword_venger
+  name_template: "{base} +2, Venger"
+  kind: weapon
+  applies_to: {include: [sword]}
+  magic_bonus: 2
+  description: |-
+    Magically attacks any opponent that attacked the wielder.
+    Initiative: The character always attacks last in the round.
+    Revenge attacks: In addition to the normal attack, make one extra attack
+    against each opponent who attacked the wielder in melee this round.
+
+- id: sword_vorpal
+  name_template: "{base} +2, Vorpal"
+  kind: weapon
+  applies_to: {include: [sword]}
+  magic_bonus: 2
+  description: |-
+    An incredibly sharp blade which can decapitate enemies.
+    Severing: On a natural 18, 19, or 20, the target is decapitated.
+    Against larger-than-human targets: only 19 or 20; against stone/metal: only 20.
+    Creatures without a head, or some constructs/elementals, are unaffected.
+
+- id: sword_plus_3
+  name_template: "{base} +3"
+  kind: weapon
+  applies_to: {include: [sword]}
+  magic_bonus: 3
+  description: "+3 to attack and damage rolls."
+
+- id: sword_defender
+  name_template: "{base} +3, Defender"
+  kind: weapon
+  applies_to: {include: [sword]}
+  magic_bonus: 3
+  description: |-
+    Can grant a bonus to attack or to defence, determined by the wielder each
+    round.
+    Defence: At the start of each combat round, the wielder may choose to
+    transfer all or part of the sword's +3 bonus to an AC bonus against melee
+    attacks. The bonus lasts until the end of the round.
+    (This is a reference sheet; the AC-transfer option is noted here for the
+    GM and is not modelled as a passive modifier.)
+
+- id: sword_holy_avenger
+  name_template: "{base} +3, Holy Avenger"
+  kind: weapon
+  applies_to: {include: [sword]}
+  magic_bonus: 3
+  modifiers:
+    - {target: "save:spells", op: add, value: 4}
+  description: |-
+    A holy sword granting special bonuses to lawful cleric-type characters.
+    Save bonus: +4 to saves against magic.
+    Used against chaotic creatures: Inflicts double damage.
+    Used by other lawful characters: Functions as a +1 sword only.
+    Touching by non-lawful characters inflicts 1d6/2d6 damage per round.
