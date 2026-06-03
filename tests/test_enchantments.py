@@ -431,3 +431,59 @@ def test_active_modifiers_ignore_unequipped_enchanted(data):
     items = add_free_enchanted([], "short_sword", "luck_blade_t9b", d)  # not equipped
     spec = _minimal_spec(enchanted=items)
     assert active_modifiers(spec, d) == []
+
+
+def _equip_one_enchanted(d, base_id, ench_id, **spec_kwargs):
+    from aose.engine.enchant import add_free_enchanted, equip
+    spec = _minimal_spec(**spec_kwargs)
+    spec.enchanted = add_free_enchanted([], base_id, ench_id, d)
+    spec.enchanted = equip(spec.enchanted, spec.enchanted[0].instance_id)
+    return spec
+
+
+def test_ac_enchanted_armour_base(data):
+    import copy
+    from aose.engine.armor_class import armor_class
+    from aose.models import Enchantment
+    d = copy.deepcopy(data)
+    d.enchantments["armour_plus_1_t10"] = Enchantment(
+        id="armour_plus_1_t10", name_template="{base} +1", kind="armor",
+        applies_to={"include": ["any_armour"]}, magic_bonus=1)
+    spec = _equip_one_enchanted(
+        d, "chain_mail", "armour_plus_1_t10",
+        abilities={"STR": 12, "INT": 12, "WIS": 11, "DEX": 10, "CON": 12, "CHA": 10})
+    desc, _ = armor_class(spec, d)
+    assert desc == 4   # chain 5 − 1 magic
+
+
+def test_ac_enchanted_shield_bonus(data):
+    import copy
+    from aose.engine.armor_class import armor_class
+    from aose.models import Enchantment
+    d = copy.deepcopy(data)
+    d.enchantments["shield_plus_1_t10"] = Enchantment(
+        id="shield_plus_1_t10", name_template="{base} +1", kind="shield",
+        applies_to={"include": ["any_shield"]}, magic_bonus=1)
+    spec = _equip_one_enchanted(
+        d, "shield", "shield_plus_1_t10",
+        abilities={"STR": 12, "INT": 12, "WIS": 11, "DEX": 10, "CON": 12, "CHA": 10})
+    desc, _ = armor_class(spec, d)
+    assert desc == 9 - 2   # unarmoured 9, shield ac_bonus 1 + magic 1
+
+
+def test_ac_best_base_wins_mundane_vs_enchanted(data):
+    """Wearing mundane leather (7) + an enchanted chain (4) → best base 4."""
+    import copy
+    from aose.engine.armor_class import armor_class
+    from aose.models import Enchantment
+    d = copy.deepcopy(data)
+    d.enchantments["armour_plus_1_t10b"] = Enchantment(
+        id="armour_plus_1_t10b", name_template="{base} +1", kind="armor",
+        applies_to={"include": ["any_armour"]}, magic_bonus=1)
+    spec = _equip_one_enchanted(
+        d, "chain_mail", "armour_plus_1_t10b",
+        abilities={"STR": 12, "INT": 12, "WIS": 11, "DEX": 10, "CON": 12, "CHA": 10})
+    spec.inventory = ["leather_armor"]
+    spec.equipped = {"armor": "leather_armor"}   # worse base
+    desc, _ = armor_class(spec, d)
+    assert desc == 4   # enchanted chain base wins over leather 7

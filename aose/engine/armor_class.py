@@ -2,6 +2,7 @@ from aose.data.loader import GameData
 from aose.models import Ability, Armor, CharacterSpec
 
 from .ability_mods import ability_modifier
+from .enchant import equipped_enchanted
 from .magic import active_modifiers, effective_abilities
 
 UNARMORED_AC_DESCENDING = 9
@@ -20,6 +21,10 @@ def armor_class(spec: CharacterSpec, data: GameData) -> tuple[int, int]:
         if isinstance(item, Armor) and not item.is_shield:
             base = item.ac_descending - item.magic_bonus
 
+    # Enchanted armour: best-AC-wins (min descending) over mundane equipped.
+    for resolved in equipped_enchanted(spec, data, "armor"):
+        base = min(base, resolved.ac_descending - resolved.magic_bonus)
+
     # `ac set N` = literal descending base candidate (bracers-style); keep the better.
     for m in mods:
         if m.target == "ac" and m.op == "set":
@@ -31,6 +36,8 @@ def armor_class(spec: CharacterSpec, data: GameData) -> tuple[int, int]:
         item = data.items[shield_id]
         if isinstance(item, Armor) and item.is_shield:
             shield_bonus = item.ac_bonus + item.magic_bonus
+    for resolved in equipped_enchanted(spec, data, "shield"):
+        shield_bonus = max(shield_bonus, resolved.ac_bonus + resolved.magic_bonus)
 
     ac_add = sum(m.value for m in mods if m.target == "ac" and m.op == "add")
     descending = base - dex_mod - shield_bonus - ac_add
