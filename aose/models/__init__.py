@@ -23,6 +23,7 @@ from .item import (
     WeaponDamage,
 )
 from .modifier import Modifier
+from .enchantment import AppliesTo, Enchantment
 from .character import CharacterSpec, ClassEntry, ContainerInstance, MagicItemInstance, SpellSlot
 
 __all__ = [
@@ -48,6 +49,8 @@ __all__ = [
     "Poison",
     "WeaponDamage",
     "Modifier",
+    "AppliesTo",
+    "Enchantment",
     "CharacterSpec",
     "ClassEntry",
     "ContainerInstance",
