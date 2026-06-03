@@ -63,6 +63,22 @@ renders a "pending" badge — a regression test guards this.
 
 ## Current state (2026-06-02)
 
+Magic item enchantment composition just landed (19-task plan, on `main`). All 834 tests pass.
+
+- **Enchantment composition model** — magic weapons/armour are no longer stored as
+  hand-authored catalog entries. A `Enchantment` registry (`data/enchantments.yaml` →
+  `GameData.enchantments`) is independent of any base item; per-character
+  `EnchantedInstance` pairs a `base_id` + `enchantment_id`. The cycle-free engine module
+  `aose/engine/enchant.py` resolves the pair to a synthetic `Weapon`/`Armor` on the fly.
+  Tag-based matching (`Weapon.groups`, `Armor.groups`, `Armor.ac_bonus` + kind wildcards
+  `any_weapon`/`any_armour`/`any_shield`) means a new base is adopted by every compatible
+  enchantment with no YAML changes. Acquisition is **sheet-only, Add-only** (GM grant, no
+  gold); the wizard equipment step is mundane-only. The placeholder `magic_items.yaml` is
+  deleted — misc magic items (gauntlets, rings, etc.) remain plain `MagicItem` catalog
+  entries; only native magic weapons/armour moved to the composition model. Shield `ac_bonus`
+  was refactored from a hardcoded constant to a data field. Phase 2 = bulk YAML import.
+  Spec/plan: `docs/superpowers/{specs,plans}/2026-06-02-magic-item-enchantments*`.
+
 Manual rolls + Strict Mode just landed (8-task plan, on `main`). All 788 tests pass.
 
 - **Manual rolls + Strict Mode** — abilities, HP, and starting gold all require
