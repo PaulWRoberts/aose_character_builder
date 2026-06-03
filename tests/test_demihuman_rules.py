@@ -115,7 +115,7 @@ def test_class_card_marked_unavailable_when_restricted(client):
         shields_allowed=False,
         progression={
             1: ClassLevelData(
-                xp_required=0, thac0=19, hit_dice="1d4",
+                xp_required=0, thac0=19,
                 saves={"death": 13, "wands": 14, "paralysis": 13, "breath": 16, "spells": 15},
             ),
         },

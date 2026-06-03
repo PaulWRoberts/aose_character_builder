@@ -6,6 +6,8 @@ non_reducible_abilities:
 - STR
 max_level: 14
 hit_die: 1d4
+name_level: 9
+hp_after_name_level: 2
 weapons_allowed: all
 armor_allowed:
 - leather
@@ -17,7 +19,6 @@ progression:
   1:
     xp_required: 0
     thac0: 19
-    hit_dice: 1d4
     saves:
       death: 13
       wands: 14
@@ -27,7 +28,6 @@ progression:
   2:
     xp_required: 1500
     thac0: 19
-    hit_dice: 2d4
     saves:
       death: 13
       wands: 14
@@ -37,7 +37,6 @@ progression:
   3:
     xp_required: 3000
     thac0: 19
-    hit_dice: 3d4
     saves:
       death: 13
       wands: 14
@@ -47,7 +46,6 @@ progression:
   4:
     xp_required: 6000
     thac0: 19
-    hit_dice: 4d4
     saves:
       death: 13
       wands: 14
@@ -57,7 +55,6 @@ progression:
   5:
     xp_required: 12000
     thac0: 17
-    hit_dice: 5d4
     saves:
       death: 12
       wands: 13
@@ -67,7 +64,6 @@ progression:
   6:
     xp_required: 25000
     thac0: 17
-    hit_dice: 6d4
     saves:
       death: 12
       wands: 13
@@ -77,7 +73,6 @@ progression:
   7:
     xp_required: 50000
     thac0: 17
-    hit_dice: 7d4
     saves:
       death: 12
       wands: 13
@@ -87,7 +82,6 @@ progression:
   8:
     xp_required: 100000
     thac0: 17
-    hit_dice: 8d4
     saves:
       death: 12
       wands: 13
@@ -97,7 +91,6 @@ progression:
   9:
     xp_required: 200000
     thac0: 14
-    hit_dice: 9d4
     saves:
       death: 10
       wands: 11
@@ -107,7 +100,6 @@ progression:
   10:
     xp_required: 300000
     thac0: 14
-    hit_dice: 9d4+2
     saves:
       death: 10
       wands: 11
@@ -117,7 +109,6 @@ progression:
   11:
     xp_required: 425000
     thac0: 14
-    hit_dice: 9d4+4
     saves:
       death: 10
       wands: 11
@@ -127,7 +118,6 @@ progression:
   12:
     xp_required: 575000
     thac0: 14
-    hit_dice: 9d4+6
     saves:
       death: 10
       wands: 11
@@ -137,7 +127,6 @@ progression:
   13:
     xp_required: 750000
     thac0: 12
-    hit_dice: 9d4+8
     saves:
       death: 8
       wands: 9
@@ -147,7 +136,6 @@ progression:
   14:
     xp_required: 900000
     thac0: 12
-    hit_dice: 9d4+10
     saves:
       death: 8
       wands: 9

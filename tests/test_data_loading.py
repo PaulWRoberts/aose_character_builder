@@ -118,3 +118,29 @@ def test_character_spec_languages_defaults_empty():
         classes=[ClassEntry(class_id="fighter")], alignment="law",
     )
     assert spec.languages == []
+
+
+def test_classes_have_name_level_fields(data):
+    fighter = data.classes["fighter"]
+    assert fighter.name_level == 9
+    assert fighter.hp_after_name_level == 2
+    assert data.classes["magic_user"].hp_after_name_level == 1
+    assert data.classes["cleric"].hp_after_name_level == 1
+    assert data.classes["barbarian"].hp_after_name_level == 3
+    assert data.classes["thief"].hp_after_name_level == 2
+    # Capped race-as-class options: dice stop at 8, fixed step never fires.
+    assert data.classes["gnome"].name_level == 8
+    assert data.classes["halfling"].name_level == 8
+
+
+def test_hit_dice_removed_from_class_level_data():
+    from pydantic import ValidationError
+    from aose.models.character_class import ClassLevelData
+
+    # The retired `hit_dice` field must now be rejected (extra="forbid").
+    with pytest.raises(ValidationError):
+        ClassLevelData(
+            xp_required=0, thac0=19, hit_dice="1d8",
+            saves={"death": 12, "wands": 13, "paralysis": 14,
+                   "breath": 15, "spells": 16},
+        )

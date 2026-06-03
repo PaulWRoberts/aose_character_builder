@@ -7,6 +7,8 @@ ability_requirements:
   INT: 9
 max_level: 10
 hit_die: 1d6
+name_level: 9
+hp_after_name_level: 2
 weapons_allowed: all
 armor_allowed: all
 shields_allowed: true
@@ -17,7 +19,6 @@ progression:
   1:
     xp_required: 0
     thac0: 19
-    hit_dice: 1d6
     saves:
       death: 12
       wands: 13
@@ -29,7 +30,6 @@ progression:
   2:
     xp_required: 4000
     thac0: 19
-    hit_dice: 2d6
     saves:
       death: 12
       wands: 13
@@ -41,7 +41,6 @@ progression:
   3:
     xp_required: 8000
     thac0: 19
-    hit_dice: 3d6
     saves:
       death: 12
       wands: 13
@@ -54,7 +53,6 @@ progression:
   4:
     xp_required: 16000
     thac0: 17
-    hit_dice: 4d6
     saves:
       death: 10
       wands: 11
@@ -67,7 +65,6 @@ progression:
   5:
     xp_required: 32000
     thac0: 17
-    hit_dice: 5d6
     saves:
       death: 10
       wands: 11
@@ -81,7 +78,6 @@ progression:
   6:
     xp_required: 64000
     thac0: 17
-    hit_dice: 6d6
     saves:
       death: 10
       wands: 11
@@ -96,7 +92,6 @@ progression:
   7:
     xp_required: 120000
     thac0: 14
-    hit_dice: 7d6
     saves:
       death: 8
       wands: 9
@@ -112,7 +107,6 @@ progression:
   8:
     xp_required: 250000
     thac0: 14
-    hit_dice: 8d6
     saves:
       death: 8
       wands: 9
@@ -128,7 +122,6 @@ progression:
   9:
     xp_required: 400000
     thac0: 14
-    hit_dice: 9d6
     saves:
       death: 8
       wands: 9
@@ -144,7 +137,6 @@ progression:
   10:
     xp_required: 600000
     thac0: 12
-    hit_dice: 9d6+2
     saves:
       death: 6
       wands: 7
