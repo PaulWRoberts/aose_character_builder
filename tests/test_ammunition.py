@@ -208,3 +208,65 @@ def test_is_unloaded_flag():
         ammo = []
         loaded_ammo = {}
     assert is_unloaded("short_bow", d.items["short_bow"], _Spec(), d) is True
+
+
+def _bow_spec(loaded=True, ench=True):
+    from aose.models import CharacterSpec, ClassEntry
+    spec = CharacterSpec(
+        name="B", abilities={"STR": 12, "INT": 10, "WIS": 10,
+                             "DEX": 12, "CON": 12, "CHA": 10},
+        race_id="human", classes=[ClassEntry(class_id="fighter")], alignment="law")
+    spec.inventory = ["short_bow"]
+    spec.equipped_weapons = ["short_bow"]
+    eid = "arrows_plus_1" if ench else None
+    spec.ammo = [AmmoStack(instance_id="a", base_id="arrow",
+                           enchantment_id=eid, count=20)]
+    if loaded:
+        spec.loaded_ammo = {"short_bow": "a"}
+    return spec
+
+
+def _real_data():
+    return GameData.load(DATA_DIR)
+
+
+def _bow_profile(profiles):
+    return next(p for p in profiles if p.weapon_id == "short_bow")
+
+
+@pytest.mark.xfail(reason="needs Task 5 data", strict=True)
+def test_plus1_arrow_in_plus0_bow_is_plus1():
+    from aose.engine.attacks import attack_profiles
+    d = _real_data()
+    p = _bow_profile(attack_profiles(_bow_spec(loaded=True, ench=True), d))
+    base = _bow_profile(attack_profiles(_bow_spec(loaded=True, ench=False), d))
+    assert p.to_hit_ascending == base.to_hit_ascending + 1
+
+
+@pytest.mark.xfail(reason="needs Task 5 data", strict=True)
+def test_unloaded_bow_flagged():
+    from aose.engine.attacks import attack_profiles
+    d = _real_data()
+    p = _bow_profile(attack_profiles(_bow_spec(loaded=False), d))
+    assert p.unloaded is True
+    p2 = _bow_profile(attack_profiles(_bow_spec(loaded=True, ench=True), d))
+    assert p2.unloaded is False
+    assert p2.loaded_ammo_name and "+1" in p2.loaded_ammo_name
+
+
+def test_profile_adds_ammo_bonus_unit():
+    from aose.engine.attacks import attack_profiles
+    d = _data_with_ammo()
+    from aose.models import CharacterSpec, ClassEntry
+    # Minimal class so thac0() resolves; reuse fighter from real data.
+    rd = _real_data()
+    d.classes = rd.classes
+    spec = CharacterSpec(name="U", abilities={"STR": 10, "INT": 10, "WIS": 10,
+                         "DEX": 10, "CON": 10, "CHA": 10}, race_id="human",
+                         classes=[ClassEntry(class_id="fighter")], alignment="law")
+    spec.equipped_weapons = ["short_bow"]
+    spec.ammo = [AmmoStack(instance_id="a", base_id="arrow",
+                           enchantment_id="arrows_plus_1", count=5)]
+    spec.loaded_ammo = {"short_bow": "a"}
+    p = _bow_profile(attack_profiles(spec, d))
+    assert p.unloaded is False and "+1" in (p.loaded_ammo_name or "")

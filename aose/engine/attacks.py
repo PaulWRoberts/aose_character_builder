@@ -29,6 +29,7 @@ from pydantic import BaseModel
 from aose.data.loader import GameData
 from aose.engine.ability_mods import ability_modifier
 from aose.engine.attack_bonus import thac0
+from aose.engine.ammo import is_unloaded, loaded_bonus, loaded_stack, resolve_ammo
 from aose.engine.enchant import equipped_enchanted
 from aose.engine.magic import active_modifiers, effective_abilities
 from aose.engine.proficiency import (
@@ -64,6 +65,8 @@ class AttackProfile(BaseModel):
     range_ft: tuple[int, int, int] | None  # short / medium / long
     conditional: ConditionalAttack | None = None
     unarmed: bool = False
+    unloaded: bool = False           # launcher with no ammo loaded
+    loaded_ammo_name: str | None = None
 
 
 def _format_damage(base: str, mod: int) -> str:
@@ -83,7 +86,9 @@ def _global_atk_dmg(spec: CharacterSpec, data: GameData) -> tuple[int, int]:
 
 def _profile_for(weapon: Weapon, spec: CharacterSpec, data: GameData,
                  count: int, eff: dict, base_thac0: int,
-                 g_atk: int, g_dmg: int) -> AttackProfile:
+                 g_atk: int, g_dmg: int,
+                 ammo_bonus: int = 0, ammo_conditional=None,
+                 ammo_name: str | None = None, unloaded: bool = False) -> AttackProfile:
     str_mod = ability_modifier(eff[Ability.STR])
     dex_mod = ability_modifier(eff[Ability.DEX])
     base_attack = 19 - base_thac0
@@ -126,11 +131,21 @@ def _profile_for(weapon: Weapon, spec: CharacterSpec, data: GameData,
     def dmg(extra: int) -> str:
         return _format_damage(base_damage, dmg_mod + g_dmg + spec_dmg + extra)
 
+    flat = weapon.magic_bonus + ammo_bonus
+
     conditional = None
     if weapon.conditional_bonus is not None:
-        extra = weapon.magic_bonus + weapon.conditional_bonus.bonus
+        extra = weapon.magic_bonus + weapon.conditional_bonus.bonus + ammo_bonus
         conditional = ConditionalAttack(
             label=f"vs {weapon.conditional_bonus.vs}",
+            to_hit_thac0=hit_thac0(extra),
+            to_hit_ascending=hit_asc(extra),
+            damage=dmg(extra),
+        )
+    elif ammo_conditional is not None:
+        extra = flat + ammo_conditional.bonus
+        conditional = ConditionalAttack(
+            label=f"vs {ammo_conditional.vs}",
             to_hit_thac0=hit_thac0(extra),
             to_hit_ascending=hit_asc(extra),
             damage=dmg(extra),
@@ -144,12 +159,14 @@ def _profile_for(weapon: Weapon, spec: CharacterSpec, data: GameData,
         ranged=weapon.ranged,
         proficient=proficient,
         specialised=specialised,
-        to_hit_thac0=hit_thac0(weapon.magic_bonus),
-        to_hit_ascending=hit_asc(weapon.magic_bonus),
-        damage=dmg(weapon.magic_bonus),
+        to_hit_thac0=hit_thac0(flat),
+        to_hit_ascending=hit_asc(flat),
+        damage=dmg(flat),
         range_ft=rng,
         conditional=conditional,
         unarmed=False,
+        unloaded=unloaded,
+        loaded_ammo_name=ammo_name,
     )
 
 
@@ -187,6 +204,16 @@ def attack_profiles(spec: CharacterSpec, data: GameData) -> list[AttackProfile]:
     base_thac0 = thac0(spec, data)
     g_atk, g_dmg = _global_atk_dmg(spec, data)
 
+    def _ammo_args(weapon):
+        if not weapon.accepts_ammo:
+            return {}
+        a_bonus, a_cond = loaded_bonus(weapon.id, spec, data)
+        stack = loaded_stack(weapon.id, spec, data)
+        name = resolve_ammo(stack, data)["name"] if stack else None
+        return {"ammo_bonus": a_bonus, "ammo_conditional": a_cond,
+                "ammo_name": name,
+                "unloaded": is_unloaded(weapon.id, weapon, spec, data)}
+
     counts = Counter(spec.equipped_weapons)
     weapon_profiles: list[AttackProfile] = []
     for weapon_id, count in counts.items():
@@ -194,11 +221,13 @@ def attack_profiles(spec: CharacterSpec, data: GameData) -> list[AttackProfile]:
         if not isinstance(item, Weapon):
             continue  # equipped_weapons should only contain weapons, defensive
         weapon_profiles.append(
-            _profile_for(item, spec, data, count, eff, base_thac0, g_atk, g_dmg)
+            _profile_for(item, spec, data, count, eff, base_thac0, g_atk, g_dmg,
+                         **_ammo_args(item))
         )
     for resolved in equipped_enchanted(spec, data, "weapon"):
         weapon_profiles.append(
-            _profile_for(resolved, spec, data, 1, eff, base_thac0, g_atk, g_dmg)
+            _profile_for(resolved, spec, data, 1, eff, base_thac0, g_atk, g_dmg,
+                         **_ammo_args(resolved))
         )
     weapon_profiles.sort(key=lambda p: p.name)
     return [_unarmed_profile(spec, eff, base_thac0, g_atk, g_dmg), *weapon_profiles]
