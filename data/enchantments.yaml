@@ -116,4 +116,89 @@
     A cast metal bullet engraved with runes. +1 to attack and damage; on a
     hit that beats the required roll, inflicts extra damage equal to the
     margin of success.
-  description: "+1 bonus to Armour Class from the shield."
+
+# Armour enchantments
+- id: armour_plus_2
+  name_template: "{base} +2"
+  kind: armor
+  applies_to: {include: [any_armour]}
+  magic_bonus: 2
+  description: "+2 bonus to Armour Class. Enchanted armour weighs half as much."
+
+- id: armour_plus_3
+  name_template: "{base} +3"
+  kind: armor
+  applies_to: {include: [any_armour]}
+  magic_bonus: 3
+  description: "+3 bonus to Armour Class. Enchanted armour weighs half as much."
+
+- id: cursed_armour_minus_1
+  name_template: "{base} -1"
+  kind: armor
+  applies_to: {include: [any_armour]}
+  magic_bonus: -1
+  cursed: true
+  description: |-
+    All tests indicate a +1 bonus, but in deadly combat the curse is revealed:
+    worsens the wearer's Armour Class by 1. Cannot be removed without magic.
+
+- id: cursed_armour_minus_2
+  name_template: "{base} -2"
+  kind: armor
+  applies_to: {include: [any_armour]}
+  magic_bonus: -2
+  cursed: true
+  description: |-
+    All tests indicate a +1 bonus, but in deadly combat the curse is revealed:
+    worsens the wearer's Armour Class by 2. Cannot be removed without magic.
+
+- id: cursed_armour_ac_9
+  name_template: "{base} (Cursed, AC 9)"
+  kind: armor
+  applies_to: {include: [any_armour]}
+  magic_bonus: 0
+  cursed: true
+  modifiers:
+    - {target: ac, op: set, value: 9}
+  description: |-
+    All tests indicate a +1 bonus, but in deadly combat the curse sets the
+    wearer's base Armour Class to 9 [10] (before Dexterity). Cannot be removed
+    without magic.
+
+# Shield enchantments
+- id: shield_plus_2
+  name_template: "{base} +2"
+  kind: shield
+  applies_to: {include: [any_shield]}
+  magic_bonus: 2
+  description: "+2 bonus to Armour Class from the shield."
+
+- id: shield_plus_3
+  name_template: "{base} +3"
+  kind: shield
+  applies_to: {include: [any_shield]}
+  magic_bonus: 3
+  description: "+3 bonus to Armour Class from the shield."
+
+- id: cursed_shield_minus_2
+  name_template: "{base} -2"
+  kind: shield
+  applies_to: {include: [any_shield]}
+  magic_bonus: -2
+  cursed: true
+  description: |-
+    All tests indicate a +1 bonus, but in deadly combat the curse is revealed:
+    worsens the bearer's Armour Class by 2. Cannot be removed without magic.
+
+- id: cursed_shield_ac_9
+  name_template: "{base} (Cursed, AC 9)"
+  kind: shield
+  applies_to: {include: [any_shield]}
+  magic_bonus: 0
+  cursed: true
+  modifiers:
+    - {target: ac, op: set, value: 9}
+  description: |-
+    All tests indicate a +1 bonus, but in deadly combat the curse sets the
+    bearer's base Armour Class to 9 [10] (before Dexterity). Cannot be removed
+    without magic.

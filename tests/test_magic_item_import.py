@@ -37,6 +37,18 @@ def test_containers_have_descriptions(data):
     assert data.items["bag_of_holding"].magic is True
 
 
+def test_armour_shield_enchantments(data):
+    e = data.enchantments
+    assert e["armour_plus_3"].kind == "armor" and e["armour_plus_3"].magic_bonus == 3
+    assert e["shield_plus_2"].kind == "shield" and e["shield_plus_2"].magic_bonus == 2
+    assert e["cursed_armour_minus_1"].magic_bonus == -1
+    assert e["cursed_armour_minus_1"].cursed is True
+    ac9 = e["cursed_armour_ac_9"]
+    assert ac9.cursed is True
+    assert ac9.modifiers[0].target == "ac" and ac9.modifiers[0].op == "set"
+    assert ac9.modifiers[0].value == 9
+
+
 def test_rolled_modifier_rolls_into_extra_modifiers():
     """A MagicItem.rolled_modifiers entry becomes a concrete per-instance
     extra_modifier with a rolled value when the instance is created."""
