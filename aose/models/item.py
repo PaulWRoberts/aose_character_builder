@@ -42,6 +42,7 @@ class Weapon(ItemBase):
     range_medium: int | None = None
     range_long: int | None = None
     qualities: list[str] = Field(default_factory=list)
+    groups: list[str] = Field(default_factory=list)  # enchantment matching tags
     magic_bonus: int = 0
     conditional_bonus: ConditionalBonus | None = None
     base_weapon: str | None = None   # for magic/variant weapons: the mundane
@@ -53,6 +54,8 @@ class Armor(ItemBase):
     ac_descending: int
     movement_impact: Literal["none", "leather", "metal"] = "metal"
     is_shield: bool = False
+    groups: list[str] = Field(default_factory=list)  # enchantment matching tags
+    ac_bonus: int = 0                # AC improvement while worn (shields: 1)
     magic_bonus: int = 0
     weight_multiplier: float = 1.0   # 0.5 for enchanted armour
     base_armor: str | None = None    # for magic/variant armour: the mundane

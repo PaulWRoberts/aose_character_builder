@@ -56,3 +56,33 @@ def test_enchantment_forbids_extra_fields():
     with pytest.raises(ValueError):
         Enchantment(id="x", name_template="{base}", kind="weapon",
                     applies_to={"include": ["any_weapon"]}, bogus=True)
+
+
+def test_weapon_has_groups_default_empty():
+    from aose.models import Weapon, WeaponDamage
+    w = Weapon(id="dagger", name="Dagger", category="weapons", item_type="weapon",
+               cost_gp=3, weight_cn=10, damage=WeaponDamage())
+    assert w.groups == []
+
+
+def test_weapon_groups_set():
+    from aose.models import Weapon, WeaponDamage
+    w = Weapon(id="short_sword", name="Short Sword", category="weapons",
+               item_type="weapon", cost_gp=7, weight_cn=30,
+               damage=WeaponDamage(), groups=["sword"])
+    assert w.groups == ["sword"]
+
+
+def test_armor_has_groups_and_ac_bonus_defaults():
+    from aose.models import Armor
+    a = Armor(id="leather", name="Leather", category="armor", item_type="armor",
+              cost_gp=20, weight_cn=200, ac_descending=7, movement_impact="leather")
+    assert a.groups == []
+    assert a.ac_bonus == 0
+
+
+def test_armor_shield_ac_bonus():
+    from aose.models import Armor
+    a = Armor(id="shield", name="Shield", category="armor", item_type="armor",
+              cost_gp=10, weight_cn=100, ac_descending=0, is_shield=True, ac_bonus=1)
+    assert a.ac_bonus == 1
