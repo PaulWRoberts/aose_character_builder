@@ -63,6 +63,22 @@ renders a "pending" badge — a regression test guards this.
 
 ## Current state (2026-06-03)
 
+Gems & jewellery just landed (7-task plan, on `feature/gems-and-jewellery`). All 959 tests pass.
+
+- **Gems & jewellery** — free-acquired, weightless, sheet-only treasure. Two
+  per-instance models on `CharacterSpec`: `GemStack` (value + count + label,
+  stacks by value+label) and `JewelleryPiece` (full value + `damaged` toggle +
+  label; damaged halves value with floor at display/sell). Cycle-free
+  `aose/engine/valuables.py` owns add/adjust/remove/sell/sell-all (gems),
+  add/toggle-damaged/remove/sell (jewellery), `roll_jewellery_value` (3d6×100),
+  and the value helpers (`gem_stack_value`/`jewellery_value`/`total_value`).
+  `GEM_INCREMENTS` is a dropdown affordance, not a constraint (custom values
+  allowed). Selling adds value to `gold`; dropping refunds nothing (free
+  acquisition). Sheet gains a "Gems & Jewellery" section (`valuables_view`) +
+  `/gems/{add,adjust,sell,sell-all,remove}` and `/jewellery/{add,toggle-damaged,
+  sell,remove}` (sheet-only). Never touches `encumbrance.py`. Spec/plan:
+  `docs/superpowers/{specs,plans}/2026-06-03-gems-and-jewellery*`.
+
 Spell books & scrolls just landed (11-task plan, on `feature/spell-books-scrolls`). All 924 tests pass.
 
 - **Spell books & scrolls** — owned documents with custom contents, modelled as a
