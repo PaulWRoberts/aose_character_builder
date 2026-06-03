@@ -12,6 +12,8 @@ Target model: `CharClass` (`aose/models/character_class.py`). `extra="forbid"`
 | ability_requirements | map Ability->int | no | minimum scores to take the class |
 | max_level | int | no | default 14 |
 | hit_die | str | yes | e.g. "1d8", "1d4" |
+| name_level | int | no | default 9; last level that rolls a Hit Die (8 for capped race-as-class) |
+| hp_after_name_level | int | no | default 0; flat HP/level gained beyond name level, no CON modifier |
 | weapons_allowed | list[str] \| "all" | yes | |
 | armor_allowed | list[str] \| "all" | yes | `[]` = none |
 | shields_allowed | bool | yes | |
@@ -21,7 +23,7 @@ Target model: `CharClass` (`aose/models/character_class.py`). `extra="forbid"`
 | race_locked | str \| null | no | race id, for race-as-class entries |
 | spell_lists | list[str] | no | which pool(s) this class casts from; each id MUST be defined in `data/spell_lists.yaml` (define it first if new). `[]` = non-caster. The arcane/divine behaviour comes from the list, not the class. |
 
-`ClassLevelData`: `{xp_required:int, thac0:int, hit_dice:str,
+`ClassLevelData`: `{xp_required:int, thac0:int,
 saves:{death,wands,paralysis,breath,spells (ints)}, spell_slots: map int->int | null}`
 `ClassFeature`: `{id:str, name:str, text:str, gained_at_level:int=1, mechanical: map | null}`
 
@@ -32,6 +34,8 @@ name: Fighter
 prime_requisites: [STR]
 max_level: 14
 hit_die: 1d8
+name_level: 9
+hp_after_name_level: 2
 weapons_allowed: all
 armor_allowed: all
 shields_allowed: true
@@ -40,7 +44,6 @@ progression:
   1:
     xp_required: 0
     thac0: 19
-    hit_dice: 1d8
     saves: { death: 12, wands: 13, paralysis: 14, breath: 15, spells: 16 }
 features:
   - id: combat_focus
@@ -58,13 +61,11 @@ progression:
   1:
     xp_required: 0
     thac0: 19
-    hit_dice: 1d4
     saves: { death: 13, wands: 14, paralysis: 13, breath: 16, spells: 15 }
     spell_slots: { 1: 1 }          # one 1st-level spell at level 1
   3:
     xp_required: 5000
     thac0: 19
-    hit_dice: 3d4
     saves: { death: 13, wands: 14, paralysis: 13, breath: 16, spells: 15 }
     spell_slots: { 1: 2, 2: 1 }
 ```

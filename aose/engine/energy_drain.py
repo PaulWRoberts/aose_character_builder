@@ -121,8 +121,11 @@ def energy_drain(spec: CharacterSpec, data: GameData, levels: int,
             _kill(spec, data)
             return
         former.setdefault(target.class_id, target.level)
+        removed_level = target.level  # the level being stripped
         target.level -= 1
-        if target.hp_rolls:
+        # Levels above name level never rolled a Hit Die, so there is nothing to
+        # pop; only remove a stored roll when the removed level had one.
+        if removed_level <= data.classes[target.class_id].name_level and target.hp_rolls:
             target.hp_rolls.pop()
         _trim_to_accessible(target, data, spec.ruleset)
 

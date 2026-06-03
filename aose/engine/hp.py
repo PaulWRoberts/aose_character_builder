@@ -7,43 +7,56 @@ from .ability_mods import ability_modifier
 from .magic import effective_abilities
 
 
-def _hp_events(spec: CharacterSpec) -> list[int]:
+def _hp_events(spec: CharacterSpec, data: GameData) -> list[int]:
     """The sequence of HP-gain *events*, each an integer roll-sum.
 
     At character creation every class rolls its hit die simultaneously — that is
     a single event whose value is the sum of those rolls.  Each subsequent
     per-class level-up is its own single-die event.  Rolls live per class on
     ``ClassEntry.hp_rolls`` (index 0 = the creation roll).
+
+    Each class contributes only its first ``name_level`` rolls: Hit Dice stop at
+    name level, so any rolls stored beyond that (e.g. on a character leveled
+    under an older engine) are ignored defensively.
     """
-    if not any(e.hp_rolls for e in spec.classes):
+    rolls = [e.hp_rolls[: data.classes[e.class_id].name_level] for e in spec.classes]
+    if not any(rolls):
         return []
-    events: list[int] = [sum(e.hp_rolls[0] for e in spec.classes if e.hp_rolls)]
-    max_len = max(len(e.hp_rolls) for e in spec.classes)
+    events: list[int] = [sum(r[0] for r in rolls if r)]
+    max_len = max(len(r) for r in rolls)
     for k in range(1, max_len):
-        for e in spec.classes:
-            if k < len(e.hp_rolls):
-                events.append(e.hp_rolls[k])
+        for r in rolls:
+            if k < len(r):
+                events.append(r[k])
     return events
 
 
 def _hp_total(spec: CharacterSpec, data: GameData) -> Fraction:
     """Exact (fractional) maximum HP before flooring.
 
-    For each event the hit points gained are divided by the number of classes
-    (AOSE Advanced Multiple Classes rule) and the *effective* CON modifier is
-    added, with a floor of 1 hit point per event (min 1 per Hit Die).  Fractions
-    are summed exactly and only the final total is floored, so partial hit
-    points accumulate across level-ups.  CON is read from
-    ``effective_abilities`` — never baked into the stored rolls — so equipped
-    CON-altering magic items and curses change max HP live.
+    Two contributions, both divided by the number of classes N (AOSE Advanced
+    Multiple Classes rule) and summed as exact ``Fraction``s, floored once:
 
-    Single-class (N=1) reduces to ``sum(max(1, roll + CON))`` — unchanged.
+    * Rolled Hit Dice (up to name level): each event gets the *effective* CON
+      modifier added, with a floor of 1 HP per event (min 1 per Hit Die).
+    * Fixed post-name-level HP: ``hp_after_name_level`` per level beyond name
+      level, per class.  This is a flat bonus — NO CON modifier and NO per-event
+      floor — so partial hit points accumulate and may form whole HP later.
+
+    Single-class (N=1) below name level reduces to ``sum(max(1, roll + CON))``.
+    CON is read from ``effective_abilities`` — never baked into stored rolls.
     """
     n = len(spec.classes)
     con_mod = ability_modifier(effective_abilities(spec, data)[Ability.CON])
     total = Fraction(0)
-    for event in _hp_events(spec):
+    for event in _hp_events(spec, data):
         total += max(Fraction(1), Fraction(event, n) + con_mod)
+    fixed = sum(
+        max(0, e.level - data.classes[e.class_id].name_level)
+        * data.classes[e.class_id].hp_after_name_level
+        for e in spec.classes
+    )
+    total += Fraction(fixed, n)
     return total
 
 

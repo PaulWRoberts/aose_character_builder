@@ -127,8 +127,10 @@ def level_up(spec: CharacterSpec, data: GameData, class_id: str,
     ``ValueError`` if the class is at max level, missing from the spec, or
     short on XP.
 
-    HP rules: standard ``roll_hp(hit_die)`` — Max-HP-at-L1 and Re-roll 1s/2s
-    apply only at character creation, not at subsequent level-ups.
+    HP rules: standard ``roll_hp(hit_die)`` until name level.  At or beyond
+    ``cls.name_level`` no die is rolled and ``hp_rolls`` is left unchanged
+    (returns 0); the flat post-name-level HP is applied by ``hp.py``.
+    Max-HP-at-L1 and Re-roll 1s/2s apply only at character creation.
     """
     entry = next((e for e in spec.classes if e.class_id == class_id), None)
     if entry is None:
@@ -144,6 +146,12 @@ def level_up(spec: CharacterSpec, data: GameData, class_id: str,
         )
 
     cls = data.classes[class_id]
+    # At or beyond name level the class no longer rolls Hit Dice; it gains a
+    # flat `hp_after_name_level` per level instead (applied in hp.py, no CON).
+    if entry.level >= cls.name_level:
+        entry.level += 1
+        return 0
+
     new_hp = roll_hp(cls.hit_die, rng=rng)
     entry.level += 1
     entry.hp_rolls.append(new_hp)

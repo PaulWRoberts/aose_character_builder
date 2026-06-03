@@ -10,7 +10,6 @@ class ClassLevelData(BaseModel):
 
     xp_required: int
     thac0: int
-    hit_dice: str
     saves: dict[str, int]
     # spell_level -> slot count; only set on spellcasting classes
     spell_slots: dict[int, int] | None = None
@@ -38,6 +37,12 @@ class CharClass(BaseModel):
     ability_requirements: dict[Ability, int] = Field(default_factory=dict)
     max_level: int = 14
     hit_die: str
+    # Name level: the last level at which this class rolls a Hit Die. Beyond it
+    # the class gains a flat `hp_after_name_level` HP per level with NO CON
+    # modifier (AOSE). 9 for almost every class; 8 for capped race-as-class
+    # options whose max_level is also 8 (so the step never fires for them).
+    name_level: int = 9
+    hp_after_name_level: int = 0
     weapons_allowed: AllowedList
     armor_allowed: AllowedList
     shields_allowed: bool

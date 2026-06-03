@@ -214,3 +214,24 @@ def test_sheet_renders_energy_drain_form(client):
     assert 'name="xp_mode"' in r.text
     assert 'value="midpoint"' in r.text
     assert 'value="new_min"' in r.text
+
+
+# ── Energy drain across name level ────────────────────────────────────────────
+
+def test_drain_past_name_level_keeps_all_hit_dice(data):
+    # L11 fighter has only 9 rolls (none past name level). Draining 11 -> 10 -> 9
+    # must NOT pop a real Hit Die — those levels never had one.
+    spec = _spec(level=11, xp=480000, hp_rolls=[8] * 9)
+    energy_drain(spec, data, 2, "new_min")
+    e = spec.classes[0]
+    assert e.level == 9
+    assert e.hp_rolls == [8] * 9        # all 9 dice intact
+
+
+def test_drain_across_name_level_boundary_pops_only_real_dice(data):
+    # L10 fighter (9 rolls). Drain 2 levels: 10 -> 9 (no pop), 9 -> 8 (pop one).
+    spec = _spec(level=10, xp=360000, hp_rolls=[8] * 9)
+    energy_drain(spec, data, 2, "new_min")
+    e = spec.classes[0]
+    assert e.level == 8
+    assert e.hp_rolls == [8] * 8        # exactly one real die removed
