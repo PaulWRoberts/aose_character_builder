@@ -144,3 +144,20 @@ def test_hit_dice_removed_from_class_level_data():
             saves={"death": 12, "wands": 13, "paralysis": 14,
                    "breath": 15, "spells": 16},
         )
+
+
+
+def test_protection_scrolls_loaded():
+    from pathlib import Path
+    from aose.data.loader import GameData
+    from aose.models import MagicItem
+    data = GameData.load(Path(__file__).parent.parent / "data")
+    for sid in ("scroll_of_protection_from_elementals",
+                "scroll_of_protection_from_lycanthropes",
+                "scroll_of_protection_from_magic",
+                "scroll_of_protection_from_undead"):
+        item = data.items[sid]
+        assert isinstance(item, MagicItem)
+        assert item.magic is True
+        assert item.category == "scrolls"
+        assert item.description

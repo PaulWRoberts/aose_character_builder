@@ -1,0 +1,72 @@
+- id: scroll_of_protection_from_elementals
+  item_type: magic
+  name: Scroll of Protection from Elementals
+  category: scrolls
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    Reading the script aloud (in a non-magical language, usually Common) conjures
+    a 10' radius circle of protection around the reader.
+
+    No elemental may enter the circle. If the reader moves, the circle follows
+    them. The circle does not prevent elementals from using magic or missile
+    attacks against those within it. If anyone within the circle attacks an
+    affected elemental in melee, the circle is broken.
+
+    Duration: 2 turns, unless broken. One use only — the words disappear when read.
+
+- id: scroll_of_protection_from_lycanthropes
+  item_type: magic
+  name: Scroll of Protection from Lycanthropes
+  category: scrolls
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    Reading the script aloud conjures a 10' radius circle of protection around
+    the reader. A number of lycanthropes are barred from entering, depending on
+    their Hit Dice: 1-3 HD: 1d10 affected; 4-5 HD: 1d8 affected; 6+ HD: 1d4
+    affected.
+
+    If the reader moves, the circle follows them. The circle does not prevent
+    lycanthropes from using magic or missile attacks against those within it. If
+    anyone within the circle attacks an affected lycanthrope in melee, the circle
+    is broken.
+
+    Duration: 6 turns, unless broken. One use only — the words disappear when read.
+
+- id: scroll_of_protection_from_magic
+  item_type: magic
+  name: Scroll of Protection from Magic
+  category: scrolls
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    Reading the script aloud conjures a barrier that spells and spell-like
+    effects (e.g. from magic items) cannot cross. The barrier prevents magic from
+    entering the circle, but also from leaving it.
+
+    Duration: 1d4 turns. Can only be dispelled by a wish. One use only — the
+    words disappear when read.
+
+- id: scroll_of_protection_from_undead
+  item_type: magic
+  name: Scroll of Protection from Undead
+  category: scrolls
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    Reading the script aloud conjures a 10' radius circle of protection around
+    the reader. A number of undead monsters are barred from entering, depending
+    on their Hit Dice: 1-3 HD: 2d12 affected; 4-5 HD: 2d6 affected; 6+ HD: 1d6
+    affected.
+
+    If the reader moves, the circle follows them. The circle does not prevent
+    undead from using magic or missile attacks against those within it. If anyone
+    within the circle attacks an affected undead monster in melee, the circle is
+    broken.
+
+    Duration: 6 turns, unless broken. One use only — the words disappear when read.
