@@ -384,3 +384,25 @@ def test_multiclass_fixed_step_divides_and_tracks_fraction(data):
     )
     assert max_hp(spec, data) == 36
     assert hp_remainder(spec, data) == Fraction(1, 2)
+
+
+# ── level_up past name level ──────────────────────────────────────────────────
+
+def test_level_up_past_name_level_rolls_nothing(data):
+    # Fighter at name level (9) with 9 rolls; XP for L10 is 360000.
+    spec = _fighter_spec(9, [8] * 9)
+    spec.classes[0].xp = 360000
+    result = level_up(spec, data, "fighter")
+    assert spec.classes[0].level == 10
+    assert spec.classes[0].hp_rolls == [8] * 9   # no new roll appended
+    assert result == 0                            # no die rolled
+
+
+def test_level_up_at_name_level_minus_one_still_rolls(data):
+    # Leveling 8 -> 9 is the last rolling level; a die is still added.
+    spec = _fighter_spec(8, [8] * 8)
+    spec.classes[0].xp = 240000
+    result = level_up(spec, data, "fighter")
+    assert spec.classes[0].level == 9
+    assert len(spec.classes[0].hp_rolls) == 9
+    assert 1 <= result <= 8
