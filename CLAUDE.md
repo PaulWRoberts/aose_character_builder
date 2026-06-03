@@ -63,6 +63,24 @@ renders a "pending" badge — a regression test guards this.
 
 ## Current state (2026-06-03)
 
+Spell books & scrolls just landed (11-task plan, on `feature/spell-books-scrolls`). All 924 tests pass.
+
+- **Spell books & scrolls** — owned documents with custom contents, modelled as a
+  per-instance `SpellSource` (`kind` spellbook|scroll, `caster_type`, `entries`
+  each with a `copy_failed` flag) on `CharacterSpec.spell_sources`. Cycle-free
+  `aose/engine/spell_sources.py` owns create/add/remove, `cast_from_scroll`
+  (expends one spell; empties → document dropped; gated by caster-type match via
+  `can_cast_scroll`), and `copy_spell` (Advanced-rule only; rolls 1d100 vs
+  `spells.copy_chance_for_int(effective INT)`; **failure is recorded on the source
+  entry, never on the character**, so the same spell stays copyable from another
+  source). `spells.learn()` now refuses free adds under `advanced_spell_books`
+  (copy-only); standard rule keeps free learn-on-level-up. Sheet gains a
+  "Spell Books & Scrolls" section + `/spell-sources/{add,remove,cast,copy}`
+  (sheet-only, Add-only). Protection scrolls (4) added as `MagicItem` catalog data
+  in `data/equipment/scrolls.yaml` (`category: scrolls`, no Use action — matches
+  potions). Cursed scrolls / treasure maps out of scope. Spec/plan:
+  `docs/superpowers/{specs,plans}/2026-06-03-spell-books-and-scrolls*`.
+
 Magic-item compendium bulk import (Phase 2) just landed (10-task plan, on `main`). All 882 tests pass.
 
 - **Phase 2 bulk import** — every item from the AOSE Advanced magic-item markdown
