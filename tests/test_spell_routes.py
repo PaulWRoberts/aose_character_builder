@@ -43,7 +43,7 @@ def _save_mu(client, spellbook=None, slots=None, advanced=False):
 
 
 def test_sheet_learn_route(client):
-    _save_mu(client, advanced=True)
+    _save_mu(client, advanced=False)
     r = client.post("/character/mu/spells/learn",
                     data={"class_id": "magic_user", "spell_id": "magic_user_magic_missile"})
     assert r.status_code == 303
@@ -131,3 +131,62 @@ def test_wizard_finalize_persists_spellbook(client):
     char_id = r.headers["location"].rsplit("/", 1)[1]
     spec = load_character(char_id, client._characters_dir)
     assert spec.classes[0].spellbook == ["magic_user_magic_missile"]
+
+
+# ── Spell-source routes ──────────────────────────────────────────────────────
+
+def _add_scroll(client, spell_ids, caster_type="arcane", kind="scroll"):
+    r = client.post("/character/mu/spell-sources/add",
+                    data={"kind": kind, "caster_type": caster_type, "name": "",
+                          "spell_ids": spell_ids})
+    assert r.status_code == 303
+    return load_character("mu", client._characters_dir).spell_sources[-1]
+
+
+def test_add_and_remove_spell_source(client):
+    _save_mu(client)
+    src = _add_scroll(client, ["magic_user_magic_missile", "magic_user_sleep"])
+    assert {e.spell_id for e in src.entries} == {"magic_user_magic_missile", "magic_user_sleep"}
+    client.post("/character/mu/spell-sources/remove", data={"instance_id": src.instance_id})
+    assert load_character("mu", client._characters_dir).spell_sources == []
+
+
+def test_cast_from_scroll_route(client):
+    _save_mu(client)
+    src = _add_scroll(client, ["magic_user_magic_missile", "magic_user_sleep"])
+    r = client.post("/character/mu/spell-sources/cast",
+                    data={"instance_id": src.instance_id,
+                          "spell_id": "magic_user_magic_missile"})
+    assert r.status_code == 303
+    after = load_character("mu", client._characters_dir).spell_sources[0]
+    assert [e.spell_id for e in after.entries] == ["magic_user_sleep"]
+
+
+def test_cast_rejects_caster_type_mismatch(client):
+    _save_mu(client)  # arcane caster
+    src = _add_scroll(client, ["faerie_fire"], caster_type="divine")
+    r = client.post("/character/mu/spell-sources/cast",
+                    data={"instance_id": src.instance_id, "spell_id": "faerie_fire"})
+    assert r.status_code == 400
+
+
+def test_copy_route_success(client):
+    _save_mu(client, advanced=True)  # INT 13 from _save_mu
+    src = _add_scroll(client, ["magic_user_sleep"])
+    r = client.post("/character/mu/spell-sources/copy",
+                    data={"instance_id": src.instance_id,
+                          "class_id": "magic_user", "spell_id": "magic_user_sleep"})
+    assert r.status_code == 303
+    spec = load_character("mu", client._characters_dir)
+    learned = "magic_user_sleep" in spec.classes[0].spellbook
+    failed = spec.spell_sources[0].entries[0].copy_failed
+    assert learned ^ failed   # exactly one outcome
+
+
+def test_copy_route_rejected_under_standard_rule(client):
+    _save_mu(client, advanced=False)
+    src = _add_scroll(client, ["magic_user_sleep"])
+    r = client.post("/character/mu/spell-sources/copy",
+                    data={"instance_id": src.instance_id,
+                          "class_id": "magic_user", "spell_id": "magic_user_sleep"})
+    assert r.status_code == 400

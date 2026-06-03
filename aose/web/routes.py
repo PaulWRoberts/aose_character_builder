@@ -26,6 +26,7 @@ from aose.engine.magic import (
     NotEquippable,
     UnknownMagicItem,
     add_free_magic_item,
+    effective_abilities,
     equip_magic as _equip_magic,
     needs_instance,
     remove_magic as _remove_magic,
@@ -71,8 +72,10 @@ from aose.engine.proficiency import (
     allowed_weapon_ids,
     shields_allowed,
 )
-from aose.models import Ammunition
-from aose.sheet.view import build_sheet
+from aose.engine import spell_sources as spell_source_engine
+from aose.engine.spell_sources import SpellSourceError
+from aose.models import Ability, Ammunition
+from aose.sheet.view import build_sheet, spell_source_add_options
 
 router = APIRouter()
 
@@ -165,6 +168,7 @@ async def character_sheet(request: Request, character_id: str):
             "show_gold_grant": True,
             "gold_grant_url": f"/character/{character_id}/gold",
             "rest_heal_roll": dice.roll("1d3"),
+            "spell_source_add_options": spell_source_add_options(game_data),
         },
     )
 
@@ -811,6 +815,84 @@ async def sheet_spell_clear(request: Request, character_id: str,
         spec.classes[idx] = spell_engine.clear_slot(spec.classes[idx], slot_index)
     except ValueError as e:
         raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+# ── Spell books & scrolls on the live sheet ────────────────────────────────
+
+@router.post("/character/{character_id}/spell-sources/add")
+async def sheet_spell_source_add(request: Request, character_id: str):
+    spec = _load_spec_or_404(request, character_id)
+    data = request.app.state.game_data
+    form = await request.form()
+    kind = form.get("kind", "scroll")
+    caster_type = form.get("caster_type", "arcane")
+    name = form.get("name", "")
+    list_id = form.get("list_id", "") or None
+    spell_ids = form.getlist("spell_ids")
+    try:
+        spec.spell_sources = spell_source_engine.add_spell_source(
+            spec.spell_sources, kind, caster_type, spell_ids, data,
+            name=name, list_id=list_id,
+        )
+    except (SpellSourceError, ValueError) as e:
+        raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/spell-sources/remove")
+async def sheet_spell_source_remove(request: Request, character_id: str,
+                                    instance_id: str = Form(...)):
+    spec = _load_spec_or_404(request, character_id)
+    try:
+        spec.spell_sources = spell_source_engine.remove_spell_source(
+            spec.spell_sources, instance_id)
+    except SpellSourceError as e:
+        raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/spell-sources/cast")
+async def sheet_spell_source_cast(request: Request, character_id: str,
+                                  instance_id: str = Form(...),
+                                  spell_id: str = Form(...)):
+    spec = _load_spec_or_404(request, character_id)
+    data = request.app.state.game_data
+    source = next((s for s in spec.spell_sources if s.instance_id == instance_id), None)
+    if source is None:
+        raise HTTPException(400, f"No spell document with id {instance_id!r}")
+    if not spell_source_engine.can_cast_scroll(source, spec, data):
+        raise HTTPException(400, "This character cannot cast from that scroll")
+    try:
+        spec.spell_sources = spell_source_engine.cast_from_scroll(
+            spec.spell_sources, instance_id, spell_id)
+    except SpellSourceError as e:
+        raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/spell-sources/copy")
+async def sheet_spell_source_copy(request: Request, character_id: str,
+                                  instance_id: str = Form(...),
+                                  class_id: str = Form(...),
+                                  spell_id: str = Form(...)):
+    spec = _load_spec_or_404(request, character_id)
+    data = request.app.state.game_data
+    idx = _find_class_entry(spec, class_id)
+    eff_int = effective_abilities(spec, data)[Ability.INT]
+    try:
+        entry, sources, _success = spell_source_engine.copy_spell(
+            spec.classes[idx], data.classes[class_id], data, spec.ruleset,
+            eff_int, spec.spell_sources, instance_id, spell_id,
+        )
+    except SpellSourceError as e:
+        raise HTTPException(400, str(e))
+    spec.classes[idx] = entry
+    spec.spell_sources = sources
     save_character(character_id, spec, request.app.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
