@@ -56,6 +56,15 @@ Scroll **casting** is independent of which regime is active and available to bot
    today — they are inventory items the player removes manually on use).
 5. **Cursed scrolls and treasure maps** — out of scope.
 
+## Where failures are stored (design invariant)
+
+A failed copy is recorded **on the source document, never on the character.**
+`copy_failed` is a field on `SpellSourceEntry` (inside the `SpellSource`
+instance). There is **no** per-character "spells I can never learn" list, and
+nothing is written to `ClassEntry`/`CharacterSpec` on a failure beyond the
+source entry's flag. This is what makes a failure burn *that source for that
+spell* while leaving the same spell copyable from any other source.
+
 ## Architecture
 
 Unified per-instance `SpellSource` model (one shape for both spell books and
