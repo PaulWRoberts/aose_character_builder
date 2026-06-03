@@ -123,6 +123,38 @@ def test_rods_staves_wands_loaded(data):
     assert len(rsw) == 35
 
 
+def test_misc_stat_items(data):
+    g = data.items["gauntlets_of_ogre_power"]
+    assert g.equippable is True
+    mods = {(m.target, m.op, m.value) for m in g.modifiers}
+    assert ("ability:STR", "set", 18) in mods
+    assert ("carry_capacity", "add", 1000) in mods
+    assert data.items["girdle_of_giant_strength"].modifiers[0].target == "thac0"
+    assert data.items["girdle_of_giant_strength"].modifiers[0].op == "set_max"
+    assert data.items["bracers_of_defencelessness"].modifiers[0].value == 9
+    assert data.items["luckstone"].modifiers[0].target == "save:all"
+
+
+def test_bracers_of_armour_rolls_at_acquisition(data):
+    import random
+    from aose.engine.magic import new_magic_instance
+    b = data.items["bracers_of_armour"]
+    assert b.modifiers == []
+    rm = b.rolled_modifiers[0]
+    assert rm.target == "ac" and rm.op == "set"
+    inst = new_magic_instance("bracers_of_armour", data, rng=random.Random(0))
+    rolled = [m for m in inst.extra_modifiers if m.target == "ac"]
+    assert len(rolled) == 1 and 4 <= rolled[0].value <= 7
+
+
+def test_misc_count_and_descriptions(data):
+    misc = [i for i in data.items.values()
+            if isinstance(i, MagicItem) and i.category == "miscellaneous_magic_items"]
+    assert len(misc) >= 128
+    assert all(i.description for i in misc)
+    assert all(i.cost_gp == 0 and i.magic for i in misc)
+
+
 def test_rolled_modifier_rolls_into_extra_modifiers():
     """A MagicItem.rolled_modifiers entry becomes a concrete per-instance
     extra_modifier with a rolled value when the instance is created."""

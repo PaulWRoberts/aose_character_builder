@@ -2,6 +2,1826 @@
 # All MagicItem variants. cost_gp: 0 (Add-only, GM grant). Descriptions are
 # transcribed verbatim from import/markdown/magic-items/*.md.
 
+# ─── Miscellaneous Magic Items ────────────────────────────────────────────────
+# Tables I–IV; Bag of Holding is already in containers.yaml — not duplicated.
+
+- id: alchemists_beaker
+  item_type: magic
+  name: Alchemist's Beaker
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    A glass beaker containing 1d4+1 liquid layers; each layer has the effects
+    of a magic potion (referee selects types randomly; duplicates and harmful
+    potions are possible). Potions are always poured in layer order. Replenishes
+    after a number of days equal to the number of potions once all layers have
+    been poured. Every month, the beaker loses the lowest layer, eventually
+    going inert. Mixing potions is dangerous.
+
+- id: amulet_of_protection_against_possession
+  item_type: magic
+  name: Amulet of Protection Against Possession
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: true
+  description: |-
+    An amulet that prevents disembodied spirits from entering and possessing
+    the wearer's body. The magic-user spell magic jar cannot affect the wearer.
+    The possession attack of a ghost is ineffective against the wearer.
+
+- id: amulet_of_protection_against_scrying
+  item_type: magic
+  name: Amulet of Protection Against Scrying
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: true
+  description: |-
+    Provides protection from remote viewing and mind-reading. The person
+    wearing this amulet cannot be viewed in a crystal ball. The wearer is
+    immune to all forms of ESP.
+
+- id: apparatus_of_the_crab
+  item_type: magic
+  name: Apparatus of the Crab
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    A large (6' tall, 4' around) iron barrel which acts as a mechanical
+    aquatic vehicle, appearing like a giant crab when in use. Secret hatch
+    allows entry. Interior levers: extend/retract legs and tail (MV 60'/20'
+    on land or water); portholes (forward, side); extend/retract pincers;
+    snap pincers (2 attacks/round, THAC0 19, 2d6 damage); move forward/
+    backward; turn left/right; rise/sink in water; open/close eyes (30'
+    light radius); open/close hatch (watertight when closed). Combat: AC 0
+    [19], 40 hull points. Holds 2 humans. Air for 1d4+1 hours when sealed.
+
+- id: arrow_of_location
+  item_type: magic
+  name: Arrow of Location
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    A normal-looking arrow that points the way to certain dungeon features.
+    Thrown into the air while naming a feature type (dungeon entrance/exit,
+    stairway up, stairway down): the arrow falls pointing in the direction of
+    the nearest such feature. Once per day. After indicating, may be thrown
+    up to 7 more times (at 1-turn intervals) to re-indicate the same feature.
+
+- id: bag_of_devouring
+  item_type: magic
+  name: Bag of Devouring
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    A normal-looking small sack that devours objects placed inside it.
+    Anything placed inside vanishes from existence after 1d6+6 turns. Living
+    creatures may be affected, but only if the entire creature fits inside.
+
+- id: bag_of_transformation
+  item_type: magic
+  name: Bag of Transformation
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    A normal-looking small sack that can hold large objects (up to 10'×5'×3',
+    10,000 coins of weight; weighs 600 when full). After 1d6 days of use, it
+    becomes cursed: precious items inside are transmuted into worthless items
+    (precious metals → lead, gems → rocks, magic items → normal items, etc.).
+
+- id: book_of_foul_corruption
+  item_type: magic
+  name: Book of Foul Corruption
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    An unremarkable book with a powerful unholy enchantment. Effects on
+    opening depend on the opener's class and alignment. Divine casters
+    (lawful): save vs death or die. Divine casters (neutral): change to
+    chaotic. Divine casters (chaotic): may study for 1 week to gain 1 level
+    and +1 WIS (once only). Arcane casters: save vs spells or lose 1 INT.
+    Other (lawful): 4d10 damage. Other (neutral): change to chaotic.
+    Other (chaotic): unaffected. Vanishes after use.
+
+- id: book_of_infinite_spells
+  item_type: magic
+  name: Book of Infinite Spells
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    A tome with 1d8+12 pages. Each page grants the owner the ability to cast
+    one spell once per day (4× if the character could normally cast it). Non-
+    spell casters: 5d4 damage and paralysed 5d4 turns on first opening.
+    Turning to another page causes the previous page's spell to disappear
+    forever. Each time a spell is cast, 1-in-6 chance it disappears from
+    the page. When all pages are gone, the book is empty.
+
+- id: book_of_sublime_holiness
+  item_type: magic
+  name: Book of Sublime Holiness
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    An unremarkable book with a powerful holy enchantment. Effects on opening
+    depend on class and alignment. Divine casters (lawful): may study for 1
+    week to gain 1 level and +1 WIS (once only). Divine casters (neutral/
+    chaotic): lose one experience level. Arcane casters: save vs spells or
+    lose 1 INT. Other (lawful/neutral): unaffected. Other (chaotic): 4d10
+    damage. Vanishes after use.
+
+- id: boots_of_dancing
+  item_type: magic
+  name: Boots of Dancing
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: true
+  description: |-
+    Cursed boots which cause the wearer to dance uncontrollably in melee or
+    when evading an encounter. While dancing: cannot attack or move, -4 AC
+    penalty, -4 to all saving throws. Once active, cannot be removed without
+    magic (e.g. remove curse).
+
+- id: boots_of_levitation
+  item_type: magic
+  name: Boots of Levitation
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: true
+  description: |-
+    The wearer moves up and down through the air at will. Vertical: mentally
+    directed at up to 20' per round. Horizontal: push against solid objects.
+    A normal amount of weight can be carried. Unlimited frequency/duration.
+
+- id: boots_of_speed
+  item_type: magic
+  name: Boots of Speed
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: true
+  description: |-
+    The wearer moves at up to 240' (80') — the speed of a riding horse. Can
+    be maintained for up to 12 hours; afterwards the wearer must rest for 1
+    day.
+
+- id: boots_of_travelling_and_leaping
+  item_type: magic
+  name: Boots of Travelling and Leaping
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: true
+  description: |-
+    The wearer can travel without tiring (ignoring normal rest needs in
+    wilderness travel) and can leap up to 10' high and 30' horizontally.
+
+- id: bracers_of_armour
+  item_type: magic
+  name: Bracers of Armour
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: true
+  rolled_modifiers:
+    - {target: ac, op: set, dice: "1d4+3"}   # AC 8 − 1d4 (uniform 4–7), rolled at acquisition
+  description: |-
+    Enchanted wrist-guards which grant the wearer protection as if wearing
+    armour. When first donned, the protective power is determined: the
+    wearer's Armour Class becomes 8 − 1d4 (i.e. AC 4 to 7 [11 to 15]).
+    The AC granted is fixed for that pair. Grants no benefit when worn with
+    armour.
+
+- id: bracers_of_defencelessness
+  item_type: magic
+  name: Bracers of Defencelessness
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: true
+  modifiers:
+    - {target: ac, op: set, value: 9}
+  description: |-
+    Cursed wrist-guards that initially grant AC 5 [14] (while wearing no
+    armour). Once the wearer is in a dangerous combat situation, the curse
+    activates: AC becomes 9 [10] and all DEX/magical AC bonuses are negated.
+    Cannot be removed while cursed; requires magic (e.g. remove curse).
+
+- id: brooch_of_shielding
+  item_type: magic
+  name: Brooch of Shielding
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: true
+  description: |-
+    A silver or gold clasp that protects the wearer from magic missiles (from
+    spells, wands, etc.). The brooch absorbs the damage inflicted by magic
+    missiles. Once it has negated 101 hit points of magic-missile damage, it
+    dissolves and becomes utterly useless.
+
+- id: broom_of_flying
+  item_type: magic
+  name: Broom of Flying
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    A broom that flies at 240' (80') carrying its owner. An additional
+    passenger may be carried; with two riders, speed drops to 180' (60').
+
+- id: candle_of_invocation
+  item_type: magic
+  name: Candle of Invocation
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    Specially consecrated candles associated with a specific alignment
+    (determined randomly). Characters of that alignment gain benefits while
+    the candle burns. If lit by a divine caster: memorize and cast spells as
+    if two experience levels higher. If lit by another character: +1 to
+    attack rolls and saving throws. Duration: 4 hours total (can be
+    extinguished and relit).
+
+- id: chime_of_opening
+  item_type: magic
+  name: Chime of Opening
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  charge_dice: "4d20"
+  description: |-
+    A 1' long hollow metal tube. When sounded and left to ring for one
+    minute, one portal, lock, lid, bar, etc. is caused to open. 1-in-6
+    chance of attracting wandering monsters. Negates hold portal and wizard
+    lock (the latter only if cast below 9th level). After 4d20 uses, the
+    chime shatters.
+
+- id: chime_of_ravening
+  item_type: magic
+  name: Chime of Ravening
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    A 1' long hollow metal tube that brings maddening hunger when sounded.
+    All within 60': creatures with food drop everything and eat for 1d6
+    rounds; creatures without food move to the chime's location and attempt
+    to kill and eat anyone present. Each round of eating, a creature may save
+    vs spells to end the hunger.
+
+- id: cloak_of_defence
+  item_type: magic
+  name: Cloak of Defence
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: true
+  modifiers:
+    - {target: ac, op: add, value: 1}
+    - {target: "save:all", op: add, value: 1}
+  description: |-
+    A cloak of any appearance that magically protects the wearer from harm.
+    Protection: a bonus to AC and all saving throws. When found, roll 1d8:
+    1–4: +1, 5–6: +2, 7–8: +3. (Default +1 encoded; GM adjust via
+    extra_modifiers for +2/+3 results.) No effect if wearing armour heavier
+    than leather, a shield, or magical armour.
+
+- id: cloak_of_flight
+  item_type: magic
+  name: Cloak of Flight
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: true
+  description: |-
+    A plain black cloak. On speaking a command word, it transforms into great
+    bat wings (20' wingspan) granting flight. Speed and duration: 360' (120')
+    for 2 turns; 180' (60') for 4 turns; or 120' (40') for 8 turns. After
+    the maximum duration, rest 6 turns (shorter flights require proportional
+    rest). May be used once per day.
+
+- id: cloak_of_poison
+  item_type: magic
+  name: Cloak of Poison
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: true
+  description: |-
+    A woollen cloak which instantly slays anyone who dons it. Can be handled
+    safely. While the cloak remains on the victim, they cannot be restored to
+    life. Once donned, can only be removed by magic (e.g. remove curse); the
+    victim may then be revived by other magic.
+
+- id: cloak_of_the_manta_ray
+  item_type: magic
+  name: Cloak of the Manta Ray
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: true
+  description: |-
+    A leather cloak which wraps around the wearer when submerged in salt
+    water. Grants: breathing water; swim 180' (60') with ray-like wings; AC
+    6 [13] (unless improved by magical armour/devices); one attack per round
+    with a tail barb (1d6 damage) while also freeing arms for other attacks;
+    90% indistinguishable from a real manta ray underwater.
+
+- id: crystal_ball
+  item_type: magic
+  name: Crystal Ball
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    Allows an arcane spell caster to view any place or object brought to
+    mind. Duration: 1 turn per use; clarity depends on familiarity with the
+    subject. May be used at most 3 times a day. Cannot cast spells through
+    the crystal ball into the viewed scene.
+
+- id: crystal_ball_with_clairaudience
+  item_type: magic
+  name: Crystal Ball with Clairaudience
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    As a crystal ball, but the scryer can also hear the desired scene.
+
+- id: crystal_ball_with_esp
+  item_type: magic
+  name: Crystal Ball with ESP
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    As a crystal ball, but allows the scryer to read the thoughts of a single
+    creature viewed in the ball. The scryer understands the meaning of all
+    thoughts even in unknown languages. Obstructed by lead or 2'+ of rock.
+
+- id: crystal_hypnosis_ball
+  item_type: magic
+  name: Crystal Hypnosis Ball
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    Grants an arcane spell caster false visions (up to 3 per day), while
+    placing the user under the sway of a malignant intelligence (a powerful
+    magic-user, lich, or extra-planar entity). All visions are fabricated.
+    Following each use, a suggestion is telepathically implanted, gradually
+    bringing the user under the remote intelligence's control.
+
+- id: cube_of_force
+  item_type: magic
+  name: Cube of Force
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    A 3/4" cube of bone, ivory, or stone. Pressing faces activates a 10'
+    cubic force field (36 charges/day). Face effects: (1) 1 charge/turn —
+    keeps out gases/wind, MV 120'; (2) 2/turn — nonliving matter, MV 90';
+    (3) 3/turn — living things, MV 60'; (4) 4/turn — magic, MV 30'; (5)
+    6/turn — all things, MV 30'; (6) 0/turn — deactivates. Additional
+    blocking costs: catapult 1 charge; wall of fire 2; fireball/pass-wall 3;
+    lightning bolt 4; horn of blasting/disintegrate 6.
+
+- id: cube_of_frost_resistance
+  item_type: magic
+  name: Cube of Frost Resistance
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    A 3/4" cube that activates a 10' cubic field of protection. Inside the
+    field: pleasant ambient temperature regardless of external conditions.
+    Cold-based attacks are absorbed; if more than 50 hp of damage are
+    absorbed in 1 turn, the field collapses and cannot be reactivated for
+    1 hour.
+
+- id: decanter_of_endless_water
+  item_type: magic
+  name: Decanter of Endless Water
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    A stoppered flask that pours fresh or salt water on command. Stream: 1
+    gallon/round. Fountain: 5-gallon/round, 5' high. Geyser: 30 gallons/
+    round, 20' long (STR check each round or knocked down; can attack as a
+    missile, 20' range, 1d2 damage; fills a 10' cube every 4 turns).
+    A command word stops the flow.
+
+- id: deck_of_many_things
+  item_type: magic
+  name: Deck of Many Things
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    A deck of 22 ivory or vellum cards. A character may draw up to 4 cards,
+    each with a magical effect. Each character may only draw once. Drawn
+    cards return to the deck magically. Effects by card: Sun (KD): 50,000 XP
+    + 1 beneficial magic item. Moon (QD): 1d4 wishes. Star (JD): +2 to prime
+    requisite. Vizier (AD): one true answer to any question. Comet (2D):
+    defeat next hostile encounter for a level. Throne (KH): CHA 18 + a keep.
+    Key (QH): treasure map + magic weapon/staff/wand. Knight (JH): loyal 4th
+    level fighter. Fates (AH): avoid one event. Gem (2H): 20 gems/jewellery.
+    Void (KC): soul trapped; deck disappears. Flames (QC): powerful chaotic
+    enemy. Skull (JC): fight a lesser grim reaper alone. Idiot (AC): -1d4
+    INT. Talons (2C): all magic items vanish. Ruin (KS): all wealth vanishes.
+    Medusa (QS): -3 to saves vs petrification. Rogue (JS): a retainer turns
+    hostile. Donjon (AS): imprisoned; deck disappears. Balance (2S): change
+    alignment. Jester (Jester no TM): 10,000 XP or draw 2 more (disappears).
+    Fool (Jester TM): -10,000 XP, draw another (disappears).
+
+- id: displacer_cloak
+  item_type: magic
+  name: Displacer Cloak
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: true
+  description: |-
+    A cloak that bends light, making the wearer appear to be 5' away from
+    their true location. Saves: +2 bonus to saving throws against
+    petrification, rods, spells, staves, and wands. Melee attacks against
+    the wearer suffer a -2 penalty.
+
+- id: drums_of_panic
+  item_type: magic
+  name: Drums of Panic
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    Large war drums that induce panic. Creatures up to 240' away are
+    affected (not those within 10'): must save vs spells or make a morale
+    check with -2 penalty. Creatures that fail flee at full running speed
+    for 30 rounds.
+
+- id: drums_of_thunder
+  item_type: magic
+  name: Drums of Thunder
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    When both struck together, unleash deafening thunder. All within 60'
+    are permanently deafened (curable only by powerful magic). All within
+    10' are also stunned and unable to move or act for 2d4 rounds.
+
+- id: dust_of_appearance
+  item_type: magic
+  name: Dust of Appearance
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    Ultra-fine metallic dust (usually 5d10 parcels) that reveals invisible
+    things. Thrown into the air: coats everything in 10' radius. Blown
+    through a tube: coats a 20' long × 15' wide cone. Effect: anything
+    coated is rendered visible for 2d10 turns, negating invisibility,
+    camouflage, displacement, and mirror imaging.
+
+- id: dust_of_disappearance
+  item_type: magic
+  name: Dust of Disappearance
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    Ultra-fine metallic dust (usually 5d10 parcels) that renders things
+    invisible for 2d10 turns. Thrown into the air: 10' radius. Blown through
+    a tube: 20' × 15' cone. Invisible creatures always surprise others and
+    gain +4 AC (not vs those who detect invisible).
+
+- id: dust_of_sneezing_and_choking
+  item_type: magic
+  name: Dust of Sneezing and Choking
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    Ultra-fine metallic dust (usually 5d10 parcels), deadly when cast into
+    the air. Thrown: fills 20' radius. Blown through tube: 20' × 15' cone.
+    Creatures in the area must save vs poison or die; those that save are
+    unable to act or move for 5d4 rounds.
+
+- id: efreeti_bottle
+  item_type: magic
+  name: Efreeti Bottle
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    A 3' tall jug that, when unsealed, releases a trapped lesser efreeti who
+    serves the one who freed it once per day. After 101 days, service ends
+    and the efreeti returns to the City of Brass. If the efreeti is killed,
+    service ends.
+
+- id: elemental_summoning_device_air
+  item_type: magic
+  name: Elemental Summoning Device (Air)
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    A censer enchanted with the power to summon a 12 HD air elemental. Must
+    be prepared first (1 turn); activation takes 1 round. Summoned elemental
+    serves the summoner as per conjure elemental. May be used once per day.
+
+- id: elemental_summoning_device_earth
+  item_type: magic
+  name: Elemental Summoning Device (Earth)
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    A 6" diameter stone enchanted with the power to summon a 12 HD earth
+    elemental. Must be prepared first (1 turn); activation takes 1 round.
+    Summoned elemental serves the summoner as per conjure elemental. Once
+    per day.
+
+- id: elemental_summoning_device_fire
+  item_type: magic
+  name: Elemental Summoning Device (Fire)
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    A brazier enchanted with the power to summon a 12 HD fire elemental.
+    Must be prepared first (1 turn); activation takes 1 round. Summoned
+    elemental serves the summoner as per conjure elemental. Once per day.
+
+- id: elemental_summoning_device_water
+  item_type: magic
+  name: Elemental Summoning Device (Water)
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    A 3' diameter bowl enchanted with the power to summon a 12 HD water
+    elemental. Must be prepared first (1 turn); activation takes 1 round.
+    Summoned elemental serves the summoner as per conjure elemental. Once
+    per day.
+
+- id: elven_cloak_and_boots
+  item_type: magic
+  name: Elven Cloak and Boots
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: true
+  description: |-
+    Enchanted elven boots and matching cloak. Boots: the wearer moves
+    silently. Cloak: renders the wearer almost invisible (only 1-in-6 chance
+    of being spotted). If the wearer attacks, the cloak's invisibility is
+    nullified for one turn.
+
+- id: eyes_of_charming
+  item_type: magic
+  name: Eyes of Charming
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: true
+  description: |-
+    Crystal lenses that grant the power to charm persons within 60' (one per
+    round). Target may save vs spells to resist (+2 if only one lens worn).
+    Charmed individuals regard the character as a trusted friend and obey
+    commands (not obviously harmful, not against alignment). The charm lasts
+    until dispelled or the lenses are removed.
+
+- id: eyes_of_minuscule_sight
+  item_type: magic
+  name: Eyes of Minuscule Sight
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: true
+  description: |-
+    Crystal lenses that grant ability to see minuscule details at close range
+    (1' or less). Wearing only one lens causes intense dizziness unless the
+    other eye is closed.
+
+- id: eyes_of_petrification
+  item_type: magic
+  name: Eyes of Petrification
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: true
+  description: |-
+    Crystal lenses that fit over the eyes. The wearer is instantly turned to
+    stone, without a saving throw.
+
+- id: eyes_of_the_eagle
+  item_type: magic
+  name: Eyes of the Eagle
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: true
+  description: |-
+    Crystal lenses that enhance long range vision by 100 times (e.g. the
+    wearer can see details at 2,000' that would normally be visible at 20').
+    Wearing only one lens causes intense dizziness unless the other eye is
+    closed.
+
+- id: feather_token
+  item_type: magic
+  name: Feather Token
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    A small feather producing a magical effect when thrown; disappears after
+    use. Type (1d20): 1–4 Anchor (moors a vessel for 1 day); 5–7 Bird
+    (summons a gargantuan bird for 24 hours, carries huge loads, cannot
+    attack); 8–10 Fan (at sea: propels a sailing vessel at +½ speed, or
+    calms a storm area, for up to 8 hours); 11–13 Swan Boat (conjures a
+    swan boat for 24 hours, 240' (80'), holds 32 people, AC 7, 1d6+3×10 hp);
+    14–18 Tree (conjures a great oak: 6' trunk, 60' high, 40' top);
+    19–20 Whip (conjures an attacking whip for 6 turns: THAC0 13, 1d6+1
+    damage, save vs spells or entangled 1d6+1 rounds).
+
+- id: figurine_of_wondrous_power
+  item_type: magic
+  name: Figurine of Wondrous Power
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    A ~1" statuette of an animal. Casting it to the ground (command word)
+    transforms it into a living animal that obeys commands. Repeating the
+    word returns it to figurine form. If slain, reverts. If the figurine is
+    destroyed, magical power is lost. Type (1d20): 1–3 Ebony fly (pony-
+    sized fly, AC 4, HD 4+4, MV 480'/160' flying, 3×/week ≤12 hrs); 4–6
+    Pair of golden lions (HD 5, Att 2×claw/1×bite, 1×/day ≤1 hr); 7–8
+    Trio of ivory goats (Travelling: large goat mount, up to 24 hrs/week;
+    Travail: monstrous goat AC 0, HD 16, 1×/month ≤12 hrs; Terror: giant
+    goat mount with +3 lance and sword horns, 1× per 2 weeks ≤3 hrs);
+    9–11 Marble elephant (HD 9, 4×/month ≤24 hrs); 12–13 Obsidian steed
+    (nightmare AC -3, HD 6, 1×/week ≤24 hrs); 14–17 Onyx dog (hunting dog,
+    HD 2+2, tracks by scent, infravision 90', detect invisible 65%, speaks
+    Common, 1×/week ≤6 hrs); 18–20 Serpentine owl (horned owl HD ½,
+    telepathy, 1×/day ≤8 hrs).
+
+- id: flying_carpet
+  item_type: magic
+  name: Flying Carpet
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    An enchanted carpet that flies through the air carrying up to 3
+    passengers and their gear. Speed: 1 passenger 300' (100'); 2 passengers
+    240' (80'); 3 passengers 180' (60').
+
+- id: folding_boat
+  item_type: magic
+  name: Folding Boat
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    A normal-seeming wooden box (~1' cube). One command word unfolds it into
+    a small river boat (10'×4'×2'), holds 4 humans and 5,000 coins of cargo,
+    MV 150' rowed / 240' sailed, AC 8, 1d10+10 hull points. Another command
+    word unfolds it into a small sailing ship (24'×8'×6'), holds 15 humans
+    and 15,000 coins of cargo, MV 180' rowed / 360' sailed, AC 8, 1d20+20
+    hull points. A third word folds it back.
+
+- id: gauntlets_of_ogre_power
+  item_type: magic
+  name: Gauntlets of Ogre Power
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: true
+  modifiers:
+    - {target: "ability:STR", op: set, value: 18}
+    - {target: carry_capacity, op: add, value: 1000}
+  description: |-
+    A character who wears these gauntlets has a Strength score of 18. Grants
+    all usual bonuses including: +3 to melee attack and damage rolls; unarmed
+    attacks deal 1d2+3 damage. When using detailed encumbrance rules, the
+    character can carry 1,000 additional coins of weight.
+
+- id: gem_of_brightness
+  item_type: magic
+  name: Gem of Brightness
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  max_charges: 50
+  description: |-
+    A crystal prism with 50 charges. Beam: pale light 10' long × 2' wide,
+    no charge. Ray: momentary bright ray 50' long × 1' wide at a creature's
+    eyes (save vs spells or blinded 1d4 rounds), 1 charge. Flash: blinding
+    cone 30' × 5' wide (save vs spells or blinded 1d4 rounds and permanent
+    attack penalty equal to rounds blinded; penalty cured only by powerful
+    magic), 5 charges. Magical darkness negates the gem.
+
+- id: gem_of_monster_attraction
+  item_type: magic
+  name: Gem of Monster Attraction
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    A shining gem that curses its owner: wandering monster encounter chance
+    doubled; monster pursuit chance doubled. Discarded gems reappear on the
+    character's person unless the curse is removed (e.g. remove curse).
+
+- id: gem_of_pristine_faceting
+  item_type: magic
+  name: Gem of Pristine Faceting
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    A magical gem with 10d10 charges (one facet per charge). When placed
+    with other (non-magical) gems, each has a 20% chance of being magically
+    perfected, increasing its value by 50%; 1 charge per gem transformed.
+    When all charges are spent, becomes a worthless stone sphere.
+
+- id: gem_of_seeing
+  item_type: magic
+  name: Gem of Seeing
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    A finely cut clear gem. Gazing through it reveals: secret doors and
+    traps; invisible objects and creatures; illusions (seen through);
+    enchanted objects and creatures. Range: 30'. Scanning speed: 100 sq ft
+    per round. Per usage, 5% chance of providing false information.
+
+- id: girdle_of_giant_strength
+  item_type: magic
+  name: Girdle of Giant Strength
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: true
+  modifiers:
+    - {target: thac0, op: set_max, value: 12}
+  description: |-
+    A character who wears this girdle gains the strength of a hill giant.
+    Combat: attacks as an 8 HD monster (THAC0 12 [+7]); the girdle does not
+    worsen attack probability if the character already attacks better. Damage:
+    2d8 (or twice normal with variable weapon damage rules).
+
+# TODO: model the continuous DEX-step effect in a future pass (rolled_modifiers / ability:DEX).
+- id: gloves_of_dexterity
+  item_type: magic
+  name: Gloves of Dexterity
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: true
+  description: |-
+    Soft leather gloves that bestow remarkable manual dexterity. DEX
+    increase: DEX 6 or less: +4; DEX 7–13: +2; DEX 14–17: +1. May pick
+    pockets with 35% success (+10% if already able); may open locks with
+    30% success (+10% if already able, requires thieves' tools, one try per
+    lock).
+    (GM: apply the DEX bonus via extra_modifiers when the item is acquired.)
+
+- id: gloves_of_swimming_and_climbing
+  item_type: magic
+  name: Gloves of Swimming and Climbing
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: true
+  description: |-
+    Soft leather gloves granting remarkable swimming and climbing skill.
+    Swimming: 180' (60') on the surface, 150' (50') underwater (no water
+    breathing). Climbing sheer surfaces: 95% success per 100' (99% if
+    already able); failure causes falling from the halfway point.
+
+- id: helm_of_alignment_changing
+  item_type: magic
+  name: Helm of Alignment Changing
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: true
+  description: |-
+    A beautifully crafted but cursed helmet. Putting it on instantly changes
+    the wearer's alignment to a randomly determined one. The wearer cannot
+    remove it and resists attempts to remove it. The curse is removed by
+    magic (e.g. remove curse) or by performing a special quest.
+
+- id: helm_of_read_languages_and_magic
+  item_type: magic
+  name: Helm of Reading Languages and Magic
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: true
+  description: |-
+    A fragile helmet granting the ability to read any writing. Normal text:
+    any language. Magical text: even magical writing is comprehensible (does
+    not grant ability to cast spells). Fragility: each time the wearer is
+    hit, 1-in-10 chance the helm is destroyed; destroyed when the wearer
+    is killed.
+
+- id: helm_of_telepathy
+  item_type: magic
+  name: Helm of Telepathy
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: true
+  description: |-
+    A beautifully crafted helmet granting telepathy at range 90'. Read a
+    creature's thoughts by remaining still and concentrating; thoughts are
+    comprehensible even in unknown languages. May initiate bidirectional
+    telepathic communication, though the creature is not compelled to respond.
+
+- id: helm_of_teleportation
+  item_type: magic
+  name: Helm of Teleportation
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: true
+  description: |-
+    Grants an arcane spell caster the ability to cast the teleport spell on
+    themselves, another creature, or an object (save vs spells to resist for
+    others). When first found, usable only once; must be recharged by casting
+    teleport onto the helm. Once recharged, usable unlimited times (once per
+    round), but using it on an unwilling target costs the charge again.
+
+- id: horn_of_blasting
+  item_type: magic
+  name: Horn of Blasting
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    Releases a blast of destructive noise. Creatures in a 100' long cone
+    (20' wide at the end) suffer 2d6 damage and are deafened for one turn
+    (save vs spells to avoid deafness). May also damage objects and buildings
+    (referee's discretion). May be used once per turn.
+
+- id: horn_of_cave_ins
+  item_type: magic
+  name: Horn of Cave-Ins
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    Without command word: a cave-in occurs directly above the character.
+    With command word: aim at a ceiling section within 60' (90% chance of
+    cave-in in the desired area, 10% chance above the character).
+    Outdoors without command word: 2d6 stones fall on the character, each
+    1d6 damage. Indoors/underground: ceiling collapses, 6d6 damage to all
+    in 10' radius (save vs paralysis for half).
+
+- id: horn_of_frothing
+  item_type: magic
+  name: Horn of Frothing
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    A normal-looking cursed musical instrument. In perilous circumstances
+    (e.g. in the presence of hostile monsters), blowing it causes a mass of
+    bubbles to froth over the character's head, causing blindness for 2d10
+    rounds. Under normal circumstances, no effect.
+
+- id: horn_of_the_tritons
+  item_type: magic
+  name: Horn of the Tritons
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    A large conch shell with power over marine animals and the seas. Each
+    use: calm rough seas in 1-mile radius; or summon 6d6 hippocampi/giant
+    sea horses; or panic marine animals within 240' for 3d6 turns (save vs
+    spells). Once per day (tritons: 3×/day). All tritons within 3 miles hear
+    it.
+
+- id: horn_of_valhalla
+  item_type: magic
+  name: Horn of Valhalla
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    An engraved hunting horn that summons berserkers once per week. Type
+    (d%): 01–40 Silver (2d4+2 berserkers, HD 2, any class); 41–75 Brass
+    (2d4+1 berserkers, HD 3, clerics/fighters/thieves only); 76–90 Bronze
+    (2d4 berserkers, HD 4, clerics/fighters only); 91–00 Iron (1d4+1
+    berserkers, HD 5, fighters only). Using a restricted horn: summoned
+    berserkers attack the character. Berserkers remain until slain, their
+    opponents are slain, or 1 hour passes.
+
+- id: horseshoes_of_a_zephyr
+  item_type: magic
+  name: Horseshoes of a Zephyr
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    Iron shoes that allow a horse to float slightly above the ground. The
+    horse can move across water as if solid ground, leaves no tracks. All 4
+    must be worn for the magic to function.
+
+- id: horseshoes_of_speed
+  item_type: magic
+  name: Horseshoes of Speed
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    Iron horseshoes that double a horse's movement rate when all 4 are worn.
+
+- id: incense_of_meditation
+  item_type: magic
+  name: Incense of Meditation
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    Small blocks of incense (2d4 usually found) for divine spell casters.
+    Burns for 8 hours. After praying and meditating for 8 hours nearby, for
+    24 hours: (a) all variable spell effects are maximised; (b) -1 penalty
+    to saves against the character's spells; (c) resurrection magic has an
+    increased chance of success (subject's CON treated as +4 for survival
+    roll). Recognizable by divine casters of 5th level+.
+
+- id: incense_of_obsession
+  item_type: magic
+  name: Incense of Obsession
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    Small blocks of incense (2d4 usually found) identical in appearance to
+    incense of meditation. Burns for 1 hour. Causes a divine spell caster
+    who meditates nearby to become obsessed with spell casting — determined
+    to use spells at every opportunity, even when useless or unnecessary.
+    The obsession lasts until all spells are cast or 24 hours elapse.
+
+- id: instant_fortress
+  item_type: magic
+  name: Instant Fortress
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    A small metal cube that transforms into a metal tower (30' tall, 20'
+    square) in 1 round. Anyone (except the owner) within 20' must save vs
+    paralysis or suffer 10d6 damage. 3 storeys, arrow slits, single ground-
+    level door (only opens at owner's command, resist knock spells). Tower:
+    AC 5, 40 hull points; only a wish can repair it (2 hull points/wish).
+    Deactivated only when empty.
+
+- id: ioun_stones
+  item_type: magic
+  name: Ioun Stones
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: true
+  description: |-
+    Small floating stones of different forms and hues (1d10 usually found).
+    Type (1d20): 1 Pale blue rhomboid +1 STR; 2 Scarlet/blue sphere +1 INT;
+    3 Incandescent blue sphere +1 WIS; 4 Deep red sphere +1 DEX; 5 Pink
+    rhomboid +1 CON; 6 Pink/green sphere +1 CHA; 7 Pale green prism +1
+    experience level; 8 Clear spindle sustains without food/water; 9
+    Iridescent spindle sustains without air; 10 Pearly white spindle heals
+    1 hp/turn; 11 Pale lavender ellipsoid absorbs spells 3rd level or lower
+    (burns out after 1d3×10 spell levels); 12 Lavender/green ellipsoid
+    absorbs spells 5th level or lower (burns out after 2d3×10 spell levels);
+    13 Vibrant purple prism stores 2d4 levels of spells (trigger at will);
+    14 Dusty rose prism +1 AC and saving throws; 15+ Dull grey ellipsoid
+    (burned out, no power). AC 0 [19], 10 hp when attacked. Orbits the
+    head; can be stored by grasping.
+    (GM: apply ability/level/AC bonuses via extra_modifiers.)
+
+- id: iron_flask
+  item_type: magic
+  name: Iron Flask
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    A flask of iron decorated with silver runes and sealed with a brass plug.
+    When found: 50% chance of a trapped extra-planar creature inside.
+    Removing the plug frees any trapped creature. Speaking the command word
+    forces it to serve for 1 turn; without it, determine reaction randomly.
+    If empty: an extra-planar creature within 60' can be trapped (save vs
+    spells to resist; previously trapped creatures gain +2 to save and become
+    utterly hostile if recaptured).
+
+- id: jug_of_endless_liquids
+  item_type: magic
+  name: Jug of Endless Liquids
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    A glass or ceramic jug that pours different liquids on command (up to 1
+    pint/round; each type once/day). Acid: 1 vial (dissolves 1 sq ft wood or
+    metal in 1 turn). Ale: 32 pints. Fresh water: 64 pints. Oil: 1 pint.
+    Poison: 1 vial (40 hp damage, save vs poison for half; 40% chance of
+    detectable scent). Salt water: 128 pints. Vinegar: 16 pints. Wine: 8
+    pints.
+
+- id: libram_of_arcane_power
+  item_type: magic
+  name: Libram of Arcane Power
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    A tome of arcane knowledge with a specific alignment (1d6: 1–2 lawful,
+    3–4 neutral, 5–6 chaotic). Arcane casters of the same alignment: may
+    study for 1 week to gain one experience level (once only). Arcane casters
+    of different alignment: 5d4 damage, unconscious 5d4 turns, and cannot
+    gain XP without a quest of atonement. Other classes: save vs spells or
+    become permanently insane. Vanishes after use.
+
+- id: loadstone
+  item_type: magic
+  name: Loadstone
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    A polished decorative stone that curses its owner with slow movement.
+    When the character attempts to flee (in combat or pursuit), movement rate
+    is halved and they can only attack or cast spells every second round.
+    Discarded stones reappear on the character's person unless the curse is
+    removed (e.g. remove curse).
+
+- id: luckstone
+  item_type: magic
+  name: Luckstone
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: true
+  modifiers:
+    - {target: "save:all", op: add, value: 1}
+  description: |-
+    A polished decorative stone that grants good luck. The character gains a
+    +1 (or +5%, as applicable) bonus to saving throws, ability checks, and
+    similar rolls.
+
+- id: lyre_of_building
+  item_type: magic
+  name: Lyre of Building
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    A beautifully crafted musical instrument. Once per day: playing the
+    proper chords negates attacks against a building/construction (e.g.
+    negating a horn of blasting or siege weapons). Once per week: playing
+    causes construction equivalent to 100 humans over 3 days to occur in
+    3 turns. If disturbed while playing, 50% chance effects are negated.
+
+- id: marvellous_pigments
+  item_type: magic
+  name: Marvellous Pigments
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    Pots of magical paint (1d4 pots + brush usually found). Applied to any
+    flat surface (1 turn per object), the paint magically conjures a real,
+    three-dimensional non-magical inanimate object. Each pot covers 10'×10',
+    conjuring up to 1,000 cubic feet of object. Valuable-looking conjured
+    objects are actually made of low-value materials. Conjured objects are
+    permanent and real in every sense.
+
+- id: medallion_of_esp_30
+  item_type: magic
+  name: Medallion of ESP 30'
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: true
+  description: |-
+    A medallion on a chain. By concentrating for 1 round, the wearer may
+    read the thoughts of a creature within 30' (save vs spells to resist at
+    referee's option). The wearer may move while reading, but cannot cast
+    spells or attack. Per usage, 1-in-6 chance of misfiring, instead sending
+    the wearer's thoughts to all within 30'.
+    (GM: apply continuous thought-reading effects as needed.)
+
+- id: medallion_of_esp_90
+  item_type: magic
+  name: Medallion of ESP 90'
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: true
+  description: |-
+    A medallion on a chain that works as the magic-user spell ESP. Range:
+    90'. (GM: apply continuous thought-reading effects as needed.)
+
+- id: medallion_of_thought_projection
+  item_type: magic
+  name: Medallion of Thought Projection
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: true
+  description: |-
+    A medallion that reads thoughts (as medallion of ESP 30') but is cursed:
+    when used, 5-in-6 chance it also projects the wearer's thoughts to all
+    within 30', alerting them to the wearer's presence.
+
+- id: mirror_of_life_trapping
+  item_type: magic
+  name: Mirror of Life Trapping
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    A mirror that traps living creatures. Any human-sized or smaller creature
+    gazing into it is sucked inside (save vs spells to resist), with all
+    belongings. Capacity: 20 creatures. Inside: creatures live indefinitely
+    without air or sustenance; may communicate but are utterly powerless.
+    Breaking the mirror releases those trapped.
+
+- id: mirror_of_mental_prowess
+  item_type: magic
+  name: Mirror of Mental Prowess
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    A large looking glass (5' tall, 2' wide). Powers: read thoughts of any
+    creature reflected (even unknown languages); scry up to 3×/day with
+    sound; step into the mirror to appear in the observed location (as the
+    6th level illusionist spell through the looking glass); once per week,
+    ask a short true question about a creature viewed in the mirror.
+
+- id: mirror_of_opposition
+  item_type: magic
+  name: Mirror of Opposition
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    A looking glass (4' tall, 3' wide) that brings to life a double of
+    anyone reflected. The double steps out and attacks the original, having
+    the same statistics, abilities, spells, and equipment. If either the
+    double or original is killed, the double disappears with all its
+    equipment.
+
+- id: necklace_of_adaptation
+  item_type: magic
+  name: Necklace of Adaptation
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: true
+  description: |-
+    A heavy chain with a medallion granting the ability to survive without
+    breathing. Gases do not affect the wearer. The wearer can survive
+    underwater, in a vacuum, or any other airless environment.
+
+- id: necklace_of_fireballs
+  item_type: magic
+  name: Necklace of Fireballs
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: true
+  description: |-
+    A cheap-looking medallion; wearers perceive it as a golden chain with
+    small golden spheres. Spheres can be detached and thrown up to 70',
+    exploding in a fireball (20' radius, save vs spells for half). Larger
+    spheres deal more damage. If the wearer is harmed by magical fire, save
+    vs spells or all remaining spheres explode immediately. Sphere count and
+    damage by type (d20): 1–4: 1×5d6, 2×3d6; 5–8: 1×6d6, 2×4d6, 2×2d6;
+    9–12: 1×7d6, 2×5d6, 4×3d6; 13–16: 1×8d6, 2×6d6, 2×4d6, 4×2d6;
+    17–18: 1×9d6, 2×8d6, 2×5d6, 2×3d6; 19: 1×10d6, 2×8d6, 2×6d6, 4×4d6;
+    20: 1×11d6, 2×9d6, 2×7d6, 2×5d6, 2×3d6.
+
+- id: necklace_of_strangulation
+  item_type: magic
+  name: Necklace of Strangulation
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: true
+  description: |-
+    A fabulous jewelled necklace cursed to strangle anyone who wears it.
+    Upon wearing, it constricts, inflicting 6 points of damage per round.
+    Can only be removed by magic (e.g. remove curse). If the character dies,
+    the necklace remains until the corpse rots away (~1 month), then loosens.
+
+- id: net_of_aquatic_snaring
+  item_type: magic
+  name: Net of Aquatic Snaring
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    A 10' square net of meshed rope that can ensnare creatures, but only
+    functions underwater. Thrown up to 20'; creatures must save vs spells
+    or be trapped. Only creatures of giant strength can escape; strands
+    cannot be cut by mundane means.
+
+- id: net_of_snaring
+  item_type: magic
+  name: Net of Snaring
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    A 10' square net of meshed rope. Thrown up to 20' (creatures save vs
+    spells or trapped); suspended from above by command word and drops;
+    placed on ground and raised by command word. Only creatures of giant
+    strength can escape; strands cannot be cut by mundane means.
+
+- id: oil_of_insubstantiality
+  item_type: magic
+  name: Oil of Insubstantiality
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    A flask of thin oil. Rubbed onto a character or object (one flask covers
+    one human-sized character and gear), the subject becomes insubstantial:
+    can move through physical objects like a ghost, and can only be harmed by
+    magic. Duration: 1d4+4 turns.
+
+- id: oil_of_slipperiness
+  item_type: magic
+  name: Oil of Slipperiness
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    A flask of thin oil. Rubbed onto a character or object (one flask covers
+    one human-sized character and gear), the subject becomes impossible to
+    grasp: immune to constriction, slips out of webs/bonds/chains instantly.
+    Applied to a 10' square floor area: 95% chance per round of creatures
+    slipping. Duration: 8 hours.
+
+- id: pearl_of_power
+  item_type: magic
+  name: Pearl of Power
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    A magical pearl allowing an arcane spell caster to instantly re-memorize
+    one spell already cast (from among those most recently memorized). May be
+    used once per day. Maximum spell level recalled (1d20): 1–5: 1st; 6–10:
+    2nd; 11–14: 3rd; 15–17: 4th; 18–19: 5th; 20: 6th.
+
+- id: pearl_of_wisdom
+  item_type: magic
+  name: Pearl of Wisdom
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: true
+  description: |-
+    A normal-looking pearl that increases the WIS of a divine spell caster
+    by 1 (maximum 18) while kept on their person. The effect requires 30
+    days of continuous possession before taking effect.
+
+# TODO: model the poison-save bonus in a future pass (save:poison once that target exists).
+- id: periapt_of_proof_against_poison
+  item_type: magic
+  name: Periapt of Proof Against Poison
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: true
+  description: |-
+    A small gem protecting its possessor against poison. Power determined
+    when found (1d10): 1–4: 10% resistance to no-save poisons / +1 save
+    bonus; 5–7: 20% / +2; 8–9: 30% / +3; 10: 40% / +4. For poisons with
+    no save: character has a percentage chance of resisting. For saves with
+    penalty: penalty is negated. For normal saves: character gains the bonus.
+    (GM: apply the save bonus via extra_modifiers.)
+
+- id: periapt_of_foul_rotting
+  item_type: magic
+  name: Periapt of Foul Rotting
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: true
+  description: |-
+    A small gem of apparently inconsequential value that curses its possessor
+    with a horrible rotting disease. Beginning one week after coming into
+    possession: lose 1 point of CHA, CON, and DEX per week. If any
+    afflicted ability score reaches 0, the character dies. The curse must
+    first be removed (e.g. remove curse) before the disease can be cured
+    (e.g. cure disease). The gem is engraved with magical sigils visible
+    only by magic.
+
+# TODO: model the continuous disease-immunity effect in a future pass.
+- id: periapt_of_health
+  item_type: magic
+  name: Periapt of Health
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: true
+  description: |-
+    A small gem of apparently inconsequential value. While the gem is on the
+    character's person, they are immune to all forms of disease (including
+    magical disease), except the disease caused by the cursed periapt of
+    foul rotting.
+    (GM: apply disease immunity via extra_modifiers or DM note.)
+
+- id: periapt_of_wound_closure
+  item_type: magic
+  name: Periapt of Wound Closure
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: true
+  description: |-
+    A small gem protecting its possessor against wounding. The character is
+    immune to bleeding effects. Natural healing: regains hit points at twice
+    the normal rate (2d3 hp per day of rest). The character can heal
+    magically non-healable damage normally.
+
+- id: phylactery_of_betrayal
+  item_type: magic
+  name: Phylactery of Betrayal
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: true
+  description: |-
+    A small box containing inscribed holy text, strapped to the arm. Once
+    strapped on, its curse activates: enemies of the character's religion
+    (powerful monsters of opposite alignment, priests of opposing religions,
+    etc.) are alerted to the character's presence when within 120'. Cannot
+    be removed once active; requires magic (e.g. remove curse).
+
+- id: phylactery_of_faithfulness
+  item_type: magic
+  name: Phylactery of Faithfulness
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: true
+  description: |-
+    A small box containing inscribed holy text, strapped to the arm. When
+    the character briefly contemplates a course of action or item, the
+    phylactery forewarns them if it would cause an alignment change or bring
+    about deity disfavour.
+
+- id: phylactery_of_longevity
+  item_type: magic
+  name: Phylactery of Longevity
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: true
+  description: |-
+    A small box containing inscribed holy text, strapped to the arm. The
+    character ages at 3/4 of the normal rate (e.g. after 4 years wearing,
+    the character is only 3 years older).
+
+- id: pipes_of_the_sewers
+  item_type: magic
+  name: Pipes of the Sewers
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    Wooden musical pipes with the power to summon and control rats. Playing
+    a specific learned melody summons either 1d6×10 giant rats or 3d6×10
+    normal rats from within 400' (arrive at 50'/round). Summoned rats have
+    95% chance of obeying mental commands while the pipes play; stopping
+    causes them to leave (resuming: 70% chance of obedience, 30% of attack).
+    Can also take over control of rats controlled by another (30% chance/round).
+
+- id: portable_hole
+  item_type: magic
+  name: Portable Hole
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    A 6' diameter circle of fine black cloth (often folded to handkerchief
+    size). Placed on a surface, it creates a 6' diameter, 10' deep hole in
+    the surface. Items inside remain in an extra-dimensional space when the
+    cloth is picked up. Living creatures inside can unfold the cloth to
+    recreate the hole (contains enough air for one turn).
+
+- id: purse_of_plentiful_coin
+  item_type: magic
+  name: Purse of Plentiful Coin
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    A small leather pouch. When found: contains 26 coins of each type (cp,
+    sp, ep, gp, pp). Each morning: duplicates any coins left in it, producing
+    up to 25 coins of each type it contains (e.g. one gold piece becomes 26
+    gp). If completely emptied: the purse permanently loses its power.
+
+- id: restorative_ointment
+  item_type: magic
+  name: Restorative Ointment
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    A jar of magical unguent (1d3 jars found, each with 5 doses). Each dose:
+    cures 1d4+8 hp of wounds; or cures any disease; or cures any poison.
+
+- id: robe_of_blending
+  item_type: magic
+  name: Robe of Blending
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: true
+  description: |-
+    A normal-looking robe with powers of disguise and camouflage. Can blend
+    into natural environments (rock walls, undergrowth, etc.). Among creatures
+    of another type, can choose to appear as one of them (not larger than
+    twice or smaller than half the character's normal size). Observers with
+    INT 15+ or 10+ HD have 1-in-6 chance per turn of spotting the character.
+    Allies see the character normally.
+
+- id: robe_of_eyes
+  item_type: magic
+  name: Robe of Eyes
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: true
+  description: |-
+    A luxurious robe adorned with eye motifs. Grants: no surprise; infravision
+    120'; multi-directional sight (all directions at once); see invisible
+    within 120'; see creatures using displacement effects in their true
+    location; detect anyone hiding or using camouflage. A light spell on the
+    robe blinds the character for 1d3 rounds; continual light for 2d4 rounds.
+
+- id: robe_of_powerlessness
+  item_type: magic
+  name: Robe of Powerlessness
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: true
+  description: |-
+    A cursed robe. Upon donning: STR reduced to 3; INT reduced to 3; all
+    magical ability lost; cannot cast spells. Removing the robe does not
+    remove the curse; requires magic (e.g. remove curse).
+
+- id: robe_of_scintillating_colours
+  item_type: magic
+  name: Robe of Scintillating Colours
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: true
+  description: |-
+    A normal-looking robe usable only by characters with INT 15+ and WIS 13+.
+    When activated, colours flow in the following round. Hypnotism: creatures
+    within 40' that see the pattern must save vs spells or stand transfixed
+    for 1d4+1 rounds; after that, another save is allowed. Protection: +1 AC
+    bonus per round active (maximum +5 after 5 rounds). Concentration:
+    cannot move more than 10'/round; spells and other actions are possible.
+
+# TODO: model the continuous AC/save bonus in a future pass (depends on robe alignment).
+- id: robe_of_the_archmagi
+  item_type: magic
+  name: Robe of the Archmagi
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: true
+  description: |-
+    A normal-looking robe for arcane spell casters. Alignment (1d20): 1–9
+    lawful, 10–15 neutral, 16–20 chaotic. If the caster's alignment differs:
+    6d4 damage and alignment changes to the robe's. Benefits (same alignment
+    arcane casters): AC 5 [14]; +1 bonus to all saves; charm, hold, and
+    polymorph spells impose -4 penalty on targets' saves.
+    (GM: apply AC and save bonuses via extra_modifiers.)
+
+- id: robe_of_useful_items
+  item_type: magic
+  name: Robe of Useful Items
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: true
+  description: |-
+    A plain-looking robe for arcane spell casters only (other characters
+    cannot use it). Cloth patches sewn into it transform into items when
+    removed (1 round each; permanently). Patches: 2 daggers, 2 10' poles,
+    2 lit lanterns, 2 large sacks, 2 steel mirrors, 2 50' ropes, and 4d4
+    random items (d%): 01–08 bag 100gp; 09–15 silver box 500gp; 16–22 iron
+    door; 23–30 10 gems 100gp each; 31–44 wooden ladder 24'; 45–51 mule and
+    saddle bags; 52–59 10' pit; 60–68 healing potion 2d6+2 hp; 69–75 rowing
+    boat; 76–83 arcane spell scroll; 84–90 two war dogs; 91–00 window.
+
+- id: rope_of_climbing
+  item_type: magic
+  name: Rope of Climbing
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    A coil of thin, strong rope, 50' in length. The owner can command it to
+    climb in any direction or attach to a surface. Can support up to 10,000
+    coins of weight.
+
+- id: rope_of_entanglement
+  item_type: magic
+  name: Rope of Entanglement
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    A 50' rope that can entangle up to 8 human-sized creatures (commanded
+    up to 20' forward or 10' up; each target may save vs spells to avoid).
+    Entangled creatures are fully restrained. AC -2 [21], 22 hp; if cut
+    through, becomes non-magical. Repairs any damage to itself in 6 turns.
+
+- id: rope_of_strangulation
+  item_type: magic
+  name: Rope of Strangulation
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    A cursed 50' rope. Any command activates the curse: the rope springs to
+    life and attempts to strangle the character holding it plus 1d4 others
+    within 10' (save vs spells to avoid). Strangled creatures: 2d6 damage/
+    round, cannot cast spells, cannot free themselves. Freed by dispel magic
+    or severing (AC -2 [21], 22 hp; cut = non-magical).
+
+- id: rug_of_suffocation
+  item_type: magic
+  name: Rug of Suffocation
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    A high quality carpet cursed to smother anyone who commands it. Any
+    command while sitting on it activates the curse: the rug rolls up tightly
+    around the character (save vs spells to avoid). The character suffocates
+    in 1d4+2 rounds. Freed by dispel magic.
+
+- id: saw_of_felling
+  item_type: magic
+  name: Saw of Felling
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    A magical adamantine saw blade, 12' long and 1' wide. Minimum STR 18 to
+    operate alone; two characters of STR 17 can operate it together. Cutting
+    speed: 4' trunk in 3 turns; 2' trunk in 1 turn; 1' trunk in 3 rounds.
+    After 6 turns of sawing, the character must rest for 6 turns.
+
+- id: scarab_of_chaos
+  item_type: magic
+  name: Scarab of Chaos
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: true
+  charge_dice: "1d8+8"
+  description: |-
+    A scarab-shaped amulet that drives those who see it temporarily insane
+    (1d8+8 charges). Present it with a command word: all intelligent
+    creatures within 20' must save vs spells (-2 penalty) or become insane
+    for 1d4+8 rounds. Insane creatures cannot cast spells and each round
+    roll 2d6 for behaviour: 2–5 attack owner's group; 6–8 no action; 9–12
+    attack their own group.
+
+- id: scarab_of_death
+  item_type: magic
+  name: Scarab of Death
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    A scarab-shaped brooch cursed to kill its possessor. Activated when held
+    for more than 1 round or carried for more than 1 turn: the scarab comes
+    to life, tears through leather/cloth/flesh, and seeks the character's
+    heart (1 round; death). Cannot tear through wood, ceramic, bone, ivory,
+    or metal (safe to keep in a container of those materials).
+
+- id: scarab_of_protection
+  item_type: magic
+  name: Scarab of Protection
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: true
+  charge_dice: "2d6"
+  description: |-
+    Protects the bearer from baleful magic. Curses of all kinds are nullified.
+    Finger of death is nullified. The scarab's enchantment works 2d6 times
+    before it is spent.
+
+- id: scarab_of_rage
+  item_type: magic
+  name: Scarab of Rage
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: true
+  charge_dice: "1d6+18"
+  description: |-
+    A scarab-shaped amulet that instils blood rage (1d6+18 charges). Present
+    it with a command word: intelligent enemies within 40' are stricken with
+    blood rage (save vs spells to avoid). Blood rage: attacks the closest
+    creature, friend or foe. Effects: +1 attack rolls, +2 damage rolls, -3
+    AC penalty. Duration: 1d6+6 rounds.
+
+- id: spade_of_mighty_digging
+  item_type: magic
+  name: Spade of Mighty Digging
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    A magical spade with an 8' long handle and 3' long head. Minimum STR 18
+    to use. Digging speed: 1 cubic yard hard clay per 2 rounds; 1 cubic yard
+    normal earth per 1 round; 2 cubic yards loose soil per 1 round. After 10
+    rounds of digging, rest for 5 rounds.
+
+- id: sphere_of_annihilation
+  item_type: magic
+  name: Sphere of Annihilation
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    A static 2' globe of absolute blackness — a rift in the multiverse.
+    Anything touching the sphere is instantly and permanently annihilated;
+    restoration is impossible (even a wish cannot restore it). Arcane casters
+    within 10' per level may try to move it mentally (control check each
+    round; chance by level: 1–5: 15%; 6–7: 30%; 8–9: 50%; 10–11: 60%;
+    12–13: 70%; 14: 80%). If check succeeds: move sphere up to listed rate
+    for 1 round. If check fails: sphere slides toward the character 10' for
+    1d4 rounds. Multiple casters may vie for control.
+
+- id: sweet_water
+  item_type: magic
+  name: Sweet Water
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    A vial of scintillating liquid that transmutes liquids into pure, drinkable
+    water when poured in. Salt or impure water: up to 100,000 cubic feet.
+    Acid: up to 1,000 cubic feet. Potions: one potion (rendered non-magical).
+    Poisoned liquid: up to 6 quarts.
+
+- id: talisman_of_the_sphere
+  item_type: magic
+  name: Talisman of the Sphere
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    An adamantine loop and handle. Arcane spell casters using it when
+    attempting to control a sphere of annihilation may add their INT score to
+    the control chance; a successful check allows moving the sphere for 2
+    rounds before the next check. Other characters touching the talisman
+    suffer 5d6 damage.
+
+- id: vacuous_grimoire
+  item_type: magic
+  name: Vacuous Grimoire
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    A cursed tome that adapts its appearance to blend in with nearby books.
+    Reading so much as one word afflicts the character: lose 1 point of INT
+    (save vs spells to avoid) and 2 points of WIS (save vs spells to avoid).
+    The grimoire is impervious to physical harm unless remove curse is cast
+    on it first.
+
+- id: well_of_many_worlds
+  item_type: magic
+  name: Well of Many Worlds
+  category: miscellaneous_magic_items
+  cost_gp: 0
+  magic: true
+  equippable: false
+  description: |-
+    A 6' diameter circle of fine black cloth (often folded to handkerchief
+    size). Placed on a surface, creates a 6' diameter gateway to another
+    world, plane, or dimension (chosen by the referee). An identical hole
+    exists at the destination, allowing transit back and forth. Picking up
+    the cloth causes the hole to disappear. Placing it in a different location
+    opens a gateway to a different world.
+
 # ─── Rings ────────────────────────────────────────────────────────────────────
 
 - id: ring_control_animals
