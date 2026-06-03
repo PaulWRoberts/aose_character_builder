@@ -177,3 +177,77 @@ def test_mundane_shield_still_minus_one_ac(data):
 
 def test_base_swords_carry_sword_group(data):
     assert "sword" in data.items["short_sword"].groups
+
+
+def _wpn(id, groups=(), is_shield=False):
+    from aose.models import Weapon, WeaponDamage
+    return Weapon(id=id, name=id.title(), category="weapons", item_type="weapon",
+                  cost_gp=1, weight_cn=10, damage=WeaponDamage(), groups=list(groups))
+
+
+def _arm(id, groups=(), is_shield=False, ac=7):
+    from aose.models import Armor
+    return Armor(id=id, name=id.title(), category="armor", item_type="armor",
+                 cost_gp=1, weight_cn=100, ac_descending=ac, is_shield=is_shield,
+                 groups=list(groups))
+
+
+def _ench(id, kind, include, exclude=()):
+    from aose.models import Enchantment
+    return Enchantment(id=id, name_template="{base} +1", kind=kind,
+                       applies_to={"include": list(include), "exclude": list(exclude)})
+
+
+def test_matches_by_id_group_and_wildcard():
+    from aose.engine.enchant import matches
+    sword = _wpn("short_sword", groups=["sword"])
+    assert matches(sword, "short_sword")          # base id
+    assert matches(sword, "sword")                # group tag
+    assert matches(sword, "any_weapon")           # weapon wildcard
+    assert not matches(sword, "axe")
+
+
+def test_wildcards_respect_nature():
+    from aose.engine.enchant import matches
+    plate = _arm("plate_mail", groups=["metal_armour"])
+    shield = _arm("shield", is_shield=True)
+    assert matches(plate, "any_armour")
+    assert not matches(plate, "any_shield")
+    assert matches(shield, "any_shield")
+    assert not matches(shield, "any_armour")
+
+
+def test_lightsaber_matches_sword_by_tag_not_name():
+    from aose.engine.enchant import is_compatible
+    saber = _wpn("lightsaber", groups=["sword"])
+    sword_ench = _ench("sword_plus_1", "weapon", ["sword"])
+    assert is_compatible(saber, sword_ench)
+
+
+def test_exclude_wins_generic_not_swords():
+    from aose.engine.enchant import is_compatible
+    sword = _wpn("short_sword", groups=["sword"])
+    axe = _wpn("battle_axe", groups=["axe"])
+    generic = _ench("generic_plus_1", "weapon", ["any_weapon"], ["sword"])
+    assert not is_compatible(sword, generic)   # excluded
+    assert is_compatible(axe, generic)
+
+
+def test_compatibility_requires_kind_match():
+    from aose.engine.enchant import is_compatible
+    sword = _wpn("short_sword", groups=["sword"])
+    armour_ench = _ench("armour_plus_1", "armor", ["any_armour"])
+    assert not is_compatible(sword, armour_ench)
+
+
+def test_compatible_bases_lists_matches():
+    from aose.engine.enchant import compatible_bases
+    from aose.data.loader import GameData
+    d = GameData(items={
+        "short_sword": _wpn("short_sword", groups=["sword"]),
+        "battle_axe": _wpn("battle_axe", groups=["axe"]),
+        "plate_mail": _arm("plate_mail", groups=["metal_armour"]),
+    })
+    ench = _ench("sword_plus_1", "weapon", ["sword"])
+    ids = {b.id for b in compatible_bases(ench, d)}
+    assert ids == {"short_sword"}
