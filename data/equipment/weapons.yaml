@@ -37,6 +37,7 @@
   range_medium: 160
   range_long: 240
   qualities: [missile, reload, slow, two_handed]
+  accepts_ammo: [crossbow_bolt]
 
 - id: dagger
   item_type: weapon
@@ -106,6 +107,8 @@
   range_medium: 140
   range_long: 210
   qualities: [missile, two_handed]
+  groups: [bow]
+  accepts_ammo: [arrow]
 
 - id: mace
   item_type: weapon
@@ -141,6 +144,8 @@
   range_medium: 100
   range_long: 150
   qualities: [missile, two_handed]
+  groups: [bow]
+  accepts_ammo: [arrow]
 
 - id: short_sword
   item_type: weapon
@@ -181,6 +186,7 @@
   range_medium: 80
   range_long: 160
   qualities: [blunt, missile]
+  accepts_ammo: [sling_stone]
 
 - id: spear
   item_type: weapon

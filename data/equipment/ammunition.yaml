@@ -1,0 +1,43 @@
+# Mundane ammunition.  weight_cn is always 0 — the listed weight of a missile
+# weapon already includes its ammunition and container.  bundle_count is how
+# many units one purchase grants.
+
+- id: arrow
+  item_type: ammunition
+  name: Arrows (quiver of 20)
+  category: ammunition
+  cost_gp: 5
+  weight_cn: 0
+  bundle_count: 20
+  groups: [arrow]
+  description: A quiver of 20 arrows for short or long bows.
+
+- id: crossbow_bolt
+  item_type: ammunition
+  name: Crossbow Bolts (case of 30)
+  category: ammunition
+  cost_gp: 10
+  weight_cn: 0
+  bundle_count: 30
+  groups: [crossbow_bolt]
+  description: A case of 30 bolts (quarrels) for crossbows.
+
+- id: silver_arrow
+  item_type: ammunition
+  name: Silver-Tipped Arrow
+  category: ammunition
+  cost_gp: 5
+  weight_cn: 0
+  bundle_count: 1
+  groups: [arrow]
+  description: A single arrow with a silver tip.
+
+- id: sling_stone
+  item_type: ammunition
+  name: Sling Stones
+  category: ammunition
+  cost_gp: 0
+  weight_cn: 0
+  bundle_count: 20
+  groups: [sling_stone]
+  description: Stones for a sling — freely gathered.

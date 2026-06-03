@@ -67,4 +67,53 @@
   applies_to:
     include: [any_shield]
   magic_bonus: 1
+
+# Ammunition enchantments
+- id: arrows_plus_1
+  name_template: "{base} +1"
+  kind: ammunition
+  applies_to: {include: [arrow]}
+  magic_bonus: 1
+  description: "+1 to attack and damage rolls while these arrows are loaded."
+
+- id: arrows_plus_2
+  name_template: "{base} +2"
+  kind: ammunition
+  applies_to: {include: [arrow]}
+  magic_bonus: 2
+  description: "+2 to attack and damage rolls while these arrows are loaded."
+
+- id: arrow_slaying
+  name_template: "{base} of Slaying"
+  kind: ammunition
+  applies_to: {include: [arrow]}
+  magic_bonus: 1
+  description: |-
+    Enchanted to kill a certain type of foe (chosen by the referee). Acts as a
+    +3 arrow against that foe and slays it instantly on a hit; otherwise a
+    +1 arrow.
+
+- id: crossbow_bolts_plus_1
+  name_template: "{base} +1"
+  kind: ammunition
+  applies_to: {include: [crossbow_bolt]}
+  magic_bonus: 1
+  description: "+1 to attack and damage rolls while these bolts are loaded."
+
+- id: crossbow_bolts_plus_2
+  name_template: "{base} +2"
+  kind: ammunition
+  applies_to: {include: [crossbow_bolt]}
+  magic_bonus: 2
+  description: "+2 to attack and damage rolls while these bolts are loaded."
+
+- id: sling_bullet_impact
+  name_template: "{base} +1, Impact"
+  kind: ammunition
+  applies_to: {include: [sling_stone]}
+  magic_bonus: 1
+  description: |-
+    A cast metal bullet engraved with runes. +1 to attack and damage; on a
+    hit that beats the required roll, inflicts extra damage equal to the
+    margin of success.
   description: "+1 bonus to Armour Class from the shield."

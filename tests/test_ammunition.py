@@ -234,7 +234,6 @@ def _bow_profile(profiles):
     return next(p for p in profiles if p.weapon_id == "short_bow")
 
 
-@pytest.mark.xfail(reason="needs Task 5 data", strict=True)
 def test_plus1_arrow_in_plus0_bow_is_plus1():
     from aose.engine.attacks import attack_profiles
     d = _real_data()
@@ -243,7 +242,6 @@ def test_plus1_arrow_in_plus0_bow_is_plus1():
     assert p.to_hit_ascending == base.to_hit_ascending + 1
 
 
-@pytest.mark.xfail(reason="needs Task 5 data", strict=True)
 def test_unloaded_bow_flagged():
     from aose.engine.attacks import attack_profiles
     d = _real_data()
@@ -270,3 +268,28 @@ def test_profile_adds_ammo_bonus_unit():
     spec.loaded_ammo = {"short_bow": "a"}
     p = _bow_profile(attack_profiles(spec, d))
     assert p.unloaded is False and "+1" in (p.loaded_ammo_name or "")
+
+
+def test_data_ammunition_loads():
+    d = GameData.load(DATA_DIR)
+    arrow = d.items["arrow"]
+    assert isinstance(arrow, Ammunition)
+    assert arrow.bundle_count == 20 and arrow.weight_cn == 0
+    assert "arrow" in arrow.groups
+    assert d.items["sling_stone"].cost_gp == 0
+
+
+def test_launchers_accept_ammo():
+    d = GameData.load(DATA_DIR)
+    assert d.items["short_bow"].accepts_ammo == ["arrow"]
+    assert d.items["long_bow"].accepts_ammo == ["arrow"]
+    assert d.items["crossbow"].accepts_ammo == ["crossbow_bolt"]
+    assert d.items["sling"].accepts_ammo == ["sling_stone"]
+
+
+def test_ammo_enchantments_load():
+    d = GameData.load(DATA_DIR)
+    assert d.enchantments["arrows_plus_1"].kind == "ammunition"
+    assert d.enchantments["arrows_plus_1"].magic_bonus == 1
+    assert d.enchantments["crossbow_bolts_plus_2"].magic_bonus == 2
+    assert d.enchantments["sling_bullet_impact"].applies_to.include == ["sling_stone"]
