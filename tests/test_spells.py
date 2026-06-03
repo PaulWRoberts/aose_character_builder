@@ -313,6 +313,51 @@ def test_spells_view_empty_for_noncaster():
     assert sheet.spells == []
 
 
+def test_learnable_hidden_under_advanced_rule():
+    from aose.data.loader import GameData
+    from aose.sheet.view import spells_view
+    data = GameData.load(DATA_DIR)
+    spec = _spec("magic_user", spellbook=["magic_user_magic_missile"], advanced=True)
+    block = spells_view(spec, data)[0]
+    assert block.can_learn is True          # forget still available
+    assert block.learnable == []            # no free pick under advanced
+
+
+def test_spell_sources_view_cast_and_copy_flags():
+    from aose.data.loader import GameData
+    from aose.engine import spell_sources as ss
+    from aose.sheet.view import spell_sources_view
+    data = GameData.load(DATA_DIR)
+    scroll = ss.new_spell_source("scroll", "arcane",
+                                 ["magic_user_magic_missile", "magic_user_sleep"], data)
+    spec = _spec("magic_user", spellbook=["magic_user_magic_missile"], advanced=True)
+    spec.spell_sources = [scroll]
+    view = spell_sources_view(spec, data)
+    assert len(view) == 1
+    sv = view[0]
+    assert sv.kind == "scroll"
+    assert sv.arcane_class_id == "magic_user"
+    by_id = {e.spell_id: e for e in sv.entries}
+    # both castable (arcane caster, arcane scroll)
+    assert by_id["magic_user_sleep"].can_cast is True
+    # sleep is copyable (level 1, not known); magic_missile already known -> not copyable
+    assert by_id["magic_user_sleep"].can_copy is True
+    assert by_id["magic_user_magic_missile"].can_copy is False
+
+
+def test_spell_sources_view_copy_hidden_under_standard_rule():
+    from aose.data.loader import GameData
+    from aose.engine import spell_sources as ss
+    from aose.sheet.view import spell_sources_view
+    data = GameData.load(DATA_DIR)
+    scroll = ss.new_spell_source("scroll", "arcane", ["magic_user_sleep"], data)
+    spec = _spec("magic_user", advanced=False)
+    spec.spell_sources = [scroll]
+    sv = spell_sources_view(spec, data)[0]
+    assert sv.entries[0].can_copy is False   # copy is advanced-only
+    assert sv.entries[0].can_cast is True
+
+
 def test_copy_chance_for_int_table():
     from aose.engine import spells
     assert spells.copy_chance_for_int(3) == 20

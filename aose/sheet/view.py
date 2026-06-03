@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field
 
 from aose.data.loader import GameData
 from aose.engine import ability_mods, armor_class, attack_bonus, hp, saves, spells as spell_engine
+from aose.engine import spell_sources as spell_source_engine
 from aose.engine.attacks import AttackProfile, attack_profiles
 from aose.engine.encumbrance import (
     EncumbranceTable,
@@ -158,6 +159,37 @@ class SpellClassView(BaseModel):
     learnable: list[SpellEntryView]
 
 
+class SpellSourceEntryView(BaseModel):
+    spell_id: str
+    name: str
+    level: int
+    copy_failed: bool
+    can_cast: bool
+    can_copy: bool
+
+
+class SpellSourceView(BaseModel):
+    instance_id: str
+    kind: str                 # "spellbook" | "scroll"
+    caster_type: str
+    name: str                 # display label (falls back to a default)
+    arcane_class_id: str | None  # the class whose book a Copy targets, if any
+    entries: list[SpellSourceEntryView]
+
+
+class SpellSourceOptionGroup(BaseModel):
+    list_id: str | None       # set for arcane spellbook lists; None for scroll type buckets
+    label: str
+    caster_type: str
+    spells: list[SpellEntryView]
+
+
+class SpellSourceAddOptions(BaseModel):
+    arcane_lists: list[SpellSourceOptionGroup]   # spellbook: one group per arcane list
+    arcane_spells: list[SpellEntryView]          # scroll arcane: all arcane spells
+    divine_spells: list[SpellEntryView]          # scroll divine: all divine spells
+
+
 class CharacterSheet(BaseModel):
     name: str
     race_name: str
@@ -206,6 +238,7 @@ class CharacterSheet(BaseModel):
 
     magic_items: list[MagicItemView]
     spells: list[SpellClassView]
+    spell_sources: list[SpellSourceView] = Field(default_factory=list)
     ammo: list[AmmoRow] = Field(default_factory=list)
     ammo_load_options: dict[str, list[AmmoOption]] = Field(default_factory=dict)
 
@@ -550,9 +583,102 @@ def spells_view(spec: CharacterSpec, data: GameData) -> list[SpellClassView]:
             can_learn=(ctype == "arcane"),
             known=[_spell_entry(s) for s in known],
             slot_groups=groups,
-            learnable=[_spell_entry(s) for s in spell_engine.learnable_spells(entry, cls, data)],
+            learnable=(
+                [] if spec.ruleset.advanced_spell_books
+                else [_spell_entry(s) for s in spell_engine.learnable_spells(entry, cls, data)]
+            ),
         ))
     return out
+
+
+def _first_arcane_class_id(spec: CharacterSpec, data: GameData) -> str | None:
+    for entry in spec.classes:
+        cls = data.classes.get(entry.class_id)
+        if cls is not None and spell_engine.caster_type_of(cls, data) == "arcane":
+            return entry.class_id
+    return None
+
+
+def _default_source_name(source) -> str:
+    if source.name:
+        return source.name
+    kind = "Spell Book" if source.kind == "spellbook" else "Scroll"
+    n = len(source.entries)
+    return f"{kind} ({n} spell{'s' if n != 1 else ''})"
+
+
+def spell_sources_view(spec: CharacterSpec, data: GameData) -> list[SpellSourceView]:
+    """One row per owned spell book / scroll, with per-spell cast/copy flags.
+
+    ``can_cast`` (scrolls): the character has a class matching the scroll's caster
+    type.  ``can_copy`` (advanced rule only): arcane caster, arcane source, spell
+    castable-level + on-list + not known + not failed on this source."""
+    arcane_cid = _first_arcane_class_id(spec, data)
+    arcane_entry = None
+    arcane_cls = None
+    if arcane_cid is not None:
+        arcane_entry = next(e for e in spec.classes if e.class_id == arcane_cid)
+        arcane_cls = data.classes[arcane_cid]
+
+    advanced = spec.ruleset.advanced_spell_books
+    out: list[SpellSourceView] = []
+    for source in spec.spell_sources:
+        castable = spell_source_engine.can_cast_scroll(source, spec, data)
+        copyable: set[str] = set()
+        if advanced and arcane_entry is not None:
+            copyable = spell_source_engine.copyable_spell_ids(
+                source, arcane_entry, arcane_cls, data)
+        entries: list[SpellSourceEntryView] = []
+        for e in source.entries:
+            spell = data.spells.get(e.spell_id)
+            entries.append(SpellSourceEntryView(
+                spell_id=e.spell_id,
+                name=spell.name if spell else e.spell_id,
+                level=spell.level if spell else 0,
+                copy_failed=e.copy_failed,
+                can_cast=castable,
+                can_copy=e.spell_id in copyable,
+            ))
+        out.append(SpellSourceView(
+            instance_id=source.instance_id,
+            kind=source.kind,
+            caster_type=source.caster_type,
+            name=_default_source_name(source),
+            arcane_class_id=arcane_cid,
+            entries=entries,
+        ))
+    return out
+
+
+def spell_source_add_options(data: GameData) -> SpellSourceAddOptions:
+    """Selectable spells for the Add-document form, grouped for the UI."""
+    arcane_list_ids = {lid for lid, sl in data.spell_lists.items() if sl.caster_type == "arcane"}
+    divine_list_ids = {lid for lid, sl in data.spell_lists.items() if sl.caster_type == "divine"}
+
+    arcane_lists: list[SpellSourceOptionGroup] = []
+    for lid in sorted(arcane_list_ids):
+        sl = data.spell_lists[lid]
+        spells = sorted(
+            (s for s in data.spells.values() if lid in s.spell_lists),
+            key=lambda s: (s.level, s.name),
+        )
+        arcane_lists.append(SpellSourceOptionGroup(
+            list_id=lid, label=sl.name, caster_type="arcane",
+            spells=[_spell_entry(s) for s in spells],
+        ))
+
+    def bucket(list_ids) -> list[SpellEntryView]:
+        spells = sorted(
+            (s for s in data.spells.values() if set(s.spell_lists) & list_ids),
+            key=lambda s: (s.level, s.name),
+        )
+        return [_spell_entry(s) for s in spells]
+
+    return SpellSourceAddOptions(
+        arcane_lists=arcane_lists,
+        arcane_spells=bucket(arcane_list_ids),
+        divine_spells=bucket(divine_list_ids),
+    )
 
 
 def ammo_view(spec, data: GameData) -> tuple[list[AmmoRow], dict[str, list[AmmoOption]]]:
@@ -673,6 +799,7 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
         weapon_qualities_reference=_weapon_qualities_reference(spec, data),
         magic_items=_magic_items(spec, data) + enchanted_items_view(spec.enchanted, data),
         spells=spells_view(spec, data),
+        spell_sources=spell_sources_view(spec, data),
         ammo=ammo_rows,
         ammo_load_options=ammo_options,
         enabled_optional_rules=_enabled_optional_rules(spec.ruleset),
