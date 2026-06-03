@@ -1009,11 +1009,17 @@ def _truthy(value: str) -> bool:
 
 
 @router.post("/character/{character_id}/gems/add")
-async def sheet_gem_add(request: Request, character_id: str,
-                        value: int = Form(...), count: int = Form(1),
-                        label: str = Form("")):
+async def sheet_gem_add(request: Request, character_id: str):
+    # Read form manually: the template sends two "value" fields (dropdown + custom
+    # number).  Take the last non-empty one so the custom box overrides the dropdown
+    # when filled, and the dropdown wins when the custom box is left blank.
     spec = _load_spec_or_404(request, character_id)
+    form = await request.form()
+    raw_values = [v for v in form.getlist("value") if str(v).strip()]
     try:
+        value = int(raw_values[-1]) if raw_values else 0
+        count = int(form.get("count", 1) or 1)
+        label = str(form.get("label", "") or "")
         spec.gems = valuables_engine.add_gem(spec.gems, value, count, label)
     except ValuableError as e:
         raise HTTPException(400, str(e))
