@@ -306,3 +306,83 @@ def test_sheet_exposes_ammo_section():
     # the bow launcher offers the loaded stack as an option
     opts = sheet.ammo_load_options["short_bow"]
     assert any(o.instance_id == "a" for o in opts)
+
+
+# ── Route tests ───────────────────────────────────────────────────────────
+
+from fastapi.testclient import TestClient
+
+from aose.characters import load_character, save_character, save_settings
+from aose.web.app import create_app
+
+PROJECT_ROOT = DATA_DIR.parent
+
+
+def _make_client(tmp_path, ruleset=None):
+    from aose.models import RuleSet
+    characters_dir = tmp_path / "characters"
+    drafts_dir = tmp_path / "drafts"
+    examples_dir = tmp_path / "examples"
+    examples_dir.mkdir(parents=True)
+    settings_path = tmp_path / "settings.json"
+    save_settings(settings_path, ruleset or RuleSet())
+    app = create_app(data_dir=DATA_DIR, characters_dir=characters_dir,
+                     drafts_dir=drafts_dir, examples_dir=examples_dir,
+                     settings_path=settings_path)
+    client = TestClient(app, follow_redirects=False)
+    client._characters_dir = characters_dir
+    client._drafts_dir = drafts_dir
+    return client
+
+
+def _seed(client, **overrides):
+    from aose.models import CharacterSpec, ClassEntry, RuleSet
+    base = dict(
+        name="Tester",
+        abilities={"STR": 12, "INT": 12, "WIS": 11, "DEX": 12, "CON": 12, "CHA": 10},
+        race_id="human",
+        classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[6])],
+        alignment="law",
+        ruleset=RuleSet(),
+    )
+    base.update(overrides)
+    spec = CharacterSpec(**base)
+    save_character("test", spec, client._characters_dir)
+    return "test"
+
+
+def test_buy_then_load_then_adjust(tmp_path):
+    client = _make_client(tmp_path)
+    cid = _seed(client, gold=100)
+    # add a bow and equip it
+    client.post(f"/character/{cid}/equipment/add", data={"item_id": "short_bow"})
+    client.post(f"/character/{cid}/equipment/equip", data={"item_id": "short_bow"})
+    # buy a quiver → ammo stack of 20, gold -5
+    client.post(f"/character/{cid}/equipment/buy", data={"item_id": "arrow"})
+    spec = load_character(cid, client._characters_dir)
+    assert spec.ammo[0].count == 20 and spec.ammo[0].base_id == "arrow"
+    iid = spec.ammo[0].instance_id
+    # load + adjust
+    r = client.post(f"/character/{cid}/ammo/load",
+                    data={"weapon_key": "short_bow", "instance_id": iid})
+    assert r.status_code == 303
+    r = client.post(f"/character/{cid}/ammo/adjust",
+                    data={"instance_id": iid, "delta": -1})
+    assert r.status_code == 303
+    spec = load_character(cid, client._characters_dir)
+    assert spec.loaded_ammo["short_bow"] == iid and spec.ammo[0].count == 19
+
+
+def test_add_magic_ammo_and_remove(tmp_path):
+    client = _make_client(tmp_path)
+    cid = _seed(client)
+    r = client.post(f"/character/{cid}/ammo/add",
+                    data={"base_id": "arrow", "enchantment_id": "arrows_plus_1"})
+    assert r.status_code == 303
+    spec = load_character(cid, client._characters_dir)
+    assert spec.ammo[0].enchantment_id == "arrows_plus_1"
+    iid = spec.ammo[0].instance_id
+    r = client.post(f"/character/{cid}/ammo/remove", data={"instance_id": iid})
+    assert r.status_code == 303
+    spec = load_character(cid, client._characters_dir)
+    assert spec.ammo == []

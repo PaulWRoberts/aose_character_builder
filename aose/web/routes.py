@@ -55,11 +55,23 @@ from aose.engine.shop import (
     unstash as shop_unstash,
     unstash_container as shop_unstash_container,
 )
+from aose.engine.ammo import (
+    add_free_ammo as _add_free_ammo,
+    adjust_count as _adjust_ammo,
+    buy_ammo as _buy_ammo,
+    load as _load_ammo,
+    remove_ammo as _remove_ammo,
+    unload as _unload_ammo,
+    InsufficientGold as _AmmoInsufficientGold,
+    IncompatibleAmmo as _IncompatibleAmmo,
+    UnknownAmmo as _UnknownAmmo,
+)
 from aose.engine.proficiency import (
     allowed_armor_ids,
     allowed_weapon_ids,
     shields_allowed,
 )
+from aose.models import Ammunition
 from aose.sheet.view import build_sheet
 
 router = APIRouter()
@@ -146,6 +158,9 @@ async def character_sheet(request: Request, character_id: str):
             "shop": shop_categories(game_data),
             "remove_modes": REMOVE_MODES,
             "target_url_prefix": f"/character/{character_id}/equipment",
+            "ammo_rows": sheet.ammo,
+            "ammo_load_options": sheet.ammo_load_options,
+            "ammo_url_prefix": f"/character/{character_id}",
             "show_gold_reroll": False,
             "show_gold_grant": True,
             "gold_grant_url": f"/character/{character_id}/gold",
@@ -338,7 +353,9 @@ async def equipment_buy(request: Request, character_id: str,
     item = game_data.items.get(item_id)
     from aose.models import Container
     try:
-        if isinstance(item, Container):
+        if isinstance(item, Ammunition):
+            spec.ammo, spec.gold = _buy_ammo(spec.ammo, spec.gold, item_id, game_data)
+        elif isinstance(item, Container):
             spec.containers, spec.gold = buy_container(
                 spec.containers, spec.gold, item_id, game_data,
             )
@@ -346,7 +363,7 @@ async def equipment_buy(request: Request, character_id: str,
             new_inventory, new_gold = shop_buy(spec.inventory, spec.gold, item_id, game_data)
             spec.inventory = new_inventory
             spec.gold = new_gold
-    except (UnknownItem, InsufficientGold, ValueError) as e:
+    except (UnknownItem, InsufficientGold, _AmmoInsufficientGold, ValueError) as e:
         raise HTTPException(400, str(e))
     save_character(character_id, spec, request.app.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
@@ -362,13 +379,15 @@ async def equipment_add(request: Request, character_id: str,
     item = game_data.items.get(item_id)
     from aose.models import Container
     try:
-        if needs_instance(item):
+        if isinstance(item, Ammunition):
+            spec.ammo = _add_free_ammo(spec.ammo, item_id, None, game_data)
+        elif needs_instance(item):
             spec.magic_items = add_free_magic_item(spec.magic_items, item_id, game_data)
         elif isinstance(item, Container):
             spec.containers = add_free_container(spec.containers, item_id, game_data)
         else:
             spec.inventory = shop_add_free(spec.inventory, item_id, game_data)
-    except (UnknownItem, UnknownMagicItem, ValueError) as e:
+    except (UnknownItem, UnknownMagicItem, _UnknownAmmo, ValueError) as e:
         raise HTTPException(400, str(e))
     save_character(character_id, spec, request.app.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
@@ -835,5 +854,67 @@ async def rest_full_day(request: Request, character_id: str,
         spec.damage_taken = hp.apply_healing(spec, data, heal_amount)
     except ValueError as e:
         raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+# ── Ammunition management on the live sheet ───────────────────────────────
+
+@router.post("/character/{character_id}/ammo/add")
+async def ammo_add(request: Request, character_id: str,
+                   base_id: str = Form(...), enchantment_id: str = Form("")):
+    spec = _load_spec_or_404(request, character_id)
+    try:
+        spec.ammo = _add_free_ammo(spec.ammo, base_id,
+                                   enchantment_id or None, request.app.state.game_data)
+    except (_UnknownAmmo, _IncompatibleAmmo, ValueError) as e:
+        raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/ammo/adjust")
+async def ammo_adjust(request: Request, character_id: str,
+                      instance_id: str = Form(...), delta: int = Form(...)):
+    spec = _load_spec_or_404(request, character_id)
+    try:
+        spec.ammo = _adjust_ammo(spec.ammo, instance_id, delta)
+    except _UnknownAmmo as e:
+        raise HTTPException(400, str(e))
+    # drop any load pointing at a now-removed stack
+    live = {s.instance_id for s in spec.ammo}
+    spec.loaded_ammo = {k: v for k, v in spec.loaded_ammo.items() if v in live}
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/ammo/remove")
+async def ammo_remove(request: Request, character_id: str,
+                      instance_id: str = Form(...)):
+    spec = _load_spec_or_404(request, character_id)
+    try:
+        spec.ammo = _remove_ammo(spec.ammo, instance_id)
+    except _UnknownAmmo as e:
+        raise HTTPException(400, str(e))
+    live = {s.instance_id for s in spec.ammo}
+    spec.loaded_ammo = {k: v for k, v in spec.loaded_ammo.items() if v in live}
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/ammo/load")
+async def ammo_load(request: Request, character_id: str,
+                    weapon_key: str = Form(...), instance_id: str = Form(...)):
+    spec = _load_spec_or_404(request, character_id)
+    spec.loaded_ammo = _load_ammo(spec.loaded_ammo, weapon_key, instance_id)
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/ammo/unload")
+async def ammo_unload(request: Request, character_id: str,
+                      weapon_key: str = Form(...)):
+    spec = _load_spec_or_404(request, character_id)
+    spec.loaded_ammo = _unload_ammo(spec.loaded_ammo, weapon_key)
     save_character(character_id, spec, request.app.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)

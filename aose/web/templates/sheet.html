@@ -123,6 +123,11 @@
                                 {% if atk.specialised %}
                                 <span class="small" title="Weapon specialisation: +1 hit / +1 damage">(spec.)</span>
                                 {% endif %}
+                                {% if atk.unloaded %}
+                                <span class="badge badge-warn small" title="No ammo loaded">Unloaded</span>
+                                {% elif atk.loaded_ammo_name %}
+                                <span class="small muted">[{{ atk.loaded_ammo_name }}]</span>
+                                {% endif %}
                             </td>
                             <td class="num">
                                 {% if sheet.use_ascending %}

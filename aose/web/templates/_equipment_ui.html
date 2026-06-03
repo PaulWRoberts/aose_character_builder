@@ -346,6 +346,58 @@
 {% endif %}
 {% endif %}
 
+{% if ammo_rows is defined and ammo_rows %}
+<h3 class="subhead">Ammunition</h3>
+<table class="inventory-table ammo-table">
+  <thead><tr><th>Ammo</th><th class="num">Count</th><th>Actions</th></tr></thead>
+  <tbody>
+  {% for row in ammo_rows %}
+    <tr>
+      <td>{% if row.magic %}<em>{{ row.name }}</em>{% else %}{{ row.name }}{% endif %}</td>
+      <td class="num">{{ row.count }}</td>
+      <td>
+        <form method="post" action="{{ ammo_url_prefix }}/ammo/adjust" class="inline-form">
+          <input type="hidden" name="instance_id" value="{{ row.instance_id }}">
+          <input type="hidden" name="delta" value="1">
+          <button type="submit">+</button>
+        </form>
+        <form method="post" action="{{ ammo_url_prefix }}/ammo/adjust" class="inline-form">
+          <input type="hidden" name="instance_id" value="{{ row.instance_id }}">
+          <input type="hidden" name="delta" value="-1">
+          <button type="submit">−</button>
+        </form>
+        <form method="post" action="{{ ammo_url_prefix }}/ammo/remove" class="inline-form">
+          <input type="hidden" name="instance_id" value="{{ row.instance_id }}">
+          <button type="submit">Remove</button>
+        </form>
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{% if ammo_load_options is defined and ammo_load_options %}
+<h3 class="subhead">Load Ammo</h3>
+{% for weapon_key, opts in ammo_load_options.items() %}
+<form method="post" action="{{ ammo_url_prefix }}/ammo/load" class="inline-form">
+  <input type="hidden" name="weapon_key" value="{{ weapon_key }}">
+  <label>{{ weapon_key }}:
+    <select name="instance_id">
+      {% for opt in opts %}
+      <option value="{{ opt.instance_id }}">{{ opt.name }} ({{ opt.count }})</option>
+      {% endfor %}
+    </select>
+  </label>
+  <button type="submit">Load</button>
+</form>
+<form method="post" action="{{ ammo_url_prefix }}/ammo/unload" class="inline-form">
+  <input type="hidden" name="weapon_key" value="{{ weapon_key }}">
+  <button type="submit">Unload</button>
+</form>
+{% endfor %}
+{% endif %}
+
 <h3 class="subhead">Shop</h3>
 <input type="text" id="shop-search" class="shop-search"
        placeholder="Search items by name…"
