@@ -709,6 +709,32 @@ def test_wizard_exposes_no_magic_or_enchanted_acquisition(tmp_path):
     assert "/equipment/add-enchanted" not in page
 
 
+def test_wizard_finalize_roundtrips_enchanted_empty(tmp_path):
+    client = _make_client(tmp_path)
+    from aose.characters import load_draft, save_draft
+    r = client.get("/wizard/new")
+    draft_id = r.headers["location"].split("/")[2]
+    client.post(f"/wizard/{draft_id}/rules", data={
+        "ability_roll_method": "3d6_in_order", "encumbrance": "basic",
+        "separate_race_class": "on", "demihuman_level_limits": "on",
+        "demihuman_class_restrictions": "on"})
+    draft = load_draft(draft_id, client._drafts_dir)
+    draft["abilities"] = {"STR": 15, "INT": 11, "WIS": 12, "DEX": 13, "CON": 14, "CHA": 10}
+    save_draft(draft_id, draft, client._drafts_dir)
+    client.post(f"/wizard/{draft_id}/abilities", data={})
+    client.post(f"/wizard/{draft_id}/race", data={"race_id": "dwarf"})
+    client.post(f"/wizard/{draft_id}/class", data={"class_id": "fighter"})
+    client.post(f"/wizard/{draft_id}/hp/roll")
+    client.post(f"/wizard/{draft_id}/hp")
+    client.post(f"/wizard/{draft_id}/identity", data={"name": "Tester", "alignment": "law"})
+    client.get(f"/wizard/{draft_id}/equipment")
+    r = client.post(f"/wizard/{draft_id}/finalize")
+    assert r.status_code == 303
+    char_id = r.headers["location"].rsplit("/", 1)[-1]
+    spec = load_character(char_id, client._characters_dir)
+    assert spec.enchanted == []
+
+
 def test_enchanted_equip_charge_note_remove_roundtrip(tmp_path):
     client = _make_client(tmp_path)
     _seed(client)

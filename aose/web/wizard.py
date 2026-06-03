@@ -76,6 +76,7 @@ from aose.models import (
     CharacterSpec,
     ClassEntry,
     ContainerInstance,
+    EnchantedInstance,
     MagicItemInstance,
     RuleSet,
 )
@@ -1323,9 +1324,10 @@ def _equipment_context(draft: dict[str, Any], game_data) -> dict:
             allowed_armor=allowed_armor_ids(classes, game_data),
             allow_shields=shields_allowed(classes),
         ),
-        "magic_items_view": magic_items_view(
-            _draft_magic(draft), list(inventory), game_data,
-        ),
+        "magic_items_view": [],   # wizard equipment step is mundane-only
+        "enchanted_rows": [],
+        "magic_acquisition": False,
+        "enchant_choices": [],
         "shop": shop_categories(game_data),
         "remove_modes": REMOVE_MODES,
     }
@@ -1745,6 +1747,9 @@ def _draft_to_spec(draft: dict[str, Any], data) -> CharacterSpec:
         ],
         magic_items=[
             MagicItemInstance.model_validate(m) for m in draft.get("magic_items", [])
+        ],
+        enchanted=[
+            EnchantedInstance.model_validate(e) for e in draft.get("enchanted", [])
         ],
         ruleset=ruleset,
     )
