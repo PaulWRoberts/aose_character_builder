@@ -29,6 +29,7 @@ from pydantic import BaseModel
 from aose.data.loader import GameData
 from aose.engine.ability_mods import ability_modifier
 from aose.engine.attack_bonus import thac0
+from aose.engine.enchant import equipped_enchanted
 from aose.engine.magic import active_modifiers, effective_abilities
 from aose.engine.proficiency import (
     base_weapon_id,
@@ -194,6 +195,10 @@ def attack_profiles(spec: CharacterSpec, data: GameData) -> list[AttackProfile]:
             continue  # equipped_weapons should only contain weapons, defensive
         weapon_profiles.append(
             _profile_for(item, spec, data, count, eff, base_thac0, g_atk, g_dmg)
+        )
+    for resolved in equipped_enchanted(spec, data, "weapon"):
+        weapon_profiles.append(
+            _profile_for(resolved, spec, data, 1, eff, base_thac0, g_atk, g_dmg)
         )
     weapon_profiles.sort(key=lambda p: p.name)
     return [_unarmed_profile(spec, eff, base_thac0, g_atk, g_dmg), *weapon_profiles]

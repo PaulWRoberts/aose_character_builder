@@ -487,3 +487,41 @@ def test_ac_best_base_wins_mundane_vs_enchanted(data):
     spec.equipped = {"armor": "leather_armor"}   # worse base
     desc, _ = armor_class(spec, d)
     assert desc == 4   # enchanted chain base wins over leather 7
+
+
+def test_enchanted_weapon_attack_profile(data):
+    import copy
+    from aose.engine.attacks import attack_profiles
+    from aose.engine.attack_bonus import thac0
+    from aose.models import Enchantment
+    d = copy.deepcopy(data)
+    d.enchantments["sword_vs_undead_t11"] = Enchantment(
+        id="sword_vs_undead_t11", name_template="{base} +1, +3 vs Undead",
+        kind="weapon", applies_to={"include": ["sword"]}, magic_bonus=1,
+        conditional_bonus={"vs": "undead", "bonus": 2})
+    spec = _equip_one_enchanted(
+        d, "short_sword", "sword_vs_undead_t11",
+        abilities={"STR": 12, "INT": 12, "WIS": 11, "DEX": 12, "CON": 12, "CHA": 10})
+    base_thac0 = thac0(_minimal_spec(), d)
+    profiles = attack_profiles(spec, d)
+    ench_row = next(p for p in profiles if p.name.startswith("Short Sword +1"))
+    assert ench_row.to_hit_thac0 == base_thac0 - 1   # +1 magic, STR 12 mod 0
+    assert ench_row.conditional is not None
+    assert ench_row.conditional.label == "vs undead"
+    assert ench_row.conditional.to_hit_thac0 == base_thac0 - 3
+    assert ench_row.damage == "1d6+1"
+
+
+def test_unequipped_enchanted_weapon_absent_from_attacks(data):
+    import copy
+    from aose.engine.attacks import attack_profiles
+    from aose.engine.enchant import add_free_enchanted
+    from aose.models import Enchantment
+    d = copy.deepcopy(data)
+    d.enchantments["sword_plus_1_t11b"] = Enchantment(
+        id="sword_plus_1_t11b", name_template="{base} +1", kind="weapon",
+        applies_to={"include": ["sword"]}, magic_bonus=1)
+    spec = _minimal_spec()
+    spec.enchanted = add_free_enchanted([], "short_sword", "sword_plus_1_t11b", d)  # not equipped
+    names = {p.name for p in attack_profiles(spec, d)}
+    assert not any(n.startswith("Short Sword +1") for n in names)
