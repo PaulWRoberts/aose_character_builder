@@ -299,3 +299,18 @@ def test_spells_view_empty_for_noncaster():
     spec = _spec("fighter")
     sheet = build_sheet(spec, data)
     assert sheet.spells == []
+
+
+def test_copy_chance_for_int_table():
+    from aose.engine import spells
+    assert spells.copy_chance_for_int(3) == 20
+    assert spells.copy_chance_for_int(4) == 30
+    assert spells.copy_chance_for_int(5) == 30
+    assert spells.copy_chance_for_int(7) == 35
+    assert spells.copy_chance_for_int(9) == 40
+    assert spells.copy_chance_for_int(12) == 50
+    assert spells.copy_chance_for_int(14) == 70
+    assert spells.copy_chance_for_int(16) == 75
+    assert spells.copy_chance_for_int(17) == 85
+    assert spells.copy_chance_for_int(18) == 90
+    assert spells.copy_chance_for_int(20) == 90   # 18+

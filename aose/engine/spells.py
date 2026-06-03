@@ -97,17 +97,27 @@ def learnable_spells(entry: ClassEntry, cls: CharClass, data: GameData) -> list[
     )
 
 
-_INT_BEGINNING_SPELLS = [
-    (3, 1), (5, 1), (7, 2), (9, 2), (12, 3), (14, 3), (16, 4), (17, 4), (18, 5),
+# (INT ceiling, beginning spells, copy chance %) — OSE Advanced Spell Book table.
+_INT_SPELL_TABLE = [
+    (3, 1, 20), (5, 1, 30), (7, 2, 35), (9, 2, 40), (12, 3, 50),
+    (14, 3, 70), (16, 4, 75), (17, 4, 85), (18, 5, 90),
 ]
 
 
 def beginning_spells_for_int(int_score: int) -> int:
     """OSE Advanced 'Advanced Spell Book Rules' beginning-spells table (p112)."""
-    for ceiling, count in _INT_BEGINNING_SPELLS:
+    for ceiling, count, _chance in _INT_SPELL_TABLE:
         if int_score <= ceiling:
             return count
     return 5  # INT 18+
+
+
+def copy_chance_for_int(int_score: int) -> int:
+    """OSE Advanced 'Chance of Copying' percentage (p112) for the given INT."""
+    for ceiling, _count, chance in _INT_SPELL_TABLE:
+        if int_score <= ceiling:
+            return chance
+    return 90  # INT 18+
 
 
 def beginning_spell_count(entry: ClassEntry, cls: CharClass, int_score: int,
