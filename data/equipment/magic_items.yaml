@@ -2,6 +2,251 @@
 # All MagicItem variants. cost_gp: 0 (Add-only, GM grant). Descriptions are
 # transcribed verbatim from import/markdown/magic-items/*.md.
 
+# ─── Rings ────────────────────────────────────────────────────────────────────
+
+- id: ring_control_animals
+  item_type: magic
+  name: Ring of Controlling Animals
+  category: magic_rings
+  cost_gp: 0
+  magic: true
+  equippable: true
+  description: |-
+    Grants the power to control 1d6 normal animals or 1 giant animal (not
+    magical or intelligent). No saving throw is allowed. Only animals in
+    visual range can be controlled; control is broken if the user moves or
+    attacks. When concentration ends, a reaction roll with -1 penalty
+    determines the animals' behaviour. May be used once per turn.
+
+- id: ring_control_humans
+  item_type: magic
+  name: Ring of Controlling Humans
+  category: magic_rings
+  cost_gp: 0
+  magic: true
+  equippable: true
+  description: |-
+    Grants the power to charm humans. A charm may be placed upon a human
+    within 60' (one target per round). The subject may save vs spells (-2
+    penalty) to resist. Up to 6 Hit Dice of humans may be charmed; normal
+    humans count as ½ HD. Charmed individuals obey the character's commands
+    (not obviously harmful, not against their alignment). The charm lasts
+    until dispelled, the ring is removed, or the wearer cancels it.
+
+- id: ring_control_plants
+  item_type: magic
+  name: Ring of Controlling Plants
+  category: magic_rings
+  cost_gp: 0
+  magic: true
+  equippable: true
+  description: |-
+    Grants the power to control all plants (including plant monsters) in a
+    10' square area up to 60' distant. Affected plants may be commanded to
+    move. The effect lasts while the wearer concentrates.
+
+- id: ring_delusion
+  item_type: magic
+  name: Ring of Delusion
+  category: magic_rings
+  cost_gp: 0
+  magic: true
+  equippable: true
+  description: |-
+    The wearer believes they are under the effects of another type of magic
+    ring (determined by the referee). The referee should trick the player
+    into believing the other ring's effects, revealing the truth only at a
+    vital juncture.
+
+- id: ring_djinni_summoning
+  item_type: magic
+  name: Ring of Djinni Summoning
+  category: magic_rings
+  cost_gp: 0
+  magic: true
+  equippable: true
+  description: |-
+    Grants the power to summon a lesser djinni. The djinni serves for up to
+    24 hours and obeys only the one who summoned it. May be used once per day.
+
+- id: ring_fire_resistance
+  item_type: magic
+  name: Ring of Fire Resistance
+  category: magic_rings
+  cost_gp: 0
+  magic: true
+  equippable: true
+  description: |-
+    Grants the wearer protection against fire. Unharmed by non-magical fire.
+    +2 bonus to saving throws vs fire-based magical or breath attacks.
+    Fire-based damage reduced by 1 per die (minimum 1 per die).
+
+- id: ring_invisibility
+  item_type: magic
+  name: Ring of Invisibility
+  category: magic_rings
+  cost_gp: 0
+  magic: true
+  equippable: true
+  description: |-
+    The wearer becomes invisible. Attacking or casting a spell breaks the
+    invisibility. May be used once per turn.
+
+- id: ring_protection_plus_1
+  item_type: magic
+  name: Ring of Protection +1
+  category: magic_rings
+  cost_gp: 0
+  magic: true
+  equippable: true
+  modifiers:
+    - {target: ac, op: add, value: 1}
+    - {target: "save:all", op: add, value: 1}
+  description: |-
+    Grants a measure of protection from harm.
+    Armour Class: A +1 AC bonus.
+    Saving throws: A +1 bonus to all saves.
+
+- id: ring_protection_plus_1_5ft
+  item_type: magic
+  name: Ring of Protection +1, 5' Radius
+  category: magic_rings
+  cost_gp: 0
+  magic: true
+  equippable: true
+  modifiers:
+    - {target: ac, op: add, value: 1}
+    - {target: "save:all", op: add, value: 1}
+  description: |-
+    As Ring of Protection +1, but allies within 5' of the wearer also benefit
+    from the ring's protective power (+1 AC, +1 to all saves).
+
+- id: ring_regeneration
+  item_type: magic
+  name: Ring of Regeneration
+  category: magic_rings
+  cost_gp: 0
+  magic: true
+  equippable: true
+  description: |-
+    The wearer heals at an accelerated rate: regains 1 hit point per round.
+    Severed limbs will also regrow over time. Fire or acid damage cannot be
+    regenerated. The ring does not function if the wearer is at 0 or fewer
+    hit points.
+
+- id: ring_spell_storing
+  item_type: magic
+  name: Ring of Spell Storing
+  category: magic_rings
+  cost_gp: 0
+  magic: true
+  equippable: true
+  charge_dice: "1d6"
+  description: |-
+    Stores 1d6 magical spells that the wearer can release on command (up to
+    one per round). 20% chance of divine spells, otherwise arcane. The wearer
+    knows which spells it contains. Once triggered, a spell cannot be reused
+    until recharged by casting it directly onto the ring.
+
+- id: ring_spell_turning
+  item_type: magic
+  name: Ring of Spell Turning
+  category: magic_rings
+  cost_gp: 0
+  magic: true
+  equippable: true
+  charge_dice: "2d6"
+  description: |-
+    Spells cast on the wearer are reflected back onto the caster.
+    Charges: After 2d6 spells are reflected, the ring loses its power.
+
+- id: ring_telekinesis
+  item_type: magic
+  name: Ring of Telekinesis
+  category: magic_rings
+  cost_gp: 0
+  magic: true
+  equippable: true
+  description: |-
+    Grants the power to move objects or creatures within 120' by
+    concentrating. Up to 2,000 coins of weight may be targeted; moved up to
+    20' per round in any direction (including vertically). A targeted creature
+    may save vs spells to resist. If concentration is broken, the target falls.
+
+- id: ring_water_walking
+  item_type: magic
+  name: Ring of Water Walking
+  category: magic_rings
+  cost_gp: 0
+  magic: true
+  equippable: true
+  description: |-
+    Grants the power to walk on the surface of water without sinking.
+
+- id: ring_weakness
+  item_type: magic
+  name: Ring of Weakness
+  category: magic_rings
+  cost_gp: 0
+  magic: true
+  equippable: true
+  modifiers:
+    - {target: "ability:STR", op: set, value: 3}
+  description: |-
+    A cursed ring that weakens the wearer. Within 6 rounds of putting it on,
+    the wearer's STR is reduced to 3. The ring cannot be removed once worn;
+    the curse can be removed by magic (e.g. remove curse) or a special quest.
+
+- id: ring_wishes_1_2
+  item_type: magic
+  name: Ring of Wishes (1–2)
+  category: magic_rings
+  cost_gp: 0
+  magic: true
+  equippable: true
+  charge_dice: "1d2"
+  description: |-
+    Grants the wearer's wishes. Contains 1d2 wishes. Once all wishes are used,
+    the ring's magic is spent.
+
+- id: ring_wishes_1_3
+  item_type: magic
+  name: Ring of Wishes (1–3)
+  category: magic_rings
+  cost_gp: 0
+  magic: true
+  equippable: true
+  charge_dice: "1d3"
+  description: |-
+    Grants the wearer's wishes. Contains 1d3 wishes. Once all wishes are used,
+    the ring's magic is spent.
+
+- id: ring_wishes_2_4
+  item_type: magic
+  name: Ring of Wishes (2–4)
+  category: magic_rings
+  cost_gp: 0
+  magic: true
+  equippable: true
+  charge_dice: "1d3+1"
+  description: |-
+    Grants the wearer's wishes. Contains 1d3+1 wishes. Once all wishes are
+    used, the ring's magic is spent.
+
+- id: ring_xray_vision
+  item_type: magic
+  name: Ring of X-Ray Vision
+  category: magic_rings
+  cost_gp: 0
+  magic: true
+  equippable: true
+  description: |-
+    Grants the power to see through solid objects. Sight up to 60' through
+    less dense materials (cloth, water, wood); up to 30' through stone. Gold
+    and lead block sight. When searching, guarantees noticing secret doors or
+    traps in the 10' square examined. Concentration required (cannot move).
+    May be used at most once per turn.
+
 # ─── Potions ──────────────────────────────────────────────────────────────────
 
 - id: potion_clairaudience

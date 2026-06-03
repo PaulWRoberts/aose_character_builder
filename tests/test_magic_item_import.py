@@ -96,6 +96,19 @@ def test_potions_loaded(data):
     assert heal.modifiers == [] and heal.charge_dice is None
 
 
+def test_rings_loaded(data):
+    prot = data.items["ring_protection_plus_1"]
+    assert prot.equippable is True and prot.category == "magic_rings"
+    targets = {(m.target, m.op, m.value) for m in prot.modifiers}
+    assert ("ac", "add", 1) in targets
+    assert ("save:all", "add", 1) in targets
+    weak = data.items["ring_weakness"]
+    assert weak.modifiers[0].target == "ability:STR"
+    assert weak.modifiers[0].op == "set" and weak.modifiers[0].value == 3
+    assert data.items["ring_spell_turning"].charge_dice == "2d6"
+    assert data.items["ring_wishes_2_4"].charge_dice == "1d3+1"
+
+
 def test_rolled_modifier_rolls_into_extra_modifiers():
     """A MagicItem.rolled_modifiers entry becomes a concrete per-instance
     extra_modifier with a rolled value when the instance is created."""
