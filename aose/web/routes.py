@@ -5,7 +5,8 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 
 from aose.characters.storage import list_character_ids, load_character, save_character
-from aose.engine import dice, hp, spells as spell_engine
+from aose.engine import currency as _currency, dice, hp, spells as spell_engine
+from aose.engine.currency import CurrencyError
 from aose.engine.equip import equip as _equip, unequip as _unequip
 from aose.engine.energy_drain import energy_drain as _energy_drain
 from aose.engine.leveling import grant_xp as _grant_xp, level_up as _level_up
@@ -264,6 +265,35 @@ async def grant_gold(request: Request, character_id: str, amount: int = Form(...
     thing in OSE, even if the GM claws back some treasure."""
     spec = _load_spec_or_404(request, character_id)
     spec.gold = max(0, spec.gold + amount)
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/coins/add")
+async def add_coins(request: Request, character_id: str,
+                    denom: str = Form(...), amount: int = Form(...)):
+    """Add or subtract coins of one denomination, clamped at zero."""
+    spec = _load_spec_or_404(request, character_id)
+    if denom not in _currency.RATES:
+        raise HTTPException(400, f"unknown denomination {denom!r}")
+    attr = _currency._ATTR[denom]
+    setattr(spec, attr, max(0, getattr(spec, attr) + amount))
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/coins/convert")
+async def convert_coins(request: Request, character_id: str,
+                        from_denom: str = Form(...), to_denom: str = Form(...),
+                        count: int = Form(...)):
+    """Make change between two denominations at official rates."""
+    spec = _load_spec_or_404(request, character_id)
+    try:
+        changes = _currency.convert(spec, from_denom, to_denom, count)
+    except CurrencyError as e:
+        raise HTTPException(400, str(e))
+    for attr, value in changes.items():
+        setattr(spec, attr, value)
     save_character(character_id, spec, request.app.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 

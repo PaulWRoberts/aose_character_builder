@@ -68,3 +68,61 @@ def test_convert_rejects_same_denom_and_bad_count():
         currency.convert(s, "gp", "gp", 1)
     with pytest.raises(CurrencyError):
         currency.convert(s, "gp", "sp", 0)
+
+
+# ---------------------------------------------------------------------------
+# Route tests
+# ---------------------------------------------------------------------------
+from pathlib import Path
+from fastapi.testclient import TestClient
+from aose.characters import load_character, save_character
+from aose.web.app import create_app
+
+DATA_DIR = Path(__file__).parent.parent / "data"
+
+
+def _make_client(tmp_path):
+    characters_dir = tmp_path / "characters"
+    drafts_dir = tmp_path / "drafts"
+    examples_dir = tmp_path / "examples"
+    examples_dir.mkdir()
+    app = create_app(
+        data_dir=DATA_DIR, characters_dir=characters_dir,
+        drafts_dir=drafts_dir, examples_dir=examples_dir,
+        settings_path=tmp_path / "settings.json",
+    )
+    client = TestClient(app, follow_redirects=False)
+    client._characters_dir = characters_dir
+    return client
+
+
+def test_coins_add_route(tmp_path):
+    client = _make_client(tmp_path)
+    save_character("c1", _spec(), client._characters_dir)
+    r = client.post("/character/c1/coins/add", data={"denom": "sp", "amount": "25"})
+    assert r.status_code == 303
+    assert load_character("c1", client._characters_dir).silver == 25
+
+
+def test_coins_add_clamps_at_zero(tmp_path):
+    client = _make_client(tmp_path)
+    save_character("c1", _spec(silver=10), client._characters_dir)
+    client.post("/character/c1/coins/add", data={"denom": "sp", "amount": "-50"})
+    assert load_character("c1", client._characters_dir).silver == 0
+
+
+def test_coins_convert_route(tmp_path):
+    client = _make_client(tmp_path)
+    save_character("c1", _spec(platinum=2), client._characters_dir)
+    client.post("/character/c1/coins/convert",
+                data={"from_denom": "pp", "to_denom": "gp", "count": "2"})
+    s = load_character("c1", client._characters_dir)
+    assert (s.platinum, s.gold) == (0, 10)
+
+
+def test_coins_convert_bad_request(tmp_path):
+    client = _make_client(tmp_path)
+    save_character("c1", _spec(gold=1), client._characters_dir)
+    r = client.post("/character/c1/coins/convert",
+                    data={"from_denom": "gp", "to_denom": "sp", "count": "99"})
+    assert r.status_code == 400
