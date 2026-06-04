@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maelen Duskwarden — Character Sheet (prototype)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   AOSE Character Sheet — redesign prototype
+   Aged-parchment module flavour. Self-contained; sample data.
+   ============================================================ */
+
+:root{
+  /* paper & ink */
+  --paper:        #ece0c4;   /* desk / page behind the sheet            */
+  --sheet:        #f6efdb;   /* the sheet itself                        */
+  --region:       #fbf6e9;   /* boxed region fill                       */
+  --region-sunk:  #f0e7d0;   /* inset / printed-value wells             */
+  --ink:          #2a2017;   /* body ink                                */
+  --ink-soft:     #6f5e46;   /* secondary ink                           */
+  --ink-faint:    #9a8868;   /* tertiary / placeholders                 */
+  --brown:        #4a3728;   /* headings, heavy rules                   */
+  --rule:         #c4b083;   /* section rules                           */
+  --hair:         #ddceaa;   /* hairline dividers                       */
+  /* accents */
+  --oxblood:      #8a2c2c;   /* important / destructive / magic glow    */
+  --oxblood-dk:   #6f2020;
+  --moss:         #5c7438;   /* "active / current" highlight            */
+  --moss-bg:      #e7eecd;
+  --gilt:         #9a7322;   /* gold / treasure / modified marker       */
+  /* type */
+  --display: 'Cinzel', 'Times New Roman', serif;
+  --body: 'EB Garamond', Georgia, 'Times New Roman', serif;
+  --mono: 'JetBrains Mono', ui-monospace, monospace;
+  /* metrics */
+  --gap: 14px;
+  --radius: 2px;
+  --shadow: 0 1px 0 rgba(255,255,255,.5) inset, 0 2px 10px rgba(60,40,20,.10);
+}
+
+*{ box-sizing:border-box; }
+
+html{ scroll-behavior:smooth; }
+
+body{
+  margin:0;
+  font-family:var(--body);
+  font-size:16px;
+  line-height:1.38;
+  color:var(--ink);
+  background-color:var(--paper);
+  background-image:
+    radial-gradient(120% 90% at 50% -10%, rgba(255,250,235,.55), transparent 60%),
+    radial-gradient(90% 70% at 50% 120%, rgba(90,60,30,.10), transparent 55%);
+  font-variant-numeric: oldstyle-nums proportional-nums;
+  -webkit-font-smoothing:antialiased;
+}
+/* faint paper grain */
+body::before{
+  content:"";
+  position:fixed; inset:0; z-index:0; pointer-events:none; opacity:.04;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ── site chrome ─────────────────────────────────────────── */
+.topbar{
+  position:relative; z-index:1;
+  display:flex; justify-content:space-between; align-items:baseline;
+  max-width:1200px; margin:0 auto; padding:14px 24px 0;
+}
+.topbar .brand{
+  font-family:var(--display); font-weight:600; letter-spacing:.16em;
+  text-transform:uppercase; font-size:13px; color:var(--brown);
+  text-decoration:none;
+}
+.topbar nav a{
+  font-family:var(--display); font-size:11px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--ink-soft); text-decoration:none; margin-left:18px;
+}
+.topbar nav a:hover{ color:var(--oxblood); }
+
+/* ── the sheet ───────────────────────────────────────────── */
+.sheet{
+  position:relative; z-index:1;
+  max-width:1200px; margin:14px auto 60px;
+  padding:22px 26px 26px;
+  background:var(--sheet);
+  border:1px solid var(--brown);
+  box-shadow:var(--shadow);
+  background-image:
+    linear-gradient(180deg, rgba(255,252,242,.7), transparent 120px);
+}
+
+/* ── identity band ───────────────────────────────────────── */
+.ident{
+  display:grid;
+  grid-template-columns: 1fr auto;
+  gap:18px;
+  align-items:end;
+  padding-bottom:14px;
+  border-bottom:2px solid var(--brown);
+}
+.ident .who h1{
+  font-family:var(--display); font-weight:700;
+  font-size:34px; line-height:1; margin:0 0 6px;
+  letter-spacing:.01em; color:var(--ink);
+}
+.ident .who .line{
+  font-size:17px; color:var(--ink-soft);
+}
+.ident .who .line .sep{ color:var(--ink-faint); margin:0 .4em; }
+.ident .who .line b{ color:var(--brown); font-weight:600; }
+
+/* XP / advancement chip-row */
+.xp-rail{
+  display:flex; gap:16px; align-items:center; flex-wrap:wrap;
+  justify-content:flex-end;
+}
+.xp-track{ text-align:right; }
+.xp-track .cls{
+  font-family:var(--display); font-size:11px; letter-spacing:.12em;
+  text-transform:uppercase; color:var(--brown);
+}
+.xp-track .bar{
+  position:relative; width:150px; height:8px; margin:3px 0 2px auto;
+  background:var(--region-sunk); border:1px solid var(--hair);
+}
+.xp-track .bar > i{
+  position:absolute; inset:0 auto 0 0; background:var(--moss);
+  display:block;
+}
+.xp-track .num{ font-size:12px; color:var(--ink-soft); }
+.xp-track .num b{ color:var(--ink); font-variant-numeric: lining-nums tabular-nums; }
+
+/* ── main grid ───────────────────────────────────────────── */
+.grid{
+  display:grid;
+  grid-template-columns: 2.6fr 4.4fr 3.6fr;
+  gap:var(--gap);
+  margin-top:16px;
+  align-items:start;
+}
+@media (max-width:1080px){
+  .grid{ grid-template-columns: 1fr 1fr; }
+  .col-3{ grid-column:1 / -1; }
+}
+.col{ display:flex; flex-direction:column; gap:var(--gap); }
+
+/* ── region box ──────────────────────────────────────────── */
+.region{
+  background:var(--region);
+  border:1px solid var(--rule);
+  border-radius:var(--radius);
+  padding:10px 12px 12px;
+}
+.region > h2{
+  display:flex; align-items:center; gap:8px;
+  font-family:var(--display); font-weight:600;
+  font-size:11.5px; letter-spacing:.16em; text-transform:uppercase;
+  color:var(--brown); margin:0 0 9px;
+  padding-bottom:6px;
+  border-bottom:1px solid var(--rule);
+}
+.region > h2::before{
+  content:"◆"; color:var(--gilt); font-size:8px; transform:translateY(-1px);
+}
+.region > h2 .tools{ margin-left:auto; display:flex; gap:4px; }
+
+/* vitals strip (top-right quad) */
+.vitals{
+  display:grid;
+  grid-template-columns: repeat(4, minmax(82px, 1fr));
+  gap:10px;
+  align-self:end;
+}
+.stat{
+  position:relative;
+  background:var(--region);
+  border:1px solid var(--rule);
+  border-radius:var(--radius);
+  padding:7px 10px 8px;
+  text-align:center;
+  min-width:84px;
+}
+.stat .lbl{
+  font-family:var(--display); font-size:9.5px; letter-spacing:.13em;
+  text-transform:uppercase; color:var(--ink-soft); display:block;
+}
+.stat .big{
+  font-size:30px; line-height:1.05; font-weight:600; color:var(--ink);
+  font-variant-numeric: lining-nums tabular-nums;
+  display:block; margin-top:1px;
+}
+.stat .sub{ font-size:11px; color:var(--ink-faint); display:block; }
+.stat.alt{ background:var(--region-sunk); }
+.stat .hp-state{ font-size:10px; letter-spacing:.08em; text-transform:uppercase; }
+.is-alive{ color:var(--moss); } .is-dead{ color:var(--oxblood); font-weight:600; }
+
+/* ── abilities table ─────────────────────────────────────── */
+table.tight{ width:100%; border-collapse:collapse; }
+table.tight th, table.tight td{ padding:3px 5px; text-align:left; }
+table.tight td.n, table.tight th.n{ text-align:right; font-variant-numeric: lining-nums tabular-nums; }
+table.tight thead th{
+  font-family:var(--display); font-size:9.5px; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--ink-soft); font-weight:600;
+  border-bottom:1px solid var(--hair); padding-bottom:4px;
+}
+table.tight tbody tr + tr td{ border-top:1px dotted var(--hair); }
+
+.abil td:first-child{
+  font-family:var(--display); font-size:11px; letter-spacing:.06em;
+  text-transform:uppercase; color:var(--brown);
+}
+.abil .score{ font-size:20px; font-weight:600; font-variant-numeric: lining-nums tabular-nums; }
+.abil .mod{ color:var(--ink-soft); }
+.mark{ color:var(--gilt); font-weight:700; }   /* * modified marker */
+
+/* ── saving throws ───────────────────────────────────────── */
+.saves td:first-child{ color:var(--ink); }
+.saves .n{ font-size:16px; font-weight:600; }
+
+/* ── attacks ─────────────────────────────────────────────── */
+.atk th, .atk td{ padding:4px 5px; }
+.atk .wpn{ font-weight:500; }
+.atk tr.cond td{ color:var(--ink-soft); font-size:13px; padding-top:0; }
+.atk tr.cond td:first-child{ padding-left:18px; }
+.atk .dmg{ font-variant-numeric: lining-nums tabular-nums; }
+
+/* badges */
+.badge{
+  display:inline-block; font-family:var(--display); font-size:8.5px;
+  letter-spacing:.08em; text-transform:uppercase; font-weight:600;
+  padding:1px 5px; border-radius:2px; vertical-align:middle; margin-left:4px;
+}
+.badge.magic{ background:#efe2c4; color:var(--gilt); border:1px solid #d8c08a; }
+.badge.spec{ background:var(--moss-bg); color:var(--moss); border:1px solid #c3d49a; }
+.badge.warn{ background:#f3dcd8; color:var(--oxblood); border:1px solid #e0b3aa; }
+.badge.muted{ background:var(--region-sunk); color:var(--ink-faint); border:1px solid var(--hair); }
+
+/* ── feature / spell / item chips (click to expand) ──────── */
+.chips{ display:flex; flex-wrap:wrap; gap:5px; }
+.chip{
+  font-size:13px; line-height:1.1; padding:4px 9px;
+  background:var(--region-sunk); border:1px solid var(--hair); border-radius:2px;
+  cursor:pointer; color:var(--ink); text-align:left;
+  font-family:var(--body);
+}
+.chip:hover{ border-color:var(--brown); background:#efe6cd; }
+.chip .src{ color:var(--ink-faint); font-size:11px; }
+.chip.gilt{ border-left:3px solid var(--gilt); }
+
+/* compact key/value lines */
+.kv{ display:flex; justify-content:space-between; gap:8px; padding:3px 0; }
+.kv + .kv{ border-top:1px dotted var(--hair); }
+.kv .k{ color:var(--ink-soft); }
+.kv .v{ font-variant-numeric: lining-nums tabular-nums; }
+.kv .v.big{ font-size:17px; font-weight:600; }
+
+/* ── editable affordance ─────────────────────────────────── */
+.edit{
+  cursor:pointer; border-bottom:1px dashed var(--ink-faint);
+  position:relative; padding-right:14px;
+}
+.edit::after{
+  content:"✎"; position:absolute; right:0; top:50%; transform:translateY(-50%);
+  font-size:10px; color:var(--ink-faint); opacity:0; transition:opacity .12s;
+}
+.edit:hover{ background:#f3e9cf; }
+.edit:hover::after{ opacity:1; }
+.calc{ /* calculated value — printed, not editable */ }
+
+/* spell pips */
+.slot-row{ display:flex; align-items:center; gap:7px; padding:4px 0; }
+.slot-row + .slot-row{ border-top:1px dotted var(--hair); }
+.slot-lv{
+  font-family:var(--display); font-size:10px; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--brown); min-width:54px;
+}
+.pips{ display:flex; gap:4px; flex-wrap:wrap; flex:1; }
+.pip{
+  font-size:12px; padding:2px 8px; border-radius:10px; cursor:pointer;
+  border:1px solid var(--rule); background:var(--region-sunk); color:var(--ink);
+}
+.pip.spent{ text-decoration:line-through; color:var(--ink-faint); background:transparent; }
+.pip.free{ color:var(--ink-faint); border-style:dashed; cursor:pointer; }
+.pip:hover{ border-color:var(--brown); }
+
+/* inventory mini-columns */
+.inv-mini{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+.inv-mini h3{
+  font-family:var(--display); font-size:10px; letter-spacing:.12em;
+  text-transform:uppercase; color:var(--ink-soft); margin:0 0 5px;
+  border-bottom:1px dotted var(--hair); padding-bottom:3px;
+}
+.inv-mini ul{ list-style:none; margin:0; padding:0; }
+.inv-mini li{ font-size:13.5px; padding:2px 0; display:flex; justify-content:space-between; gap:6px; }
+.inv-mini li .q{ color:var(--ink-faint); font-variant-numeric: lining-nums tabular-nums; }
+.inv-mini .bag{ color:var(--brown); }
+.inv-mini .bag::before{ content:"▸ "; color:var(--gilt); }
+.add-row{
+  margin-top:8px; width:100%; text-align:left; font-style:italic;
+  color:var(--ink-faint); background:transparent; border:1px dashed var(--hair);
+  border-radius:2px; padding:5px 8px; cursor:pointer; font-family:var(--body); font-size:13px;
+}
+.add-row:hover{ border-color:var(--brown); color:var(--ink-soft); background:#f3e9cf; }
+
+/* notes */
+.notes-body{ white-space:pre-wrap; font-size:14px; color:var(--ink); min-height:48px; cursor:text; }
+.notes-body:hover{ background:#f3e9cf; }
+
+/* footer */
+.sheet-foot{
+  margin-top:18px; padding-top:12px; border-top:1px solid var(--rule);
+  font-size:12.5px; color:var(--ink-soft); display:flex; gap:20px; flex-wrap:wrap;
+}
+.sheet-foot b{ color:var(--brown); }
+
+/* ── buttons ─────────────────────────────────────────────── */
+.btn{
+  font-family:var(--display); font-size:10px; letter-spacing:.1em; text-transform:uppercase;
+  padding:5px 10px; border:1px solid var(--brown); background:var(--region);
+  color:var(--brown); border-radius:2px; cursor:pointer; line-height:1;
+}
+.btn:hover{ background:#efe2c2; }
+.btn.tool{ padding:3px 8px; font-size:9px; color:var(--ink-soft); border-color:var(--rule); }
+.btn.tool:hover{ color:var(--brown); border-color:var(--brown); }
+.btn.solid{ background:var(--brown); color:#f6efdb; }
+.btn.solid:hover{ background:#5c4530; }
+.btn.danger{ border-color:var(--oxblood); color:var(--oxblood); }
+.btn.danger:hover{ background:var(--oxblood); color:#f6efdb; }
+.btn.link{
+  border:none; background:none; text-transform:none; letter-spacing:0;
+  font-family:var(--body); font-size:13px; color:var(--oxblood);
+  padding:2px 4px; text-decoration:underline; text-underline-offset:2px;
+}
+.btn.link:hover{ color:var(--oxblood-dk); }
+
+/* form bits used inside overlays */
+label.f{ display:block; font-size:12px; color:var(--ink-soft); margin:0 0 10px; }
+label.f .lab{
+  font-family:var(--display); font-size:10px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--brown); display:block; margin-bottom:3px;
+}
+input[type=text], input[type=number], select, textarea{
+  font-family:var(--body); font-size:14px; color:var(--ink);
+  background:#fffdf6; border:1px solid var(--rule); border-radius:2px; padding:6px 8px;
+}
+input[type=number]{ width:5em; }
+textarea{ width:100%; resize:vertical; }
+.inline-form{ display:inline-flex; gap:6px; align-items:center; margin:0 0 8px; }
+.row-actions{ display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+
+/* ============================================================
+   OVERLAY SYSTEM — scrim + drawer + modal + popover
+   ============================================================ */
+.scrim{
+  position:fixed; inset:0; z-index:40; background:rgba(40,28,16,.34);
+  opacity:0; visibility:hidden; transition:opacity .18s;
+  -webkit-backdrop-filter:blur(1px); backdrop-filter:blur(1px);
+}
+.scrim.on{ opacity:1; visibility:visible; }
+
+.overlay{ position:fixed; z-index:50; display:none; }
+.overlay.on{ display:block; }
+
+/* drawer — slides from right */
+.overlay.drawer{
+  top:0; right:0; height:100vh; width:min(560px, 94vw);
+  background:var(--sheet); border-left:2px solid var(--brown);
+  box-shadow:-8px 0 30px rgba(40,25,10,.28);
+  transform:translateX(100%); transition:transform .22s ease;
+  display:flex; flex-direction:column;
+}
+.overlay.drawer.on{ display:flex; transform:translateX(0); }
+
+/* modal — centred dialog */
+.overlay.modal{
+  top:50%; left:50%; width:min(520px, 94vw); max-height:88vh;
+  transform:translate(-50%,-46%) scale(.98); opacity:0;
+  background:var(--sheet); border:2px solid var(--brown); border-radius:3px;
+  box-shadow:0 18px 50px rgba(40,25,10,.34);
+  transition:transform .18s ease, opacity .18s ease;
+  display:flex; flex-direction:column;
+}
+.overlay.modal.on{ display:flex; transform:translate(-50%,-50%) scale(1); opacity:1; }
+
+.ov-head{
+  display:flex; align-items:center; gap:10px;
+  padding:14px 18px; border-bottom:2px solid var(--brown); flex:none;
+  background:linear-gradient(180deg,#f1e7cd,var(--sheet));
+}
+.ov-head h3{
+  font-family:var(--display); font-weight:600; font-size:14px; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--brown); margin:0;
+}
+.ov-head .x{
+  margin-left:auto; border:none; background:none; cursor:pointer;
+  font-size:22px; line-height:1; color:var(--ink-soft); padding:0 4px;
+}
+.ov-head .x:hover{ color:var(--oxblood); }
+.ov-body{ padding:16px 18px; overflow:auto; }
+.ov-section{ margin-bottom:22px; }
+.ov-section > h4{
+  font-family:var(--display); font-size:11px; letter-spacing:.13em; text-transform:uppercase;
+  color:var(--brown); margin:0 0 8px; padding-bottom:4px; border-bottom:1px solid var(--rule);
+}
+
+/* popover — anchored micro-surface */
+.overlay.popover{
+  width:max-content; max-width:300px;
+  background:var(--sheet); border:1px solid var(--brown); border-radius:3px;
+  box-shadow:0 8px 24px rgba(40,25,10,.26); padding:12px 14px;
+  opacity:0; transform:translateY(-4px); transition:opacity .12s, transform .12s;
+}
+.overlay.popover.on{ opacity:1; transform:translateY(0); }
+.overlay.popover h4{
+  font-family:var(--display); font-size:10px; letter-spacing:.12em; text-transform:uppercase;
+  color:var(--brown); margin:0 0 8px;
+}
+
+/* drawer inner tables (inventory / shop) */
+.dtable{ width:100%; border-collapse:collapse; font-size:13px; margin-bottom:10px; }
+.dtable th{
+  font-family:var(--display); font-size:9px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--ink-soft); text-align:left; padding:4px 6px; border-bottom:1px solid var(--rule);
+}
+.dtable td{ padding:5px 6px; border-bottom:1px dotted var(--hair); vertical-align:middle; }
+.dtable td.n{ text-align:right; font-variant-numeric: lining-nums tabular-nums; }
+.dtable .child td:first-child{ padding-left:22px; color:var(--ink-soft); }
+.dtable .child td:first-child::before{ content:"↳ "; color:var(--gilt); }
+.search{
+  width:100%; margin-bottom:10px; padding:8px 10px; font-size:14px;
+  border:1px solid var(--rule); background:#fffdf6;
+}
+.shop-cat{
+  font-family:var(--display); font-size:11px; letter-spacing:.12em; text-transform:uppercase;
+  color:var(--brown); margin:16px 0 4px; border-bottom:1px solid var(--rule); padding-bottom:3px;
+}
+.out td{ color:var(--ink-faint); }
+.tabs{ display:flex; gap:4px; margin-bottom:14px; }
+.tab{
+  font-family:var(--display); font-size:10px; letter-spacing:.08em; text-transform:uppercase;
+  padding:6px 12px; border:1px solid var(--rule); background:var(--region-sunk);
+  color:var(--ink-soft); cursor:pointer; border-radius:2px;
+}
+.tab.on{ background:var(--brown); color:var(--sheet); border-color:var(--brown); }
+.hint{ font-size:12px; color:var(--ink-faint); font-style:italic; margin:2px 0 10px; }
+
+/* print: drop chrome & overlays */
+@media print{
+  body{ background:#fff; } body::before{ display:none; }
+  .topbar, .scrim, .overlay, .btn, .tools, .add-row{ display:none !important; }
+  .sheet{ border:none; box-shadow:none; margin:0; }
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="#" class="brand">AOSE Character Builder</a>
+  <nav><a href="#">All Characters</a><a href="#">Settings</a></nav>
+</div>
+
+<article class="sheet">
+
+  <!-- ════════ IDENTITY BAND ════════ -->
+  <header class="ident">
+    <div class="who">
+      <h1 class="edit" data-pop="pop-identity">Maelen Duskwarden</h1>
+      <div class="line">
+        <b>Elf</b><span class="sep">·</span>Fighter 2 / Magic-User 2<span class="sep">·</span><b>Neutral</b>
+      </div>
+    </div>
+    <div class="xp-rail">
+      <div class="xp-track">
+        <div class="cls">Fighter — L2</div>
+        <div class="bar"><i style="right:46%"></i></div>
+        <div class="num"><b>4,200</b> / 8,000</div>
+      </div>
+      <div class="xp-track">
+        <div class="cls">Magic-User — L2</div>
+        <div class="bar"><i style="right:30%"></i></div>
+        <div class="num"><b>3,100</b> / 5,000</div>
+      </div>
+      <button class="btn tool" data-modal="modal-advance">Advancement</button>
+    </div>
+  </header>
+
+  <!-- ════════ MAIN GRID ════════ -->
+  <div class="grid">
+
+    <!-- ─── COLUMN 1 : abilities · saves ─── -->
+    <div class="col col-1">
+
+      <section class="region">
+        <h2>Abilities</h2>
+        <table class="tight abil">
+          <thead><tr><th>Score</th><th class="n">Value</th><th class="n">Mod</th><th class="n">Temp</th></tr></thead>
+          <tbody>
+            <tr><td>Str</td><td class="n"><span class="score">18</span><span class="mark" title="modified by Gauntlets of Ogre Power">*</span></td><td class="n mod">+3</td>
+                <td class="n edit" data-pop="pop-temp" data-ability="Str">0</td></tr>
+            <tr><td>Int</td><td class="n"><span class="score">16</span></td><td class="n mod">+2</td>
+                <td class="n edit" data-pop="pop-temp" data-ability="Int">0</td></tr>
+            <tr><td>Wis</td><td class="n"><span class="score">9</span></td><td class="n mod">0</td>
+                <td class="n edit" data-pop="pop-temp" data-ability="Wis">0</td></tr>
+            <tr><td>Dex</td><td class="n"><span class="score">15</span></td><td class="n mod">+1</td>
+                <td class="n edit" data-pop="pop-temp" data-ability="Dex">0</td></tr>
+            <tr><td>Con</td><td class="n"><span class="score">11</span></td><td class="n mod">0</td>
+                <td class="n edit" data-pop="pop-temp" data-ability="Con">0</td></tr>
+            <tr><td>Cha</td><td class="n"><span class="score">12</span></td><td class="n mod">0</td>
+                <td class="n edit" data-pop="pop-temp" data-ability="Cha">0</td></tr>
+          </tbody>
+        </table>
+        <p class="hint" style="margin:6px 0 0"><span class="mark">*</span> Str base 13, +5 equipment → 18.</p>
+      </section>
+
+      <section class="region">
+        <h2>Saving Throws</h2>
+        <table class="tight saves">
+          <tbody>
+            <tr><td>Death / Poison</td><td class="n">12</td></tr>
+            <tr><td>Magic Wands</td><td class="n">13</td></tr>
+            <tr><td>Paralysis / Petrify</td><td class="n">13</td></tr>
+            <tr><td>Breath Attacks</td><td class="n">15</td></tr>
+            <tr><td>Spells / Rods / Staves</td><td class="n">15</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="region">
+        <h2>Languages</h2>
+        <p style="margin:0; font-size:14px;">Common, Elvish, Gnoll, Orcish</p>
+      </section>
+
+    </div><!-- /col-1 -->
+
+    <!-- ─── COLUMN 2 : vitals · attacks · features ─── -->
+    <div class="col col-2">
+
+      <div class="vitals">
+        <div class="stat">
+          <span class="lbl">Hit Points</span>
+          <span class="big edit" data-pop="pop-hp">11<span style="font-size:18px;color:var(--ink-faint)"> / 14</span></span>
+          <span class="hp-state is-alive">Alive</span>
+        </div>
+        <div class="stat alt">
+          <span class="lbl">Armour Class</span>
+          <span class="big calc">4</span>
+          <span class="sub">asc 15</span>
+        </div>
+        <div class="stat alt">
+          <span class="lbl">THAC0</span>
+          <span class="big calc">18</span>
+          <span class="sub">attack +1</span>
+        </div>
+        <div class="stat">
+          <span class="lbl">Movement</span>
+          <span class="big calc">90<span style="font-size:14px">′</span></span>
+          <span class="sub">30′ enc.</span>
+        </div>
+      </div>
+
+      <section class="region">
+        <h2>Attacks
+          <span class="tools"><button class="btn tool" data-drawer="drawer-equip">Manage</button></span>
+        </h2>
+        <table class="tight atk">
+          <thead><tr><th>Weapon</th><th class="n">THAC0</th><th>Damage</th><th>Range</th></tr></thead>
+          <tbody>
+            <tr><td class="wpn">Long Sword +1 <span class="badge magic">+1</span><span class="badge spec">spec</span></td>
+                <td class="n">16</td><td class="dmg">1d8+5</td><td>—</td></tr>
+            <tr class="cond"><td>vs. dragons</td><td class="n">15</td><td class="dmg">1d8+8</td><td>—</td></tr>
+            <tr><td class="wpn">Short Bow <span class="badge muted">[arrows ×19]</span></td>
+                <td class="n">18</td><td class="dmg">1d6</td><td>50/100/150′</td></tr>
+            <tr><td class="wpn">Dagger</td><td class="n">18</td><td class="dmg">1d4+3</td><td>10/20/30′</td></tr>
+            <tr><td class="wpn" style="color:var(--ink-soft)">Unarmed</td><td class="n">18</td><td class="dmg">1d2+3</td><td>—</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="region">
+        <h2>Class &amp; Race Features</h2>
+        <div class="chips">
+          <button class="chip" data-modal="modal-feature" data-title="Infravision 60′"
+            data-text="Maelen can see in the dark up to 60 feet, perceiving heat and cold as shades of red and blue.">Infravision 60′ <span class="src">· Elf</span></button>
+          <button class="chip" data-modal="modal-feature" data-title="Detect Secret Doors"
+            data-text="When actively searching, an elf finds secret and concealed doors on a 1–2 on 1d6 (rather than 1 only). Merely passing within 10′ of a secret door grants a 1-in-6 chance to notice it.">Detect Secret Doors <span class="src">· Elf</span></button>
+          <button class="chip" data-modal="modal-feature" data-title="Immunity to Ghoul Paralysis"
+            data-text="Elves are wholly unaffected by the paralysing touch of ghouls.">Ghoul Immunity <span class="src">· Elf</span></button>
+          <button class="chip" data-modal="modal-feature" data-title="Combat Options"
+            data-text="As a Fighter, Maelen may use any weapon and armour, and benefits from the optional combat manoeuvres (e.g. defensive fighting, parrying).">Fighter Combat <span class="src">· Fighter</span></button>
+          <button class="chip gilt" data-modal="modal-feature" data-title="Arcane Magic"
+            data-text="Maelen casts arcane spells from a personal spellbook, memorising a limited number each day. Spells must be copied into the book before they can be prepared.">Arcane Magic <span class="src">· Magic-User</span></button>
+        </div>
+      </section>
+
+      <section class="region">
+        <h2>Weapon Proficiencies
+          <span class="tools"><span class="badge muted">2 / 3 slots</span></span>
+        </h2>
+        <p class="hint" style="margin:0 0 6px">Non-proficient attacks: −2 to hit.</p>
+        <table class="tight">
+          <tbody>
+            <tr><td>Long Sword</td><td class="n"><span class="badge spec">specialised</span> 1d8</td></tr>
+            <tr><td>Short Bow</td><td class="n">1d6</td></tr>
+            <tr><td>Dagger</td><td class="n">1d4</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="region">
+        <h2>Notes</h2>
+        <div class="notes-body" data-modal="modal-notes">Owes 200gp to the Thieves' Guild of Threshold.
+Carries a sealed letter for the Grey Tower — do not open.
+Allergic to silver (roleplay only).</div>
+      </section>
+
+    </div><!-- /col-2 -->
+
+    <!-- ─── COLUMN 3 : spells · treasure · encumbrance ─── -->
+    <div class="col col-3">
+
+      <!-- Class-adaptive: shown only for spellcasters. A pure Fighter
+           would omit this entire region. -->
+      <section class="region">
+        <h2>Spells — Arcane
+          <span class="tools"><button class="btn tool" data-drawer="drawer-spells">Manage</button></span>
+        </h2>
+        <div class="slot-row">
+          <span class="slot-lv">Level 1</span>
+          <div class="pips">
+            <span class="pip" data-modal="modal-spell" data-title="Magic Missile" data-text="A glowing dart of magical energy darts forth, unerringly striking its target for 1d6+1 damage. No attack roll required."  >Magic Missile</span>
+            <span class="pip spent" data-modal="modal-spell" data-title="Sleep" data-text="A magical slumber descends on 2d8 Hit Dice of creatures within a 40′ radius. Creatures with fewer HD are affected first. No save.">Sleep · spent</span>
+          </div>
+        </div>
+        <div class="kv" style="margin-top:8px">
+          <span class="k">Spellbook</span>
+          <span class="v">6 spells known</span>
+        </div>
+        <div class="chips" style="margin-top:6px">
+          <button class="chip" data-modal="modal-spell" data-title="Magic Missile" data-text="A glowing dart of magical energy darts forth, unerringly striking its target for 1d6+1 damage.">Magic Missile</button>
+          <button class="chip" data-modal="modal-spell" data-title="Sleep" data-text="2d8 HD of creatures fall asleep, no save.">Sleep</button>
+          <button class="chip" data-modal="modal-spell" data-title="Shield" data-text="An invisible barrier grants AC 2 (asc 17) vs. missiles and AC 4 (asc 15) in melee for the duration.">Shield</button>
+          <button class="chip" data-modal="modal-spell" data-title="Charm Person" data-text="One humanoid must save versus spells or regard the caster as a trusted friend.">Charm Person</button>
+          <button class="chip" data-modal="modal-spell" data-title="Detect Magic" data-text="Magical auras within 60′ glow visibly to the caster for 2 turns.">Detect Magic</button>
+          <button class="chip" data-modal="modal-spell" data-title="Read Magic" data-text="The caster can read otherwise unintelligible magical writings and scrolls.">Read Magic</button>
+        </div>
+      </section>
+
+      <section class="region">
+        <h2>Spell Books &amp; Scrolls
+          <span class="tools"><button class="btn tool" data-drawer="drawer-spells">Manage</button></span>
+        </h2>
+        <div class="kv"><span class="k bag" style="color:var(--brown)">Maelen's Travelling Spellbook</span><span class="v">6</span></div>
+        <div class="kv"><span class="k bag" style="color:var(--brown)">Scroll of Fireball</span><span class="v badge muted">L3 · arcane</span></div>
+      </section>
+
+      <section class="region">
+        <h2>Coins &amp; Treasure
+          <span class="tools"><button class="btn tool" data-pop="pop-coins">Coins</button>
+          <button class="btn tool" data-drawer="drawer-valuables">Valuables</button></span>
+        </h2>
+        <div class="kv"><span class="k">Spendable gold</span><span class="v big">142 gp</span></div>
+        <div class="kv"><span class="k">Purse</span><span class="v">0 pp · 142 gp · 0 ep · 30 sp · 18 cp</span></div>
+        <div class="kv"><span class="k">Gems</span><span class="v">3 · 700 gp</span></div>
+        <div class="kv"><span class="k">Jewellery</span><span class="v">1 · 700 gp</span></div>
+        <div class="kv"><span class="k">Treasure value</span><span class="v big" style="color:var(--gilt)">1,415 gp</span></div>
+      </section>
+
+      <section class="region">
+        <h2>Encumbrance</h2>
+        <div class="kv"><span class="k">Carried</span><span class="v">540 / 1,600 cn</span></div>
+        <div class="kv"><span class="k">Band</span><span class="v" style="color:var(--moss)">Lightly loaded → 90′</span></div>
+        <details style="margin-top:8px">
+          <summary class="btn tool" style="display:inline-block">Movement thresholds</summary>
+          <table class="tight" style="margin-top:8px">
+            <thead><tr><th>Max weight</th><th class="n">Move</th></tr></thead>
+            <tbody>
+              <tr><td>up to 400 cn</td><td class="n">120′</td></tr>
+              <tr style="background:var(--moss-bg);color:var(--moss);font-weight:600"><td>up to 600 cn</td><td class="n">90′</td></tr>
+              <tr><td>up to 800 cn</td><td class="n">60′</td></tr>
+              <tr><td>up to 1,600 cn</td><td class="n">30′</td></tr>
+            </tbody>
+          </table>
+        </details>
+      </section>
+
+      <section class="region">
+        <h2>Rest</h2>
+        <div class="row-actions">
+          <button class="btn" data-modal="modal-rest">Rest &amp; Memorise</button>
+          <button class="btn" data-modal="modal-rest">Full Day</button>
+        </div>
+      </section>
+
+    </div><!-- /col-3 -->
+  </div><!-- /grid -->
+
+  <!-- ════════ EQUIPMENT STRIP ════════ -->
+  <section class="region" style="margin-top:var(--gap)">
+    <h2>Equipment &amp; Inventory
+      <span class="tools">
+        <span class="badge muted">540 cn carried</span>
+        <button class="btn tool solid" data-drawer="drawer-equip">Manage equipment</button>
+      </span>
+    </h2>
+    <div class="inv-mini">
+      <div>
+        <h3>Equipped</h3>
+        <ul>
+          <li><span>Chainmail</span><span class="q">400</span></li>
+          <li><span>Shield</span><span class="q">100</span></li>
+          <li><span>Long Sword +1</span><span class="q">60</span></li>
+        </ul>
+      </div>
+      <div>
+        <h3>Carried</h3>
+        <ul>
+          <li><span>Short Bow</span><span class="q">30</span></li>
+          <li><span>Dagger</span><span class="q">10</span></li>
+          <li class="bag"><span>Backpack</span><span class="q">80</span></li>
+          <li><span>Rope, 50′</span><span class="q">↳ 50</span></li>
+          <li><span>Rations, iron ×7</span><span class="q">↳ 140</span></li>
+          <li><span>Torches ×6</span><span class="q">↳ 120</span></li>
+        </ul>
+      </div>
+      <div>
+        <h3>Stashed</h3>
+        <ul>
+          <li><span>Tent</span><span class="q">—</span></li>
+          <li><span>Wineskin</span><span class="q">—</span></li>
+        </ul>
+        <button class="add-row" data-drawer="drawer-equip">+ add or buy an item…</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════ MAGIC ITEMS ════════ -->
+  <section class="region" style="margin-top:var(--gap)">
+    <h2>Magic Items
+      <span class="tools"><button class="btn tool" data-drawer="drawer-equip">Manage</button></span>
+    </h2>
+    <div class="chips">
+      <button class="chip gilt" data-modal="modal-feature" data-title="Gauntlets of Ogre Power"
+        data-text="These gauntlets set the wearer's Strength to 18 while worn, granting +3 to hit and damage with melee weapons and improved feats of strength.">Gauntlets of Ogre Power <span class="src">· worn · Str → 18</span></button>
+      <button class="chip gilt" data-modal="modal-feature" data-title="Ring of Protection +1"
+        data-text="Grants a +1 bonus to Armour Class and a +1 bonus to all saving throws, so long as the ring is worn.">Ring of Protection +1 <span class="src">· worn · +1 AC, +1 saves</span></button>
+      <button class="chip gilt" data-modal="modal-feature" data-title="Potion of Healing ×2"
+        data-text="Each draught restores 1d6+1 hit points. Two doses remain.">Potion of Healing <span class="src">· ×2</span></button>
+    </div>
+  </section>
+
+  <!-- ════════ FOOTER ════════ -->
+  <footer class="sheet-foot">
+    <span>Encumbrance: <b>Detailed</b> — movement by total weight.</span>
+    <span>Optional rules: <b>Weapon Proficiency, Multiclassing, Variable Weapon Damage</b></span>
+  </footer>
+
+</article>
+
+<!-- ════════════════════════════════════════════════════════
+     OVERLAYS
+     ════════════════════════════════════════════════════════ -->
+<div class="scrim" id="scrim"></div>
+
+<!-- ── DRAWER: Equipment & shop ── -->
+<aside class="overlay drawer" id="drawer-equip" role="dialog" aria-label="Manage equipment">
+  <div class="ov-head">
+    <h3>Equipment</h3>
+    <span class="badge muted" style="margin-left:6px">Gold: 142 gp</span>
+    <button class="x" data-close aria-label="Close">×</button>
+  </div>
+  <div class="ov-body">
+    <div class="tabs" id="equip-tabs">
+      <button class="tab on" data-tab="inv">Inventory</button>
+      <button class="tab" data-tab="magic">Magic</button>
+      <button class="tab" data-tab="shop">Shop</button>
+    </div>
+
+    <div data-pane="inv">
+      <div class="ov-section">
+        <h4>Equipped</h4>
+        <table class="dtable">
+          <tbody>
+            <tr><td>Chainmail</td><td class="n">400 cn</td><td class="n"><button class="btn link">unequip</button> <button class="btn link">stash</button></td></tr>
+            <tr><td>Shield</td><td class="n">100 cn</td><td class="n"><button class="btn link">unequip</button> <button class="btn link">stash</button></td></tr>
+            <tr><td>Long Sword +1</td><td class="n">60 cn</td><td class="n"><button class="btn link">unequip</button></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="ov-section">
+        <h4>Carried</h4>
+        <table class="dtable">
+          <tbody>
+            <tr><td>Short Bow</td><td class="n">30 cn</td><td class="n"><button class="btn link">equip</button> <button class="btn link">stow</button> <button class="btn link">drop</button></td></tr>
+            <tr><td>Dagger ×1</td><td class="n">10 cn</td><td class="n"><button class="btn link">equip</button> <button class="btn link">stow</button> <button class="btn link">drop</button></td></tr>
+            <tr><td><strong>Backpack</strong> <span class="badge muted">310 / 400 cn</span></td><td class="n">390 cn</td><td class="n"><button class="btn link">stash</button></td></tr>
+            <tr class="child"><td>Rope, 50′</td><td class="n">50 cn</td><td class="n"><button class="btn link">take out</button></td></tr>
+            <tr class="child"><td>Iron Rations ×7</td><td class="n">140 cn</td><td class="n"><button class="btn link">take out</button></td></tr>
+            <tr class="child"><td>Torches ×6</td><td class="n">120 cn</td><td class="n"><button class="btn link">take out</button></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="ov-section">
+        <h4>Stashed <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--ink-faint)">— off-person, no weight</span></h4>
+        <table class="dtable">
+          <tbody>
+            <tr><td>Tent</td><td class="n">—</td><td class="n"><button class="btn link">unstash</button> <button class="btn link">drop</button></td></tr>
+            <tr><td>Wineskin</td><td class="n">—</td><td class="n"><button class="btn link">unstash</button> <button class="btn link">drop</button></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="ov-section">
+        <h4>Ammunition</h4>
+        <table class="dtable">
+          <tbody>
+            <tr><td>Arrows</td><td class="n">19</td><td class="n"><button class="btn tool">+</button> <button class="btn tool">−</button> <button class="btn link">load to Short Bow</button></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div data-pane="magic" hidden>
+      <div class="ov-section">
+        <h4>Owned Magic Items</h4>
+        <table class="dtable">
+          <tbody>
+            <tr><td><strong>Gauntlets of Ogre Power</strong><br><span class="badge magic">Str → 18</span></td><td class="n">worn</td><td class="n"><button class="btn link">unequip</button> <button class="btn link">remove</button></td></tr>
+            <tr><td><strong>Ring of Protection +1</strong><br><span class="badge magic">+1 AC</span> <span class="badge magic">+1 saves</span></td><td class="n">worn</td><td class="n"><button class="btn link">unequip</button> <button class="btn link">remove</button></td></tr>
+            <tr><td><strong>Potion of Healing</strong> ×2</td><td class="n">—</td><td class="n"><button class="btn link">use one</button> <button class="btn link">remove</button></td></tr>
+            <tr><td><strong>Long Sword +1</strong> <span class="badge magic">+1 / +3 vs dragons</span></td><td class="n">equipped</td><td class="n"><button class="btn link">unequip</button></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="ov-section">
+        <h4>Add Enchanted Item <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--ink-faint)">— GM grant</span></h4>
+        <label class="f"><span class="lab">Enchantment</span>
+          <select><option>Sword +1</option><option>Sword +1, +3 vs dragons</option><option>Armour +1</option><option>Shield +1</option></select></label>
+        <label class="f"><span class="lab">Base item</span>
+          <select><option>Long Sword</option><option>Short Sword</option><option>Battle Axe</option></select></label>
+        <button class="btn solid">Add (GM grant)</button>
+      </div>
+    </div>
+
+    <div data-pane="shop" hidden>
+      <input type="text" class="search" placeholder="Search items by name…">
+      <div class="shop-cat">Weapons</div>
+      <table class="dtable">
+        <thead><tr><th>Item</th><th class="n">Cost</th><th class="n">Weight</th><th></th></tr></thead>
+        <tbody>
+          <tr><td>Battle Axe</td><td class="n">7 gp</td><td class="n">50 cn</td><td class="n"><button class="btn tool">Buy</button> <button class="btn link">add</button></td></tr>
+          <tr><td>War Hammer</td><td class="n">5 gp</td><td class="n">30 cn</td><td class="n"><button class="btn tool">Buy</button> <button class="btn link">add</button></td></tr>
+          <tr class="out"><td>Plate Mail</td><td class="n">450 gp</td><td class="n">500 cn</td><td class="n"><button class="btn tool" disabled>Buy</button> <button class="btn link">add</button></td></tr>
+        </tbody>
+      </table>
+      <div class="shop-cat">Adventuring Gear</div>
+      <table class="dtable">
+        <thead><tr><th>Item</th><th class="n">Cost</th><th class="n">Weight</th><th></th></tr></thead>
+        <tbody>
+          <tr><td>Lantern</td><td class="n">10 gp</td><td class="n">30 cn</td><td class="n"><button class="btn tool">Buy</button> <button class="btn link">add</button></td></tr>
+          <tr><td>Holy Water (vial)</td><td class="n">25 gp</td><td class="n">5 cn</td><td class="n"><button class="btn tool">Buy</button> <button class="btn link">add</button></td></tr>
+          <tr><td>Grappling Hook</td><td class="n">25 gp</td><td class="n">80 cn</td><td class="n"><button class="btn tool">Buy</button> <button class="btn link">add</button></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</aside>
+
+<!-- ── DRAWER: Spells ── -->
+<aside class="overlay drawer" id="drawer-spells" role="dialog" aria-label="Manage spells">
+  <div class="ov-head"><h3>Spells — Magic-User</h3><button class="x" data-close>×</button></div>
+  <div class="ov-body">
+    <div class="ov-section">
+      <h4>Memorised — Level 1 <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--ink-faint)">2 / 2 slots</span></h4>
+      <table class="dtable">
+        <tbody>
+          <tr><td>Magic Missile</td><td class="n"><button class="btn link">cast</button> <button class="btn link">clear</button></td></tr>
+          <tr><td style="color:var(--ink-faint);text-decoration:line-through">Sleep</td><td class="n"><button class="btn link">restore</button> <button class="btn link">clear</button></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="ov-section">
+      <h4>Spellbook — Known</h4>
+      <p class="hint">Memorise a known spell into a free slot, or copy new spells from a source below.</p>
+      <table class="dtable">
+        <tbody>
+          <tr><td>Magic Missile <span class="badge muted">L1</span></td><td class="n"><button class="btn link">memorise</button> <button class="btn link">forget</button></td></tr>
+          <tr><td>Sleep <span class="badge muted">L1</span></td><td class="n"><button class="btn link">memorise</button> <button class="btn link">forget</button></td></tr>
+          <tr><td>Shield <span class="badge muted">L1</span></td><td class="n"><button class="btn link">memorise</button> <button class="btn link">forget</button></td></tr>
+          <tr><td>Charm Person <span class="badge muted">L1</span></td><td class="n"><button class="btn link">memorise</button> <button class="btn link">forget</button></td></tr>
+          <tr><td>Detect Magic <span class="badge muted">L1</span></td><td class="n"><button class="btn link">memorise</button> <button class="btn link">forget</button></td></tr>
+          <tr><td>Read Magic <span class="badge muted">L1</span></td><td class="n"><button class="btn link">memorise</button> <button class="btn link">forget</button></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="ov-section">
+      <h4>Spell Books &amp; Scrolls</h4>
+      <table class="dtable">
+        <tbody>
+          <tr><td><strong>Maelen's Travelling Spellbook</strong> <span class="badge muted">6 spells</span></td><td class="n"><button class="btn link">remove</button></td></tr>
+          <tr class="child"><td>Fireball <span class="badge muted">L3</span></td><td class="n"><button class="btn link">copy to book</button></td></tr>
+          <tr><td><strong>Scroll of Fireball</strong> <span class="badge muted">arcane</span></td><td class="n"><button class="btn link">cast</button> <button class="btn link">remove</button></td></tr>
+        </tbody>
+      </table>
+      <button class="btn" style="margin-top:6px">+ Add spell book or scroll</button>
+    </div>
+  </div>
+</aside>
+
+<!-- ── DRAWER: Gems & Jewellery ── -->
+<aside class="overlay drawer" id="drawer-valuables" role="dialog" aria-label="Gems and jewellery">
+  <div class="ov-head"><h3>Gems &amp; Jewellery</h3><button class="x" data-close>×</button></div>
+  <div class="ov-body">
+    <div class="ov-section">
+      <h4>Gems</h4>
+      <table class="dtable">
+        <thead><tr><th>Value</th><th class="n">Count</th><th class="n">Total</th><th></th></tr></thead>
+        <tbody>
+          <tr><td>500 gp <span class="src">amethyst</span></td><td class="n">1</td><td class="n">500 gp</td><td class="n"><button class="btn link">sell</button> <button class="btn link">drop</button></td></tr>
+          <tr><td>100 gp <span class="src">sapphire</span></td><td class="n">2</td><td class="n">200 gp</td><td class="n"><button class="btn link">sell one</button> <button class="btn link">sell all</button></td></tr>
+        </tbody>
+      </table>
+      <button class="btn" style="margin-top:4px">+ Add gem</button>
+    </div>
+    <div class="ov-section">
+      <h4>Jewellery</h4>
+      <table class="dtable">
+        <tbody>
+          <tr><td>Gold necklace <span class="src">700 gp</span></td><td class="n"><button class="btn link">mark damaged</button> <button class="btn link">sell</button> <button class="btn link">drop</button></td></tr>
+        </tbody>
+      </table>
+      <button class="btn" style="margin-top:4px">+ Add jewellery</button>
+    </div>
+    <p class="hint">Gems &amp; jewellery value: <strong>1,400 gp</strong> — weight 12 cn.</p>
+  </div>
+</aside>
+
+<!-- ── MODAL: Feature / Spell / Magic-item detail (reused) ── -->
+<div class="overlay modal" id="modal-feature" role="dialog" aria-label="Detail">
+  <div class="ov-head"><h3 data-role="title">Detail</h3><button class="x" data-close>×</button></div>
+  <div class="ov-body"><p data-role="text" style="font-size:15px;margin:0"></p></div>
+</div>
+<div class="overlay modal" id="modal-spell" role="dialog" aria-label="Spell">
+  <div class="ov-head"><h3 data-role="title">Spell</h3><button class="x" data-close>×</button></div>
+  <div class="ov-body">
+    <p data-role="text" style="font-size:15px"></p>
+    <div class="row-actions" style="margin-top:14px">
+      <button class="btn solid">Memorise</button>
+      <button class="btn">Cast</button>
+      <button class="btn link">Clear from slot</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL: Advancement ── -->
+<div class="overlay modal" id="modal-advance" role="dialog" aria-label="Advancement">
+  <div class="ov-head"><h3>Advancement</h3><button class="x" data-close>×</button></div>
+  <div class="ov-body">
+    <div class="ov-section">
+      <h4>Fighter — Level 2</h4>
+      <div class="kv"><span class="k">Experience</span><span class="v">4,200 / 8,000</span></div>
+      <button class="btn" disabled style="margin-top:6px">Level Up → 3 (need 8,000)</button>
+    </div>
+    <div class="ov-section">
+      <h4>Magic-User — Level 2</h4>
+      <div class="kv"><span class="k">Experience</span><span class="v">3,100 / 5,000</span></div>
+      <button class="btn" disabled style="margin-top:6px">Level Up → 3 (need 5,000)</button>
+    </div>
+    <div class="ov-section">
+      <h4>Award Experience</h4>
+      <div class="inline-form"><input type="number" value="500" step="50"><button class="btn solid">Grant XP</button></div>
+      <p class="hint">XP is split evenly across classes and scaled by each prime-requisite.</p>
+    </div>
+    <div class="ov-section">
+      <h4>Energy Drain</h4>
+      <div class="inline-form"><input type="number" value="1" min="1"><button class="btn danger">Drain Level</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL: Notes editor ── -->
+<div class="overlay modal" id="modal-notes" role="dialog" aria-label="Edit notes">
+  <div class="ov-head"><h3>Notes</h3><button class="x" data-close>×</button></div>
+  <div class="ov-body">
+    <textarea rows="8">Owes 200gp to the Thieves' Guild of Threshold.
+Carries a sealed letter for the Grey Tower — do not open.
+Allergic to silver (roleplay only).</textarea>
+    <div class="row-actions" style="margin-top:12px"><button class="btn solid" data-close>Save notes</button></div>
+  </div>
+</div>
+
+<!-- ── MODAL: Rest ── -->
+<div class="overlay modal" id="modal-rest" role="dialog" aria-label="Rest">
+  <div class="ov-head"><h3>Rest</h3><button class="x" data-close>×</button></div>
+  <div class="ov-body">
+    <label class="f"><span class="lab">Spell loadout</span>
+      <select><option>Restore previous</option><option>Clear all</option><option>Keep as-is</option></select></label>
+    <label class="f"><span class="lab">Healing (1d3, full day only)</span>
+      <input type="number" value="2" min="0" max="3"></label>
+    <div class="row-actions"><button class="btn solid" data-close>Rest &amp; Memorise</button><button class="btn" data-close>Full Day Rest</button></div>
+  </div>
+</div>
+
+<!-- ── POPOVER: HP ── -->
+<div class="overlay popover" id="pop-hp" role="dialog" aria-label="Hit points">
+  <h4>Hit Points — 11 / 14</h4>
+  <div class="inline-form"><input type="number" value="1" min="0"><button class="btn">Damage</button></div><br>
+  <div class="inline-form"><input type="number" value="1" min="0"><button class="btn">Heal</button></div><br>
+  <div class="inline-form"><input type="number" value="11" min="0" max="14"><button class="btn solid">Set</button></div>
+</div>
+
+<!-- ── POPOVER: Ability temp modifier ── -->
+<div class="overlay popover" id="pop-temp" role="dialog" aria-label="Temporary modifier">
+  <h4><span data-role="ability">Ability</span> — temporary</h4>
+  <div class="inline-form"><input type="number" value="0" step="1"><button class="btn solid" data-close>Set</button></div>
+  <p class="hint" style="margin:4px 0 0">Signed modifier, e.g. −2 for drain.</p>
+</div>
+
+<!-- ── POPOVER: Coins ── -->
+<div class="overlay popover" id="pop-coins" role="dialog" aria-label="Coin purse" style="max-width:260px">
+  <h4>Coin Purse</h4>
+  <table class="dtable" style="margin-bottom:8px">
+    <tbody>
+      <tr><td>Platinum</td><td class="n">0</td><td class="n"><input type="number" value="0" style="width:3.4em"></td></tr>
+      <tr><td>Gold</td><td class="n">142</td><td class="n"><input type="number" value="0" style="width:3.4em"></td></tr>
+      <tr><td>Electrum</td><td class="n">0</td><td class="n"><input type="number" value="0" style="width:3.4em"></td></tr>
+      <tr><td>Silver</td><td class="n">30</td><td class="n"><input type="number" value="0" style="width:3.4em"></td></tr>
+      <tr><td>Copper</td><td class="n">18</td><td class="n"><input type="number" value="0" style="width:3.4em"></td></tr>
+    </tbody>
+  </table>
+  <button class="btn solid">Apply</button>
+  <p class="hint" style="margin:8px 0 4px">Convert</p>
+  <div class="inline-form" style="margin:0">
+    <input type="number" value="1" min="1" style="width:3.4em">
+    <select><option>sp</option><option>gp</option><option>cp</option></select> →
+    <select><option>gp</option><option>sp</option></select>
+    <button class="btn">Go</button>
+  </div>
+</div>
+
+<!-- ── POPOVER: Identity ── -->
+<div class="overlay popover" id="pop-identity" role="dialog" aria-label="Edit identity">
+  <h4>Identity</h4>
+  <label class="f"><span class="lab">Name</span><input type="text" value="Maelen Duskwarden" style="width:200px"></label>
+  <label class="f" style="margin-bottom:0"><span class="lab">Alignment</span>
+    <select><option>Lawful</option><option selected>Neutral</option><option>Chaotic</option></select></label>
+  <div class="row-actions" style="margin-top:10px"><button class="btn solid" data-close>Save</button></div>
+</div>
+
+<script>
+/* ============================================================
+   Overlay controller — one open surface at a time.
+   Triggers carry one of: data-drawer / data-modal / data-pop
+   Close via [data-close], scrim click, or Escape.
+   Modals & popovers can be "templated": a trigger may carry
+   data-title / data-text / data-ability that fill [data-role].
+   ============================================================ */
+(function(){
+  const scrim = document.getElementById('scrim');
+  let current = null;
+  let lastTrigger = null;
+
+  function closeAll(){
+    document.querySelectorAll('.overlay.on').forEach(o => o.classList.remove('on'));
+    scrim.classList.remove('on');
+    current = null;
+    if (lastTrigger){ try{ lastTrigger.focus({preventScroll:true}); }catch(e){} lastTrigger = null; }
+  }
+
+  function fillTemplate(panel, trigger){
+    const t = trigger.dataset;
+    panel.querySelectorAll('[data-role="title"]').forEach(el => { if (t.title) el.textContent = t.title; });
+    panel.querySelectorAll('[data-role="text"]').forEach(el => { if (t.text) el.textContent = t.text; });
+    panel.querySelectorAll('[data-role="ability"]').forEach(el => { if (t.ability) el.textContent = t.ability; });
+  }
+
+  function positionPopover(panel, trigger){
+    const r = trigger.getBoundingClientRect();
+    panel.style.visibility = 'hidden'; panel.classList.add('on');
+    const pw = panel.offsetWidth, ph = panel.offsetHeight;
+    panel.classList.remove('on'); panel.style.visibility = '';
+    let left = r.left;
+    let top = r.bottom + 6;
+    if (left + pw > window.innerWidth - 10) left = window.innerWidth - pw - 10;
+    if (left < 10) left = 10;
+    if (top + ph > window.innerHeight - 10) top = Math.max(10, r.top - ph - 6);
+    panel.style.left = left + 'px';
+    panel.style.top = top + 'px';
+  }
+
+  function open(id, type, trigger){
+    closeAll();
+    const panel = document.getElementById(id);
+    if (!panel) return;
+    lastTrigger = trigger;
+    if (trigger) fillTemplate(panel, trigger);
+    if (type === 'pop') positionPopover(panel, trigger);
+    // popovers get a light scrim too so click-away closes; drawers/modals get full scrim
+    scrim.classList.add('on');
+    requestAnimationFrame(() => panel.classList.add('on'));
+    current = panel;
+    const focusable = panel.querySelector('input,select,textarea,button:not(.x)');
+    if (focusable && type !== 'pop') setTimeout(()=>{ try{focusable.focus();}catch(e){} }, 60);
+  }
+
+  document.addEventListener('click', (e) => {
+    const trig = e.target.closest('[data-drawer],[data-modal],[data-pop]');
+    if (trig){
+      e.preventDefault();
+      if (trig.dataset.drawer) return open(trig.dataset.drawer, 'drawer', trig);
+      if (trig.dataset.modal)  return open(trig.dataset.modal, 'modal', trig);
+      if (trig.dataset.pop)    return open(trig.dataset.pop, 'pop', trig);
+    }
+    if (e.target.closest('[data-close]')) { closeAll(); return; }
+  });
+
+  scrim.addEventListener('click', closeAll);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAll(); });
+
+  /* drawer tabs (Inventory / Magic / Shop) */
+  document.querySelectorAll('.tabs').forEach(tabs => {
+    tabs.addEventListener('click', (e) => {
+      const t = e.target.closest('.tab'); if (!t) return;
+      const root = tabs.closest('.ov-body');
+      tabs.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x === t));
+      root.querySelectorAll('[data-pane]').forEach(p =>
+        p.hidden = (p.dataset.pane !== t.dataset.tab));
+    });
+  });
+})();
+</script>
+</body>
+</html>

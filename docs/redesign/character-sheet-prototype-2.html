@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maelen Duskwarden — Character Sheet (prototype 2)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600;700&family=Bitter:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   AOSE Character Sheet — redesign prototype 2
+   "OSR zine" — high-contrast B&W, bold inked header bars,
+   label-tab fields, attack-value matrix.  Inspired by the
+   Old-School Essentials Vagabond & Underground sheets.
+   ============================================================ */
+
+:root{
+  --ink:        #18160f;   /* near-black ink                       */
+  --ink-2:      #3a362c;
+  --paper:      #efece2;   /* desk behind sheet (newsprint warm)   */
+  --sheet:      #f7f5ed;   /* the sheet                            */
+  --box:        #fdfcf6;   /* value-box fill                       */
+  --box-sunk:   #ebe8dc;   /* inset / disabled wells               */
+  --gray:       #6c685b;   /* secondary ink                        */
+  --faint:      #a39e8c;   /* tertiary / placeholders              */
+  --line:       #18160f;   /* heavy rules                          */
+  --hair:       #cdc8b6;   /* hairline dividers                    */
+  --stamp:      #b32a1e;   /* red rubber-stamp accent (sparing)    */
+  --stamp-dk:   #8c2016;
+
+  --display: 'Oswald', 'Arial Narrow', sans-serif;
+  --body: 'Bitter', Georgia, serif;
+
+  --gap: 12px;
+}
+*{ box-sizing:border-box; }
+html{ scroll-behavior:smooth; }
+
+body{
+  margin:0;
+  font-family:var(--body);
+  font-size:15px; line-height:1.34;
+  color:var(--ink);
+  background:var(--paper);
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ── site chrome ─────────────────────────────────────────── */
+.topbar{
+  display:flex; justify-content:space-between; align-items:center;
+  max-width:1240px; margin:0 auto; padding:14px 22px 0;
+}
+.topbar .brand{
+  font-family:var(--display); font-weight:700; letter-spacing:.04em;
+  text-transform:uppercase; font-size:15px; color:var(--ink); text-decoration:none;
+}
+.topbar nav a{
+  font-family:var(--display); font-weight:500; font-size:11px; letter-spacing:.12em;
+  text-transform:uppercase; color:var(--gray); text-decoration:none; margin-left:18px;
+}
+.topbar nav a:hover{ color:var(--stamp); }
+
+/* ── sheet ───────────────────────────────────────────────── */
+.sheet{
+  max-width:1240px; margin:14px auto 60px; padding:18px;
+  background:var(--sheet);
+  border:2.5px solid var(--ink);
+  box-shadow:6px 6px 0 rgba(24,22,15,.16);
+}
+
+/* ============================================================
+   BAR — the signature inked section header
+   ============================================================ */
+.bar{
+  position:relative;
+  display:flex; align-items:center; gap:8px;
+  background:var(--ink); color:#f7f5ed;
+  font-family:var(--display); font-weight:600; letter-spacing:.1em;
+  text-transform:uppercase; font-size:12.5px;
+  padding:5px 10px; overflow:hidden;
+}
+/* roughed inked texture on the bar — cheap CSS fleck (no SVG filters / no blend) */
+.bar::after{
+  content:""; position:absolute; inset:0; pointer-events:none; opacity:.07;
+  background-image:
+    repeating-linear-gradient(115deg, rgba(255,255,255,.6) 0 1px, transparent 1px 4px),
+    repeating-linear-gradient(8deg, rgba(255,255,255,.5) 0 1px, transparent 1px 6px);
+}
+.bar .tools{ margin-left:auto; display:flex; gap:6px; align-items:center; position:relative; z-index:1; }
+.bar .meta{ font-weight:400; letter-spacing:.06em; font-size:10.5px; opacity:.82; }
+
+/* region = bar + framed body */
+.reg{ border:2px solid var(--ink); background:var(--box); }
+.reg + .reg{ margin-top:var(--gap); }
+.reg-body{ padding:10px 11px 11px; }
+
+/* ============================================================
+   LABEL-TAB FIELD — black tab + value box
+   ============================================================ */
+.field{ display:flex; align-items:stretch; margin:0; }
+.field .tab{
+  display:flex; align-items:center;
+  background:var(--ink); color:#f7f5ed;
+  font-family:var(--display); font-weight:600; letter-spacing:.08em;
+  text-transform:uppercase; font-size:10px;
+  padding:0 8px; white-space:nowrap;
+}
+.field .box{
+  flex:1; display:flex; align-items:center; justify-content:center;
+  background:var(--box); border:1.5px solid var(--ink); border-left:none;
+  padding:3px 8px; font-variant-numeric: lining-nums tabular-nums;
+  min-width:0;
+}
+.field .box.big{ font-size:22px; font-weight:600; }
+.field .box.val{ font-weight:600; }
+.fieldrow{ display:flex; gap:8px; flex-wrap:wrap; }
+.fieldrow .field{ flex:1; min-width:120px; }
+
+/* editable affordance */
+.editable{ cursor:pointer; position:relative; }
+.editable:hover .box{ background:#fff6da; box-shadow:inset 0 0 0 1.5px var(--stamp); }
+
+/* ── identity band ───────────────────────────────────────── */
+.ident{
+  display:grid; grid-template-columns: 1fr auto; gap:16px; align-items:end;
+  border:2px solid var(--ink); background:var(--ink); color:#f7f5ed;
+  padding:14px 16px; position:relative; overflow:hidden;
+}
+.ident::after{
+  content:""; position:absolute; inset:0; pointer-events:none; opacity:.06;
+  background-image:
+    repeating-linear-gradient(115deg, rgba(255,255,255,.5) 0 1px, transparent 1px 5px),
+    repeating-linear-gradient(8deg, rgba(255,255,255,.4) 0 1px, transparent 1px 7px);
+}
+.ident .who{ position:relative; z-index:1; }
+.ident h1{
+  font-family:var(--display); font-weight:700; font-size:38px; line-height:.95;
+  letter-spacing:.01em; margin:0 0 8px; text-transform:uppercase;
+}
+.ident .tags{ display:flex; gap:8px; flex-wrap:wrap; }
+.ident .pill{
+  font-family:var(--display); font-weight:500; font-size:11px; letter-spacing:.08em;
+  text-transform:uppercase; border:1.5px solid #f7f5ed; padding:2px 9px; cursor:pointer;
+}
+.ident .pill b{ font-weight:700; }
+.ident .pill:hover{ background:#f7f5ed; color:var(--ink); }
+.ident .xp{ position:relative; z-index:1; display:flex; gap:14px; align-items:flex-end; }
+.xp-track{ text-align:right; }
+.xp-track .cls{ font-family:var(--display); font-weight:500; font-size:10px; letter-spacing:.1em; text-transform:uppercase; opacity:.85; }
+.xp-track .bar2{ width:148px; height:9px; margin:4px 0 3px auto; border:1.5px solid #f7f5ed; background:transparent; position:relative; }
+.xp-track .bar2 > i{ position:absolute; inset:0 auto 0 0; background:#f7f5ed; }
+.xp-track .num{ font-size:12px; font-variant-numeric: lining-nums tabular-nums; }
+
+/* ── ability strip (Vagabond-style 6 columns) ───────────── */
+.abilities{ display:grid; grid-template-columns:repeat(6,1fr); gap:8px; }
+.abil-cell{ border:2px solid var(--ink); background:var(--box); text-align:center; }
+.abil-cell .ab{
+  background:var(--ink); color:#f7f5ed; font-family:var(--display); font-weight:600;
+  letter-spacing:.12em; text-transform:uppercase; font-size:12px; padding:3px 0;
+}
+.abil-cell .sc{ font-size:30px; font-weight:600; line-height:1.05; padding:4px 0 0; font-variant-numeric: lining-nums tabular-nums; }
+.abil-cell .sc .star{ color:var(--stamp); font-size:16px; vertical-align:super; }
+.abil-cell .md{
+  border-top:1.5px solid var(--ink); font-family:var(--display); font-weight:500;
+  font-size:13px; padding:2px 0; display:flex; justify-content:space-around; align-items:center;
+}
+.abil-cell .md .lab{ font-size:8.5px; letter-spacing:.1em; color:var(--gray); }
+.abil-cell .md .tmp{ cursor:pointer; padding:0 4px; border-left:1px solid var(--hair); }
+.abil-cell .md .tmp:hover{ background:#fff6da; color:var(--stamp); }
+
+/* ── grid ────────────────────────────────────────────────── */
+.grid{ display:grid; grid-template-columns: 3fr 4fr 4fr; gap:var(--gap); margin-top:var(--gap); align-items:start; }
+@media (max-width:1080px){ .grid{ grid-template-columns:1fr 1fr; } .col-c{ grid-column:1 / -1; } }
+.col{ display:flex; flex-direction:column; gap:var(--gap); }
+
+/* ── combat block ────────────────────────────────────────── */
+.combat-grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.combat-grid .field{ flex-direction:column; }
+.combat-grid .field .tab{ justify-content:center; padding:2px 0; }
+.combat-grid .field .box{ border-left:1.5px solid var(--ink); border-top:none; justify-content:center; }
+.combat-grid .sub{ font-size:10px; color:var(--gray); font-family:var(--display); letter-spacing:.06em; }
+.shield{
+  grid-row:span 2; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  border:2px solid var(--ink); background:var(--box); position:relative;
+}
+.shield .lab{ font-family:var(--display); font-weight:600; font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--gray); margin-top:6px; }
+.shield .ac{ font-size:46px; font-weight:700; line-height:.9; font-variant-numeric: lining-nums tabular-nums; }
+.shield .alt{ font-size:10px; color:var(--gray); margin-bottom:6px; font-family:var(--display); letter-spacing:.05em; }
+
+/* attack matrix */
+.matrix{ margin-top:8px; }
+.matrix .mhead{ font-family:var(--display); font-weight:600; font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--gray); margin-bottom:3px; }
+.matrix .cells{ display:grid; grid-template-columns:repeat(10,1fr); border:1.5px solid var(--ink); }
+.matrix .cells > div{ text-align:center; border-right:1px solid var(--hair); font-size:11px; font-variant-numeric: lining-nums tabular-nums; }
+.matrix .cells > div:last-child{ border-right:none; }
+.matrix .cells .ac{ background:var(--ink); color:#f7f5ed; font-family:var(--display); font-weight:500; font-size:9.5px; padding:2px 0; }
+.matrix .cells .hit{ padding:3px 0; font-weight:600; }
+
+/* ── generic tight table ─────────────────────────────────── */
+table.t{ width:100%; border-collapse:collapse; }
+table.t th, table.t td{ padding:3px 5px; text-align:left; }
+table.t td.n, table.t th.n{ text-align:right; font-variant-numeric: lining-nums tabular-nums; }
+table.t thead th{
+  font-family:var(--display); font-weight:600; font-size:9.5px; letter-spacing:.08em;
+  text-transform:uppercase; color:var(--gray); border-bottom:1.5px solid var(--ink); padding-bottom:3px;
+}
+table.t tbody tr + tr td{ border-top:1px solid var(--hair); }
+
+/* saving throws — drop-cap rows */
+.saves{ display:flex; flex-direction:column; gap:5px; }
+.save{ display:flex; align-items:center; gap:8px; }
+.save .cap{
+  font-family:var(--display); font-weight:700; font-size:18px; width:24px; height:24px;
+  display:flex; align-items:center; justify-content:center; background:var(--ink); color:#f7f5ed; flex:none;
+}
+.save .nm{ flex:1; font-size:13.5px; }
+.save .tg{ font-family:var(--display); font-weight:600; font-size:16px; border:1.5px solid var(--ink); padding:0 9px; background:var(--box); font-variant-numeric: lining-nums tabular-nums; }
+
+/* attacks */
+.atk .wpn{ font-weight:600; }
+.atk tr.cond td{ color:var(--gray); font-size:13px; padding-top:0; padding-left:16px; }
+.atk .dmg{ font-variant-numeric: lining-nums tabular-nums; }
+
+/* tags / badges */
+.tag{
+  display:inline-block; font-family:var(--display); font-weight:600; font-size:8.5px;
+  letter-spacing:.06em; text-transform:uppercase; padding:1px 5px; vertical-align:middle; margin-left:4px;
+  border:1.5px solid var(--ink); background:var(--box);
+}
+.tag.inv{ background:var(--ink); color:#f7f5ed; }
+.tag.stamp{ border-color:var(--stamp); color:var(--stamp); }
+.tag.faint{ border-color:var(--hair); color:var(--faint); }
+
+/* chips (features / spells — click to expand) */
+.chips{ display:flex; flex-wrap:wrap; gap:6px; }
+.chip{
+  font-family:var(--body); font-size:13px; line-height:1.1; padding:4px 9px;
+  background:var(--box); border:1.5px solid var(--ink); cursor:pointer; color:var(--ink); text-align:left;
+}
+.chip:hover{ background:var(--ink); color:#f7f5ed; }
+.chip:hover .src{ color:#d8d2bf; }
+.chip .src{ color:var(--gray); font-size:11px; font-family:var(--display); letter-spacing:.04em; }
+.chip.gilt{ border-left:4px solid var(--stamp); }
+
+/* key/value */
+.kv{ display:flex; justify-content:space-between; gap:8px; padding:3px 0; }
+.kv + .kv{ border-top:1px solid var(--hair); }
+.kv .k{ color:var(--gray); }
+.kv .v{ font-variant-numeric: lining-nums tabular-nums; font-weight:600; }
+.kv .v.big{ font-size:18px; }
+.kv .v.stamp{ color:var(--stamp); }
+
+/* spell slot pips */
+.slot-row{ display:flex; align-items:center; gap:8px; padding:4px 0; }
+.slot-row + .slot-row{ border-top:1px solid var(--hair); }
+.slot-lv{ font-family:var(--display); font-weight:600; font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink); min-width:50px; }
+.pips{ display:flex; gap:5px; flex-wrap:wrap; flex:1; }
+.pip{ font-size:12px; padding:2px 8px; border:1.5px solid var(--ink); background:var(--box); cursor:pointer; }
+.pip.spent{ text-decoration:line-through; color:var(--faint); background:var(--box-sunk); }
+.pip:hover{ background:var(--ink); color:#f7f5ed; }
+
+/* coins row */
+.coins{ display:grid; grid-template-columns:repeat(5,1fr); gap:6px; }
+.coin{ border:1.5px solid var(--ink); text-align:center; background:var(--box); }
+.coin .d{ background:var(--ink); color:#f7f5ed; font-family:var(--display); font-weight:600; font-size:9.5px; letter-spacing:.08em; padding:2px 0; }
+.coin .c{ font-size:15px; font-weight:600; padding:3px 0; font-variant-numeric: lining-nums tabular-nums; }
+
+/* inventory mini columns */
+.inv-mini{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+.inv-mini h4{ font-family:var(--display); font-weight:600; font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink); margin:0 0 5px; border-bottom:1.5px solid var(--ink); padding-bottom:3px; }
+.inv-mini ul{ list-style:none; margin:0; padding:0; }
+.inv-mini li{ font-size:13.5px; padding:2px 0; display:flex; justify-content:space-between; gap:6px; }
+.inv-mini li .q{ color:var(--faint); font-variant-numeric: lining-nums tabular-nums; }
+.inv-mini .bag{ font-weight:600; }
+.inv-mini .bag::before{ content:"▸ "; }
+.inv-mini .sub{ color:var(--gray); padding-left:10px; }
+.add-row{
+  margin-top:8px; width:100%; text-align:left; font-style:italic; font-family:var(--body);
+  color:var(--faint); background:transparent; border:1.5px dashed var(--hair); padding:5px 8px; cursor:pointer; font-size:13px;
+}
+.add-row:hover{ border-color:var(--ink); color:var(--ink); }
+
+/* notes */
+.notes-body{ white-space:pre-wrap; font-size:14px; min-height:40px; cursor:text; }
+.notes-body:hover{ background:#fff6da; }
+
+/* footer */
+.sheet-foot{ margin-top:var(--gap); border:2px solid var(--ink); background:var(--box-sunk); padding:8px 12px; font-size:12.5px; color:var(--gray); display:flex; gap:22px; flex-wrap:wrap; }
+.sheet-foot b{ color:var(--ink); font-family:var(--display); font-weight:600; letter-spacing:.04em; }
+
+/* ── buttons ─────────────────────────────────────────────── */
+.btn{
+  font-family:var(--display); font-weight:600; font-size:10px; letter-spacing:.08em; text-transform:uppercase;
+  padding:5px 10px; border:1.5px solid var(--ink); background:var(--box); color:var(--ink); cursor:pointer; line-height:1;
+}
+.btn:hover{ background:var(--ink); color:#f7f5ed; }
+.btn.solid{ background:var(--ink); color:#f7f5ed; }
+.btn.solid:hover{ background:var(--ink-2); }
+.btn.tool{ padding:3px 8px; font-size:9px; border-color:#f7f5ed; color:#f7f5ed; background:transparent; }
+.btn.tool:hover{ background:#f7f5ed; color:var(--ink); }
+.btn.tool.dark{ border-color:var(--ink); color:var(--ink); background:var(--box); }
+.btn.tool.dark:hover{ background:var(--ink); color:#f7f5ed; }
+.btn.danger{ border-color:var(--stamp); color:var(--stamp); }
+.btn.danger:hover{ background:var(--stamp); color:#f7f5ed; }
+.btn.link{ border:none; background:none; text-transform:none; letter-spacing:0; font-family:var(--body); font-size:13px; color:var(--stamp); padding:2px 4px; text-decoration:underline; text-underline-offset:2px; }
+.btn.link:hover{ color:var(--stamp-dk); background:none; }
+
+/* form bits */
+label.f{ display:block; font-size:12px; color:var(--gray); margin:0 0 10px; }
+label.f .lab{ font-family:var(--display); font-weight:600; font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink); display:block; margin-bottom:3px; }
+input[type=text], input[type=number], select, textarea{ font-family:var(--body); font-size:14px; color:var(--ink); background:#fff; border:1.5px solid var(--ink); padding:6px 8px; }
+input[type=number]{ width:5em; }
+textarea{ width:100%; resize:vertical; }
+.inline-form{ display:inline-flex; gap:6px; align-items:center; margin:0 0 8px; }
+.row-actions{ display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+
+/* ============================================================
+   OVERLAYS — scrim + drawer + modal + popover (single open)
+   ============================================================ */
+.scrim{ position:fixed; inset:0; z-index:40; background:rgba(24,22,15,.42); opacity:0; visibility:hidden; transition:opacity .16s; }
+.scrim.on{ opacity:1; visibility:visible; }
+.overlay{ position:fixed; z-index:50; display:none; }
+.overlay.on{ display:block; }
+
+.overlay.drawer{
+  top:0; right:0; height:100vh; width:min(580px,95vw);
+  background:var(--sheet); border-left:3px solid var(--ink);
+  box-shadow:-10px 0 0 rgba(24,22,15,.12);
+  transform:translateX(100%); transition:transform .2s ease; display:flex; flex-direction:column;
+}
+.overlay.drawer.on{ display:flex; transform:translateX(0); }
+
+.overlay.modal{
+  top:50%; left:50%; width:min(540px,95vw); max-height:88vh;
+  transform:translate(-50%,-46%); opacity:0;
+  background:var(--sheet); border:3px solid var(--ink); box-shadow:8px 8px 0 rgba(24,22,15,.18);
+  transition:transform .16s ease, opacity .16s ease; display:flex; flex-direction:column;
+}
+.overlay.modal.on{ display:flex; transform:translate(-50%,-50%); opacity:1; }
+
+.ov-head{ display:flex; align-items:center; gap:10px; padding:10px 14px; background:var(--ink); color:#f7f5ed; flex:none; position:relative; overflow:hidden; }
+.ov-head::after{ content:""; position:absolute; inset:0; pointer-events:none; opacity:.07; background-image:repeating-linear-gradient(115deg,rgba(255,255,255,.5) 0 1px,transparent 1px 5px),repeating-linear-gradient(8deg,rgba(255,255,255,.4) 0 1px,transparent 1px 7px); }
+.ov-head h3{ font-family:var(--display); font-weight:600; font-size:14px; letter-spacing:.08em; text-transform:uppercase; margin:0; position:relative; z-index:1; }
+.ov-head .x{ margin-left:auto; border:none; background:none; cursor:pointer; font-size:22px; line-height:1; color:#f7f5ed; padding:0 4px; position:relative; z-index:1; }
+.ov-head .x:hover{ color:#fff; }
+.ov-body{ padding:14px 16px; overflow:auto; }
+.ov-section{ margin-bottom:20px; }
+.ov-section > h4{ font-family:var(--display); font-weight:600; font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink); margin:0 0 8px; border-bottom:1.5px solid var(--ink); padding-bottom:4px; }
+
+.overlay.popover{
+  width:max-content; max-width:300px; background:var(--sheet); border:2px solid var(--ink);
+  box-shadow:5px 5px 0 rgba(24,22,15,.18); padding:12px 14px; opacity:0; transform:translateY(-4px);
+  transition:opacity .1s, transform .1s;
+}
+.overlay.popover.on{ opacity:1; transform:translateY(0); }
+.overlay.popover h4{ font-family:var(--display); font-weight:600; font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink); margin:0 0 8px; }
+
+/* drawer tables */
+.tabs{ display:flex; gap:0; margin-bottom:14px; border:1.5px solid var(--ink); }
+.tab{ flex:1; font-family:var(--display); font-weight:600; font-size:10px; letter-spacing:.06em; text-transform:uppercase; padding:7px 6px; background:var(--box); color:var(--gray); cursor:pointer; text-align:center; border-right:1.5px solid var(--ink); }
+.tab:last-child{ border-right:none; }
+.tab.on{ background:var(--ink); color:#f7f5ed; }
+.dtable{ width:100%; border-collapse:collapse; font-size:13px; margin-bottom:10px; }
+.dtable th{ font-family:var(--display); font-weight:600; font-size:9px; letter-spacing:.08em; text-transform:uppercase; color:var(--gray); text-align:left; padding:4px 6px; border-bottom:1.5px solid var(--ink); }
+.dtable td{ padding:5px 6px; border-bottom:1px solid var(--hair); vertical-align:middle; }
+.dtable td.n{ text-align:right; font-variant-numeric: lining-nums tabular-nums; }
+.dtable .child td:first-child{ padding-left:22px; color:var(--gray); }
+.dtable .child td:first-child::before{ content:"↳ "; }
+.search{ width:100%; margin-bottom:10px; padding:8px 10px; font-size:14px; border:1.5px solid var(--ink); background:#fff; }
+.shop-cat{ font-family:var(--display); font-weight:600; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:#f7f5ed; background:var(--ink); padding:4px 8px; margin:16px 0 4px; }
+.out td{ color:var(--faint); }
+.hint{ font-size:12px; color:var(--faint); font-style:italic; margin:2px 0 10px; }
+
+@media print{
+  body{ background:#fff; }
+  .topbar, .scrim, .overlay, .btn, .tools, .add-row{ display:none !important; }
+  .sheet{ border:none; box-shadow:none; margin:0; }
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="#" class="brand">AOSE Character Builder</a>
+  <nav><a href="#">All Characters</a><a href="#">Settings</a></nav>
+</div>
+
+<article class="sheet">
+
+  <!-- ════════ IDENTITY ════════ -->
+  <header class="ident">
+    <div class="who">
+      <h1 class="editable" data-pop="pop-identity">Maelen Duskwarden</h1>
+      <div class="tags">
+        <span class="pill"><b>Elf</b></span>
+        <span class="pill">Fighter 2 / Magic-User 2</span>
+        <span class="pill editable" data-pop="pop-identity"><b>Neutral</b></span>
+      </div>
+    </div>
+    <div class="xp">
+      <div class="xp-track">
+        <div class="cls">Fighter L2</div>
+        <div class="bar2"><i style="width:53%"></i></div>
+        <div class="num">4,200 / 8,000</div>
+      </div>
+      <div class="xp-track">
+        <div class="cls">Magic-User L2</div>
+        <div class="bar2"><i style="width:62%"></i></div>
+        <div class="num">3,100 / 5,000</div>
+      </div>
+      <button class="btn tool" data-modal="modal-advance">Advance</button>
+    </div>
+  </header>
+
+  <!-- ════════ ABILITY STRIP ════════ -->
+  <div class="abilities" style="margin-top:var(--gap)">
+    <div class="abil-cell"><div class="ab">Str</div><div class="sc">18<span class="star" title="Gauntlets of Ogre Power">✦</span></div><div class="md"><span><span class="lab">mod</span> +3</span><span class="tmp editable" data-pop="pop-temp" data-ability="Str" title="temporary modifier">±0</span></div></div>
+    <div class="abil-cell"><div class="ab">Int</div><div class="sc">16</div><div class="md"><span><span class="lab">mod</span> +2</span><span class="tmp editable" data-pop="pop-temp" data-ability="Int">±0</span></div></div>
+    <div class="abil-cell"><div class="ab">Wis</div><div class="sc">9</div><div class="md"><span><span class="lab">mod</span> +0</span><span class="tmp editable" data-pop="pop-temp" data-ability="Wis">±0</span></div></div>
+    <div class="abil-cell"><div class="ab">Dex</div><div class="sc">15</div><div class="md"><span><span class="lab">mod</span> +1</span><span class="tmp editable" data-pop="pop-temp" data-ability="Dex">±0</span></div></div>
+    <div class="abil-cell"><div class="ab">Con</div><div class="sc">11</div><div class="md"><span><span class="lab">mod</span> +0</span><span class="tmp editable" data-pop="pop-temp" data-ability="Con">±0</span></div></div>
+    <div class="abil-cell"><div class="ab">Cha</div><div class="sc">12</div><div class="md"><span><span class="lab">mod</span> +0</span><span class="tmp editable" data-pop="pop-temp" data-ability="Cha">±0</span></div></div>
+  </div>
+
+  <!-- ════════ GRID ════════ -->
+  <div class="grid">
+
+    <!-- ─── COLUMN A : combat · saves · languages ─── -->
+    <div class="col col-a">
+      <section class="reg">
+        <div class="bar">Combat <span class="tools"><button class="btn tool" data-modal="modal-rest">Rest</button></span></div>
+        <div class="reg-body">
+          <div class="combat-grid">
+            <div class="field editable" data-pop="pop-hp" style="flex-direction:row">
+              <span class="tab">HP</span><span class="box big">11<span style="font-size:14px;color:var(--gray)"> / 14</span></span>
+            </div>
+            <div class="shield">
+              <div class="lab">Armour Class</div>
+              <div class="ac">4</div>
+              <div class="alt">asc 15</div>
+            </div>
+            <div class="field" style="flex-direction:row"><span class="tab">THAC0</span><span class="box val">18</span></div>
+            <div class="field" style="flex-direction:row"><span class="tab">Move</span><span class="box val">90′ <span class="sub">/30′</span></span></div>
+          </div>
+          <div class="matrix">
+            <div class="mhead">To-hit by target AC (descending)</div>
+            <div class="cells">
+              <div><div class="ac">9</div><div class="hit">9</div></div>
+              <div><div class="ac">8</div><div class="hit">10</div></div>
+              <div><div class="ac">7</div><div class="hit">11</div></div>
+              <div><div class="ac">6</div><div class="hit">12</div></div>
+              <div><div class="ac">5</div><div class="hit">13</div></div>
+              <div><div class="ac">4</div><div class="hit">14</div></div>
+              <div><div class="ac">3</div><div class="hit">15</div></div>
+              <div><div class="ac">2</div><div class="hit">16</div></div>
+              <div><div class="ac">1</div><div class="hit">17</div></div>
+              <div><div class="ac">0</div><div class="hit">18</div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="reg">
+        <div class="bar">Saving Throws</div>
+        <div class="reg-body">
+          <div class="saves">
+            <div class="save"><span class="cap">D</span><span class="nm">Death / Poison</span><span class="tg">12</span></div>
+            <div class="save"><span class="cap">W</span><span class="nm">Magic Wands</span><span class="tg">13</span></div>
+            <div class="save"><span class="cap">P</span><span class="nm">Paralysis / Petrify</span><span class="tg">13</span></div>
+            <div class="save"><span class="cap">B</span><span class="nm">Breath Attacks</span><span class="tg">15</span></div>
+            <div class="save"><span class="cap">S</span><span class="nm">Spells / Rods / Staves</span><span class="tg">15</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="reg">
+        <div class="bar">Languages</div>
+        <div class="reg-body"><p style="margin:0">Common, Elvish, Gnoll, Orcish</p></div>
+      </section>
+    </div>
+
+    <!-- ─── COLUMN B : attacks · features · proficiencies · notes ─── -->
+    <div class="col col-b">
+      <section class="reg">
+        <div class="bar">Attacks <span class="tools"><button class="btn tool" data-drawer="drawer-equip">Manage</button></span></div>
+        <div class="reg-body">
+          <table class="t atk">
+            <thead><tr><th>Weapon</th><th class="n">THAC0</th><th>Damage</th><th>Range</th></tr></thead>
+            <tbody>
+              <tr><td class="wpn">Long Sword +1 <span class="tag stamp">+1</span><span class="tag">spec</span></td><td class="n">16</td><td class="dmg">1d8+5</td><td>—</td></tr>
+              <tr class="cond"><td>vs. dragons</td><td class="n">15</td><td class="dmg">1d8+8</td><td>—</td></tr>
+              <tr><td class="wpn">Short Bow <span class="tag faint">arrows ×19</span></td><td class="n">18</td><td class="dmg">1d6</td><td>50/100/150′</td></tr>
+              <tr><td class="wpn">Dagger</td><td class="n">18</td><td class="dmg">1d4+3</td><td>10/20/30′</td></tr>
+              <tr><td class="wpn" style="color:var(--gray)">Unarmed</td><td class="n">18</td><td class="dmg">1d2+3</td><td>—</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="reg">
+        <div class="bar">Class &amp; Race Features</div>
+        <div class="reg-body">
+          <div class="chips">
+            <button class="chip" data-modal="modal-feature" data-title="Infravision 60′" data-text="Maelen can see in the dark up to 60 feet, perceiving heat and cold as shades of red and blue.">Infravision 60′ <span class="src">Elf</span></button>
+            <button class="chip" data-modal="modal-feature" data-title="Detect Secret Doors" data-text="When actively searching, an elf finds secret and concealed doors on a 1–2 on 1d6. Passing within 10′ grants a 1-in-6 chance to notice one.">Secret Doors <span class="src">Elf</span></button>
+            <button class="chip" data-modal="modal-feature" data-title="Immunity to Ghoul Paralysis" data-text="Elves are wholly unaffected by the paralysing touch of ghouls.">Ghoul Immunity <span class="src">Elf</span></button>
+            <button class="chip" data-modal="modal-feature" data-title="Fighter Combat" data-text="May use any weapon and armour and benefits from optional combat manoeuvres.">Fighter Combat <span class="src">Fighter</span></button>
+            <button class="chip gilt" data-modal="modal-feature" data-title="Arcane Magic" data-text="Casts arcane spells from a personal spellbook, memorising a limited number each day. Spells must be copied into the book before being prepared.">Arcane Magic <span class="src">Magic-User</span></button>
+          </div>
+        </div>
+      </section>
+
+      <section class="reg">
+        <div class="bar">Weapon Proficiencies <span class="meta">2 / 3 slots · non-prof −2</span></div>
+        <div class="reg-body">
+          <table class="t">
+            <tbody>
+              <tr><td>Long Sword</td><td class="n"><span class="tag">specialised</span> 1d8</td></tr>
+              <tr><td>Short Bow</td><td class="n">1d6</td></tr>
+              <tr><td>Dagger</td><td class="n">1d4</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="reg">
+        <div class="bar">Notes</div>
+        <div class="reg-body">
+          <div class="notes-body" data-modal="modal-notes">Owes 200gp to the Thieves' Guild of Threshold.
+Carries a sealed letter for the Grey Tower — do not open.
+Allergic to silver (roleplay only).</div>
+        </div>
+      </section>
+    </div>
+
+    <!-- ─── COLUMN C : spells · coins ─── -->
+    <div class="col col-c">
+      <!-- class-adaptive: omitted entirely for non-casters -->
+      <section class="reg">
+        <div class="bar">Spells — Arcane <span class="tools"><button class="btn tool" data-drawer="drawer-spells">Manage</button></span></div>
+        <div class="reg-body">
+          <div class="slot-row">
+            <span class="slot-lv">Level 1</span>
+            <div class="pips">
+              <span class="pip" data-modal="modal-spell" data-title="Magic Missile" data-text="A glowing dart of magical energy unerringly strikes its target for 1d6+1 damage. No attack roll.">Magic Missile</span>
+              <span class="pip spent" data-modal="modal-spell" data-title="Sleep" data-text="2d8 Hit Dice of creatures within 40′ fall asleep, lowest HD first. No save.">Sleep · spent</span>
+            </div>
+          </div>
+          <div class="kv" style="margin-top:8px"><span class="k">Spellbook</span><span class="v">6 known</span></div>
+          <div class="chips" style="margin-top:6px">
+            <button class="chip" data-modal="modal-spell" data-title="Magic Missile" data-text="1d6+1, auto-hit.">Magic Missile</button>
+            <button class="chip" data-modal="modal-spell" data-title="Sleep" data-text="2d8 HD asleep, no save.">Sleep</button>
+            <button class="chip" data-modal="modal-spell" data-title="Shield" data-text="AC 2 vs missiles, AC 4 in melee.">Shield</button>
+            <button class="chip" data-modal="modal-spell" data-title="Charm Person" data-text="One humanoid saves vs spells or befriends caster.">Charm Person</button>
+            <button class="chip" data-modal="modal-spell" data-title="Detect Magic" data-text="Magical auras glow for 2 turns.">Detect Magic</button>
+            <button class="chip" data-modal="modal-spell" data-title="Read Magic" data-text="Read magical writings and scrolls.">Read Magic</button>
+          </div>
+          <p class="hint" style="margin:8px 0 0">Also carrying 1 spellbook &amp; 1 scroll — see Equipment.</p>
+        </div>
+      </section>
+
+      <section class="reg">
+        <div class="bar">Coins &amp; Treasure <span class="tools"><button class="btn tool" data-pop="pop-coins">Adjust</button></span></div>
+        <div class="reg-body">
+          <div class="coins" style="margin-bottom:10px">
+            <div class="coin"><div class="d">PP</div><div class="c">0</div></div>
+            <div class="coin"><div class="d">GP</div><div class="c">142</div></div>
+            <div class="coin"><div class="d">EP</div><div class="c">0</div></div>
+            <div class="coin"><div class="d">SP</div><div class="c">30</div></div>
+            <div class="coin"><div class="d">CP</div><div class="c">18</div></div>
+          </div>
+          <div class="kv"><span class="k">Spendable gold</span><span class="v big">142 gp</span></div>
+          <div class="kv"><span class="k">Gems</span><span class="v">3 · 700 gp <button class="btn link" data-drawer="drawer-valuables">manage</button></span></div>
+          <div class="kv"><span class="k">Jewellery</span><span class="v">1 · 700 gp</span></div>
+          <div class="kv"><span class="k">Treasure value</span><span class="v big stamp">1,415 gp</span></div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- ════════ EQUIPMENT (unified inventory + encumbrance) ════════ -->
+  <section class="reg" style="margin-top:var(--gap)">
+    <div class="bar">Equipment &amp; Encumbrance
+      <span class="tools">
+        <span class="meta">540 / 1,600 cn · lightly loaded → 90′</span>
+        <button class="btn tool" data-modal="modal-encumbrance">Thresholds</button>
+        <button class="btn tool" data-drawer="drawer-equip">Manage</button>
+      </span>
+    </div>
+    <div class="reg-body">
+      <div class="inv-mini">
+        <div>
+          <h4>Equipped</h4>
+          <ul>
+            <li><span>Chainmail</span><span class="q">400</span></li>
+            <li><span>Shield</span><span class="q">100</span></li>
+            <li><span>Long Sword +1 <span class="tag stamp">magic</span></span><span class="q">60</span></li>
+            <li><span>Gauntlets of Ogre Power <span class="tag stamp">magic</span></span><span class="q">—</span></li>
+            <li><span>Ring of Protection +1 <span class="tag stamp">magic</span></span><span class="q">—</span></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Carried</h4>
+          <ul>
+            <li><span>Short Bow</span><span class="q">30</span></li>
+            <li><span>Dagger</span><span class="q">10</span></li>
+            <li><span>Potion of Healing ×2 <span class="tag stamp">magic</span></span><span class="q">20</span></li>
+            <li class="bag"><span>Backpack</span><span class="q">390</span></li>
+            <li class="sub"><span>Rope · Rations ×7 · Torches ×6</span><span class="q">↳</span></li>
+            <li><span>Spellbook <span class="tag">book</span></span><span class="q">—</span></li>
+            <li><span>Scroll of Fireball <span class="tag">scroll</span></span><span class="q">1</span></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Stashed</h4>
+          <ul>
+            <li><span>Tent</span><span class="q">—</span></li>
+            <li><span>Wineskin</span><span class="q">—</span></li>
+          </ul>
+          <button class="add-row" data-drawer="drawer-equip">+ add, buy, or grant an item…</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="sheet-foot">
+    <span>Encumbrance: <b>Detailed</b></span>
+    <span>Optional rules: <b>Weapon Proficiency · Multiclassing · Variable Weapon Damage</b></span>
+  </footer>
+
+</article>
+
+<!-- ════════════════════════════════════════════════════════ OVERLAYS ════════════════════════════════════════════════════════ -->
+<div class="scrim" id="scrim"></div>
+
+<!-- DRAWER: Equipment (unified: inventory + magic + documents + shop) -->
+<aside class="overlay drawer" id="drawer-equip" role="dialog" aria-label="Manage equipment">
+  <div class="ov-head"><h3>Equipment</h3><span class="tag" style="margin-left:6px">Gold 142 gp</span><button class="x" data-close>×</button></div>
+  <div class="ov-body">
+    <div class="tabs" id="equip-tabs">
+      <button class="tab on" data-tab="inv">Carried</button>
+      <button class="tab" data-tab="magic">Magic</button>
+      <button class="tab" data-tab="docs">Documents</button>
+      <button class="tab" data-tab="shop">Shop</button>
+    </div>
+
+    <div data-pane="inv">
+      <div class="ov-section"><h4>Equipped</h4>
+        <table class="dtable"><tbody>
+          <tr><td>Chainmail</td><td class="n">400 cn</td><td class="n"><button class="btn link">unequip</button> <button class="btn link">stash</button></td></tr>
+          <tr><td>Shield</td><td class="n">100 cn</td><td class="n"><button class="btn link">unequip</button></td></tr>
+          <tr><td>Long Sword +1</td><td class="n">60 cn</td><td class="n"><button class="btn link">unequip</button></td></tr>
+        </tbody></table>
+      </div>
+      <div class="ov-section"><h4>Carried</h4>
+        <table class="dtable"><tbody>
+          <tr><td>Short Bow</td><td class="n">30 cn</td><td class="n"><button class="btn link">equip</button> <button class="btn link">stow</button> <button class="btn link">drop</button></td></tr>
+          <tr><td>Dagger ×1</td><td class="n">10 cn</td><td class="n"><button class="btn link">equip</button> <button class="btn link">drop</button></td></tr>
+          <tr><td><strong>Backpack</strong> <span class="tag faint">310 / 400 cn</span></td><td class="n">390 cn</td><td class="n"><button class="btn link">stash</button></td></tr>
+          <tr class="child"><td>Rope, 50′</td><td class="n">50 cn</td><td class="n"><button class="btn link">take out</button></td></tr>
+          <tr class="child"><td>Iron Rations ×7</td><td class="n">140 cn</td><td class="n"><button class="btn link">take out</button></td></tr>
+          <tr class="child"><td>Torches ×6</td><td class="n">120 cn</td><td class="n"><button class="btn link">take out</button></td></tr>
+        </tbody></table>
+      </div>
+      <div class="ov-section"><h4>Stashed <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--faint)">— no weight</span></h4>
+        <table class="dtable"><tbody>
+          <tr><td>Tent</td><td class="n">—</td><td class="n"><button class="btn link">unstash</button> <button class="btn link">drop</button></td></tr>
+          <tr><td>Wineskin</td><td class="n">—</td><td class="n"><button class="btn link">unstash</button> <button class="btn link">drop</button></td></tr>
+        </tbody></table>
+      </div>
+      <div class="ov-section"><h4>Ammunition</h4>
+        <table class="dtable"><tbody>
+          <tr><td>Arrows</td><td class="n">19</td><td class="n"><button class="btn tool dark">+</button> <button class="btn tool dark">−</button> <button class="btn link">load → Short Bow</button></td></tr>
+        </tbody></table>
+      </div>
+    </div>
+
+    <div data-pane="magic" hidden>
+      <div class="ov-section"><h4>Magic Items</h4>
+        <table class="dtable"><tbody>
+          <tr><td><strong>Gauntlets of Ogre Power</strong><br><span class="tag stamp">Str → 18</span></td><td class="n">worn</td><td class="n"><button class="btn link">unequip</button> <button class="btn link">remove</button></td></tr>
+          <tr><td><strong>Ring of Protection +1</strong><br><span class="tag stamp">+1 AC</span> <span class="tag stamp">+1 saves</span></td><td class="n">worn</td><td class="n"><button class="btn link">unequip</button> <button class="btn link">remove</button></td></tr>
+          <tr><td><strong>Potion of Healing</strong> ×2</td><td class="n">—</td><td class="n"><button class="btn link">use one</button> <button class="btn link">remove</button></td></tr>
+          <tr><td><strong>Long Sword +1</strong> <span class="tag stamp">+1 / +3 vs dragons</span></td><td class="n">equipped</td><td class="n"><button class="btn link">unequip</button></td></tr>
+        </tbody></table>
+      </div>
+      <div class="ov-section"><h4>Add Enchanted Item <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--faint)">— GM grant</span></h4>
+        <label class="f"><span class="lab">Enchantment</span><select><option>Sword +1</option><option>Sword +1, +3 vs dragons</option><option>Armour +1</option></select></label>
+        <label class="f"><span class="lab">Base item</span><select><option>Long Sword</option><option>Battle Axe</option></select></label>
+        <button class="btn solid">Add (GM grant)</button>
+      </div>
+    </div>
+
+    <div data-pane="docs" hidden>
+      <div class="ov-section"><h4>Spell Books &amp; Scrolls</h4>
+        <p class="hint">Physical documents are part of inventory; cast &amp; copy actions live here.</p>
+        <table class="dtable"><tbody>
+          <tr><td><strong>Maelen's Travelling Spellbook</strong> <span class="tag faint">6 spells</span></td><td class="n"><button class="btn link">remove</button></td></tr>
+          <tr><td><strong>Scroll of Fireball</strong> <span class="tag faint">arcane · L3</span></td><td class="n"><button class="btn link">cast</button> <button class="btn link">copy to book</button> <button class="btn link">remove</button></td></tr>
+        </tbody></table>
+        <button class="btn" style="margin-top:6px">+ Add spell book or scroll</button>
+      </div>
+    </div>
+
+    <div data-pane="shop" hidden>
+      <input type="text" class="search" placeholder="Search items by name…">
+      <div class="shop-cat">Weapons</div>
+      <table class="dtable"><thead><tr><th>Item</th><th class="n">Cost</th><th class="n">Wt</th><th></th></tr></thead><tbody>
+        <tr><td>Battle Axe</td><td class="n">7 gp</td><td class="n">50</td><td class="n"><button class="btn tool dark">Buy</button> <button class="btn link">add</button></td></tr>
+        <tr><td>War Hammer</td><td class="n">5 gp</td><td class="n">30</td><td class="n"><button class="btn tool dark">Buy</button> <button class="btn link">add</button></td></tr>
+        <tr class="out"><td>Plate Mail</td><td class="n">450 gp</td><td class="n">500</td><td class="n"><button class="btn tool dark" disabled>Buy</button> <button class="btn link">add</button></td></tr>
+      </tbody></table>
+      <div class="shop-cat">Adventuring Gear</div>
+      <table class="dtable"><thead><tr><th>Item</th><th class="n">Cost</th><th class="n">Wt</th><th></th></tr></thead><tbody>
+        <tr><td>Lantern</td><td class="n">10 gp</td><td class="n">30</td><td class="n"><button class="btn tool dark">Buy</button> <button class="btn link">add</button></td></tr>
+        <tr><td>Holy Water (vial)</td><td class="n">25 gp</td><td class="n">5</td><td class="n"><button class="btn tool dark">Buy</button> <button class="btn link">add</button></td></tr>
+        <tr><td>Grappling Hook</td><td class="n">25 gp</td><td class="n">80</td><td class="n"><button class="btn tool dark">Buy</button> <button class="btn link">add</button></td></tr>
+      </tbody></table>
+    </div>
+  </div>
+</aside>
+
+<!-- DRAWER: Spells -->
+<aside class="overlay drawer" id="drawer-spells" role="dialog" aria-label="Manage spells">
+  <div class="ov-head"><h3>Spells — Magic-User</h3><button class="x" data-close>×</button></div>
+  <div class="ov-body">
+    <div class="ov-section"><h4>Memorised — Level 1 <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--faint)">2 / 2 slots</span></h4>
+      <table class="dtable"><tbody>
+        <tr><td>Magic Missile</td><td class="n"><button class="btn link">cast</button> <button class="btn link">clear</button></td></tr>
+        <tr><td style="color:var(--faint);text-decoration:line-through">Sleep</td><td class="n"><button class="btn link">restore</button> <button class="btn link">clear</button></td></tr>
+      </tbody></table>
+    </div>
+    <div class="ov-section"><h4>Spellbook — Known</h4>
+      <table class="dtable"><tbody>
+        <tr><td>Magic Missile <span class="tag faint">L1</span></td><td class="n"><button class="btn link">memorise</button> <button class="btn link">forget</button></td></tr>
+        <tr><td>Sleep <span class="tag faint">L1</span></td><td class="n"><button class="btn link">memorise</button> <button class="btn link">forget</button></td></tr>
+        <tr><td>Shield <span class="tag faint">L1</span></td><td class="n"><button class="btn link">memorise</button> <button class="btn link">forget</button></td></tr>
+        <tr><td>Charm Person <span class="tag faint">L1</span></td><td class="n"><button class="btn link">memorise</button> <button class="btn link">forget</button></td></tr>
+        <tr><td>Detect Magic <span class="tag faint">L1</span></td><td class="n"><button class="btn link">memorise</button> <button class="btn link">forget</button></td></tr>
+        <tr><td>Read Magic <span class="tag faint">L1</span></td><td class="n"><button class="btn link">memorise</button> <button class="btn link">forget</button></td></tr>
+      </tbody></table>
+    </div>
+  </div>
+</aside>
+
+<!-- DRAWER: Gems & Jewellery -->
+<aside class="overlay drawer" id="drawer-valuables" role="dialog" aria-label="Gems and jewellery">
+  <div class="ov-head"><h3>Gems &amp; Jewellery</h3><button class="x" data-close>×</button></div>
+  <div class="ov-body">
+    <div class="ov-section"><h4>Gems</h4>
+      <table class="dtable"><thead><tr><th>Value</th><th class="n">Count</th><th class="n">Total</th><th></th></tr></thead><tbody>
+        <tr><td>500 gp <span class="src">amethyst</span></td><td class="n">1</td><td class="n">500 gp</td><td class="n"><button class="btn link">sell</button> <button class="btn link">drop</button></td></tr>
+        <tr><td>100 gp <span class="src">sapphire</span></td><td class="n">2</td><td class="n">200 gp</td><td class="n"><button class="btn link">sell one</button> <button class="btn link">sell all</button></td></tr>
+      </tbody></table>
+      <button class="btn" style="margin-top:4px">+ Add gem</button>
+    </div>
+    <div class="ov-section"><h4>Jewellery</h4>
+      <table class="dtable"><tbody>
+        <tr><td>Gold necklace <span class="src">700 gp</span></td><td class="n"><button class="btn link">mark damaged</button> <button class="btn link">sell</button> <button class="btn link">drop</button></td></tr>
+      </tbody></table>
+      <button class="btn" style="margin-top:4px">+ Add jewellery</button>
+    </div>
+  </div>
+</aside>
+
+<!-- MODAL: feature / spell detail -->
+<div class="overlay modal" id="modal-feature" role="dialog" aria-label="Detail">
+  <div class="ov-head"><h3 data-role="title">Detail</h3><button class="x" data-close>×</button></div>
+  <div class="ov-body"><p data-role="text" style="font-size:15px;margin:0"></p></div>
+</div>
+<div class="overlay modal" id="modal-spell" role="dialog" aria-label="Spell">
+  <div class="ov-head"><h3 data-role="title">Spell</h3><button class="x" data-close>×</button></div>
+  <div class="ov-body">
+    <p data-role="text" style="font-size:15px"></p>
+    <div class="row-actions" style="margin-top:14px"><button class="btn solid">Memorise</button><button class="btn">Cast</button><button class="btn link">Clear from slot</button></div>
+  </div>
+</div>
+
+<!-- MODAL: advancement -->
+<div class="overlay modal" id="modal-advance" role="dialog" aria-label="Advancement">
+  <div class="ov-head"><h3>Advancement</h3><button class="x" data-close>×</button></div>
+  <div class="ov-body">
+    <div class="ov-section"><h4>Fighter — Level 2</h4><div class="kv"><span class="k">Experience</span><span class="v">4,200 / 8,000</span></div><button class="btn" disabled style="margin-top:6px">Level Up → 3 (need 8,000)</button></div>
+    <div class="ov-section"><h4>Magic-User — Level 2</h4><div class="kv"><span class="k">Experience</span><span class="v">3,100 / 5,000</span></div><button class="btn" disabled style="margin-top:6px">Level Up → 3 (need 5,000)</button></div>
+    <div class="ov-section"><h4>Award Experience</h4><div class="inline-form"><input type="number" value="500" step="50"><button class="btn solid">Grant XP</button></div><p class="hint">Split evenly across classes, scaled by each prime-requisite.</p></div>
+    <div class="ov-section"><h4>Energy Drain</h4><div class="inline-form"><input type="number" value="1" min="1"><button class="btn danger">Drain Level</button></div></div>
+  </div>
+</div>
+
+<!-- MODAL: encumbrance thresholds -->
+<div class="overlay modal" id="modal-encumbrance" role="dialog" aria-label="Encumbrance">
+  <div class="ov-head"><h3>Encumbrance</h3><button class="x" data-close>×</button></div>
+  <div class="ov-body">
+    <div class="kv"><span class="k">Carried</span><span class="v">540 / 1,600 cn</span></div>
+    <div class="kv"><span class="k">Current band</span><span class="v stamp">Lightly loaded → 90′</span></div>
+    <table class="dtable" style="margin-top:12px"><thead><tr><th>Max weight</th><th class="n">Move</th></tr></thead><tbody>
+      <tr><td>up to 400 cn</td><td class="n">120′</td></tr>
+      <tr style="background:var(--ink);color:#f7f5ed"><td>up to 600 cn</td><td class="n">90′</td></tr>
+      <tr><td>up to 800 cn</td><td class="n">60′</td></tr>
+      <tr><td>up to 1,600 cn</td><td class="n">30′</td></tr>
+    </tbody></table>
+  </div>
+</div>
+
+<!-- MODAL: notes -->
+<div class="overlay modal" id="modal-notes" role="dialog" aria-label="Edit notes">
+  <div class="ov-head"><h3>Notes</h3><button class="x" data-close>×</button></div>
+  <div class="ov-body">
+    <textarea rows="8">Owes 200gp to the Thieves' Guild of Threshold.
+Carries a sealed letter for the Grey Tower — do not open.
+Allergic to silver (roleplay only).</textarea>
+    <div class="row-actions" style="margin-top:12px"><button class="btn solid" data-close>Save notes</button></div>
+  </div>
+</div>
+
+<!-- MODAL: rest -->
+<div class="overlay modal" id="modal-rest" role="dialog" aria-label="Rest">
+  <div class="ov-head"><h3>Rest</h3><button class="x" data-close>×</button></div>
+  <div class="ov-body">
+    <label class="f"><span class="lab">Spell loadout</span><select><option>Restore previous</option><option>Clear all</option><option>Keep as-is</option></select></label>
+    <label class="f"><span class="lab">Healing (1d3, full day only)</span><input type="number" value="2" min="0" max="3"></label>
+    <div class="row-actions"><button class="btn solid" data-close>Rest &amp; Memorise</button><button class="btn" data-close>Full Day Rest</button></div>
+  </div>
+</div>
+
+<!-- POPOVER: HP -->
+<div class="overlay popover" id="pop-hp" role="dialog" aria-label="Hit points">
+  <h4>Hit Points — 11 / 14</h4>
+  <div class="inline-form"><input type="number" value="1" min="0"><button class="btn">Damage</button></div><br>
+  <div class="inline-form"><input type="number" value="1" min="0"><button class="btn">Heal</button></div><br>
+  <div class="inline-form"><input type="number" value="11" min="0" max="14"><button class="btn solid">Set</button></div>
+</div>
+
+<!-- POPOVER: ability temp -->
+<div class="overlay popover" id="pop-temp" role="dialog" aria-label="Temporary modifier">
+  <h4><span data-role="ability">Ability</span> — temporary</h4>
+  <div class="inline-form"><input type="number" value="0" step="1"><button class="btn solid" data-close>Set</button></div>
+  <p class="hint" style="margin:4px 0 0">Signed, e.g. −2 for drain.</p>
+</div>
+
+<!-- POPOVER: coins -->
+<div class="overlay popover" id="pop-coins" role="dialog" aria-label="Coin purse" style="max-width:270px">
+  <h4>Coin Purse</h4>
+  <table class="dtable" style="margin-bottom:8px"><tbody>
+    <tr><td>Platinum</td><td class="n">0</td><td class="n"><input type="number" value="0" style="width:3.4em"></td></tr>
+    <tr><td>Gold</td><td class="n">142</td><td class="n"><input type="number" value="0" style="width:3.4em"></td></tr>
+    <tr><td>Electrum</td><td class="n">0</td><td class="n"><input type="number" value="0" style="width:3.4em"></td></tr>
+    <tr><td>Silver</td><td class="n">30</td><td class="n"><input type="number" value="0" style="width:3.4em"></td></tr>
+    <tr><td>Copper</td><td class="n">18</td><td class="n"><input type="number" value="0" style="width:3.4em"></td></tr>
+  </tbody></table>
+  <button class="btn solid">Apply</button>
+  <p class="hint" style="margin:8px 0 4px">Convert</p>
+  <div class="inline-form" style="margin:0"><input type="number" value="1" min="1" style="width:3.4em"><select><option>sp</option><option>gp</option></select> → <select><option>gp</option><option>sp</option></select><button class="btn">Go</button></div>
+</div>
+
+<!-- POPOVER: identity -->
+<div class="overlay popover" id="pop-identity" role="dialog" aria-label="Edit identity">
+  <h4>Identity</h4>
+  <label class="f"><span class="lab">Name</span><input type="text" value="Maelen Duskwarden" style="width:200px"></label>
+  <label class="f" style="margin-bottom:0"><span class="lab">Alignment</span><select><option>Lawful</option><option selected>Neutral</option><option>Chaotic</option></select></label>
+  <div class="row-actions" style="margin-top:10px"><button class="btn solid" data-close>Save</button></div>
+</div>
+
+<script>
+/* Overlay controller — one open surface at a time.
+   Triggers carry data-drawer / data-modal / data-pop.
+   data-title / data-text / data-ability fill [data-role] targets. */
+(function(){
+  const scrim = document.getElementById('scrim');
+  let lastTrigger = null;
+
+  function closeAll(){
+    document.querySelectorAll('.overlay.on').forEach(o => o.classList.remove('on'));
+    scrim.classList.remove('on');
+    if (lastTrigger){ try{ lastTrigger.focus({preventScroll:true}); }catch(e){} lastTrigger = null; }
+  }
+  function fill(panel, t){
+    panel.querySelectorAll('[data-role="title"]').forEach(el => { if (t.title) el.textContent = t.title; });
+    panel.querySelectorAll('[data-role="text"]').forEach(el => { if (t.text) el.textContent = t.text; });
+    panel.querySelectorAll('[data-role="ability"]').forEach(el => { if (t.ability) el.textContent = t.ability; });
+  }
+  function place(panel, trigger){
+    const r = trigger.getBoundingClientRect();
+    panel.style.visibility='hidden'; panel.classList.add('on');
+    const pw = panel.offsetWidth, ph = panel.offsetHeight;
+    panel.classList.remove('on'); panel.style.visibility='';
+    let left = r.left, top = r.bottom + 6;
+    if (left + pw > innerWidth - 10) left = innerWidth - pw - 10;
+    if (left < 10) left = 10;
+    if (top + ph > innerHeight - 10) top = Math.max(10, r.top - ph - 6);
+    panel.style.left = left + 'px'; panel.style.top = top + 'px';
+  }
+  function open(id, type, trigger){
+    closeAll();
+    const panel = document.getElementById(id); if (!panel) return;
+    lastTrigger = trigger;
+    if (trigger) fill(panel, trigger.dataset);
+    if (type === 'pop') place(panel, trigger);
+    scrim.classList.add('on');
+    requestAnimationFrame(() => panel.classList.add('on'));
+    if (type !== 'pop'){ const f = panel.querySelector('input,select,textarea,button:not(.x)'); if (f) setTimeout(()=>{ try{f.focus();}catch(e){} }, 60); }
+  }
+  document.addEventListener('click', (e) => {
+    const trig = e.target.closest('[data-drawer],[data-modal],[data-pop]');
+    if (trig){ e.preventDefault();
+      if (trig.dataset.drawer) return open(trig.dataset.drawer,'drawer',trig);
+      if (trig.dataset.modal)  return open(trig.dataset.modal,'modal',trig);
+      if (trig.dataset.pop)    return open(trig.dataset.pop,'pop',trig);
+    }
+    if (e.target.closest('[data-close]')) closeAll();
+  });
+  scrim.addEventListener('click', closeAll);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAll(); });
+
+  document.querySelectorAll('.tabs').forEach(tabs => {
+    tabs.addEventListener('click', (e) => {
+      const t = e.target.closest('.tab'); if (!t) return;
+      const root = tabs.closest('.ov-body');
+      tabs.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x === t));
+      root.querySelectorAll('[data-pane]').forEach(p => p.hidden = (p.dataset.pane !== t.dataset.tab));
+    });
+  });
+})();
+</script>
+</body>
+</html>

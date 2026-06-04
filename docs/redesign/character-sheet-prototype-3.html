@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maelen Duskwarden — Character Sheet (prototype 3)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600;700&family=Bitter:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   AOSE Character Sheet — prototype 3
+   OSR-zine B&W.  Bounded "groups" with internal scroll so the
+   sheet stays ~one screen as spells / inventory / optional
+   rules grow.  Groups also map to future mobile swipe-cards.
+   ============================================================ */
+
+:root{
+  --ink:#18160f; --ink-2:#3a362c;
+  --paper:#efece2; --sheet:#f7f5ed; --box:#fdfcf6; --box-sunk:#ebe8dc;
+  --gray:#6c685b; --faint:#a39e8c; --hair:#cdc8b6;
+  --stamp:#b32a1e; --stamp-dk:#8c2016;
+  --display:'Oswald','Arial Narrow',sans-serif;
+  --body:'Bitter',Georgia,serif;
+  --gap:12px;
+}
+*{ box-sizing:border-box; }
+html{ scroll-behavior:smooth; }
+body{ margin:0; font-family:var(--body); font-size:15px; line-height:1.32; color:var(--ink); background:var(--paper); -webkit-font-smoothing:antialiased; }
+
+/* chrome */
+.topbar{ display:flex; justify-content:space-between; align-items:center; max-width:1280px; margin:0 auto; padding:12px 22px 0; }
+.topbar .brand{ font-family:var(--display); font-weight:700; letter-spacing:.04em; text-transform:uppercase; font-size:15px; color:var(--ink); text-decoration:none; }
+.topbar nav a{ font-family:var(--display); font-weight:500; font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--gray); text-decoration:none; margin-left:16px; }
+.topbar nav a:hover{ color:var(--stamp); }
+
+.sheet{ max-width:1280px; margin:12px auto 50px; padding:16px; background:var(--sheet); border:2.5px solid var(--ink); box-shadow:6px 6px 0 rgba(24,22,15,.16); }
+
+/* ── inked bar (group header) ──────────────────────────────── */
+.bar{ position:relative; display:flex; align-items:center; gap:8px; background:var(--ink); color:#f7f5ed; font-family:var(--display); font-weight:600; letter-spacing:.1em; text-transform:uppercase; font-size:12px; padding:5px 10px; overflow:hidden; flex:none; }
+.bar::after{ content:""; position:absolute; inset:0; pointer-events:none; opacity:.07; background-image:repeating-linear-gradient(115deg,rgba(255,255,255,.6) 0 1px,transparent 1px 4px),repeating-linear-gradient(8deg,rgba(255,255,255,.5) 0 1px,transparent 1px 6px); }
+.bar .tools{ margin-left:auto; display:flex; gap:6px; align-items:center; position:relative; z-index:1; }
+.bar .meta{ font-weight:400; letter-spacing:.05em; font-size:10px; opacity:.82; text-transform:none; }
+
+/* ── group panel: bar + bounded scroll body ────────────────── */
+.group{ display:flex; flex-direction:column; border:2px solid var(--ink); background:var(--box); }
+.group.prominent{ border-width:3px; }
+.gbody{ padding:9px 10px 10px; overflow:auto; }
+.gbody.scroll{ overflow-y:auto; }
+/* zine scrollbar */
+.gbody::-webkit-scrollbar{ width:9px; }
+.gbody::-webkit-scrollbar-thumb{ background:var(--ink); border:2px solid var(--box); }
+.gbody::-webkit-scrollbar-track{ background:var(--box-sunk); }
+.subhead{ font-family:var(--display); font-weight:600; font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink); margin:10px 0 5px; border-bottom:1.5px solid var(--ink); padding-bottom:3px; }
+.subhead:first-child{ margin-top:0; }
+
+/* ── identity ──────────────────────────────────────────────── */
+.ident{ display:grid; grid-template-columns:1fr auto; gap:16px; align-items:end; border:2.5px solid var(--ink); background:var(--ink); color:#f7f5ed; padding:13px 16px; position:relative; overflow:hidden; }
+.ident::after{ content:""; position:absolute; inset:0; pointer-events:none; opacity:.06; background-image:repeating-linear-gradient(115deg,rgba(255,255,255,.5) 0 1px,transparent 1px 5px),repeating-linear-gradient(8deg,rgba(255,255,255,.4) 0 1px,transparent 1px 7px); }
+.ident .who{ position:relative; z-index:1; }
+.ident h1{ font-family:var(--display); font-weight:700; font-size:36px; line-height:.95; letter-spacing:.01em; margin:0 0 7px; text-transform:uppercase; cursor:pointer; }
+.ident .tags{ display:flex; gap:8px; flex-wrap:wrap; }
+.ident .pill{ font-family:var(--display); font-weight:500; font-size:11px; letter-spacing:.07em; text-transform:uppercase; border:1.5px solid #f7f5ed; padding:2px 9px; cursor:pointer; }
+.ident .pill b{ font-weight:700; }
+.ident .pill:hover{ background:#f7f5ed; color:var(--ink); }
+.ident .xp{ position:relative; z-index:1; display:flex; gap:14px; align-items:flex-end; }
+.xp-track{ text-align:right; }
+.xp-track .cls{ font-family:var(--display); font-weight:500; font-size:10px; letter-spacing:.1em; text-transform:uppercase; opacity:.85; }
+.xp-track .bar2{ width:140px; height:9px; margin:4px 0 3px auto; border:1.5px solid #f7f5ed; position:relative; }
+.xp-track .bar2 > i{ position:absolute; inset:0 auto 0 0; background:#f7f5ed; }
+.xp-track .num{ font-size:12px; font-variant-numeric:lining-nums tabular-nums; }
+
+/* ── layout grid of groups ─────────────────────────────────── */
+.layout{ display:grid; grid-template-columns:300px 1fr 1fr; gap:var(--gap); margin-top:var(--gap); align-items:start; }
+.layout > .col{ display:flex; flex-direction:column; gap:var(--gap); }
+.full{ margin-top:var(--gap); }
+@media (max-width:1080px){ .layout{ grid-template-columns:1fr 1fr; } .col-spells{ grid-column:1 / -1; } }
+
+/* ── label-tab field ───────────────────────────────────────── */
+.field{ display:flex; align-items:stretch; }
+.field .tab{ display:flex; align-items:center; background:var(--ink); color:#f7f5ed; font-family:var(--display); font-weight:600; letter-spacing:.07em; text-transform:uppercase; font-size:10px; padding:0 8px; white-space:nowrap; }
+.field .box{ flex:1; display:flex; align-items:center; justify-content:center; background:var(--box); border:1.5px solid var(--ink); border-left:none; padding:3px 8px; font-variant-numeric:lining-nums tabular-nums; min-width:0; }
+.field .box.big{ font-size:21px; font-weight:600; }
+.editable{ cursor:pointer; }
+.editable:hover .box, .editable:hover{ box-shadow:inset 0 0 0 1.5px var(--stamp); }
+
+/* ── combat group ──────────────────────────────────────────── */
+.combat-top{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.shield{ grid-row:span 2; display:flex; flex-direction:column; align-items:center; justify-content:center; border:2px solid var(--ink); background:var(--box); padding:4px; }
+.shield .lab{ font-family:var(--display); font-weight:600; font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--gray); }
+.shield .ac{ font-size:42px; font-weight:700; line-height:.9; font-variant-numeric:lining-nums tabular-nums; }
+.shield .unarm{ font-family:var(--display); font-size:10px; color:var(--gray); letter-spacing:.04em; }
+.shield .unarm b{ color:var(--ink); font-weight:600; }
+.field.col-field{ flex-direction:column; }
+.field.col-field .tab{ justify-content:center; padding:2px 0; }
+.field.col-field .box{ border-left:1.5px solid var(--ink); border-top:none; justify-content:center; }
+.move3{ display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-top:8px; }
+.move3 .m{ border:1.5px solid var(--ink); text-align:center; background:var(--box); }
+.move3 .m .d{ background:var(--ink); color:#f7f5ed; font-family:var(--display); font-weight:600; font-size:8.5px; letter-spacing:.08em; padding:2px 0; }
+.move3 .m .v{ font-size:14px; font-weight:600; padding:2px 0; font-variant-numeric:lining-nums tabular-nums; }
+.move3 .m .v small{ font-size:9px; color:var(--gray); }
+
+/* ── abilities (2×3 grid) + saves ──────────────────────────── */
+.abilities{ display:grid; grid-template-columns:repeat(2,1fr); gap:7px; }
+.abil-cell{ border:2px solid var(--ink); background:var(--box); display:grid; grid-template-columns:auto 1fr auto; align-items:center; }
+.abil-cell .ab{ background:var(--ink); color:#f7f5ed; font-family:var(--display); font-weight:600; letter-spacing:.08em; text-transform:uppercase; font-size:10px; padding:0 7px; align-self:stretch; display:flex; align-items:center; }
+.abil-cell .sc{ font-size:22px; font-weight:600; text-align:center; font-variant-numeric:lining-nums tabular-nums; }
+.abil-cell .sc .star{ color:var(--stamp); font-size:12px; vertical-align:super; }
+.abil-cell .rt{ font-family:var(--display); text-align:right; padding-right:7px; font-size:11px; }
+.abil-cell .rt .md{ font-weight:600; }
+.abil-cell .rt .tmp{ display:block; font-size:9px; color:var(--gray); cursor:pointer; }
+.abil-cell .rt .tmp:hover{ color:var(--stamp); }
+
+.saves{ display:flex; flex-direction:column; gap:5px; }
+.save{ display:flex; align-items:center; gap:8px; }
+.save .cap{ font-family:var(--display); font-weight:700; font-size:16px; width:22px; height:22px; display:flex; align-items:center; justify-content:center; background:var(--ink); color:#f7f5ed; flex:none; }
+.save .nm{ flex:1; font-size:13px; }
+.save .tg{ font-family:var(--display); font-weight:600; font-size:15px; border:1.5px solid var(--ink); padding:0 8px; background:var(--box); font-variant-numeric:lining-nums tabular-nums; }
+
+/* ── tables / chips / kv (shared) ──────────────────────────── */
+table.t{ width:100%; border-collapse:collapse; }
+table.t th, table.t td{ padding:3px 5px; text-align:left; }
+table.t td.n, table.t th.n{ text-align:right; font-variant-numeric:lining-nums tabular-nums; }
+table.t thead th{ font-family:var(--display); font-weight:600; font-size:9px; letter-spacing:.08em; text-transform:uppercase; color:var(--gray); border-bottom:1.5px solid var(--ink); padding-bottom:3px; }
+table.t tbody tr + tr td{ border-top:1px solid var(--hair); }
+
+.tag{ display:inline-block; font-family:var(--display); font-weight:600; font-size:8.5px; letter-spacing:.05em; text-transform:uppercase; padding:1px 5px; vertical-align:middle; margin-left:4px; border:1.5px solid var(--ink); background:var(--box); }
+.tag.stamp{ border-color:var(--stamp); color:var(--stamp); }
+.tag.faint{ border-color:var(--hair); color:var(--faint); }
+
+.chips{ display:flex; flex-wrap:wrap; gap:6px; }
+.chip{ font-family:var(--body); font-size:13px; line-height:1.1; padding:4px 9px; background:var(--box); border:1.5px solid var(--ink); cursor:pointer; color:var(--ink); text-align:left; }
+.chip:hover{ background:var(--ink); color:#f7f5ed; }
+.chip:hover .src{ color:#d8d2bf; }
+.chip .src{ color:var(--gray); font-size:11px; font-family:var(--display); letter-spacing:.04em; }
+.chip.gilt{ border-left:4px solid var(--stamp); }
+
+.kv{ display:flex; justify-content:space-between; gap:8px; padding:3px 0; }
+.kv + .kv{ border-top:1px solid var(--hair); }
+.kv .k{ color:var(--gray); }
+.kv .v{ font-variant-numeric:lining-nums tabular-nums; font-weight:600; }
+.kv .v.stamp{ color:var(--stamp); }
+
+/* ── spells: book partitioned by level + cast pips ─────────── */
+.lvl-head{ font-family:var(--display); font-weight:600; font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:#f7f5ed; background:var(--ink); padding:2px 8px; margin:10px 0 4px; display:flex; justify-content:space-between; }
+.lvl-head:first-child{ margin-top:0; }
+.spell{ display:flex; align-items:center; gap:8px; padding:3px 2px; cursor:pointer; }
+.spell + .spell{ border-top:1px solid var(--hair); }
+.spell:hover{ background:#fff6da; }
+.spell .snm{ flex:1; font-size:14px; }
+.spell.allspent .snm{ color:var(--faint); }
+.spell .rev{ color:var(--gray); font-size:11px; font-style:italic; }
+.pips{ display:flex; gap:3px; }
+.pip{ width:13px; height:13px; border:1.5px solid var(--ink); background:var(--ink); border-radius:50%; }
+.pip.spent{ background:transparent; }
+.pip.spent::after{ content:""; }
+.known-tag{ font-family:var(--display); font-size:8.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--faint); }
+.cast-legend{ display:flex; gap:14px; font-size:11px; color:var(--gray); margin-top:8px; align-items:center; }
+.cast-legend .pip{ width:11px; height:11px; }
+
+/* ── inventory & currency group ────────────────────────────── */
+.coins{ display:grid; grid-template-columns:repeat(5,1fr) auto; gap:6px; align-items:stretch; margin-bottom:10px; }
+.coin{ border:1.5px solid var(--ink); text-align:center; background:var(--box); }
+.coin .d{ background:var(--ink); color:#f7f5ed; font-family:var(--display); font-weight:600; font-size:9px; letter-spacing:.06em; padding:2px 0; }
+.coin .c{ font-size:14px; font-weight:600; padding:3px 0; font-variant-numeric:lining-nums tabular-nums; }
+.treasure-chip{ border:1.5px solid var(--stamp); display:flex; flex-direction:column; justify-content:center; align-items:center; padding:0 12px; }
+.treasure-chip .d{ font-family:var(--display); font-size:8.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--stamp); }
+.treasure-chip .c{ font-weight:700; color:var(--stamp); font-variant-numeric:lining-nums tabular-nums; }
+
+.inv-cols{ display:grid; grid-template-columns:1.5fr 1.4fr 1fr; gap:16px; }
+.inv-cols h4{ font-family:var(--display); font-weight:600; font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink); margin:0 0 5px; border-bottom:1.5px solid var(--ink); padding-bottom:3px; }
+.inv-cols ul{ list-style:none; margin:0; padding:0; }
+.inv-cols li{ font-size:13px; padding:2px 0; display:flex; justify-content:space-between; gap:6px; }
+.inv-cols li.info{ cursor:pointer; } .inv-cols li.info:hover{ background:#fff6da; }
+.inv-cols .q{ color:var(--faint); font-variant-numeric:lining-nums tabular-nums; white-space:nowrap; }
+.inv-cols .st{ font-family:var(--display); font-size:11px; color:var(--ink); font-variant-numeric:lining-nums tabular-nums; white-space:nowrap; }
+.inv-cols .bag{ font-weight:600; } .inv-cols .bag::before{ content:"▸ "; }
+.inv-cols .sub{ color:var(--gray); padding-left:10px; font-size:12px; }
+.eqhead{ display:flex; justify-content:space-between; font-family:var(--display); font-size:8.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--faint); padding:1px 0; }
+.add-row{ margin-top:8px; width:100%; text-align:left; font-style:italic; font-family:var(--body); color:var(--faint); background:transparent; border:1.5px dashed var(--hair); padding:5px 8px; cursor:pointer; font-size:13px; }
+.add-row:hover{ border-color:var(--ink); color:var(--ink); }
+
+/* notes / languages / skills */
+.notes-body{ white-space:pre-wrap; font-size:13.5px; min-height:36px; cursor:text; }
+.notes-body:hover{ background:#fff6da; }
+
+/* footer */
+.sheet-foot{ margin-top:var(--gap); border:2px solid var(--ink); background:var(--box-sunk); padding:7px 12px; font-size:12px; color:var(--gray); display:flex; gap:20px; flex-wrap:wrap; }
+.sheet-foot b{ color:var(--ink); font-family:var(--display); font-weight:600; letter-spacing:.04em; }
+
+/* buttons */
+.btn{ font-family:var(--display); font-weight:600; font-size:10px; letter-spacing:.07em; text-transform:uppercase; padding:4px 9px; border:1.5px solid var(--ink); background:var(--box); color:var(--ink); cursor:pointer; line-height:1; }
+.btn:hover{ background:var(--ink); color:#f7f5ed; }
+.btn.solid{ background:var(--ink); color:#f7f5ed; } .btn.solid:hover{ background:var(--ink-2); }
+.btn.tool{ padding:3px 7px; font-size:9px; border-color:#f7f5ed; color:#f7f5ed; background:transparent; }
+.btn.tool:hover{ background:#f7f5ed; color:var(--ink); }
+.btn.tool.dark{ border-color:var(--ink); color:var(--ink); background:var(--box); } .btn.tool.dark:hover{ background:var(--ink); color:#f7f5ed; }
+.btn.danger{ border-color:var(--stamp); color:var(--stamp); } .btn.danger:hover{ background:var(--stamp); color:#f7f5ed; }
+.btn.link{ border:none; background:none; text-transform:none; letter-spacing:0; font-family:var(--body); font-size:13px; color:var(--stamp); padding:2px 4px; text-decoration:underline; text-underline-offset:2px; }
+.btn.link:hover{ color:var(--stamp-dk); background:none; }
+
+label.f{ display:block; font-size:12px; color:var(--gray); margin:0 0 10px; }
+label.f .lab{ font-family:var(--display); font-weight:600; font-size:10px; letter-spacing:.07em; text-transform:uppercase; color:var(--ink); display:block; margin-bottom:3px; }
+input[type=text],input[type=number],select,textarea{ font-family:var(--body); font-size:14px; color:var(--ink); background:#fff; border:1.5px solid var(--ink); padding:6px 8px; }
+input[type=number]{ width:5em; }
+textarea{ width:100%; resize:vertical; }
+.inline-form{ display:inline-flex; gap:6px; align-items:center; margin:0 0 8px; }
+.row-actions{ display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+
+/* ── overlays ──────────────────────────────────────────────── */
+.scrim{ position:fixed; inset:0; z-index:40; background:rgba(24,22,15,.42); opacity:0; visibility:hidden; transition:opacity .16s; }
+.scrim.on{ opacity:1; visibility:visible; }
+.overlay{ position:fixed; z-index:50; display:none; }
+.overlay.on{ display:block; }
+.overlay.drawer{ top:0; right:0; height:100vh; width:min(580px,95vw); background:var(--sheet); border-left:3px solid var(--ink); transform:translateX(100%); transition:transform .2s ease; display:flex; flex-direction:column; }
+.overlay.drawer.on{ display:flex; transform:translateX(0); }
+.overlay.modal{ top:50%; left:50%; width:min(540px,95vw); max-height:88vh; transform:translate(-50%,-46%); opacity:0; background:var(--sheet); border:3px solid var(--ink); box-shadow:8px 8px 0 rgba(24,22,15,.18); transition:transform .16s ease,opacity .16s ease; display:flex; flex-direction:column; }
+.overlay.modal.on{ display:flex; transform:translate(-50%,-50%); opacity:1; }
+.ov-head{ display:flex; align-items:center; gap:10px; padding:10px 14px; background:var(--ink); color:#f7f5ed; flex:none; position:relative; overflow:hidden; }
+.ov-head::after{ content:""; position:absolute; inset:0; pointer-events:none; opacity:.07; background-image:repeating-linear-gradient(115deg,rgba(255,255,255,.5) 0 1px,transparent 1px 5px),repeating-linear-gradient(8deg,rgba(255,255,255,.4) 0 1px,transparent 1px 7px); }
+.ov-head h3{ font-family:var(--display); font-weight:600; font-size:14px; letter-spacing:.08em; text-transform:uppercase; margin:0; position:relative; z-index:1; }
+.ov-head .x{ margin-left:auto; border:none; background:none; cursor:pointer; font-size:22px; line-height:1; color:#f7f5ed; padding:0 4px; position:relative; z-index:1; }
+.ov-body{ padding:14px 16px; overflow:auto; }
+.ov-section{ margin-bottom:18px; }
+.ov-section > h4{ font-family:var(--display); font-weight:600; font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink); margin:0 0 8px; border-bottom:1.5px solid var(--ink); padding-bottom:4px; }
+.overlay.popover{ width:max-content; max-width:320px; background:var(--sheet); border:2px solid var(--ink); box-shadow:5px 5px 0 rgba(24,22,15,.18); padding:12px 14px; opacity:0; transform:translateY(-4px); transition:opacity .1s,transform .1s; }
+.overlay.popover.on{ opacity:1; transform:translateY(0); }
+.overlay.popover h4{ font-family:var(--display); font-weight:600; font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink); margin:0 0 8px; }
+.tabs{ display:flex; margin-bottom:14px; border:1.5px solid var(--ink); flex-wrap:wrap; }
+.tab{ flex:1; font-family:var(--display); font-weight:600; font-size:9.5px; letter-spacing:.05em; text-transform:uppercase; padding:7px 5px; background:var(--box); color:var(--gray); cursor:pointer; text-align:center; border-right:1.5px solid var(--ink); }
+.tab:last-child{ border-right:none; } .tab.on{ background:var(--ink); color:#f7f5ed; }
+.dtable{ width:100%; border-collapse:collapse; font-size:13px; margin-bottom:10px; }
+.dtable th{ font-family:var(--display); font-weight:600; font-size:9px; letter-spacing:.06em; text-transform:uppercase; color:var(--gray); text-align:left; padding:4px 6px; border-bottom:1.5px solid var(--ink); }
+.dtable td{ padding:5px 6px; border-bottom:1px solid var(--hair); vertical-align:middle; }
+.dtable td.n{ text-align:right; font-variant-numeric:lining-nums tabular-nums; }
+.dtable .child td:first-child{ padding-left:22px; color:var(--gray); }
+.dtable .child td:first-child::before{ content:"↳ "; }
+.search{ width:100%; margin-bottom:10px; padding:8px 10px; font-size:14px; border:1.5px solid var(--ink); background:#fff; }
+.shop-cat{ font-family:var(--display); font-weight:600; font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:#f7f5ed; background:var(--ink); padding:4px 8px; margin:14px 0 4px; }
+.out td{ color:var(--faint); }
+.hint{ font-size:12px; color:var(--faint); font-style:italic; margin:2px 0 10px; }
+.matrix .cells{ display:grid; grid-template-columns:repeat(10,1fr); border:1.5px solid var(--ink); margin-top:8px; }
+.matrix .cells > div{ text-align:center; border-right:1px solid var(--hair); font-variant-numeric:lining-nums tabular-nums; }
+.matrix .cells > div:last-child{ border-right:none; }
+.matrix .cells .ac{ background:var(--ink); color:#f7f5ed; font-family:var(--display); font-weight:500; font-size:10px; padding:3px 0; }
+.matrix .cells .hit{ padding:5px 0; font-weight:600; }
+
+@media print{ body{ background:#fff; } .topbar,.scrim,.overlay,.btn,.tools,.add-row{ display:none !important; } .sheet{ border:none; box-shadow:none; } .gbody{ overflow:visible !important; max-height:none !important; } }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="#" class="brand">AOSE Character Builder</a>
+  <nav><a href="#">All Characters</a><a href="#">Settings</a></nav>
+</div>
+
+<article class="sheet">
+
+  <!-- ════════ IDENTITY (always visible) ════════ -->
+  <header class="ident">
+    <div class="who">
+      <h1 data-pop="pop-identity">Maelen Duskwarden</h1>
+      <div class="tags">
+        <span class="pill"><b>Elf</b></span>
+        <span class="pill">Fighter 2 / Magic-User 2</span>
+        <span class="pill" data-pop="pop-identity"><b>Neutral</b></span>
+      </div>
+    </div>
+    <div class="xp">
+      <div class="xp-track"><div class="cls">Fighter L2</div><div class="bar2"><i style="width:53%"></i></div><div class="num">4,200 / 8,000</div></div>
+      <div class="xp-track"><div class="cls">Magic-User L2</div><div class="bar2"><i style="width:62%"></i></div><div class="num">3,100 / 5,000</div></div>
+      <button class="btn tool" data-modal="modal-advance">Advance</button>
+    </div>
+  </header>
+
+  <div class="layout">
+
+    <!-- ═══ COLUMN 1: COMBAT (prominent) + ABILITIES & SAVES ═══ -->
+    <div class="col">
+      <section class="group prominent">
+        <div class="bar">Combat <span class="tools"><button class="btn tool" data-modal="modal-rest">Rest</button></span></div>
+        <div class="gbody">
+          <div class="combat-top">
+            <div class="field editable" data-pop="pop-hp"><span class="tab">HP</span><span class="box big">11<span style="font-size:13px;color:var(--gray)"> / 14</span></span></div>
+            <div class="shield">
+              <div class="lab">Armour Class</div>
+              <div class="ac">4</div>
+              <div class="unarm">unarmoured <b>8</b></div>
+            </div>
+            <div class="field col-field editable" data-modal="modal-matrix" title="Show to-hit matrix"><span class="tab">THAC0</span><span class="box" style="font-weight:600">18</span></div>
+          </div>
+          <div class="move3">
+            <div class="m"><div class="d">Explore</div><div class="v">90′<small>/turn</small></div></div>
+            <div class="m"><div class="d">Encounter</div><div class="v">30′<small>/rnd</small></div></div>
+            <div class="m"><div class="d">Overland</div><div class="v">18<small>mi/day</small></div></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="group">
+        <div class="bar">Abilities &amp; Saves</div>
+        <div class="gbody">
+          <div class="abilities">
+            <div class="abil-cell"><span class="ab">Str</span><span class="sc">18<span class="star" title="Gauntlets of Ogre Power">✦</span></span><span class="rt"><span class="md">+3</span><span class="tmp" data-pop="pop-temp" data-ability="Str">tmp ±0</span></span></div>
+            <div class="abil-cell"><span class="ab">Int</span><span class="sc">16</span><span class="rt"><span class="md">+2</span><span class="tmp" data-pop="pop-temp" data-ability="Int">tmp ±0</span></span></div>
+            <div class="abil-cell"><span class="ab">Wis</span><span class="sc">9</span><span class="rt"><span class="md">+0</span><span class="tmp" data-pop="pop-temp" data-ability="Wis">tmp ±0</span></span></div>
+            <div class="abil-cell"><span class="ab">Dex</span><span class="sc">15</span><span class="rt"><span class="md">+1</span><span class="tmp" data-pop="pop-temp" data-ability="Dex">tmp ±0</span></span></div>
+            <div class="abil-cell"><span class="ab">Con</span><span class="sc">11</span><span class="rt"><span class="md">+0</span><span class="tmp" data-pop="pop-temp" data-ability="Con">tmp ±0</span></span></div>
+            <div class="abil-cell"><span class="ab">Cha</span><span class="sc">12</span><span class="rt"><span class="md">+0</span><span class="tmp" data-pop="pop-temp" data-ability="Cha">tmp ±0</span></span></div>
+          </div>
+          <div class="subhead">Saving Throws</div>
+          <div class="saves">
+            <div class="save"><span class="cap">D</span><span class="nm">Death / Poison</span><span class="tg">12</span></div>
+            <div class="save"><span class="cap">W</span><span class="nm">Magic Wands</span><span class="tg">13</span></div>
+            <div class="save"><span class="cap">P</span><span class="nm">Paralysis / Petrify</span><span class="tg">13</span></div>
+            <div class="save"><span class="cap">B</span><span class="nm">Breath Attacks</span><span class="tg">15</span></div>
+            <div class="save"><span class="cap">S</span><span class="nm">Spells / Rods / Staves</span><span class="tg">15</span></div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- ═══ COLUMN 2: FEATURES+PROFICIENCIES, then LANG/NOTES/SKILLS ═══ -->
+    <div class="col">
+      <section class="group">
+        <div class="bar">Class &amp; Race Features</div>
+        <div class="gbody scroll" style="max-height:300px">
+          <div class="chips">
+            <button class="chip" data-modal="modal-feature" data-title="Infravision 60′" data-text="Maelen can see in the dark up to 60 feet, perceiving heat and cold as shades of red and blue.">Infravision 60′ <span class="src">Elf</span></button>
+            <button class="chip" data-modal="modal-feature" data-title="Detect Secret Doors" data-text="When actively searching, an elf finds secret and concealed doors on a 1–2 on 1d6. Passing within 10′ grants a 1-in-6 chance to notice one.">Secret Doors <span class="src">Elf</span></button>
+            <button class="chip" data-modal="modal-feature" data-title="Immunity to Ghoul Paralysis" data-text="Elves are wholly unaffected by the paralysing touch of ghouls.">Ghoul Immunity <span class="src">Elf</span></button>
+            <button class="chip" data-modal="modal-feature" data-title="Fighter Combat" data-text="May use any weapon and armour and benefits from optional combat manoeuvres.">Fighter Combat <span class="src">Fighter</span></button>
+            <button class="chip gilt" data-modal="modal-feature" data-title="Arcane Magic" data-text="Casts arcane spells from a personal spellbook, memorising a limited number each day. Spells must be copied into the book before being prepared.">Arcane Magic <span class="src">Magic-User</span></button>
+          </div>
+          <div class="subhead">Weapon Proficiencies <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--gray);font-size:11px">2 / 3 slots · non-prof −2</span></div>
+          <div class="chips">
+            <button class="chip" data-modal="modal-feature" data-title="Long Sword (Specialised)" data-text="Weapon specialisation: +1 to hit and +1 damage with the long sword.">Long Sword <span class="src">specialised</span></button>
+            <button class="chip" data-modal="modal-feature" data-title="Short Bow" data-text="Proficient — no non-proficiency penalty.">Short Bow</button>
+            <button class="chip" data-modal="modal-feature" data-title="Dagger" data-text="Proficient — no non-proficiency penalty.">Dagger</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="group">
+        <div class="bar">Languages, Notes &amp; Skills</div>
+        <div class="gbody scroll" style="max-height:230px">
+          <div class="subhead">Languages</div>
+          <p style="margin:0 0 4px">Common, Elvish, Gnoll, Orcish</p>
+          <div class="subhead">Secondary Skill</div>
+          <p style="margin:0 0 4px">Cartographer <span class="hint" style="display:inline">— may draw accurate maps</span></p>
+          <div class="subhead">Notes</div>
+          <div class="notes-body" data-modal="modal-notes">Owes 200gp to the Thieves' Guild of Threshold.
+Carries a sealed letter for the Grey Tower — do not open.</div>
+        </div>
+      </section>
+    </div>
+
+    <!-- ═══ COLUMN 3: SPELLS (caster only) ═══ -->
+    <div class="col col-spells">
+      <!-- class-adaptive: this whole group is omitted for non-casters.
+           ARCANE shown here (spellbook by level + cast pips).
+           DIVINE variant: no "known" rows — only memorised spells appear,
+           and the Manage drawer lists the full memorizable spell list. -->
+      <section class="group">
+        <div class="bar">Spells — Arcane <span class="tools"><span class="meta">L1 slots 2/2</span><button class="btn tool" data-drawer="drawer-spells">Manage</button></span></div>
+        <div class="gbody scroll" style="max-height:360px">
+          <div class="lvl-head"><span>Level 1</span><span>book · 6</span></div>
+
+          <div class="spell" data-modal="modal-spell" data-title="Magic Missile" data-text="A glowing dart of magical energy unerringly strikes its target for 1d6+1 damage. No attack roll.">
+            <span class="snm">Magic Missile</span>
+            <span class="pips" title="memorised ×2, both available"><i class="pip"></i><i class="pip"></i></span>
+          </div>
+          <div class="spell" data-modal="modal-spell" data-title="Sleep" data-text="2d8 Hit Dice of creatures within 40′ fall asleep, lowest HD first. No save.">
+            <span class="snm">Sleep</span>
+            <span class="pips" title="memorised ×2, 1 cast remaining"><i class="pip"></i><i class="pip spent"></i></span>
+          </div>
+          <div class="spell allspent" data-modal="modal-spell" data-title="Shield" data-text="AC 2 vs missiles, AC 4 in melee for the duration.">
+            <span class="snm">Shield</span>
+            <span class="pips" title="memorised ×1, all casts spent"><i class="pip spent"></i></span>
+          </div>
+          <div class="spell" data-modal="modal-spell" data-title="Charm Person" data-text="One humanoid saves vs spells or regards the caster as a trusted friend.">
+            <span class="snm">Charm Person</span><span class="known-tag">known</span>
+          </div>
+          <div class="spell" data-modal="modal-spell" data-title="Detect Magic" data-text="Magical auras within 60′ glow for 2 turns.">
+            <span class="snm">Detect Magic</span><span class="known-tag">known</span>
+          </div>
+          <div class="spell" data-modal="modal-spell" data-title="Read Magic" data-text="Read otherwise unintelligible magical writings and scrolls.">
+            <span class="snm">Read Magic</span><span class="known-tag">known</span>
+          </div>
+
+          <div class="lvl-head"><span>Level 2</span><span>book · 0</span></div>
+          <p class="hint" style="margin:4px 0">No level-2 spells in book yet. Copy from a scroll or spellbook in inventory.</p>
+
+          <div class="cast-legend"><span><i class="pip"></i> cast ready</span><span><i class="pip spent"></i> spent</span><span><span class="known-tag">known</span> not memorised</span></div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- ════════ INVENTORY · CURRENCY · TREASURE (full width, bounded) ════════ -->
+  <section class="group full">
+    <div class="bar">Inventory, Currency &amp; Treasure
+      <span class="tools"><span class="meta">540 / 1,600 cn · lightly loaded → 90′</span><button class="btn tool" data-modal="modal-encumbrance">Thresholds</button><button class="btn tool" data-drawer="drawer-equip">Manage</button></span>
+    </div>
+    <div class="gbody scroll" style="max-height:320px">
+      <div class="coins">
+        <div class="coin"><div class="d">PP</div><div class="c">0</div></div>
+        <div class="coin"><div class="d">GP</div><div class="c">142</div></div>
+        <div class="coin"><div class="d">EP</div><div class="c">0</div></div>
+        <div class="coin"><div class="d">SP</div><div class="c">30</div></div>
+        <div class="coin"><div class="d">CP</div><div class="c">18</div></div>
+        <div class="treasure-chip editable" data-pop="pop-coins"><div class="d">Treasure</div><div class="c">1,415 gp</div></div>
+      </div>
+
+      <div class="inv-cols">
+        <div>
+          <h4>Equipped</h4>
+          <div class="eqhead"><span>Weapon</span><span>hit · dmg · range</span></div>
+          <ul>
+            <li class="info" data-modal="modal-feature" data-title="Long Sword +1" data-text="A finely-wrought blade humming with magic. +1 to hit and damage; +3 vs dragons. Counts as a magic weapon.">
+              <span>Long Sword +1 <span class="tag stamp">magic</span><span class="tag">spec</span></span><span class="st">+5 · 1d8+5 · —</span></li>
+            <li class="info"><span>Short Bow <span class="tag faint">arrows ×19</span></span><span class="st">+1 · 1d6 · 50/100/150′</span></li>
+            <li><span>Unarmed</span><span class="st">+3 · 1d2+3 · —</span></li>
+            <li style="border-top:1px solid var(--hair);margin-top:4px;padding-top:4px"><span>Chainmail</span><span class="st">AC 5</span></li>
+            <li><span>Shield</span><span class="st">+1 AC</span></li>
+            <li class="info" data-modal="modal-feature" data-title="Gauntlets of Ogre Power" data-text="Set the wearer's Strength to 18 while worn (+3 hit/damage in melee).">
+              <span>Gauntlets of Ogre Power <span class="tag stamp">magic</span></span><span class="st">Str→18</span></li>
+            <li class="info" data-modal="modal-feature" data-title="Ring of Protection +1" data-text="+1 AC and +1 to all saving throws while worn.">
+              <span>Ring of Protection +1 <span class="tag stamp">magic</span></span><span class="st">+1 AC</span></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Carried</h4>
+          <ul>
+            <li><span>Dagger</span><span class="q">10 cn</span></li>
+            <li class="info" data-modal="modal-feature" data-title="Potion of Healing ×2" data-text="Each draught restores 1d6+1 hit points. Two doses remain.">
+              <span>Potion of Healing ×2 <span class="tag stamp">magic</span></span><span class="q">20</span></li>
+            <li class="bag info"><span>Backpack</span><span class="q">390</span></li>
+            <li class="sub"><span>Rope · Iron Rations ×7 · Torches ×6</span><span class="q">↳ 310</span></li>
+            <li class="sub"><span>Amethyst <span class="tag faint">gem · 500gp</span></span><span class="q">↳ 1</span></li>
+            <li><span>Sapphire ×2 <span class="tag faint">gem · 100gp</span></span><span class="q">2</span></li>
+            <li><span>Gold necklace <span class="tag faint">jewel · 700gp</span></span><span class="q">10</span></li>
+            <li class="info"><span>Spellbook <span class="tag">book</span></span><span class="q">—</span></li>
+            <li class="info" data-modal="modal-feature" data-title="Scroll of Fireball" data-text="A single-use arcane scroll. Casting expends it; an arcane caster may instead copy Fireball into their spellbook.">
+              <span>Scroll of Fireball <span class="tag">scroll</span></span><span class="q">1</span></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Stashed <span style="font-weight:400;color:var(--faint);font-size:9px">no weight</span></h4>
+          <ul>
+            <li><span>Tent</span><span class="q">—</span></li>
+            <li><span>Wineskin</span><span class="q">—</span></li>
+          </ul>
+          <button class="add-row" data-drawer="drawer-equip">+ add, buy, or grant an item…</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="sheet-foot">
+    <span>Encumbrance: <b>Detailed</b></span>
+    <span>Optional rules: <b>Weapon Proficiency · Secondary Skills · Multiclassing · Variable Weapon Damage</b></span>
+  </footer>
+
+</article>
+
+<!-- ════════════════════ OVERLAYS ════════════════════ -->
+<div class="scrim" id="scrim"></div>
+
+<!-- DRAWER: equipment (unified) -->
+<aside class="overlay drawer" id="drawer-equip" role="dialog" aria-label="Manage equipment">
+  <div class="ov-head"><h3>Inventory</h3><span class="tag" style="margin-left:6px;background:var(--box);color:var(--ink)">142 gp</span><button class="x" data-close>×</button></div>
+  <div class="ov-body">
+    <div class="tabs" id="equip-tabs">
+      <button class="tab on" data-tab="inv">Carried</button>
+      <button class="tab" data-tab="magic">Magic</button>
+      <button class="tab" data-tab="docs">Documents</button>
+      <button class="tab" data-tab="treasure">Treasure</button>
+      <button class="tab" data-tab="shop">Shop</button>
+    </div>
+    <div data-pane="inv">
+      <div class="ov-section"><h4>Equipped</h4>
+        <table class="dtable"><tbody>
+          <tr><td>Chainmail</td><td class="n">400 cn</td><td class="n"><button class="btn link">unequip</button> <button class="btn link">stash</button></td></tr>
+          <tr><td>Shield</td><td class="n">100 cn</td><td class="n"><button class="btn link">unequip</button></td></tr>
+          <tr><td>Long Sword +1</td><td class="n">60 cn</td><td class="n"><button class="btn link">unequip</button></td></tr>
+        </tbody></table></div>
+      <div class="ov-section"><h4>Carried</h4>
+        <table class="dtable"><tbody>
+          <tr><td>Dagger ×1</td><td class="n">10 cn</td><td class="n"><button class="btn link">equip</button> <button class="btn link">stow</button> <button class="btn link">drop</button></td></tr>
+          <tr><td><strong>Backpack</strong> <span class="tag faint">310 / 400 cn</span></td><td class="n">390 cn</td><td class="n"><button class="btn link">stash</button></td></tr>
+          <tr class="child"><td>Rope, 50′</td><td class="n">50 cn</td><td class="n"><button class="btn link">take out</button></td></tr>
+          <tr class="child"><td>Iron Rations ×7</td><td class="n">140 cn</td><td class="n"><button class="btn link">take out</button></td></tr>
+          <tr class="child"><td>Amethyst (gem, 500gp)</td><td class="n">1 cn</td><td class="n"><button class="btn link">take out</button></td></tr>
+        </tbody></table></div>
+      <div class="ov-section"><h4>Ammunition</h4>
+        <table class="dtable"><tbody><tr><td>Arrows</td><td class="n">19</td><td class="n"><button class="btn tool dark">+</button> <button class="btn tool dark">−</button> <button class="btn link">load → Short Bow</button></td></tr></tbody></table></div>
+    </div>
+    <div data-pane="magic" hidden>
+      <div class="ov-section"><h4>Magic Items</h4>
+        <table class="dtable"><tbody>
+          <tr><td><strong>Gauntlets of Ogre Power</strong><br><span class="tag stamp">Str → 18</span></td><td class="n">worn</td><td class="n"><button class="btn link">unequip</button> <button class="btn link">remove</button></td></tr>
+          <tr><td><strong>Ring of Protection +1</strong><br><span class="tag stamp">+1 AC</span> <span class="tag stamp">+1 saves</span></td><td class="n">worn</td><td class="n"><button class="btn link">unequip</button> <button class="btn link">remove</button></td></tr>
+          <tr><td><strong>Potion of Healing</strong> ×2</td><td class="n">—</td><td class="n"><button class="btn link">use one</button> <button class="btn link">remove</button></td></tr>
+        </tbody></table></div>
+      <div class="ov-section"><h4>Add Enchanted Item <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--faint)">— GM grant</span></h4>
+        <label class="f"><span class="lab">Enchantment</span><select><option>Sword +1</option><option>Armour +1</option></select></label>
+        <label class="f"><span class="lab">Base item</span><select><option>Long Sword</option><option>Battle Axe</option></select></label>
+        <button class="btn solid">Add (GM grant)</button></div>
+    </div>
+    <div data-pane="docs" hidden>
+      <div class="ov-section"><h4>Spell Books &amp; Scrolls</h4>
+        <p class="hint">Physical documents are part of inventory; cast &amp; copy actions live here.</p>
+        <table class="dtable"><tbody>
+          <tr><td><strong>Maelen's Travelling Spellbook</strong> <span class="tag faint">6 spells</span></td><td class="n"><button class="btn link">remove</button></td></tr>
+          <tr><td><strong>Scroll of Fireball</strong> <span class="tag faint">arcane · L3</span></td><td class="n"><button class="btn link">cast</button> <button class="btn link">copy to book</button> <button class="btn link">remove</button></td></tr>
+        </tbody></table>
+        <button class="btn" style="margin-top:6px">+ Add spell book or scroll</button></div>
+    </div>
+    <div data-pane="treasure" hidden>
+      <div class="ov-section"><h4>Gems <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--faint)">— stowable in containers</span></h4>
+        <table class="dtable"><thead><tr><th>Value</th><th class="n">Count</th><th></th></tr></thead><tbody>
+          <tr><td>500 gp · amethyst</td><td class="n">1</td><td class="n"><button class="btn link">sell</button> <button class="btn link">stow</button> <button class="btn link">drop</button></td></tr>
+          <tr><td>100 gp · sapphire</td><td class="n">2</td><td class="n"><button class="btn link">sell one</button> <button class="btn link">sell all</button></td></tr>
+        </tbody></table>
+        <button class="btn" style="margin-top:4px">+ Add gem</button></div>
+      <div class="ov-section"><h4>Jewellery</h4>
+        <table class="dtable"><tbody><tr><td>Gold necklace · 700 gp</td><td class="n"><button class="btn link">mark damaged</button> <button class="btn link">sell</button> <button class="btn link">drop</button></td></tr></tbody></table>
+        <button class="btn" style="margin-top:4px">+ Add jewellery</button></div>
+    </div>
+    <div data-pane="shop" hidden>
+      <input type="text" class="search" placeholder="Search items by name…">
+      <div class="shop-cat">Weapons</div>
+      <table class="dtable"><thead><tr><th>Item</th><th class="n">Cost</th><th class="n">Wt</th><th></th></tr></thead><tbody>
+        <tr><td>Battle Axe</td><td class="n">7 gp</td><td class="n">50</td><td class="n"><button class="btn tool dark">Buy</button> <button class="btn link">add</button></td></tr>
+        <tr class="out"><td>Plate Mail</td><td class="n">450 gp</td><td class="n">500</td><td class="n"><button class="btn tool dark" disabled>Buy</button> <button class="btn link">add</button></td></tr>
+      </tbody></table>
+      <div class="shop-cat">Adventuring Gear</div>
+      <table class="dtable"><thead><tr><th>Item</th><th class="n">Cost</th><th class="n">Wt</th><th></th></tr></thead><tbody>
+        <tr><td>Lantern</td><td class="n">10 gp</td><td class="n">30</td><td class="n"><button class="btn tool dark">Buy</button> <button class="btn link">add</button></td></tr>
+        <tr><td>Holy Water (vial)</td><td class="n">25 gp</td><td class="n">5</td><td class="n"><button class="btn tool dark">Buy</button> <button class="btn link">add</button></td></tr>
+      </tbody></table>
+    </div>
+  </div>
+</aside>
+
+<!-- DRAWER: spells (arcane) -->
+<aside class="overlay drawer" id="drawer-spells" role="dialog" aria-label="Manage spells">
+  <div class="ov-head"><h3>Spells — Magic-User</h3><button class="x" data-close>×</button></div>
+  <div class="ov-body">
+    <p class="hint">Arcane: memorise spells directly from the book below. Memorise the same spell more than once to cast it multiple times. (A divine caster sees no book here — instead the full list of spells they may memorise.)</p>
+    <div class="ov-section"><h4>Spellbook — Level 1 <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--faint)">slots 2 / 2 used</span></h4>
+      <table class="dtable"><tbody>
+        <tr><td>Magic Missile</td><td class="n"><span class="pips" style="display:inline-flex"><i class="pip"></i><i class="pip"></i></span></td><td class="n"><button class="btn link">memorise</button> <button class="btn link">cast</button> <button class="btn link">clear</button></td></tr>
+        <tr><td>Sleep</td><td class="n"><span class="pips" style="display:inline-flex"><i class="pip"></i><i class="pip spent"></i></span></td><td class="n"><button class="btn link">memorise</button> <button class="btn link">cast</button> <button class="btn link">restore</button></td></tr>
+        <tr><td>Shield</td><td class="n"><span class="pips" style="display:inline-flex"><i class="pip spent"></i></span></td><td class="n"><button class="btn link">memorise</button> <button class="btn link">restore</button> <button class="btn link">clear</button></td></tr>
+        <tr><td style="color:var(--gray)">Charm Person</td><td class="n">—</td><td class="n"><button class="btn link">memorise</button> <button class="btn link">forget</button></td></tr>
+        <tr><td style="color:var(--gray)">Detect Magic</td><td class="n">—</td><td class="n"><button class="btn link">memorise</button> <button class="btn link">forget</button></td></tr>
+        <tr><td style="color:var(--gray)">Read Magic</td><td class="n">—</td><td class="n"><button class="btn link">memorise</button> <button class="btn link">forget</button></td></tr>
+      </tbody></table>
+    </div>
+  </div>
+</aside>
+
+<!-- MODAL: feature / item / spell detail -->
+<div class="overlay modal" id="modal-feature" role="dialog" aria-label="Detail">
+  <div class="ov-head"><h3 data-role="title">Detail</h3><button class="x" data-close>×</button></div>
+  <div class="ov-body"><p data-role="text" style="font-size:15px;margin:0"></p></div>
+</div>
+<div class="overlay modal" id="modal-spell" role="dialog" aria-label="Spell">
+  <div class="ov-head"><h3 data-role="title">Spell</h3><button class="x" data-close>×</button></div>
+  <div class="ov-body">
+    <p data-role="text" style="font-size:15px"></p>
+    <div class="ov-section" style="margin:14px 0 0"><h4>Memorisation <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--faint)">memorise multiple times to cast more</span></h4>
+      <div class="row-actions"><button class="btn solid">+ Memorise</button><button class="btn">Cast (−1)</button><button class="btn">Restore</button><button class="btn link">Clear all</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: advancement -->
+<div class="overlay modal" id="modal-advance" role="dialog" aria-label="Advancement">
+  <div class="ov-head"><h3>Advancement</h3><button class="x" data-close>×</button></div>
+  <div class="ov-body">
+    <div class="ov-section"><h4>Fighter — Level 2</h4><div class="kv"><span class="k">Experience</span><span class="v">4,200 / 8,000</span></div><button class="btn" disabled style="margin-top:6px">Level Up → 3</button></div>
+    <div class="ov-section"><h4>Magic-User — Level 2</h4><div class="kv"><span class="k">Experience</span><span class="v">3,100 / 5,000</span></div><button class="btn" disabled style="margin-top:6px">Level Up → 3</button></div>
+    <div class="ov-section"><h4>Award Experience</h4><div class="inline-form"><input type="number" value="500" step="50"><button class="btn solid">Grant XP</button></div></div>
+    <div class="ov-section"><h4>Energy Drain</h4><div class="inline-form"><input type="number" value="1" min="1"><button class="btn danger">Drain Level</button></div></div>
+  </div>
+</div>
+
+<!-- MODAL: encumbrance -->
+<div class="overlay modal" id="modal-encumbrance" role="dialog" aria-label="Encumbrance">
+  <div class="ov-head"><h3>Encumbrance</h3><button class="x" data-close>×</button></div>
+  <div class="ov-body">
+    <div class="kv"><span class="k">Carried</span><span class="v">540 / 1,600 cn</span></div>
+    <div class="kv"><span class="k">Current band</span><span class="v stamp">Lightly loaded → 90′</span></div>
+    <table class="dtable" style="margin-top:12px"><thead><tr><th>Max weight</th><th class="n">Move</th></tr></thead><tbody>
+      <tr><td>up to 400 cn</td><td class="n">120′</td></tr>
+      <tr style="background:var(--ink);color:#f7f5ed"><td>up to 600 cn</td><td class="n">90′</td></tr>
+      <tr><td>up to 800 cn</td><td class="n">60′</td></tr>
+      <tr><td>up to 1,600 cn</td><td class="n">30′</td></tr>
+    </tbody></table>
+  </div>
+</div>
+
+<!-- MODAL: to-hit matrix (from THAC0 click) -->
+<div class="overlay modal" id="modal-matrix" role="dialog" aria-label="To-hit matrix">
+  <div class="ov-head"><h3>To-Hit Matrix — THAC0 18</h3><button class="x" data-close>×</button></div>
+  <div class="ov-body matrix">
+    <p class="hint">Roll needed to hit each descending Armour Class (before per-weapon bonuses).</p>
+    <div class="cells">
+      <div><div class="ac">AC 9</div><div class="hit">9</div></div>
+      <div><div class="ac">8</div><div class="hit">10</div></div>
+      <div><div class="ac">7</div><div class="hit">11</div></div>
+      <div><div class="ac">6</div><div class="hit">12</div></div>
+      <div><div class="ac">5</div><div class="hit">13</div></div>
+      <div><div class="ac">4</div><div class="hit">14</div></div>
+      <div><div class="ac">3</div><div class="hit">15</div></div>
+      <div><div class="ac">2</div><div class="hit">16</div></div>
+      <div><div class="ac">1</div><div class="hit">17</div></div>
+      <div><div class="ac">0</div><div class="hit">18</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: notes -->
+<div class="overlay modal" id="modal-notes" role="dialog" aria-label="Edit notes">
+  <div class="ov-head"><h3>Notes</h3><button class="x" data-close>×</button></div>
+  <div class="ov-body"><textarea rows="8">Owes 200gp to the Thieves' Guild of Threshold.
+Carries a sealed letter for the Grey Tower — do not open.</textarea><div class="row-actions" style="margin-top:12px"><button class="btn solid" data-close>Save notes</button></div></div>
+</div>
+
+<!-- MODAL: rest -->
+<div class="overlay modal" id="modal-rest" role="dialog" aria-label="Rest">
+  <div class="ov-head"><h3>Rest</h3><button class="x" data-close>×</button></div>
+  <div class="ov-body">
+    <label class="f"><span class="lab">Spell loadout</span><select><option>Restore previous</option><option>Clear all</option><option>Keep as-is</option></select></label>
+    <label class="f"><span class="lab">Healing (1d3, full day only)</span><input type="number" value="2" min="0" max="3"></label>
+    <div class="row-actions"><button class="btn solid" data-close>Rest &amp; Memorise</button><button class="btn" data-close>Full Day Rest</button></div>
+  </div>
+</div>
+
+<!-- POPOVER: HP -->
+<div class="overlay popover" id="pop-hp" role="dialog" aria-label="Hit points">
+  <h4>Hit Points — 11 / 14</h4>
+  <div class="inline-form"><input type="number" value="1" min="0"><button class="btn">Damage</button></div><br>
+  <div class="inline-form"><input type="number" value="1" min="0"><button class="btn">Heal</button></div><br>
+  <div class="inline-form"><input type="number" value="11" min="0" max="14"><button class="btn solid">Set</button></div>
+</div>
+<!-- POPOVER: ability temp -->
+<div class="overlay popover" id="pop-temp" role="dialog" aria-label="Temporary modifier">
+  <h4><span data-role="ability">Ability</span> — temporary</h4>
+  <div class="inline-form"><input type="number" value="0" step="1"><button class="btn solid" data-close>Set</button></div>
+  <p class="hint" style="margin:4px 0 0">Signed, e.g. −2 for drain.</p>
+</div>
+<!-- POPOVER: coins / treasure -->
+<div class="overlay popover" id="pop-coins" role="dialog" aria-label="Coins" style="max-width:270px">
+  <h4>Coin Purse</h4>
+  <table class="dtable" style="margin-bottom:8px"><tbody>
+    <tr><td>Platinum</td><td class="n">0</td><td class="n"><input type="number" value="0" style="width:3.4em"></td></tr>
+    <tr><td>Gold</td><td class="n">142</td><td class="n"><input type="number" value="0" style="width:3.4em"></td></tr>
+    <tr><td>Silver</td><td class="n">30</td><td class="n"><input type="number" value="0" style="width:3.4em"></td></tr>
+    <tr><td>Copper</td><td class="n">18</td><td class="n"><input type="number" value="0" style="width:3.4em"></td></tr>
+  </tbody></table>
+  <button class="btn solid">Apply</button>
+  <p class="hint" style="margin:8px 0 4px">Convert · or manage gems &amp; jewellery in the Treasure tab.</p>
+  <div class="inline-form" style="margin:0"><input type="number" value="1" min="1" style="width:3.4em"><select><option>sp</option><option>gp</option></select> → <select><option>gp</option><option>sp</option></select><button class="btn">Go</button></div>
+</div>
+<!-- POPOVER: identity -->
+<div class="overlay popover" id="pop-identity" role="dialog" aria-label="Edit identity">
+  <h4>Identity</h4>
+  <label class="f"><span class="lab">Name</span><input type="text" value="Maelen Duskwarden" style="width:200px"></label>
+  <label class="f" style="margin-bottom:0"><span class="lab">Alignment</span><select><option>Lawful</option><option selected>Neutral</option><option>Chaotic</option></select></label>
+  <div class="row-actions" style="margin-top:10px"><button class="btn solid" data-close>Save</button></div>
+</div>
+
+<script>
+(function(){
+  const scrim = document.getElementById('scrim');
+  let lastTrigger = null;
+  function closeAll(){
+    document.querySelectorAll('.overlay.on').forEach(o => o.classList.remove('on'));
+    scrim.classList.remove('on');
+    if (lastTrigger){ try{ lastTrigger.focus({preventScroll:true}); }catch(e){} lastTrigger = null; }
+  }
+  function fill(panel, t){
+    panel.querySelectorAll('[data-role="title"]').forEach(el => { if (t.title) el.textContent = t.title; });
+    panel.querySelectorAll('[data-role="text"]').forEach(el => { if (t.text) el.textContent = t.text; });
+    panel.querySelectorAll('[data-role="ability"]').forEach(el => { if (t.ability) el.textContent = t.ability; });
+  }
+  function place(panel, trigger){
+    const r = trigger.getBoundingClientRect();
+    panel.style.visibility='hidden'; panel.classList.add('on');
+    const pw = panel.offsetWidth, ph = panel.offsetHeight;
+    panel.classList.remove('on'); panel.style.visibility='';
+    let left = r.left, top = r.bottom + 6;
+    if (left + pw > innerWidth - 10) left = innerWidth - pw - 10;
+    if (left < 10) left = 10;
+    if (top + ph > innerHeight - 10) top = Math.max(10, r.top - ph - 6);
+    panel.style.left = left + 'px'; panel.style.top = top + 'px';
+  }
+  function open(id, type, trigger){
+    closeAll();
+    const panel = document.getElementById(id); if (!panel) return;
+    lastTrigger = trigger;
+    if (trigger) fill(panel, trigger.dataset);
+    if (type === 'pop') place(panel, trigger);
+    scrim.classList.add('on');
+    requestAnimationFrame(() => panel.classList.add('on'));
+    if (type !== 'pop'){ const f = panel.querySelector('input,select,textarea,button:not(.x)'); if (f) setTimeout(()=>{ try{f.focus();}catch(e){} }, 60); }
+  }
+  document.addEventListener('click', (e) => {
+    const trig = e.target.closest('[data-drawer],[data-modal],[data-pop]');
+    if (trig){ e.preventDefault();
+      if (trig.dataset.drawer) return open(trig.dataset.drawer,'drawer',trig);
+      if (trig.dataset.modal)  return open(trig.dataset.modal,'modal',trig);
+      if (trig.dataset.pop)    return open(trig.dataset.pop,'pop',trig);
+    }
+    if (e.target.closest('[data-close]')) closeAll();
+  });
+  scrim.addEventListener('click', closeAll);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAll(); });
+  document.querySelectorAll('.tabs').forEach(tabs => {
+    tabs.addEventListener('click', (e) => {
+      const t = e.target.closest('.tab'); if (!t) return;
+      const root = tabs.closest('.ov-body');
+      tabs.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x === t));
+      root.querySelectorAll('[data-pane]').forEach(p => p.hidden = (p.dataset.pane !== t.dataset.tab));
+    });
+  });
+})();
+</script>
+</body>
+</html>
