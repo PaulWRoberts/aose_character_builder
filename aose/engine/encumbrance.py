@@ -43,28 +43,14 @@ TREASURE_CATEGORIES = {"magic_potions", "magic_rods_staves_wands", "scrolls"}
 
 ArmorMovementClass = Literal["none", "leather", "metal"]
 
-# Human-base table.  Index by (armor class, band).
-_HUMAN_BASE = 120
-_BAND_LABELS = ["≤ 400", "401–800", "801–1200", "1201–1600", "> 1600"]
-_BAND_UPPER = [400, 800, 1200, 1600]  # > 1600 → band 4 (immobile)
-_TABLE_HUMAN: dict[tuple[str, int], int] = {
-    ("none", 0): 120, ("none", 1): 90, ("none", 2): 60, ("none", 3): 30, ("none", 4): 0,
-    ("leather", 0): 90, ("leather", 1): 60, ("leather", 2): 45, ("leather", 3): 15, ("leather", 4): 0,
-    ("metal", 0): 60, ("metal", 1): 45, ("metal", 2): 30, ("metal", 3): 15, ("metal", 4): 0,
-}
-
-
-def _scale(human_rate: int, race_base: int) -> int:
-    """Scale a 120'-base table cell to the race's actual base, rounded down
-    to the nearest 5'."""
-    if race_base == _HUMAN_BASE:
-        return human_rate
-    scaled = (human_rate * race_base) // _HUMAN_BASE
-    return (scaled // 5) * 5
+# AOSE detailed encumbrance bands (coin weights → movement).
+_BAND_UPPER = [400, 600, 800, 1600]            # band 4 == over MAX_LOAD
+_BAND_LABELS = ["≤ 400", "401–600", "601–800", "801–1600", "> 1600"]
+_DETAILED_MOVE = [120, 90, 60, 30, 0]          # feet/turn per band
 
 
 def weight_band(weight_cn: int) -> int:
-    """Return 0–4 for the OSE weight band.  Band 4 means over-encumbered."""
+    """Return 0–4 for the AOSE detailed band. Band 4 == over the 1,600 cap."""
     for i, upper in enumerate(_BAND_UPPER):
         if weight_cn <= upper:
             return i
@@ -76,64 +62,9 @@ def band_label(band: int) -> str:
 
 
 def carried_weight_cn(spec: CharacterSpec, data: GameData) -> int:
-    """Total weight in coins.
-
-    Equipped items live inside ``inventory`` already; weight is counted once
-    via the inventory list to avoid the previous double-count bug.  Stashed
-    items (``spec.stashed``) explicitly DO NOT count — that's their whole
-    purpose.
-
-    Carried containers contribute their own ``weight_cn`` plus
-    ``int(weight_multiplier * raw_contents_weight)``.  Stashed containers
-    contribute zero.
-
-    ``Armor`` items in inventory contribute ``int(weight_cn * weight_multiplier)``
-    so enchanted armour (``weight_multiplier=0.5``) weighs half as much.
-
-    Each ``MagicItemInstance`` in ``spec.magic_items`` contributes its catalog
-    ``weight_cn`` on-person whether equipped or not.
-    """
-    from aose.models import Armor, Container
-
-    total = 0
-    for item_id in spec.inventory:
-        item = data.items.get(item_id)
-        if item is None:
-            continue
-        if isinstance(item, Armor):
-            total += int(item.weight_cn * item.weight_multiplier)
-        else:
-            total += item.weight_cn
-
-    for c in spec.containers:
-        if c.state != "carried":
-            continue
-        catalog = data.items.get(c.catalog_id)
-        if not isinstance(catalog, Container):
-            continue
-        total += catalog.weight_cn
-        raw = sum(
-            (data.items[x].weight_cn if x in data.items else 0)
-            for x in c.contents
-        )
-        total += int(catalog.weight_multiplier * raw)
-
-    for mi in spec.magic_items:
-        catalog = data.items.get(mi.catalog_id)
-        if catalog is not None:
-            total += catalog.weight_cn
-
-    from aose.engine.enchant import resolve_instance
-    for inst in spec.enchanted:
-        resolved = resolve_instance(inst, data)
-        if resolved is None:
-            continue
-        if isinstance(resolved, Armor):
-            total += int(resolved.weight_cn * resolved.weight_multiplier)
-        else:
-            total += resolved.weight_cn
-
-    return total
+    """Total tracked weight in coins = treasure + detailed-mode equipment.
+    Used for the detailed band and as the sheet's carried-weight figure."""
+    return treasure_weight_cn(spec, data) + equipment_weight_cn(spec, data)
 
 
 def banding_weight_cn(spec: CharacterSpec, data: GameData) -> int:
@@ -240,22 +171,20 @@ def armor_movement_class(spec: CharacterSpec, data: GameData) -> ArmorMovementCl
     return item.movement_impact
 
 
+def _basic_movement(spec: CharacterSpec, data: GameData) -> int:
+    raise NotImplementedError  # implemented in Task 8
+
+
 def effective_movement(spec: CharacterSpec, data: GameData) -> int:
-    """The exploration movement rate after encumbrance, in feet per turn."""
+    """Exploration movement (feet/turn) after encumbrance."""
     base = data.races[spec.race_id].base_movement
     mode = spec.ruleset.encumbrance
-
     if mode == "none":
         return base
-
-    armor_cls = armor_movement_class(spec, data)
-
     if mode == "basic":
-        # Light band only — armour alone drives it.
-        return _scale(_TABLE_HUMAN[(armor_cls, 0)], base)
-
+        return _basic_movement(spec, data)
     band = weight_band(banding_weight_cn(spec, data))
-    return _scale(_TABLE_HUMAN[(armor_cls, band)], base)
+    return _DETAILED_MOVE[band]
 
 
 # ── Public table-display structures for the sheet ──────────────────────────

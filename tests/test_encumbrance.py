@@ -356,3 +356,44 @@ def test_non_treasure_magic_item_does_not_trigger_flat_80(data):
     spec = _spec()
     spec.magic_items = [MagicItemInstance(instance_id="m", catalog_id="ring_control_animals")]
     assert equipment_weight_cn(spec, data) == 0
+
+
+# ---------------------------------------------------------------------------
+# Task 7: weight_band, carried_weight_cn, effective_movement (detailed)
+# ---------------------------------------------------------------------------
+
+def test_weight_band_thresholds():
+    from aose.engine.encumbrance import weight_band
+    assert weight_band(0) == 0
+    assert weight_band(400) == 0
+    assert weight_band(401) == 1
+    assert weight_band(600) == 1
+    assert weight_band(800) == 2
+    assert weight_band(1600) == 3
+    assert weight_band(1601) == 4
+
+
+def test_carried_weight_is_treasure_plus_equipment(data):
+    spec = _spec(inventory=["sword"])   # 60 cn equipment, no gear
+    spec.gold = 100                     # 100 cn treasure
+    assert carried_weight_cn(spec, data) == 160
+
+
+def test_detailed_movement_bands(data):
+    def move(coins):
+        s = _spec(encumbrance="detailed")
+        s.gold = coins
+        return effective_movement(s, data)
+    assert move(400) == 120
+    assert move(600) == 90
+    assert move(800) == 60
+    assert move(1600) == 30
+    assert move(1601) == 0
+
+
+def test_detailed_includes_armour_weight(data):
+    # Chain mail 400 + 1 coin -> band 1 (>400) -> 90'
+    s = _spec(inventory=["chain_mail"], equipped={"armor": "chain_mail"},
+              encumbrance="detailed")
+    s.gold = 1
+    assert effective_movement(s, data) == 90
