@@ -20,5 +20,6 @@ class RuleSet(BaseModel):
     advanced_spell_books: bool = False
     human_racial_abilities: bool = False
     strict_mode: bool = True
+    optional_staves: bool = False
 
     encumbrance: EncumbranceMode = "basic"

@@ -44,6 +44,11 @@ class CharClass(BaseModel):
     name_level: int = 9
     hp_after_name_level: int = 0
     weapons_allowed: AllowedList
+    # Weapons a class may use in combat ONLY when an optional rule is on.
+    # Today this is the staff, gated by RuleSet.optional_staves (the AOSE
+    # "Magic-Users/Illusionists and Staves" optional rules). Resolved through
+    # the same path as weapons_allowed and unioned in by allowed_weapon_ids.
+    optional_weapons_allowed: list[str] = Field(default_factory=list)
     armor_allowed: AllowedList
     shields_allowed: bool
     progression: dict[int, ClassLevelData] = Field(default_factory=dict)
