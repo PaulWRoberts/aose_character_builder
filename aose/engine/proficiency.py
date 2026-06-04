@@ -179,14 +179,22 @@ def _union(values: list["set[str] | str"]) -> "set[str] | str":
     return out
 
 
-def allowed_weapon_ids(classes: list[CharClass], data) -> "set[str] | str":
+def allowed_weapon_ids(classes: list[CharClass], data, ruleset=None) -> "set[str] | str":
     weapons = [i for i in data.items.values() if isinstance(i, Weapon)]
+    optional_on = bool(ruleset is not None and getattr(ruleset, "optional_staves", False))
     per_class: list["set[str] | str"] = []
     for cls in classes:
         if cls.weapons_allowed == "all":
             per_class.append("all")
-        else:
-            per_class.append(_resolve_entries(list(cls.weapons_allowed), weapons))
+            continue
+        resolved = _resolve_entries(list(cls.weapons_allowed), weapons)
+        if optional_on and cls.optional_weapons_allowed and resolved != "all":
+            extra = _resolve_entries(list(cls.optional_weapons_allowed), weapons)
+            if extra == "all":
+                resolved = "all"
+            else:
+                resolved = resolved | extra
+        per_class.append(resolved)
     return _union(per_class)
 
 

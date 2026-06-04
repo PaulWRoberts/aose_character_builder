@@ -29,3 +29,42 @@ def test_charclass_accepts_optional_weapons_list(data):
         update={"optional_weapons_allowed": ["staff"]}
     )
     assert cls.optional_weapons_allowed == ["staff"]
+
+
+from aose.engine.proficiency import allowed_weapon_ids
+
+
+def _caster_with_optional_staff(data):
+    # A constructed class: dagger allowed, staff optional. Independent of the
+    # YAML edits in Task 3 so this test is isolated.
+    return data.classes["magic_user"].model_copy(
+        update={"weapons_allowed": ["dagger"], "optional_weapons_allowed": ["staff"]}
+    )
+
+
+def test_optional_weapon_excluded_when_ruleset_none(data):
+    cls = _caster_with_optional_staff(data)
+    allowed = allowed_weapon_ids([cls], data)
+    assert "dagger" in allowed
+    assert "staff" not in allowed
+
+
+def test_optional_weapon_excluded_when_rule_off(data):
+    cls = _caster_with_optional_staff(data)
+    allowed = allowed_weapon_ids([cls], data, RuleSet(optional_staves=False))
+    assert "staff" not in allowed
+
+
+def test_optional_weapon_included_when_rule_on(data):
+    cls = _caster_with_optional_staff(data)
+    allowed = allowed_weapon_ids([cls], data, RuleSet(optional_staves=True))
+    assert "dagger" in allowed
+    assert "staff" in allowed
+
+
+def test_optional_weapon_ignored_for_unrestricted_class(data):
+    # A class whose weapons_allowed == "all" stays "all" regardless.
+    fighter = data.classes["fighter"].model_copy(
+        update={"optional_weapons_allowed": ["staff"]}
+    )
+    assert allowed_weapon_ids([fighter], data, RuleSet(optional_staves=True)) == "all"
