@@ -25,6 +25,7 @@ RULE_LABELS = {
     "advanced_spell_books": "Advanced Spell Books",
     "human_racial_abilities": "Human Racial Abilities",
     "strict_mode": "Strict Mode",
+    "optional_staves": "Spellcasters and Staves",
 }
 
 # Rules whose engine/builder integration is fully wired up.  The settings
@@ -41,6 +42,7 @@ IMPLEMENTED_RULES = {
     "advanced_spell_books",
     "human_racial_abilities",
     "strict_mode",
+    "optional_staves",
 }
 
 # Choice-group rules that have full integration too.
@@ -85,6 +87,8 @@ RULE_GROUPS = [
         ("ascending_ac",
          "Show armour class as ascending (10 = unarmoured) and use Attack Bonus, "
          "instead of descending (9 = unarmoured) with THAC0."),
+        ("optional_staves",
+         "Magic-users and illusionists may wield a staff in combat."),
     ]),
 ]
 

@@ -332,3 +332,26 @@ def test_post_settings_basic_forces_advanced_rules_off(client):
     assert rs.separate_race_class is False
     assert rs.multiclassing is False
     assert rs.lift_demihuman_restrictions is False
+
+
+# ── optional_staves rule ───────────────────────────────────────────────────
+
+import re
+
+
+def test_optional_staves_toggle_rendered(client):
+    r = client.get("/settings")
+    assert r.status_code == 200
+    assert "Spellcasters and Staves" in r.text
+
+
+def test_optional_staves_round_trips(client):
+    # Post the settings form with the toggle on; reload and confirm it persisted.
+    r = client.post("/settings", data={"optional_staves": "on"})
+    assert r.status_code == 303
+    r2 = client.get("/settings")
+    # Precise: the optional_staves checkbox itself is rendered checked. (A bare
+    # `"checked" in text` would be always-true since other rules default on.)
+    assert re.search(
+        r'name="optional_staves"[^>]*\bchecked\b', r2.text, re.DOTALL
+    )
