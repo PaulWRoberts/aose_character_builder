@@ -532,12 +532,21 @@ def add_free(inventory: list[str], item_id: str,
 REMOVE_MODES = ("drop", "sell", "refund")
 
 
-def _refund_amount(item_id: str, mode: str, data: GameData) -> int:
-    if mode not in ("sell", "refund"):
-        return 0
+def _removal_gold(item_id: str, mode: str, data: GameData) -> int:
+    """Gold returned for a removal mode.
+
+    * ``sell``   — per-unit half price ``int((cost_gp / bundle_count) / 2)``
+    * ``refund`` — the full bundle price ``int(cost_gp)``
+    * ``drop``   — nothing
+    """
     item = data.items.get(item_id)
-    cost = int(item.cost_gp) if item else 0
-    return cost // 2 if mode == "sell" else cost
+    if item is None or mode == "drop":
+        return 0
+    cost = item.cost_gp
+    if mode == "refund":
+        return int(cost)
+    # sell: per-unit, halved, floored
+    return int((cost / _bundle_count(item)) / 2)
 
 
 def remove(inventory: list[str], gold: int, item_id: str, mode: str,
@@ -549,51 +558,70 @@ def remove(inventory: list[str], gold: int, item_id: str, mode: str,
     the gold refund:
 
     * ``drop``   — no refund (you threw it away)
-    * ``sell``   — half the listed cost (rounded down)
-    * ``refund`` — full refund (you bought it by mistake)
+    * ``sell``   — per-unit half price (rounded down; may be 0)
+    * ``refund`` — remove a full bundle_count stack, return full cost
 
     If the dropped instance was equipped, its slot/list entry is freed
-    automatically (you can't keep wielding an item you just sold).  Pass
-    ``equipped`` and ``equipped_weapons`` to enable that cleanup — they're
-    optional for backward compatibility with the older two-tuple return.
+    automatically.  Pass ``equipped`` and ``equipped_weapons`` to enable that
+    cleanup — they're optional for backward compatibility.
     """
     if item_id not in inventory:
         raise ValueError(f"{item_id!r} not in inventory")
     if mode not in REMOVE_MODES:
         raise ValueError(f"Unknown remove mode {mode!r}; want one of {REMOVE_MODES}")
 
+    item = data.items.get(item_id)
+    bundle = _bundle_count(item)
+
     new_inv = list(inventory)
-    new_inv.remove(item_id)
+    if mode == "refund" and bundle > 1:
+        if new_inv.count(item_id) < bundle:
+            raise ValueError(
+                f"Cannot refund {item_id!r}: need a full stack of {bundle}"
+            )
+        for _ in range(bundle):
+            new_inv.remove(item_id)
+    else:
+        new_inv.remove(item_id)
 
     new_eq = dict(equipped or {})
     new_weapons = list(equipped_weapons or [])
 
-    # If the removed instance pushes equipped count past the remaining
-    # inventory count, free up one equipped slot/instance.
+    # If removal pushed equipped count past remaining inventory, free a slot.
     remaining = new_inv.count(item_id)
     eq_uses = sum(1 for v in new_eq.values() if v == item_id) + new_weapons.count(item_id)
-    if eq_uses > remaining:
-        # Try the slot dict first
+    while eq_uses > remaining:
         for slot, eid in list(new_eq.items()):
             if eid == item_id:
                 del new_eq[slot]
                 break
         else:
-            # Otherwise drop one from weapons
             if item_id in new_weapons:
                 new_weapons.remove(item_id)
+            else:
+                break
+        eq_uses -= 1
 
-    return new_inv, gold + _refund_amount(item_id, mode, data), new_eq, new_weapons
+    return new_inv, gold + _removal_gold(item_id, mode, data), new_eq, new_weapons
 
 
 def remove_from_stash(stashed: list[str], gold: int, item_id: str, mode: str,
                       data: GameData) -> tuple[list[str], int]:
-    """Drop / sell / refund an item that's in the stashed pile.  Stashed
-    items aren't equipped (by definition), so no equipment cleanup is needed."""
+    """Drop / sell / refund a stashed item.  Refund removes a full bundle."""
     if item_id not in stashed:
         raise ValueError(f"{item_id!r} not in stash")
     if mode not in REMOVE_MODES:
         raise ValueError(f"Unknown remove mode {mode!r}; want one of {REMOVE_MODES}")
+    item = data.items.get(item_id)
+    bundle = _bundle_count(item)
     new_stashed = list(stashed)
-    new_stashed.remove(item_id)
-    return new_stashed, gold + _refund_amount(item_id, mode, data)
+    if mode == "refund" and bundle > 1:
+        if new_stashed.count(item_id) < bundle:
+            raise ValueError(
+                f"Cannot refund {item_id!r}: need a full stack of {bundle}"
+            )
+        for _ in range(bundle):
+            new_stashed.remove(item_id)
+    else:
+        new_stashed.remove(item_id)
+    return new_stashed, gold + _removal_gold(item_id, mode, data)
