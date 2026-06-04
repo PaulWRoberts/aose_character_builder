@@ -135,3 +135,12 @@ def test_carrying_treasure_toggle(tmp_path):
     assert load_character("c1", client._characters_dir).carrying_treasure is True
     client.post("/character/c1/carrying-treasure", data={"value": "false"})
     assert load_character("c1", client._characters_dir).carrying_treasure is False
+
+
+def test_sheet_page_renders_purse_and_convert(tmp_path):
+    client = _make_client(tmp_path)
+    save_character("c1", _spec(gold=5), client._characters_dir)
+    html = client.get("/character/c1").text
+    assert "coins/add" in html
+    assert "coins/convert" in html
+    assert "carrying-treasure" in html or "Carrying Treasure" in html

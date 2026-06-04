@@ -718,8 +718,11 @@
                     </form>
                 </details>
 
-                <p class="small muted">Total treasure value:
-                    <strong>{{ sheet.valuables.total_value }} gp</strong></p>
+                <p class="small muted">Gems &amp; jewellery value:
+                    <strong>{{ sheet.valuables.total_value }} gp</strong>
+                    &mdash; weight:
+                    <strong>{{ sheet.valuables.gems | sum(attribute='count') + sheet.valuables.jewellery | length * 10 }} cn</strong>
+                    <span class="muted">(gems 1 cn each, jewellery 10 cn each)</span></p>
             </section>
 
             <section class="section">

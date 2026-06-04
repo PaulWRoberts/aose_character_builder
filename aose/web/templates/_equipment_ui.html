@@ -8,6 +8,8 @@
      - show_gold_grant     bool   (sheet only — for the +/- gold form)
      - gold_grant_url      str    (sheet only — POST target for the grant form)
      - magic_items_view    list[MagicItemView]  (instances + inventory-magic rows)
+     - coins               dict[str,int]  (sheet only — pp/gp/ep/sp/cp counts)
+     - coins_url_prefix    str    (sheet only — POST target prefix for coin routes)
 #}
 
 <div>
@@ -23,6 +25,51 @@
     </form>
     {% endif %}
 </div>
+
+{% if coins is defined and coins_url_prefix is defined %}
+<details class="coin-purse" style="margin-bottom: 8px;">
+    <summary class="muted small">Coin purse &mdash; pp: {{ coins.pp }}, gp: {{ coins.gp }}, ep: {{ coins.ep }}, sp: {{ coins.sp }}, cp: {{ coins.cp }}</summary>
+    <table class="threshold-table" style="margin-top: 6px;">
+        <thead><tr><th>Denom</th><th class="num">Count</th><th>Adjust</th></tr></thead>
+        <tbody>
+        {% for denom, label in [("pp","Platinum"), ("gp","Gold"), ("ep","Electrum"), ("sp","Silver"), ("cp","Copper")] %}
+        <tr>
+            <th>{{ label }}</th>
+            <td class="num">{{ coins[denom] }}</td>
+            <td>
+                <form method="post" action="{{ coins_url_prefix }}/coins/add" class="inline-form">
+                    <input type="hidden" name="denom" value="{{ denom }}">
+                    <input type="number" name="amount" value="0" style="width:4em;">
+                    <button type="submit">Apply</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <form method="post" action="{{ coins_url_prefix }}/coins/convert" class="inline-form" style="margin-top: 6px;">
+        <label>Convert
+            <input type="number" name="count" value="1" min="1" style="width:4em;">
+        </label>
+        <select name="from_denom">
+            <option value="pp">pp</option>
+            <option value="gp">gp</option>
+            <option value="ep">ep</option>
+            <option value="sp">sp</option>
+            <option value="cp">cp</option>
+        </select>
+        &rarr;
+        <select name="to_denom">
+            <option value="pp">pp</option>
+            <option value="gp" selected>gp</option>
+            <option value="ep">ep</option>
+            <option value="sp">sp</option>
+            <option value="cp">cp</option>
+        </select>
+        <button type="submit">Convert</button>
+    </form>
+</details>
+{% endif %}
 
 {% macro inv_row_actions(row, target_url_prefix, state) %}
     {# Per-row action buttons.  State drives which actions show. #}

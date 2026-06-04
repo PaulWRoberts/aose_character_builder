@@ -172,6 +172,8 @@ async def character_sheet(request: Request, character_id: str):
             "show_gold_reroll": False,
             "show_gold_grant": True,
             "gold_grant_url": f"/character/{character_id}/gold",
+            "coins": sheet.coins,
+            "coins_url_prefix": f"/character/{character_id}",
             "rest_heal_roll": dice.roll("1d3"),
             "spell_source_add_options": spell_source_add_options(game_data),
         },
