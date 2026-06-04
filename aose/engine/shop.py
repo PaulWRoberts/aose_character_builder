@@ -497,6 +497,12 @@ def remove_container(containers: list[ContainerInstance], gold: int,
     return new_containers, gold + refund
 
 
+def _bundle_count(item) -> int:
+    """Units granted per purchase. Only AdventuringGear carries a bundle;
+    every other item type behaves as a single unit."""
+    return getattr(item, "bundle_count", 1)
+
+
 def buy(inventory: list[str], gold: int, item_id: str,
         data: GameData) -> tuple[list[str], int]:
     """Append ``item_id`` to ``inventory`` and deduct its ``cost_gp`` from
@@ -510,7 +516,7 @@ def buy(inventory: list[str], gold: int, item_id: str,
         raise InsufficientGold(
             f"Cannot afford {item.name}: {cost} gp required, {gold} on hand"
         )
-    return ([*inventory, item_id], gold - cost)
+    return ([*inventory, *([item_id] * _bundle_count(item))], gold - cost)
 
 
 def add_free(inventory: list[str], item_id: str,
