@@ -189,6 +189,11 @@ class CharacterSpec(BaseModel):
     gems: list[GemStack] = Field(default_factory=list)
     jewellery: list[JewelleryPiece] = Field(default_factory=list)
     secondary_skill: str | None = None
+    # Free-text "other possessions" — discrete entries, each an implied item the
+    # DM handed out ("a bronze key"). Untracked: no weight, value, or encumbrance.
+    other_possessions: list[str] = Field(default_factory=list)
+    # Open-ended scratch notes, unrelated to inventory.
+    notes: str = ""
     # Chosen *additional* languages only (INT-based picks).  Native (race) and
     # alignment tongues are derived at display time, never stored here.
     languages: list[str] = Field(default_factory=list)
