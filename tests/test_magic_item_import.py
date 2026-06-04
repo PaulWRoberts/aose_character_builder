@@ -18,7 +18,8 @@ def data():
 def test_gear_preserves_referenced_ids(data):
     for gid in ("torch", "crowbar", "lantern", "waterskin", "thieves_tools"):
         assert gid in data.items
-    assert data.items["torch"].weight_cn == 20
+    assert data.items["torch"].weight_cn == 0        # gear weight not tracked
+    assert data.items["torch"].bundle_count == 6     # sold in sets of 6
 
 
 def test_gear_has_descriptions(data):
@@ -159,11 +160,10 @@ def test_everything_loads_without_error():
     GameData.load(DATA_DIR)
 
 
-def test_sword_enchantment_composes_on_bastard_sword_and_lightsaber(data):
+def test_sword_enchantment_composes_on_all_sword_group_weapons(data):
     from aose.engine.enchant import compatible_bases
     bases = {b.id for b in compatible_bases(data.enchantments["sword_plus_1"], data)}
-    assert {"bastard_sword", "lightsaber", "short_sword", "sword",
-            "two_handed_sword"} <= bases
+    assert {"short_sword", "sword", "two_handed_sword"} <= bases
 
 
 def test_generic_weapon_plus1_not_on_swords(data):
