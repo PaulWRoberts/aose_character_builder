@@ -27,6 +27,7 @@ class ShopItem(BaseModel):
     cost_gp: float
     weight_cn: int = 0
     magic: bool = False
+    bundle_count: int = 1
 
 
 class ShopCategory(BaseModel):
@@ -40,11 +41,13 @@ class InventoryRow(BaseModel):
     name: str
     count: int
     weight_cn: int = 0          # per-unit weight; row total = count * weight_cn
-    cost_gp: float = 0          # unit price; refund amount equals this
-    sell_gp: float = 0          # 50% of cost, rounded down
+    cost_gp: float = 0          # bundle price (what the shop charges per purchase)
+    sell_gp: float = 0          # per-unit half price (may be 0 for cheap bundles)
     equippable: bool = False     # weapon / armour / shield → True
     class_allowed: bool = True   # False when the character's class can't use it
     equipped_count: int = 0     # how many copies currently equipped (legacy flat view)
+    bundle_count: int = 1        # units the shop sells per purchase
+    can_refund: bool = True      # True when count >= bundle_count
 
 
 class ContainerView(BaseModel):
@@ -98,7 +101,7 @@ def shop_categories(data: GameData) -> list[ShopCategory]:
                 ShopItem(
                     id=i.id, name=i.name, category=i.category,
                     cost_gp=i.cost_gp, weight_cn=i.weight_cn,
-                    magic=i.magic,
+                    magic=i.magic, bundle_count=_bundle_count(i),
                 )
                 for i in items
             ],
@@ -130,15 +133,18 @@ def _build_row(item_id: str, count: int, data: GameData,
         # Stale id (item deleted from data after purchase) — surface it
         # rather than silently dropping the entry.
         return InventoryRow(id=item_id, name=item_id, count=count)
+    bundle = _bundle_count(item)
     return InventoryRow(
         id=item_id,
         name=item.name,
         count=count,
         weight_cn=item.weight_cn,
         cost_gp=item.cost_gp,
-        sell_gp=int(item.cost_gp // 2),
+        sell_gp=int((item.cost_gp / bundle) / 2),
         equippable=isinstance(item, (Weapon, Armor)),
         class_allowed=_class_allows(item, allowed_weapons, allowed_armor, allow_shields),
+        bundle_count=bundle,
+        can_refund=count >= bundle,
     )
 
 
