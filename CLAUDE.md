@@ -63,6 +63,14 @@ renders a "pending" badge — a regression test guards this.
 
 ## Current state (2026-06-03)
 
+Faithful encumbrance, treasure weight & multi-coin currency just landed (13-task plan, on `main`). All 1020 tests pass.
+
+- **Multi-coin purse** — `CharacterSpec` gains `platinum/electrum/silver/copper: int` alongside the existing `gold` (gp, stays the shop-spendable balance). New `aose/engine/currency.py` (cycle-free): `DENOMINATIONS`/`RATES`/`_ATTR`, `total_value_gp`, `coin_count` (weight), `convert` (make-change, whole-coin enforced, raises `CurrencyError`). Routes: `/coins/add` (denom + signed amount, clamped ≥ 0) and `/coins/convert` (from→to, count → 400).
+- **Treasure weight** — gems 1 cn each, jewellery 10 cn each (`valuables_weight_cn`). Coins 1 cn each (via `coin_count`). Carried treasure magic items: potions 10, wands 10, rods 20, staves 40, scrolls 1 — derived in `treasure_item_weight` by category + id-prefix (no YAML edits needed). Spell-source scrolls also 1 cn each.
+- **Encumbrance rewrite** — old `(armour × band)` table + dead demihuman scaling removed. Two AOSE-faithful modes: **basic** = `_BASIC_TABLE{(armour_cls, carrying_treasure)} → move`; over-1600 treasure → immobile; new `CharacterSpec.carrying_treasure: bool = False` toggle + `/carrying-treasure` route. **Detailed** = single-axis by total weight (bands 400/600/800/1600 → 120/90/60/30/0'); total = `treasure_weight_cn` + `equipment_weight_cn` (weapons + armour by weight; `AdventuringGear` items trigger flat **80 cn** misc-gear abstraction; carried containers contribute own weight + `int(multiplier × raw_contents)` — preserves Bag of Holding mechanic; non-treasure magic items by own weight).
+- **EncumbranceTable** reshaped: basic = 3 armour rows × 2 treasure columns; detailed = 4 mobile bands × 1 movement column. Sheet exposes `coins`, `treasure_value_gp`, `treasure_weight_cn`, `carrying_treasure`, `max_load`.
+- **Sheet UI**: coin purse in `_equipment_ui.html` (add/convert per denomination); encumbrance table in `sheet.html` uses new shape with current-cell highlighting; carrying-treasure toggle (basic mode only); treasure/cap line; gem+jewellery weight display. Spec/plan: `docs/superpowers/{specs,plans}/2026-06-03-encumbrance-treasure-currency*`.
+
 Gems & jewellery just landed (7-task plan, on `feature/gems-and-jewellery`). All 959 tests pass.
 
 - **Gems & jewellery** — free-acquired, weightless, sheet-only treasure. Two
