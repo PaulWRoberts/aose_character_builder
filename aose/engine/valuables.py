@@ -153,3 +153,9 @@ def total_value(spec: CharacterSpec) -> int:
         sum(gem_stack_value(g) for g in spec.gems)
         + sum(jewellery_value(j) for j in spec.jewellery)
     )
+
+
+def valuables_weight_cn(spec: CharacterSpec) -> int:
+    """Encumbrance weight of owned gems + jewellery: 1 cn per gem,
+    10 cn per jewellery piece (damaged state does not affect weight)."""
+    return sum(g.count for g in spec.gems) + 10 * len(spec.jewellery)

@@ -165,3 +165,22 @@ def test_total_value_mixes_gems_and_jewellery():
     spec.jewellery = v.add_jewellery([], 700)          # 700
     spec.jewellery = v.add_jewellery(spec.jewellery, 200, damaged=True)  # 100
     assert v.total_value(spec) == 1100
+
+
+def test_valuables_weight_gems_one_each_jewellery_ten_each():
+    from aose.engine.valuables import valuables_weight_cn
+    from aose.models import CharacterSpec, GemStack, JewelleryPiece
+    spec = CharacterSpec(
+        name="T",
+        abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
+        race_id="human",
+        classes=[{"class_id": "fighter", "level": 1, "hp_rolls": [8]}],
+        alignment="neutral",
+        gems=[GemStack(instance_id="g1", value=100, count=3)],
+        jewellery=[
+            JewelleryPiece(instance_id="j1", value=800),
+            JewelleryPiece(instance_id="j2", value=400, damaged=True),
+        ],
+    )
+    # 3 gems * 1 + 2 pieces * 10 = 23 (damaged does not change weight)
+    assert valuables_weight_cn(spec) == 23
