@@ -304,3 +304,26 @@ def test_sheet_html_warns_when_over_encumbered(tmp_path):
     save_character("test", spec, client._characters_dir)
     r = client.get("/character/test")
     assert "Over-encumbered" in r.text
+
+
+# ---------------------------------------------------------------------------
+# Task 5: treasure_weight_cn
+# ---------------------------------------------------------------------------
+from aose.engine.encumbrance import treasure_weight_cn
+from aose.models import GemStack, JewelleryPiece, MagicItemInstance, SpellSource
+
+
+def test_treasure_weight_coins_gems_jewellery(data):
+    spec = _spec()
+    spec.gold = 50
+    spec.silver = 30
+    spec.gems = [GemStack(instance_id="g", value=100, count=5)]
+    spec.jewellery = [JewelleryPiece(instance_id="j", value=900)]
+    assert treasure_weight_cn(spec, data) == 50 + 30 + 5 + 10
+
+
+def test_treasure_weight_potion_and_scroll(data):
+    spec = _spec()
+    spec.magic_items = [MagicItemInstance(instance_id="m", catalog_id="potion_clairvoyance")]
+    spec.spell_sources = [SpellSource(instance_id="s", kind="scroll", caster_type="arcane", entries=[])]
+    assert treasure_weight_cn(spec, data) == 10 + 1

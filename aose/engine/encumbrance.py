@@ -38,6 +38,9 @@ from aose.data.loader import GameData
 from aose.models import Armor, CharacterSpec
 
 
+MAX_LOAD = 1600
+TREASURE_CATEGORIES = {"magic_potions", "magic_rods_staves_wands", "scrolls"}
+
 ArmorMovementClass = Literal["none", "leather", "metal"]
 
 # Human-base table.  Index by (armor class, band).
@@ -139,6 +142,41 @@ def banding_weight_cn(spec: CharacterSpec, data: GameData) -> int:
     raw — only the band/movement improves."""
     from aose.engine.magic import carry_capacity_bonus
     return max(0, carried_weight_cn(spec, data) - carry_capacity_bonus(spec, data))
+
+
+def treasure_item_weight(item) -> int:
+    """AOSE treasure-encumbrance weight for a carried magic item / scroll.
+    Potions 10, wands 10, rods 20, staves 40, protection scrolls 1; anything
+    else 0.  Derived from category + id prefix so catalog YAML needs no edits."""
+    cat = getattr(item, "category", "")
+    if cat == "magic_potions":
+        return 10
+    if cat == "scrolls":
+        return 1
+    if cat == "magic_rods_staves_wands":
+        iid = getattr(item, "id", "")
+        if iid.startswith("staff"):
+            return 40
+        if iid.startswith("rod"):
+            return 20
+        if iid.startswith("wand"):
+            return 10
+    return 0
+
+
+def treasure_weight_cn(spec: CharacterSpec, data: GameData) -> int:
+    """Weight of tracked treasure: coins (1 cn each) + gems (1) + jewellery
+    (10) + carried treasure magic items (potions/rods/staves/wands) + scrolls
+    held as spell sources (1 cn each)."""
+    from aose.engine import currency, valuables
+
+    total = currency.coin_count(spec) + valuables.valuables_weight_cn(spec)
+    for mi in spec.magic_items:
+        item = data.items.get(mi.catalog_id)
+        if item is not None:
+            total += treasure_item_weight(item)
+    total += sum(1 for s in spec.spell_sources if s.kind == "scroll")
+    return total
 
 
 def armor_movement_class(spec: CharacterSpec, data: GameData) -> ArmorMovementClass:
