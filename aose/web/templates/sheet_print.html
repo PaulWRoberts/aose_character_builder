@@ -188,6 +188,24 @@
         {% endif %}
     </section>
 
+    {% if sheet.other_possessions %}
+    <section class="section">
+        <h2>Other Possessions</h2>
+        <ul>
+            {% for item in sheet.other_possessions %}
+            <li>{{ item }}</li>
+            {% endfor %}
+        </ul>
+    </section>
+    {% endif %}
+
+    {% if sheet.notes %}
+    <section class="section">
+        <h2>Notes</h2>
+        <p style="white-space: pre-wrap;">{{ sheet.notes }}</p>
+    </section>
+    {% endif %}
+
     {% if sheet.magic_items %}
     <section class="section">
         <h2>Magic Items</h2>
