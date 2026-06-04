@@ -65,6 +65,7 @@ class Armor(ItemBase):
 
 class AdventuringGear(ItemBase):
     item_type: Literal["gear"]
+    bundle_count: int = 1   # individual units granted per purchase
 
 
 class Poison(ItemBase):
