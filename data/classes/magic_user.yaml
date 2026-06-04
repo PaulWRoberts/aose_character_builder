@@ -8,7 +8,8 @@ name_level: 9
 hp_after_name_level: 1
 weapons_allowed:
 - dagger
-- staff # TODO: confirm optional staff rule
+optional_weapons_allowed:
+- staff  # AOSE "Magic-Users and Staves" optional rule (RuleSet.optional_staves)
 armor_allowed: []
 shields_allowed: false
 spell_lists:

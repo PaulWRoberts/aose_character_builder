@@ -68,3 +68,18 @@ def test_optional_weapon_ignored_for_unrestricted_class(data):
         update={"optional_weapons_allowed": ["staff"]}
     )
     assert allowed_weapon_ids([fighter], data, RuleSet(optional_staves=True)) == "all"
+
+
+@pytest.mark.parametrize("class_id", ["magic_user", "illusionist"])
+def test_caster_staff_gated_by_real_data(data, class_id):
+    cls = data.classes[class_id]
+    # Staff is declared as optional, not a default weapon.
+    assert "staff" in cls.optional_weapons_allowed
+    assert "staff" not in (cls.weapons_allowed if cls.weapons_allowed != "all" else [])
+
+    off = allowed_weapon_ids([cls], data)
+    assert "dagger" in off
+    assert "staff" not in off
+
+    on = allowed_weapon_ids([cls], data, RuleSet(optional_staves=True))
+    assert "staff" in on

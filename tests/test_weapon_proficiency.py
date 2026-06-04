@@ -213,7 +213,8 @@ def test_magic_user_picker_shows_one_slot_filtered(client):
     r = client.get(f"/wizard/{draft_id}/class_setup")
     assert r.status_code == 200
     assert "Dagger" in r.text
-    assert "Staff" in r.text
+    # Staff is combat-optional; not offered unless the optional_staves rule is on.
+    assert "Staff" not in r.text
     assert "Sword" not in r.text
     assert "Specialise" not in r.text
 
