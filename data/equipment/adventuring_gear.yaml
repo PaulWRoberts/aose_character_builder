@@ -1,28 +1,13 @@
-# Adventuring gear -- the items every party scavenges over.
-# weight_cn is in coins (10 cn = 1 lb in standard B/X encumbrance).
-# Weights for items new in this import use book-typical AOSE values
-# (the markdown table lists only cost).
-
-- id: bedroll
-  item_type: gear
-  name: Bedroll
-  category: adventuring_gear
-  cost_gp: 1
-  weight_cn: 30
-
-- id: candle
-  item_type: gear
-  name: Candle
-  category: adventuring_gear
-  cost_gp: 1
-  weight_cn: 0
+# Adventuring gear — faithful to the AOSE book table (cost only; no weights).
+# Per-item weights are deliberately omitted: the encumbrance engine folds all
+# adventuring gear into a flat 80 cn abstraction, so tracked weights would be
+# dead data. Stack-priced rows carry bundle_count (units granted per purchase).
 
 - id: crowbar
   item_type: gear
   name: Crowbar
   category: adventuring_gear
   cost_gp: 10
-  weight_cn: 50
   description: |-
     2–3' long and made of solid iron. Can be used for forcing doors and
     other objects open.
@@ -32,137 +17,119 @@
   name: Garlic
   category: adventuring_gear
   cost_gp: 5
-  weight_cn: 0
-  description: |-
-    A bunch of garlic. (See the referee's notes on its uses against certain
-    monsters.)
 
 - id: grappling_hook
   item_type: gear
   name: Grappling Hook
   category: adventuring_gear
   cost_gp: 25
-  weight_cn: 80
-  description: |-
-    Has 3 or 4 prongs. Can be used for anchoring a rope.
+  description: Has 3 or 4 prongs. Can be used for anchoring a rope.
 
 - id: hammer_small
   item_type: gear
   name: Hammer, Small
   category: adventuring_gear
   cost_gp: 2
-  weight_cn: 10
-  description: |-
-    Can be used for construction or as a mallet with iron or wooden spikes.
+  description: Can be used for construction or as a mallet with iron or wooden spikes.
 
 - id: holy_symbol
   item_type: gear
   name: Holy Symbol
   category: adventuring_gear
   cost_gp: 25
-  weight_cn: 10
   description: |-
     A divine spell caster is required to own a holy symbol of their deity,
     often worn as a necklace. Each religion has its own holy symbol.
 
 - id: holy_water_vial
   item_type: gear
-  name: Holy Water, Vial
+  name: Holy Water (vial)
   category: adventuring_gear
   cost_gp: 25
-  weight_cn: 10
   description: |-
     Water that has been blessed by a holy person. It is used in some religious
     rituals and inflicts damage on undead monsters. Holy water does not retain
     its power if stored in any other container than the special vials it is
     blessed in.
 
-- id: iron_rations
+- id: iron_spike
   item_type: gear
-  name: Rations, Iron (7 days)
-  category: adventuring_gear
-  cost_gp: 15
-  weight_cn: 70
-  description: |-
-    Dried and preserved food to be carried on long voyages when securing fresh
-    food may be uncertain.
-
-- id: standard_rations
-  item_type: gear
-  name: Rations, Standard (7 days)
-  category: adventuring_gear
-  cost_gp: 5
-  weight_cn: 140
-  description: |-
-    Fresh, unpreserved food.
-
-- id: iron_spikes
-  item_type: gear
-  name: Iron Spikes (12)
+  name: Iron Spike
   category: adventuring_gear
   cost_gp: 1
-  weight_cn: 10
+  bundle_count: 12
   description: |-
     May be used for wedging doors open or shut, as an anchor to attach a rope
-    to, and many other purposes.
+    to, and many other purposes. Sold in sets of 12.
 
 - id: lantern
   item_type: gear
   name: Lantern
   category: adventuring_gear
   cost_gp: 10
-  weight_cn: 30
   description: |-
     Can be closed to hide the light. Burns one oil flask every four hours
     (24 turns). Casts light in a 30' radius.
 
 - id: mirror_small
   item_type: gear
-  name: Mirror, Small Steel
+  name: Mirror (hand-sized, steel)
   category: adventuring_gear
   cost_gp: 5
-  weight_cn: 5
-  description: |-
-    Useful for looking around corners or for reflecting a gaze attack.
+  description: Useful for looking around corners or for reflecting a gaze attack.
 
 - id: flask_of_oil
   item_type: gear
-  name: Oil, Flask
+  name: Oil (flask)
   category: adventuring_gear
   cost_gp: 2
-  weight_cn: 10
   description: |-
     A flask of oil fuels a lantern for four hours (24 turns). In addition to
     fuelling lanterns, oil can be used as a weapon: an oil flask may be lit on
-    fire and thrown, or poured on the ground and lit (covering 3 feet diameter,
-    burning for 1 turn). Burning oil does not harm monsters with a natural flame
-    attack.
+    fire and thrown, or poured on the ground and lit (covering a 3-foot diameter,
+    burning for 1 turn and inflicting damage on any character or monster moving
+    through the pool). Burning oil does not harm monsters that have a natural
+    flame attack.
 
 - id: pole_10ft
   item_type: gear
-  name: Pole, 10'
+  name: Pole (10' wooden)
   category: adventuring_gear
   cost_gp: 1
-  weight_cn: 100
   description: |-
     A 2" thick wooden pole useful for poking and prodding suspicious items in
     a dungeon.
 
+- id: iron_rations
+  item_type: gear
+  name: Rations, Iron (1 day)
+  category: adventuring_gear
+  cost_gp: 15
+  bundle_count: 7
+  description: |-
+    Dried and preserved food to be carried on long voyages when securing fresh
+    food may be uncertain. Sold as 7 days' worth.
+
+- id: standard_rations
+  item_type: gear
+  name: Rations, Standard (1 day)
+  category: adventuring_gear
+  cost_gp: 5
+  bundle_count: 7
+  description: Fresh, unpreserved food. Sold as 7 days' worth.
+
 - id: rope_50ft
   item_type: gear
-  name: Rope, 50'
+  name: Rope (50')
   category: adventuring_gear
   cost_gp: 1
-  weight_cn: 50
-  description: |-
-    Can hold the weight of approximately three human-sized beings.
+  description: Can hold the weight of approximately three human-sized beings.
 
 - id: stakes_and_mallet
   item_type: gear
-  name: Wooden Stakes (3) & Mallet
+  name: Stakes (3) and Mallet
   category: adventuring_gear
   cost_gp: 3
-  weight_cn: 10
   description: |-
     A wooden mallet and three 18" long stakes. Valuable when confronting
     vampires.
@@ -172,16 +139,13 @@
   name: Thieves' Tools
   category: adventuring_gear
   cost_gp: 25
-  weight_cn: 10
-  description: |-
-    This kit contains all of the tools needed to pick locks.
+  description: This kit contains all of the tools needed to pick locks.
 
 - id: tinder_box
   item_type: gear
   name: Tinder Box (flint & steel)
   category: adventuring_gear
   cost_gp: 3
-  weight_cn: 10
   description: |-
     Used to light fires, including torches. Using a tinder box takes one round.
     There is a 2-in-6 chance of success per round.
@@ -191,35 +155,65 @@
   name: Torch
   category: adventuring_gear
   cost_gp: 1
-  weight_cn: 20
+  bundle_count: 6
   description: |-
     A torch burns for 1 hour (6 turns), clearly illuminating a 30' radius.
-    Torches may also be used in combat.
+    Torches may also be used in combat. Sold in sets of 6.
 
 - id: waterskin
   item_type: gear
   name: Waterskin
   category: adventuring_gear
   cost_gp: 1
-  weight_cn: 50
-  description: |-
-    This container, made of hide, will hold 2 pints (1 quart) of fluid.
+  description: This container, made of hide, will hold 2 pints (1 quart) of fluid.
 
-- id: wine_skin
+- id: wine_pint
   item_type: gear
-  name: Wine, Skin
+  name: Wine (1 pint)
   category: adventuring_gear
   cost_gp: 1
-  weight_cn: 50
-  description: |-
-    A skin containing 2 pints of wine.
+  bundle_count: 2
+  description: A pint of wine. Sold by the 2-pint measure.
 
 - id: wolfsbane
   item_type: gear
   name: Wolfsbane
   category: adventuring_gear
   cost_gp: 10
-  weight_cn: 0
   description: |-
     This herb can be used to repel lycanthropes. The creature must be hit with
     the herb in melee combat.
+
+# ── Containers from the Adventuring Gear table ───────────────────────────────
+# Kept as item_type: container so the stow/capacity mechanic still applies; they
+# live here (not a separate containers.yaml) and group under Adventuring Gear in
+# the shop. No own weight (book lists cost only).
+
+- id: backpack
+  name: Backpack
+  category: adventuring_gear
+  item_type: container
+  cost_gp: 5
+  capacity_cn: 400
+  weight_multiplier: 1.0
+  description: |-
+    Has two straps and can be worn on the back, keeping the hands free.
+    Holds up to 400 coins.
+
+- id: sack_small
+  name: Sack, Small
+  category: adventuring_gear
+  item_type: container
+  cost_gp: 1
+  capacity_cn: 200
+  weight_multiplier: 1.0
+  description: Can hold up to 200 coins.
+
+- id: sack_large
+  name: Sack, Large
+  category: adventuring_gear
+  item_type: container
+  cost_gp: 2
+  capacity_cn: 600
+  weight_multiplier: 1.0
+  description: Can hold up to 600 coins.
