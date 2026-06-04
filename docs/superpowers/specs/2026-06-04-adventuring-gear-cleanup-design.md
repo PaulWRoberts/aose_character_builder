@@ -66,8 +66,11 @@ Default `1` keeps every existing gear item and every other item type unchanged.
   Non-gear items are unaffected. Container/Ammunition buys are dispatched
   *before* `buy()` is reached (routes branch on `isinstance`), so this change is
   confined to the loose-inventory path.
-- `add_free(inventory, item_id, data)`: same bundle expansion (GM grant of a
-  stack item yields the full stack).
+- `add_free(inventory, item_id, data)`: **does NOT expand** — a GM grant / found
+  item adds exactly one unit. Bundling is a *purchasing* concept ("buying a
+  stack"); a free grant of a single torch should stay a single torch. This also
+  keeps the existing add-route tests (which use a single free `torch` as a probe)
+  stable.
 - `ShopItem` gains `bundle_count: int = 1`; `shop_categories` copies it so the
   template can render a "buys N" hint.
 
@@ -177,8 +180,9 @@ Notes:
 
 ### 7. Tests
 
-- `buy()`/`add_free()` of `torch` → 6 inventory entries for one 1 gp charge;
-  `iron_spike` → 12; a `bundle_count == 1` item still adds exactly one.
+- `buy()` of `torch` → 6 inventory entries for one 1 gp charge; `iron_spike` →
+  12; a `bundle_count == 1` item still adds exactly one. `add_free()` of `torch`
+  → exactly one unit (no expansion).
 - Sell one torch → 0 gp (worthless) and one unit removed; sell one `iron_rations`
   → `int(15/7/2) = 1` gp; sell a `bundle_count == 1` item → `cost_gp // 2`.
 - Refund a full torch stack → removes 6 units, returns 1 gp; refund with fewer
