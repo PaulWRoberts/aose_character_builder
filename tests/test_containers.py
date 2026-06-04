@@ -932,3 +932,39 @@ def test_sheet_print_only_lists_container_contents(tmp_path):
     # The print-only block names the container and its contents
     assert "Backpack" in r.text
     assert "Torch" in r.text
+
+
+# ── Post-cleanup data shape ──────────────────────────────────────────────────
+
+def test_table_containers_are_adventuring_gear_category(data):
+    for cid, cap in (("backpack", 400), ("sack_small", 200), ("sack_large", 600)):
+        item = data.items[cid]
+        assert isinstance(item, Container)
+        assert item.category == "adventuring_gear"
+        assert item.capacity_cn == cap
+
+
+def test_bag_of_holding_still_a_container(data):
+    boh = data.items["bag_of_holding"]
+    assert isinstance(boh, Container)
+    assert boh.magic is True
+    assert boh.capacity_cn == 10000
+
+
+def test_dropped_and_renamed_ids_absent(data):
+    for gone in ("bedroll", "candle", "saddle_bags", "iron_spikes", "wine_skin"):
+        assert gone not in data.items
+
+
+def test_gear_bundle_counts(data):
+    assert data.items["torch"].bundle_count == 6
+    assert data.items["iron_spike"].bundle_count == 12
+    assert data.items["iron_rations"].bundle_count == 7
+    assert data.items["standard_rations"].bundle_count == 7
+    assert data.items["wine_pint"].bundle_count == 2
+    assert data.items["crowbar"].bundle_count == 1
+
+
+def test_containers_yaml_deleted():
+    from pathlib import Path
+    assert not (Path("data") / "equipment" / "containers.yaml").exists()
