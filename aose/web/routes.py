@@ -176,6 +176,9 @@ async def character_sheet(request: Request, character_id: str):
             "coins_url_prefix": f"/character/{character_id}",
             "rest_heal_roll": dice.roll("1d3"),
             "spell_source_add_options": spell_source_add_options(game_data),
+            # Equipment drawer tabs: Documents + Treasure (gated on presence)
+            "spell_sources": sheet.spell_sources,
+            "valuables": sheet.valuables,
         },
     )
 
