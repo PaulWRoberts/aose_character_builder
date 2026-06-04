@@ -217,9 +217,9 @@ def test_wildcards_respect_nature():
     assert not matches(shield, "any_armour")
 
 
-def test_lightsaber_matches_sword_by_tag_not_name():
+def test_non_sword_name_matches_sword_enchantment_by_group_tag():
     from aose.engine.enchant import is_compatible
-    saber = _wpn("lightsaber", groups=["sword"])
+    saber = _wpn("odd_sword", groups=["sword"])
     sword_ench = _ench("sword_plus_1", "weapon", ["sword"])
     assert is_compatible(saber, sword_ench)
 

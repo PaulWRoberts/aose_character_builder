@@ -971,6 +971,22 @@ async def get_identity(request: Request, draft_id: str):
 @router.post("/{draft_id}/identity/skill-reroll")
 async def post_identity_skill_reroll(request: Request, draft_id: str):
     draft = _load(request, draft_id)
+    form = await request.form()
+
+    name = (form.get("name") or "").strip()
+    if name:
+        draft["name"] = name
+
+    data = request.app.state.game_data
+    alignment = form.get("alignment")
+    allowed = {o["id"] for o in _identity_alignment_options(draft, data)}
+    if alignment in allowed:
+        draft["alignment"] = alignment
+
+    chosen_languages = list(dict.fromkeys(form.getlist("language")))
+    if chosen_languages:
+        draft["languages"] = chosen_languages
+
     skill = _roll_skill(request)
     if skill is None:
         raise HTTPException(500, "No secondary skills configured.")

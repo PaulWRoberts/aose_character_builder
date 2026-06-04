@@ -24,14 +24,17 @@
         <legend>Secondary Skill</legend>
         <p class="muted">A humble trade from before adventuring — we've rolled one;
            re-roll or pick another.</p>
-        <label class="field">
-            <span>Skill</span>
-            <select name="secondary_skill">
-                {% for s in skills %}
-                <option value="{{ s }}" {% if s == current_skill %}selected{% endif %}>{{ s }}</option>
-                {% endfor %}
-            </select>
-        </label>
+        <div class="skill-row">
+            <label class="field">
+                <span>Skill</span>
+                <select name="secondary_skill">
+                    {% for s in skills %}
+                    <option value="{{ s }}" {% if s == current_skill %}selected{% endif %}>{{ s }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <button type="submit" formaction="/wizard/{{ draft_id }}/identity/skill-reroll" formnovalidate>Re-roll skill</button>
+        </div>
     </fieldset>
     {% endif %}
 
@@ -61,8 +64,3 @@
     <button type="submit" class="primary">Next: Equipment &rarr;</button>
 </form>
 
-{% if show_skill %}
-<form method="post" action="/wizard/{{ draft_id }}/identity/skill-reroll" class="inline-form">
-    <button type="submit">Re-roll skill</button>
-</form>
-{% endif %}
