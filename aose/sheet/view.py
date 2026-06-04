@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field
 
 from aose.data.loader import GameData
 from aose.engine import ability_mods, armor_class, attack_bonus, hp, saves, spells as spell_engine
+from aose.engine.armor_class import unarmored_ac as _unarmored_ac
 from aose.engine import currency as currency_engine
 from aose.engine import spell_sources as spell_source_engine
 from aose.engine import valuables as valuables_engine
@@ -236,6 +237,8 @@ class CharacterSheet(BaseModel):
     is_dead: bool
     ac_descending: int
     ac_ascending: int
+    unarmored_ac_descending: int
+    unarmored_ac_ascending: int
     use_ascending: bool
     thac0: int
     attack_bonus: int
@@ -246,6 +249,7 @@ class CharacterSheet(BaseModel):
     broken_speech: bool              # INT 3 — speaks only in broken sentences
     movement_base: int               # effective exploration move (after encumbrance)
     movement_encounter: int          # = movement_base // 3
+    movement_overland: int           # miles/day = exploration // 5
     movement_unencumbered: int       # race base, for "before encumbrance" reference
     carried_weight_cn: int | None    # None when encumbrance is "none"
     armor_movement_class: str        # "none" / "leather" / "metal"
@@ -803,6 +807,7 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
         ))
 
     desc_ac, asc_ac = armor_class.armor_class(spec, data)
+    un_desc, un_asc = _unarmored_ac(spec, data)
     save_dict = saves.saving_throws(spec, data)
     save_rows = [
         SheetSave(name=name, label=SAVE_LABELS[name], target=save_dict[name])
@@ -832,6 +837,8 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
         is_dead=hp.is_dead(spec, data),
         ac_descending=desc_ac,
         ac_ascending=asc_ac,
+        unarmored_ac_descending=un_desc,
+        unarmored_ac_ascending=un_asc,
         use_ascending=spec.ruleset.ascending_ac,
         thac0=attack_bonus.thac0(spec, data),
         attack_bonus=attack_bonus.attack_bonus(spec, data),
@@ -840,6 +847,7 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
         broken_speech=broken_speech(spec.abilities[Ability.INT]),
         movement_base=effective_movement(spec, data),
         movement_encounter=effective_movement(spec, data) // 3,
+        movement_overland=effective_movement(spec, data) // 5,
         movement_unencumbered=race.base_movement,
         carried_weight_cn=(
             carried_weight_cn(spec, data) if spec.ruleset.encumbrance != "none" else None

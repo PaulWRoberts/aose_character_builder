@@ -181,3 +181,9 @@ def test_valuables_view_and_zero_weight():
     # Gems weigh 1 cn each, jewellery 10 cn each (AOSE treasure table).
     # 2 gems + 2 pieces = 2 + 20 = 22 cn
     assert carried_weight_cn(spec, data) == baseline_weight + 22
+
+
+def test_sheet_exposes_unarmored_and_overland(data):
+    sheet = build_sheet(make_spec(), data)
+    assert sheet.unarmored_ac_descending >= sheet.ac_descending  # armour only helps
+    assert sheet.movement_overland == sheet.movement_base // 5
