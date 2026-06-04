@@ -115,9 +115,11 @@
         <button type="submit" name="mode" value="drop"
                 title="Throw away — no gold back">Drop</button>
         <button type="submit" name="mode" value="sell"
-                title="Sell for half price">Sell&nbsp;(+{{ row.sell_gp }}&nbsp;gp)</button>
+                title="Sell one for half its per-item price">Sell&nbsp;(+{{ row.sell_gp }}&nbsp;gp)</button>
+        {% if row.can_refund %}
         <button type="submit" name="mode" value="refund"
-                title="Refund the full purchase price">Refund&nbsp;(+{{ row.cost_gp | int }}&nbsp;gp)</button>
+                title="Refund a full purchased stack">Refund{% if row.bundle_count > 1 %}&nbsp;stack&nbsp;of&nbsp;{{ row.bundle_count }}{% endif %}&nbsp;(+{{ row.cost_gp | int }}&nbsp;gp)</button>
+        {% endif %}
     </form>
 {% endmacro %}
 
@@ -466,7 +468,7 @@
     {% for item in category.items %}
         <tr class="shop-row {% if not item.magic and item.cost_gp > gold %}out-of-reach{% endif %}"
             data-shop-name="{{ item.name | lower }}">
-            <td>{{ item.name }}</td>
+            <td>{{ item.name }}{% if item.bundle_count > 1 %} <span class="muted small">(buys {{ item.bundle_count }})</span>{% endif %}</td>
             <td class="num">{% if item.magic %}—{% else %}{{ item.cost_gp | int }} gp{% endif %}</td>
             <td class="num">{{ item.weight_cn }} cn</td>
             <td>

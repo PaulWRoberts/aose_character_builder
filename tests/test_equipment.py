@@ -120,9 +120,15 @@ def test_buy_appends_and_deducts(data):
 
 
 def test_buy_respects_existing_inventory(data):
-    inv, gold = buy(["torch"], 5, "torch", data)
-    assert inv == ["torch", "torch"]
+    inv, gold = buy(["rope_50ft"], 5, "rope_50ft", data)
+    assert inv == ["rope_50ft", "rope_50ft"]
     assert gold == 4
+
+
+def test_buy_torch_grants_a_stack_of_six(data):
+    inv, gold = buy([], 5, "torch", data)
+    assert inv == ["torch"] * 6
+    assert gold == 4  # one 1 gp charge for the stack
 
 
 def test_buy_rejects_unaffordable(data):
@@ -235,11 +241,11 @@ def test_buy_locks_starting_gold_roll(client):
     draft["gold"] = 50
     save_draft(draft_id, draft, client._drafts_dir)
 
-    client.post(f"/wizard/{draft_id}/equipment/buy", data={"item_id": "torch"})
+    client.post(f"/wizard/{draft_id}/equipment/buy", data={"item_id": "rope_50ft"})
     draft = load_draft(draft_id, client._drafts_dir)
     assert draft["gold_locked"] is True
     assert draft["gold"] == 49
-    assert draft["inventory"] == ["torch"]
+    assert draft["inventory"] == ["rope_50ft"]
 
 
 def test_buy_rejects_when_short(client):
@@ -258,27 +264,27 @@ def test_remove_modes_via_wizard(client):
     draft = load_draft(draft_id, client._drafts_dir)
     draft["gold"] = 100
     save_draft(draft_id, draft, client._drafts_dir)
-    # Buy three torches
+    # Buy three ropes (1 gp each, bundle_count 1)
     for _ in range(3):
-        client.post(f"/wizard/{draft_id}/equipment/buy", data={"item_id": "torch"})
+        client.post(f"/wizard/{draft_id}/equipment/buy", data={"item_id": "rope_50ft"})
 
     # Drop one (no refund)
     r = client.post(f"/wizard/{draft_id}/equipment/remove",
-                    data={"item_id": "torch", "mode": "drop"})
+                    data={"item_id": "rope_50ft", "mode": "drop"})
     assert r.status_code == 303
     draft = load_draft(draft_id, client._drafts_dir)
-    assert draft["inventory"].count("torch") == 2
+    assert draft["inventory"].count("rope_50ft") == 2
     gold_after_drop = draft["gold"]
 
-    # Sell next (half refund â€" torch costs 1, sell value 0 due to floor)
+    # Sell next (half of 1 gp floors to 0)
     client.post(f"/wizard/{draft_id}/equipment/remove",
-                data={"item_id": "torch", "mode": "sell"})
-    # And refund the last (full price)
+                data={"item_id": "rope_50ft", "mode": "sell"})
+    # Refund the last (full price, bundle of 1)
     client.post(f"/wizard/{draft_id}/equipment/remove",
-                data={"item_id": "torch", "mode": "refund"})
+                data={"item_id": "rope_50ft", "mode": "refund"})
     draft = load_draft(draft_id, client._drafts_dir)
-    assert draft["inventory"].count("torch") == 0
-    # 0 (drop) + 0 (sell, torch half=0) + 1 (refund) = +1 from drop point
+    assert draft["inventory"].count("rope_50ft") == 0
+    # 0 (drop) + 0 (sell floor) + 1 (refund) = +1 from drop point
     assert draft["gold"] == gold_after_drop + 0 + 1
 
 

@@ -61,6 +61,15 @@ override. Changing a rule mid-wizard applies targeted downstream clears
 Every flag in `RuleSet` is integrated end-to-end. The settings page never
 renders a "pending" badge — a regression test guards this.
 
+## Current state (2026-06-04)
+
+Adventuring gear data cleanup + stackable purchases + container consolidation just landed (10-task plan, on `main`). All tests pass.
+
+- **Book-faithful gear data** — `data/equipment/adventuring_gear.yaml` fully rewritten from the AOSE PDF table. No fabricated `weight_cn` (encumbrance engine uses a flat 80 cn for any gear; per-item weights were dead data). All book descriptions included. `bedroll`/`candle` dropped (not in table). Renamed: `iron_spikes→iron_spike`, `wine_skin→wine_pint`.
+- **Stackable purchases** — `AdventuringGear.bundle_count: int = 1` (new field). `buy()` grants `bundle_count` units for one price. `add_free()` always grants exactly one (free grants are single items). Stack items: Torch ×6 (1 gp), Iron Spike ×12 (1 gp), Rations Iron ×7 (15 gp), Rations Standard ×7 (5 gp), Wine ×2 (1 gp).
+- **Per-unit sell / whole-stack refund** — Sell removes 1 unit and returns `int((cost_gp / bundle_count) / 2)` (may be 0 = worthless). Refund removes a full shop stack (`bundle_count` units) and returns `cost_gp`; requires at least `bundle_count` present. `bundle_count == 1` items behave as before. Template: "buys N" hint in shop; Refund button gated on `can_refund` with "stack of N" label.
+- **Container consolidation** — `data/equipment/containers.yaml` deleted. Backpack / Sack (small) / Sack (large) moved to `adventuring_gear.yaml` (keep `item_type: container` so stow/capacity works; `category: adventuring_gear` so they appear in the gear shop group). Bag of Holding moved to `magic_items.yaml`. `saddle_bags` dropped (Transport table, not in scope yet). Dispatch is by `isinstance(item, Container)` so the file move is transparent to routes. Spec/plan: `docs/superpowers/{specs,plans}/2026-06-04-adventuring-gear-cleanup*`.
+
 ## Current state (2026-06-03)
 
 Faithful encumbrance, treasure weight & multi-coin currency just landed (13-task plan, on `main`). All 1020 tests pass.
