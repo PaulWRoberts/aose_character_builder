@@ -179,6 +179,57 @@ def treasure_weight_cn(spec: CharacterSpec, data: GameData) -> int:
     return total
 
 
+def equipment_weight_cn(spec: CharacterSpec, data: GameData) -> int:
+    """Detailed-mode equipment weight (everything that isn't tracked treasure):
+
+      * carried weapons + armour by listed weight (enchanted armour keeps its
+        weight_multiplier);
+      * non-treasure magic items (rings, misc) and other carried items by their
+        own weight;
+      * a flat 80 cn when the character carries ANY adventuring gear —
+        AdventuringGear items or carried containers. Gear's individual weights
+        are never tracked (book RAW); the flat 80 is the whole of it.
+
+    Treasure (coins/gems/jewellery/scrolls/potions/rods/staves/wands) is NOT
+    counted here — it lives in treasure_weight_cn and contributes directly."""
+    from aose.models import Weapon, AdventuringGear
+    from aose.engine.enchant import resolve_instance
+
+    total = 0
+    has_gear = False
+    for item_id in spec.inventory:
+        item = data.items.get(item_id)
+        if item is None:
+            continue
+        if isinstance(item, Armor):
+            total += int(item.weight_cn * item.weight_multiplier)
+        elif isinstance(item, Weapon):
+            total += item.weight_cn
+        elif isinstance(item, AdventuringGear):
+            has_gear = True          # weight ignored — folded into the flat 80
+        else:
+            total += item.weight_cn  # poison, ammunition (0 cn), etc.
+
+    for inst in spec.enchanted:
+        resolved = resolve_instance(inst, data)
+        if isinstance(resolved, Armor):
+            total += int(resolved.weight_cn * resolved.weight_multiplier)
+        elif isinstance(resolved, Weapon):
+            total += resolved.weight_cn
+
+    for mi in spec.magic_items:
+        item = data.items.get(mi.catalog_id)
+        if item is not None and item.category not in TREASURE_CATEGORIES:
+            total += item.weight_cn
+
+    if any(c.state == "carried" for c in spec.containers):
+        has_gear = True
+
+    if has_gear:
+        total += 80
+    return total
+
+
 def armor_movement_class(spec: CharacterSpec, data: GameData) -> ArmorMovementClass:
     armor_id = spec.equipped.get("armor")
     if not armor_id:

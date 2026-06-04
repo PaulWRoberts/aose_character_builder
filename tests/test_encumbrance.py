@@ -327,3 +327,32 @@ def test_treasure_weight_potion_and_scroll(data):
     spec.magic_items = [MagicItemInstance(instance_id="m", catalog_id="potion_clairvoyance")]
     spec.spell_sources = [SpellSource(instance_id="s", kind="scroll", caster_type="arcane", entries=[])]
     assert treasure_weight_cn(spec, data) == 10 + 1
+
+
+# ---------------------------------------------------------------------------
+# Task 6: equipment_weight_cn
+# ---------------------------------------------------------------------------
+from aose.engine.encumbrance import equipment_weight_cn
+
+
+def test_equipment_weapon_armour_by_weight(data):
+    # Long Sword 60 cn + Chain Mail 400 cn; no adventuring gear -> no flat 80
+    spec = _spec(inventory=["sword", "chain_mail"], equipped={"armor": "chain_mail"})
+    assert equipment_weight_cn(spec, data) == 60 + 400
+
+
+def test_equipment_flat_80_for_adventuring_gear(data):
+    # torch is AdventuringGear (item_type "gear") -> flat 80, its own 20 cn ignored
+    spec = _spec(inventory=["sword", "torch", "torch"])
+    assert equipment_weight_cn(spec, data) == 60 + 80
+
+
+def test_equipment_no_gear_no_flat_80(data):
+    assert equipment_weight_cn(_spec(inventory=["sword"]), data) == 60
+
+
+def test_non_treasure_magic_item_does_not_trigger_flat_80(data):
+    # ring_control_animals is magic_rings — NOT adventuring gear
+    spec = _spec()
+    spec.magic_items = [MagicItemInstance(instance_id="m", catalog_id="ring_control_animals")]
+    assert equipment_weight_cn(spec, data) == 0
