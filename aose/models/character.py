@@ -156,7 +156,14 @@ class CharacterSpec(BaseModel):
     race_id: str
     classes: list[ClassEntry] = Field(min_length=1)
     alignment: Literal["law", "neutral", "chaos"]
-    gold: int = 0
+    gold: int = 0            # gp — the shop-spendable balance
+    platinum: int = 0        # pp
+    electrum: int = 0        # ep
+    silver: int = 0          # sp
+    copper: int = 0          # cp
+    # Basic-encumbrance referee toggle: carrying a significant amount of
+    # treasure (drops the movement rate one step). Detailed mode ignores it.
+    carrying_treasure: bool = False
     # Play-state: hit points of damage taken.  Current HP is derived as
     # max(0, max_hp − damage_taken); dead == current HP 0.  Tracks live max_hp
     # shifts (e.g. a CON-altering magic item) without rewriting stored state.
