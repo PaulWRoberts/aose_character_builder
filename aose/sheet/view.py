@@ -266,6 +266,8 @@ class CharacterSheet(BaseModel):
         gems=[], jewellery=[], total_value=0))
     ammo: list[AmmoRow] = Field(default_factory=list)
     ammo_load_options: dict[str, list[AmmoOption]] = Field(default_factory=dict)
+    other_possessions: list[str] = Field(default_factory=list)
+    notes: str = ""
 
     enabled_optional_rules: list[str]
     encumbrance_mode: str
@@ -853,6 +855,8 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
         valuables=valuables_view(spec),
         ammo=ammo_rows,
         ammo_load_options=ammo_options,
+        other_possessions=list(spec.other_possessions),
+        notes=spec.notes,
         enabled_optional_rules=_enabled_optional_rules(spec.ruleset),
         encumbrance_mode=spec.ruleset.encumbrance,
         encumbrance_description=ENCUMBRANCE_DESCRIPTIONS.get(

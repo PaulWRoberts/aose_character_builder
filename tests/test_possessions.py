@@ -59,3 +59,19 @@ def test_remove_possession_bad_index_raises():
         possessions.remove_possession(["a"], 5)
     with pytest.raises(PossessionError):
         possessions.remove_possession(["a"], -1)
+
+
+from pathlib import Path
+
+from aose.data.loader import GameData
+from aose.sheet.view import build_sheet
+
+DATA_DIR = Path(__file__).parent.parent / "data"
+
+
+def test_build_sheet_passes_through_fields():
+    data = GameData.load(DATA_DIR)
+    spec = _fighter(other_possessions=["a bronze key"], notes="scratch")
+    sheet = build_sheet(spec, data)
+    assert sheet.other_possessions == ["a bronze key"]
+    assert sheet.notes == "scratch"
