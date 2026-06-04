@@ -567,24 +567,39 @@ git commit -m "feat: treasure_weight_cn per AOSE treasure-encumbrance table"
 ```python
 # tests/test_encumbrance.py  (append)
 from aose.engine.encumbrance import equipment_weight_cn
+from aose.models import MagicItemInstance
 
 
 def test_equipment_weapon_armour_by_weight(data):
-    # Long Sword 60 cn + Chain Mail 400 cn; no misc gear -> no flat 80
+    # Long Sword 60 cn + Chain Mail 400 cn; no adventuring gear -> no flat 80
     spec = _spec(inventory=["sword", "chain_mail"],
                  equipped={"armor": "chain_mail"})
     assert equipment_weight_cn(spec, data) == 60 + 400
 
 
-def test_equipment_flat_80_for_misc_gear(data):
-    # A torch is misc adventuring gear -> flat 80, regardless of its own cn
+def test_equipment_flat_80_for_adventuring_gear(data):
+    # A torch is AdventuringGear (item_type "gear") -> flat 80, its own 20 cn
+    # is ignored. Gear's individual weights never contribute (book RAW).
     spec = _spec(inventory=["sword", "torch", "torch"])
     assert equipment_weight_cn(spec, data) == 60 + 80
 
 
 def test_equipment_no_gear_no_flat_80(data):
     assert equipment_weight_cn(_spec(inventory=["sword"]), data) == 60
+
+
+def test_non_treasure_magic_item_does_not_trigger_flat_80(data):
+    # A ring is a MagicItem (magic_rings), NOT adventuring gear: it contributes
+    # only its own weight (0 here) and must not pull in the flat 80.
+    spec = _spec()
+    spec.magic_items = [MagicItemInstance(
+        instance_id="m", catalog_id="ring_control_animals")]
+    assert equipment_weight_cn(spec, data) == 0
 ```
+
+> Confirm `MagicItemInstance` constructor fields against
+> `aose/models/character.py`; `ring_control_animals` is a real `magic_rings`
+> id in `data/equipment/magic_items.yaml`.
 
 - [ ] **Step 2: Run to verify it fails**
 
@@ -597,14 +612,24 @@ Add to `aose/engine/encumbrance.py`:
 
 ```python
 def equipment_weight_cn(spec: CharacterSpec, data: GameData) -> int:
-    """Detailed-mode equipment weight: carried weapons + armour by listed
-    weight (enchanted armour keeps its weight_multiplier), plus a flat 80 cn
-    when the character carries any miscellaneous adventuring gear (book RAW)."""
-    from aose.models import Weapon, Armor
+    """Detailed-mode equipment weight (everything that isn't tracked treasure):
+
+      * carried weapons + armour by listed weight (enchanted armour keeps its
+        weight_multiplier);
+      * non-treasure magic items (rings, misc) and other carried items (poison,
+        etc.) by their own weight;
+      * a flat 80 cn when the character carries ANY miscellaneous adventuring
+        gear — AdventuringGear items or carried containers (backpacks, sacks).
+        Gear's individual weights are never tracked (book RAW); the flat 80 is
+        the whole of it.
+
+    Treasure (coins/gems/jewellery/scrolls/potions/rods/staves/wands) is NOT
+    counted here — it lives in treasure_weight_cn and contributes directly."""
+    from aose.models import Weapon, Armor, AdventuringGear
     from aose.engine.enchant import resolve_instance
 
     total = 0
-    has_misc = False
+    has_gear = False
     for item_id in spec.inventory:
         item = data.items.get(item_id)
         if item is None:
@@ -613,8 +638,10 @@ def equipment_weight_cn(spec: CharacterSpec, data: GameData) -> int:
             total += int(item.weight_cn * item.weight_multiplier)
         elif isinstance(item, Weapon):
             total += item.weight_cn
+        elif isinstance(item, AdventuringGear):
+            has_gear = True          # weight ignored — folded into the flat 80
         else:
-            has_misc = True   # gear / containers / ammo bundles / misc magic
+            total += item.weight_cn  # poison, ammunition (0 cn), etc.
 
     # Enchanted weapons & armour count by weight too.
     for inst in spec.enchanted:
@@ -624,21 +651,28 @@ def equipment_weight_cn(spec: CharacterSpec, data: GameData) -> int:
         elif isinstance(resolved, Weapon):
             total += resolved.weight_cn
 
-    if not has_misc:
-        # Carried containers and non-treasure magic items are also "misc gear".
-        if any(c.state == "carried" for c in spec.containers):
-            has_misc = True
-        else:
-            for mi in spec.magic_items:
-                item = data.items.get(mi.catalog_id)
-                if item is not None and item.category not in TREASURE_CATEGORIES:
-                    has_misc = True
-                    break
+    # Non-treasure magic items (rings, misc) by their own weight. Treasure-type
+    # magic items (potions/rods/staves/wands) are weighed in treasure_weight_cn,
+    # so skip them here to avoid double counting and to keep them OUT of the
+    # flat-80 abstraction.
+    for mi in spec.magic_items:
+        item = data.items.get(mi.catalog_id)
+        if item is not None and item.category not in TREASURE_CATEGORIES:
+            total += item.weight_cn
 
-    if has_misc:
+    # Carried containers (backpacks, sacks) are adventuring gear → flat 80.
+    if any(c.state == "carried" for c in spec.containers):
+        has_gear = True
+
+    if has_gear:
         total += 80
     return total
 ```
+
+> Note: AdventuringGear `weight_cn` values in `data/equipment/*.yaml` are now
+> vestigial for encumbrance (the flat 80 replaces them). Leave them as-is —
+> they're harmless and may still inform inventory display. Do NOT mass-zero
+> them in this plan.
 
 - [ ] **Step 4: Run to verify it passes**
 

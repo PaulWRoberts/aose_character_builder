@@ -62,9 +62,12 @@ may be counted as a flat 80 cn. Movement by total weight:
   gp balance). `gold` stays as the gp / shop-spendable balance; four new
   count fields are added alongside. Lower churn than restructuring `gold`
   (21 code refs + 23 test files reference it), identical faithfulness.
-- **Detailed gear weight:** flat 80 cn (book RAW), not summed per-item.
-  Applied only when the character carries some non-armour/non-weapon gear
-  (0 if none).
+- **Detailed gear weight:** a flat 80 cn (book RAW) standing in for *all*
+  miscellaneous adventuring gear — `AdventuringGear` items and carried
+  containers (backpacks, sacks). Gear's individual `weight_cn` values are not
+  tracked (they become vestigial for encumbrance). Applied only when some
+  adventuring gear is carried (0 if none). Weapons, armour, magic items, and
+  all treasure are NOT gear — they contribute their own weight directly.
 - **Basic "carrying treasure":** a manual toggle (referee judgement), not
   auto-derived from treasure weight.
 - **Treasure-weight scope:** the full treasure table — coins, gems,
@@ -121,8 +124,10 @@ band)` model. Split weight into clear helpers:
   (potions/rods/staves/wands by catalog `weight_cn`) + scrolls (1 cn).
 - `equipment_weight_cn(spec, data)` (detailed only) — carried weapons by
   weight + carried armour by weight (keeping the enchanted
-  `weight_multiplier`) + flat **80 cn** when any misc adventuring gear is
-  carried, else 0.
+  `weight_multiplier`) + non-treasure magic items / other carried items by
+  their own weight + flat **80 cn** when any adventuring gear
+  (`AdventuringGear` items or carried containers) is carried, else 0. Gear's
+  own weights are ignored. Treasure is handled by `treasure_weight_cn`.
 
 ### `basic`
 Movement = armour worn × the new manual `CharacterSpec.carrying_treasure:
