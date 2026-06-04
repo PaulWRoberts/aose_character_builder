@@ -126,3 +126,12 @@ def test_coins_convert_bad_request(tmp_path):
     r = client.post("/character/c1/coins/convert",
                     data={"from_denom": "gp", "to_denom": "sp", "count": "99"})
     assert r.status_code == 400
+
+
+def test_carrying_treasure_toggle(tmp_path):
+    client = _make_client(tmp_path)
+    save_character("c1", _spec(), client._characters_dir)
+    client.post("/character/c1/carrying-treasure", data={"value": "true"})
+    assert load_character("c1", client._characters_dir).carrying_treasure is True
+    client.post("/character/c1/carrying-treasure", data={"value": "false"})
+    assert load_character("c1", client._characters_dir).carrying_treasure is False
