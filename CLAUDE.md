@@ -61,6 +61,17 @@ override. Changing a rule mid-wizard applies targeted downstream clears
 Every flag in `RuleSet` is integrated end-to-end. The settings page never
 renders a "pending" badge — a regression test guards this.
 
+## Current state (2026-06-04, sheet redesign)
+
+OSR-zine sheet redesign (prototype-3 port) just landed (on `feature/sheet-redesign`). All tests pass.
+
+- **Zine sheet** — `aose/web/templates/sheet.html` fully replaced with bounded-group zine layout: identity band, 3-column grid (combat+abilities, features+notes, spells), full-width inventory/currency/treasure group, footer. Groups have inked bars + internal scroll.
+- **CSS** — `aose/web/static/sheet.css` replaced with zine design-system (Oswald + Bitter fonts, self-hosted woff2 under `aose/web/static/fonts/`). Legacy wizard/settings CSS preserved at the bottom.
+- **JS overlay controller** — `aose/web/static/sheet_overlays.js` (single-open drawer/modal/popover; Esc/scrim/close dismiss).
+- **Tabbed equipment drawer** — `_equipment_ui.html` refactored into 5 tab panes: Carried (always), Magic (gated on `magic_acquisition`), Documents (gated on `spell_sources is defined`), Treasure (gated on `valuables is defined`), Shop (always). Wizard still shows only Carried + Shop.
+- **Engine additions** — `unarmored_ac()` in `armor_class.py`; `unarmored_ac_descending/ascending`, `movement_overland` on `CharacterSheet`; `spellbook_view()` + `SpellbookBlock/Level/Row` models in `view.py`.
+- **Spec**: `docs/superpowers/specs/2026-06-04-character-sheet-redesign-design.md`; **Plan**: `docs/superpowers/plans/2026-06-04-character-sheet-redesign.md`; **Prototype**: `docs/redesign/character-sheet-prototype-3.html`.
+
 ## Current state (2026-06-04)
 
 Adventuring gear data cleanup + stackable purchases + container consolidation just landed (10-task plan, on `main`). All tests pass.
