@@ -76,6 +76,8 @@ from aose.engine import spell_sources as spell_source_engine
 from aose.engine.spell_sources import SpellSourceError
 from aose.engine import valuables as valuables_engine
 from aose.engine.valuables import ValuableError
+from aose.engine import possessions as possessions_engine
+from aose.engine.possessions import PossessionError
 from aose.models import Ability, Ammunition
 from aose.sheet.view import build_sheet, spell_source_add_options
 
@@ -1129,5 +1131,37 @@ async def sheet_jewellery_remove(request: Request, character_id: str,
             spec.jewellery, instance_id)
     except ValuableError as e:
         raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/possessions/add")
+async def sheet_possession_add(request: Request, character_id: str,
+                               text: str = Form("")):
+    spec = _load_spec_or_404(request, character_id)
+    spec.other_possessions = possessions_engine.add_possession(
+        spec.other_possessions, text)
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/possessions/remove")
+async def sheet_possession_remove(request: Request, character_id: str,
+                                  index: int = Form(...)):
+    spec = _load_spec_or_404(request, character_id)
+    try:
+        spec.other_possessions = possessions_engine.remove_possession(
+            spec.other_possessions, index)
+    except PossessionError as e:
+        raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/notes/set")
+async def sheet_notes_set(request: Request, character_id: str,
+                          notes: str = Form("")):
+    spec = _load_spec_or_404(request, character_id)
+    spec.notes = notes
     save_character(character_id, spec, request.app.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
