@@ -73,6 +73,46 @@ def test_sheet_renders_valuables_section(tmp_path):
 
     client = TestClient(app, follow_redirects=False)
     html = client.get("/character/bran").text
-    assert "Gems &amp; Jewellery" in html
-    assert "ruby" in html
-    assert "necklace" in html
+    # The "Gems & Jewellery" section header moved to the Treasure drawer tab;
+    # verify the gem/jewellery data is present in the body and the Treasure tab is shown.
+    assert "Treasure" in html   # Treasure tab label is present
+    assert "ruby" in html       # gem label still in body (Treasure tab)
+    assert "necklace" in html   # jewellery label still in body (Treasure tab)
+
+
+def test_noncaster_has_no_spells_group(client):
+    """Thorin is a dwarf fighter — no spells group should appear."""
+    response = client.get("/character/thorin")
+    assert response.status_code == 200
+    assert "Spells —" not in response.text
+
+
+def test_caster_has_spells_group(tmp_path):
+    """A magic-user should render the arcane spells group."""
+    from pathlib import Path
+    from fastapi.testclient import TestClient
+    from aose.characters import save_character
+    from aose.models import CharacterSpec, ClassEntry
+    from aose.web.app import create_app
+
+    characters_dir = tmp_path / "characters"
+    examples_dir = tmp_path / "examples"
+    examples_dir.mkdir()
+    app = create_app(
+        data_dir=Path(__file__).parent.parent / "data",
+        characters_dir=characters_dir, drafts_dir=tmp_path / "drafts",
+        examples_dir=examples_dir, settings_path=tmp_path / "settings.json",
+    )
+    spec = CharacterSpec(
+        name="Mage",
+        abilities={"STR": 9, "INT": 16, "WIS": 9, "DEX": 12, "CON": 10, "CHA": 9},
+        race_id="human",
+        classes=[ClassEntry(class_id="magic_user", level=1, hp_rolls=[4],
+                            spellbook=["magic_user_magic_missile"])],
+        alignment="neutral",
+    )
+    save_character("mage", spec, characters_dir)
+
+    client = TestClient(app, follow_redirects=False)
+    html = client.get("/character/mage").text
+    assert "Spells —" in html
