@@ -195,29 +195,40 @@
                 {% endif %}
 
                 {% if sheet.encumbrance_table %}
+                {% set t = sheet.encumbrance_table %}
+                {% if t.mode == "basic" %}
+                <form method="post" action="/character/{{ character_id }}/carrying-treasure" class="inline-form" style="margin: 4px 0;">
+                    <input type="hidden" name="value" value="{{ 'false' if sheet.carrying_treasure else 'true' }}">
+                    <button type="submit" class="btn-small">{{ 'Carrying treasure ✓' if sheet.carrying_treasure else 'Not carrying treasure' }}</button>
+                </form>
+                {% endif %}
                 <details class="encumbrance-thresholds">
-                    <summary class="muted small">Movement thresholds ({{ sheet.encumbrance_table.mode }})</summary>
+                    <summary class="muted small">Movement thresholds ({{ t.mode }})</summary>
                     <table class="threshold-table">
                         <thead>
                             <tr>
-                                {% if sheet.encumbrance_table.mode == "detailed" %}<th>Load</th>{% endif %}
-                                <th class="num">Unarmoured</th>
-                                <th class="num">Leather</th>
-                                <th class="num">Metal</th>
+                                <th></th>
+                                {% for col in t.columns %}<th class="num">{{ col }}</th>{% endfor %}
                             </tr>
                         </thead>
                         <tbody>
-                        {% for row in sheet.encumbrance_table.rows %}
-                            <tr class="{% if row.is_current_band %}current-band{% endif %}">
-                                {% if sheet.encumbrance_table.mode == "detailed" %}<td>{{ row.label }} cn</td>{% endif %}
-                                <td class="num">{{ row.movement_per_armor.none }}'</td>
-                                <td class="num">{{ row.movement_per_armor.leather }}'</td>
-                                <td class="num">{{ row.movement_per_armor.metal }}'</td>
+                        {% for row in t.rows %}
+                            <tr class="{% if row.is_current_row %}current-band{% endif %}">
+                                <th>{{ row.label }}</th>
+                                {% for mv in row.movements %}
+                                <td class="num {% if row.is_current_row and (t.mode == 'detailed' or loop.index0 == t.current_col) %}current-cell{% endif %}">{{ mv }}'</td>
+                                {% endfor %}
                             </tr>
                         {% endfor %}
                         </tbody>
                     </table>
                 </details>
+                {% if sheet.treasure_weight_cn is defined %}
+                <div class="stat-row muted small">
+                    <span>Treasure</span>
+                    <span>{{ sheet.treasure_weight_cn }} / {{ sheet.max_load }} cn{% if sheet.treasure_weight_cn > sheet.max_load %} &mdash; <strong>over max load</strong>{% endif %}</span>
+                </div>
+                {% endif %}
                 {% endif %}
             </section>
 
