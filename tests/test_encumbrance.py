@@ -250,8 +250,8 @@ def test_sheet_carried_weight_none_in_none_mode(data):
 def test_sheet_carried_weight_reported_in_basic_mode(data):
     spec = _spec(encumbrance="basic", inventory=["torch", "torch"])
     sheet = build_sheet(spec, data)
-    # weights are tracked even in basic mode for display, just not enforced
-    assert sheet.carried_weight_cn == 40
+    # torches are AdventuringGear -> flat 80 cn (book RAW) for all carried gear
+    assert sheet.carried_weight_cn == 80
 
 
 def test_sheet_encounter_move_follows_exploration_third(data):
@@ -397,3 +397,36 @@ def test_detailed_includes_armour_weight(data):
               encumbrance="detailed")
     s.gold = 1
     assert effective_movement(s, data) == 90
+
+
+# ---------------------------------------------------------------------------
+# Task 8: basic-mode movement
+# ---------------------------------------------------------------------------
+
+def test_basic_unarmoured(data):
+    s = _spec(encumbrance="basic")
+    assert effective_movement(s, data) == 120
+    s.carrying_treasure = True
+    assert effective_movement(s, data) == 90
+
+
+def test_basic_light_armour(data):
+    s = _spec(inventory=["leather_armor"], equipped={"armor": "leather_armor"},
+              encumbrance="basic")
+    assert effective_movement(s, data) == 90
+    s.carrying_treasure = True
+    assert effective_movement(s, data) == 60
+
+
+def test_basic_heavy_armour(data):
+    s = _spec(inventory=["chain_mail"], equipped={"armor": "chain_mail"},
+              encumbrance="basic")
+    assert effective_movement(s, data) == 60
+    s.carrying_treasure = True
+    assert effective_movement(s, data) == 30
+
+
+def test_basic_over_max_load_is_immobile(data):
+    s = _spec(encumbrance="basic")
+    s.gold = 1601   # treasure alone exceeds the 1,600 cap
+    assert effective_movement(s, data) == 0

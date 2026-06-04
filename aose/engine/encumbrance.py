@@ -171,8 +171,20 @@ def armor_movement_class(spec: CharacterSpec, data: GameData) -> ArmorMovementCl
     return item.movement_impact
 
 
+_BASIC_TABLE = {
+    ("none", False): 120, ("none", True): 90,
+    ("leather", False): 90, ("leather", True): 60,
+    ("metal", False): 60, ("metal", True): 30,
+}
+
+
 def _basic_movement(spec: CharacterSpec, data: GameData) -> int:
-    raise NotImplementedError  # implemented in Task 8
+    """Basic encumbrance: armour worn × carrying-treasure toggle. Equipment
+    weight is untracked; only the 1,600 treasure cap can immobilise."""
+    if treasure_weight_cn(spec, data) > MAX_LOAD:
+        return 0
+    armor_cls = armor_movement_class(spec, data)
+    return _BASIC_TABLE[(armor_cls, spec.carrying_treasure)]
 
 
 def effective_movement(spec: CharacterSpec, data: GameData) -> int:
@@ -190,46 +202,52 @@ def effective_movement(spec: CharacterSpec, data: GameData) -> int:
 # ── Public table-display structures for the sheet ──────────────────────────
 
 class ThresholdRow(BaseModel):
-    band: int
-    label: str            # e.g. "≤ 400" or "1201–1600"
-    movement_per_armor: dict[str, int]   # {"none": 60, "leather": 45, "metal": 30}
-    is_current_band: bool
+    label: str                # armour name (basic) or band label (detailed)
+    movements: list[int]      # basic: [no_treasure, carrying]; detailed: [rate]
+    is_current_row: bool
 
 
 class EncumbranceTable(BaseModel):
-    mode: Literal["none", "basic", "detailed"]
-    armor_classes: list[str]    # ["none", "leather", "metal"] in row-display order
-    rows: list[ThresholdRow]    # one row per band, or just band 0 in basic mode
+    mode: Literal["basic", "detailed"]
+    columns: list[str]        # header labels for `movements`
+    rows: list[ThresholdRow]
+    current_col: int | None   # basic: active treasure column; detailed: None
+
+
+_BASIC_ROWS = [("Unarmoured", "none"), ("Light armour", "leather"),
+               ("Heavy armour", "metal")]
 
 
 def encumbrance_table(spec: CharacterSpec, data: GameData) -> EncumbranceTable | None:
-    """Return the movement-threshold table for the sheet, or ``None`` when
-    encumbrance is disabled.  ``rows`` is just one row in basic mode (the
-    armour-only line) and four rows in detailed mode."""
+    """Movement table for the sheet, or None when encumbrance is off.
+    Basic = 3 armour rows × 2 treasure columns; detailed = the four mobile
+    weight bands (the >1,600 immobile band is omitted from the display)."""
     mode = spec.ruleset.encumbrance
     if mode == "none":
         return None
 
-    base = data.races[spec.race_id].base_movement
-    current_band = 0
-    if mode == "detailed":
-        current_band = weight_band(banding_weight_cn(spec, data))
+    if mode == "basic":
+        current_cls = armor_movement_class(spec, data)
+        rows = [
+            ThresholdRow(
+                label=name,
+                movements=[_BASIC_TABLE[(cls, False)], _BASIC_TABLE[(cls, True)]],
+                is_current_row=(cls == current_cls),
+            )
+            for name, cls in _BASIC_ROWS
+        ]
+        return EncumbranceTable(
+            mode="basic",
+            columns=["Without Treasure", "Carrying Treasure"],
+            rows=rows,
+            current_col=(1 if spec.carrying_treasure else 0),
+        )
 
-    rows: list[ThresholdRow] = []
-    bands = range(4) if mode == "detailed" else [0]
-    for b in bands:
-        rows.append(ThresholdRow(
-            band=b,
-            label=band_label(b),
-            movement_per_armor={
-                cls: _scale(_TABLE_HUMAN[(cls, b)], base)
-                for cls in ("none", "leather", "metal")
-            },
-            is_current_band=(b == current_band),
-        ))
-
-    return EncumbranceTable(
-        mode=mode,
-        armor_classes=["none", "leather", "metal"],
-        rows=rows,
-    )
+    current_band = weight_band(banding_weight_cn(spec, data))
+    rows = [
+        ThresholdRow(label=band_label(b), movements=[_DETAILED_MOVE[b]],
+                     is_current_row=(b == current_band))
+        for b in range(4)
+    ]
+    return EncumbranceTable(mode="detailed", columns=["Movement"],
+                            rows=rows, current_col=None)
