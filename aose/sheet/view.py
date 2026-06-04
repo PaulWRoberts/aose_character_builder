@@ -219,6 +219,31 @@ class ValuablesView(BaseModel):
     total_value: int
 
 
+class SpellbookRow(BaseModel):
+    spell_id: str
+    name: str
+    level: int
+    reversible: bool
+    description: str
+    known: bool          # in book (arcane) / on accessible list (divine)
+    ready: int           # memorised copies with casts remaining
+    spent: int           # memorised copies already cast
+
+
+class SpellbookLevelGroup(BaseModel):
+    level: int
+    cap: int             # memorizable slots at this level
+    used: int            # filled slots at this level
+    rows: list[SpellbookRow]
+
+
+class SpellbookBlock(BaseModel):
+    class_id: str
+    class_name: str
+    caster_type: str         # arcane | divine
+    levels: list[SpellbookLevelGroup]
+
+
 class CharacterSheet(BaseModel):
     name: str
     race_name: str
@@ -270,6 +295,7 @@ class CharacterSheet(BaseModel):
 
     magic_items: list[MagicItemView]
     spells: list[SpellClassView]
+    spellbook: list[SpellbookBlock] = Field(default_factory=list)
     spell_sources: list[SpellSourceView] = Field(default_factory=list)
     valuables: ValuablesView = Field(default_factory=lambda: ValuablesView(
         gems=[], jewellery=[], total_value=0))
@@ -633,6 +659,79 @@ def spells_view(spec: CharacterSpec, data: GameData) -> list[SpellClassView]:
     return out
 
 
+def spellbook_view(spec: CharacterSpec, data: GameData) -> list[SpellbookBlock]:
+    """One block per casting class: arcane shows the spellbook by level with
+    cast-pip counts; divine shows only memorised spells (ready/spent).
+
+    Each row carries ready/spent counts derived from ClassEntry.slots."""
+    out: list[SpellbookBlock] = []
+    for entry in spec.classes:
+        cls = data.classes[entry.class_id]
+        ctype = spell_engine.caster_type_of(cls, data)
+        if ctype is None:
+            continue
+        caps = spell_engine.memorizable_slots(entry, cls)         # {level: cap}
+        known = spell_engine.known_spells(entry, cls, data)       # book (arcane) / list (divine)
+        known_ids = {s.id for s in known}
+        # tally memorised copies per (level, spell_id)
+        ready: dict[tuple[int, str], int] = {}
+        spent: dict[tuple[int, str], int] = {}
+        used_by_level: dict[int, int] = {}
+        for slot in entry.slots:
+            if slot.spell_id is None:
+                continue
+            key = (slot.level, slot.spell_id)
+            if slot.spent:
+                spent[key] = spent.get(key, 0) + 1
+            else:
+                ready[key] = ready.get(key, 0) + 1
+            used_by_level[slot.level] = used_by_level.get(slot.level, 0) + 1
+        levels: list[SpellbookLevelGroup] = []
+        for level in sorted(caps):
+            rows: list[SpellbookRow] = []
+            if ctype == "arcane":
+                # Arcane: show all known spells at this level
+                level_known = [s for s in known if s.level == level]
+                extra_ids = (
+                    {sid for (lv, sid) in list(ready.keys()) + list(spent.keys()) if lv == level}
+                    - {s.id for s in level_known}
+                )
+                spells_at_level = level_known + [
+                    data.spells[i] for i in sorted(extra_ids) if i in data.spells
+                ]
+                for s in spells_at_level:
+                    rows.append(SpellbookRow(
+                        spell_id=s.id, name=s.name, level=s.level, reversible=s.reversible,
+                        description=s.description, known=s.id in known_ids,
+                        ready=ready.get((level, s.id), 0),
+                        spent=spent.get((level, s.id), 0),
+                    ))
+            else:
+                # Divine: only show memorised spells (ready or spent)
+                memorised_ids_at_level = {
+                    sid for (lv, sid) in list(ready.keys()) + list(spent.keys()) if lv == level
+                }
+                for sid in sorted(memorised_ids_at_level):
+                    s = data.spells.get(sid)
+                    if s is None:
+                        continue
+                    rows.append(SpellbookRow(
+                        spell_id=s.id, name=s.name, level=s.level, reversible=s.reversible,
+                        description=s.description, known=s.id in known_ids,
+                        ready=ready.get((level, s.id), 0),
+                        spent=spent.get((level, s.id), 0),
+                    ))
+            levels.append(SpellbookLevelGroup(
+                level=level, cap=caps[level],
+                used=used_by_level.get(level, 0), rows=rows,
+            ))
+        out.append(SpellbookBlock(
+            class_id=entry.class_id, class_name=cls.name,
+            caster_type=ctype, levels=levels,
+        ))
+    return out
+
+
 def _first_arcane_class_id(spec: CharacterSpec, data: GameData) -> str | None:
     for entry in spec.classes:
         cls = data.classes.get(entry.class_id)
@@ -870,6 +969,7 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
         weapon_qualities_reference=_weapon_qualities_reference(spec, data),
         magic_items=_magic_items(spec, data) + enchanted_items_view(spec.enchanted, data),
         spells=spells_view(spec, data),
+        spellbook=spellbook_view(spec, data),
         spell_sources=spell_sources_view(spec, data),
         valuables=valuables_view(spec),
         ammo=ammo_rows,
