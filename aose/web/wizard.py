@@ -1030,7 +1030,7 @@ def _proficiency_context(draft: dict[str, Any], data) -> dict:
     pairs = [(c, 1) for c in classes]                 # creation = level 1
     required = total_proficiency_slots(pairs)
     allow_special = specialisation_allowed(classes)
-    allowed = allowed_weapon_ids(classes, data)
+    allowed = allowed_weapon_ids(classes, data, _ruleset_of(draft))
     from aose.models import Weapon
     # Proficiency is per base weapon type; magic variants (Sword +1, …) share
     # their base weapon's proficiency, so only offer base weapons here.
@@ -1076,7 +1076,7 @@ async def post_proficiencies(request: Request, draft_id: str):
     classes = [data.classes[cid] for cid in ids if cid in data.classes]
     pairs = [(c, 1) for c in classes]
     required = total_proficiency_slots(pairs)
-    allowed = allowed_weapon_ids(classes, data)
+    allowed = allowed_weapon_ids(classes, data, _ruleset_of(draft))
     allow_special = specialisation_allowed(classes)
 
     if allowed != "all":
@@ -1364,7 +1364,7 @@ def _equipment_context(draft: dict[str, Any], game_data) -> dict:
         "gold_locked": draft.get("gold_locked", False),
         "inventory_view": inventory_view(
             inventory, stashed, equipped, equipped_weapons, containers, game_data,
-            allowed_weapons=allowed_weapon_ids(classes, game_data),
+            allowed_weapons=allowed_weapon_ids(classes, game_data, _ruleset_of(draft)),
             allowed_armor=allowed_armor_ids(classes, game_data),
             allow_shields=shields_allowed(classes),
         ),
@@ -1476,7 +1476,7 @@ async def post_equipment_equip(request: Request, draft_id: str, item_id: str = F
             draft.get("equipped", {}),
             draft.get("equipped_weapons", []),
             item_id, data,
-            allowed_weapons=allowed_weapon_ids(classes, data),
+            allowed_weapons=allowed_weapon_ids(classes, data, _ruleset_of(draft)),
             allowed_armor=allowed_armor_ids(classes, data),
             allow_shields=shields_allowed(classes),
         )

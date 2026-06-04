@@ -152,7 +152,7 @@ async def character_sheet(request: Request, character_id: str):
             "inventory_view": shop_inventory_view(
                 spec.inventory, spec.stashed, spec.equipped, spec.equipped_weapons,
                 spec.containers, game_data,
-                allowed_weapons=allowed_weapon_ids(classes, game_data),
+                allowed_weapons=allowed_weapon_ids(classes, game_data, spec.ruleset),
                 allowed_armor=allowed_armor_ids(classes, game_data),
                 allow_shields=shields_allowed(classes),
             ),
@@ -411,7 +411,7 @@ async def equipment_equip(request: Request, character_id: str,
         spec.equipped, spec.equipped_weapons = _equip(
             spec.inventory, spec.equipped, spec.equipped_weapons,
             item_id, data,
-            allowed_weapons=allowed_weapon_ids(classes, data),
+            allowed_weapons=allowed_weapon_ids(classes, data, spec.ruleset),
             allowed_armor=allowed_armor_ids(classes, data),
             allow_shields=shields_allowed(classes),
         )

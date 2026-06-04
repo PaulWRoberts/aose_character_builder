@@ -186,11 +186,13 @@ def _start_fighter(client):
     return draft_id
 
 
-def _start_magic_user(client):
+def _start_magic_user(client, optional_staves=False):
     r = client.get("/wizard/new")
     draft_id = r.headers["location"].split("/")[2]
     draft = load_draft(draft_id, client._drafts_dir)
     draft["abilities"] = {"STR": 10, "INT": 15, "WIS": 11, "DEX": 13, "CON": 12, "CHA": 10}
+    if optional_staves:
+        draft.setdefault("ruleset", {})["optional_staves"] = True
     save_draft(draft_id, draft, client._drafts_dir)
     client.post(f"/wizard/{draft_id}/abilities", data={})
     client.post(f"/wizard/{draft_id}/race", data={"race_id": "human"})
@@ -217,6 +219,21 @@ def test_magic_user_picker_shows_one_slot_filtered(client):
     assert "Staff" not in r.text
     assert "Sword" not in r.text
     assert "Specialise" not in r.text
+
+
+def test_magic_user_picker_shows_staff_when_rule_on(client):
+    draft_id = _start_magic_user(client, optional_staves=True)
+    r = client.get(f"/wizard/{draft_id}/class_setup")
+    assert r.status_code == 200
+    assert "Staff" in r.text
+
+
+def test_magic_user_can_take_staff_proficiency_when_rule_on(client):
+    draft_id = _start_magic_user(client, optional_staves=True)
+    r = client.post(f"/wizard/{draft_id}/proficiencies", data={"weapon": ["staff"]})
+    assert r.status_code == 303
+    draft = load_draft(draft_id, client._drafts_dir)
+    assert draft["proficiencies"]["weapons"] == ["staff"]
 
 
 def test_magic_user_post_one_weapon_advances(client):
