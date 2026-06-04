@@ -431,8 +431,8 @@ def test_carried_weight_includes_carried_container_own_weight(data):
 
 
 def test_carried_weight_includes_contents_via_multiplier(data):
-    """A carried Backpack with two torches inside.
-    80 (bag) + 1.0 * 40 (contents) = 120 cn."""
+    """A carried Backpack with two daggers inside.
+    80 (bag) + 1.0 * 20 (contents: 2 × 10 cn) = 100 cn."""
     import copy
     from aose.engine.encumbrance import carried_weight_cn
     test_data = copy.deepcopy(data)
@@ -444,9 +444,9 @@ def test_carried_weight_includes_contents_via_multiplier(data):
     spec = _minimal_spec(ruleset=RuleSet(encumbrance="detailed"))
     spec.containers = [ContainerInstance(
         instance_id="x", catalog_id="backpack", state="carried",
-        contents=["torch", "torch"],
+        contents=["dagger", "dagger"],
     )]
-    assert carried_weight_cn(spec, test_data) == 80 + 40
+    assert carried_weight_cn(spec, test_data) == 80 + 20
 
 
 def test_stashed_container_contributes_zero(data):
@@ -466,7 +466,8 @@ def test_stashed_container_contributes_zero(data):
 
 
 def test_bag_of_holding_at_full_weighs_600(data):
-    """Bag of Holding at 10 000 cn raw: 0 own + int(0.06 * 10000) = 600."""
+    """Bag of Holding at 10 000 cn raw: 0 own + int(0.06 * 10000) = 600.
+    Uses 1000 daggers (10 cn each) to produce 10 000 cn of contents."""
     import copy
     from aose.engine.encumbrance import carried_weight_cn
     test_data = copy.deepcopy(data)
@@ -478,7 +479,7 @@ def test_bag_of_holding_at_full_weighs_600(data):
     spec = _minimal_spec(ruleset=RuleSet(encumbrance="detailed"))
     spec.containers = [ContainerInstance(
         instance_id="x", catalog_id="boh", state="carried",
-        contents=["torch"] * 500,
+        contents=["dagger"] * 1000,
     )]
     assert carried_weight_cn(spec, test_data) == int(0.06 * 10000)
 
@@ -506,10 +507,10 @@ def test_bag_of_holding_loaded(data):
     assert boh.category == "miscellaneous_magic_items"
 
 
-def test_shop_categories_includes_containers_and_magic(data):
+def test_shop_categories_includes_adventuring_gear_and_magic(data):
     from aose.engine.shop import shop_categories
     cats = {c.id for c in shop_categories(data)}
-    assert "containers" in cats
+    assert "adventuring_gear" in cats       # containers now live here
     assert "miscellaneous_magic_items" in cats
 
 
@@ -680,15 +681,15 @@ def test_sheet_stow_rejects_full_container(tmp_path):
     client.post("/character/test/equipment/add", data={"item_id": "sack_small"})
     spec = load_character("test", client._characters_dir)
     instance_id = spec.containers[0].instance_id
-    # 10 torches at 20 cn = 200 cn = sack_small capacity
-    for _ in range(10):
-        client.post("/character/test/equipment/add", data={"item_id": "torch"})
+    # 20 daggers at 10 cn = 200 cn = sack_small capacity
+    for _ in range(20):
+        client.post("/character/test/equipment/add", data={"item_id": "dagger"})
         client.post("/character/test/equipment/stow", data={
-            "instance_id": instance_id, "item_id": "torch",
+            "instance_id": instance_id, "item_id": "dagger",
         })
-    client.post("/character/test/equipment/add", data={"item_id": "torch"})
+    client.post("/character/test/equipment/add", data={"item_id": "dagger"})
     r = client.post("/character/test/equipment/stow", data={
-        "instance_id": instance_id, "item_id": "torch",
+        "instance_id": instance_id, "item_id": "dagger",
     })
     assert r.status_code == 400
     assert "full" in r.text.lower()
