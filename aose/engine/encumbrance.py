@@ -153,8 +153,22 @@ def equipment_weight_cn(spec: CharacterSpec, data: GameData) -> int:
         if item is not None and item.category not in TREASURE_CATEGORIES:
             total += item.weight_cn
 
-    if any(c.state == "carried" for c in spec.containers):
-        has_gear = True
+    # Carried containers contribute own weight + scaled contents.
+    # They have listed weights (Bag of Holding has a 0.06 multiplier), so they
+    # are NOT subsumed into the flat-80 abstraction.
+    from aose.models import Container as _Container
+    for c in spec.containers:
+        if c.state != "carried":
+            continue
+        catalog = data.items.get(c.catalog_id)
+        if not isinstance(catalog, _Container):
+            continue
+        total += catalog.weight_cn
+        raw = sum(
+            (data.items[x].weight_cn if x in data.items else 0)
+            for x in c.contents
+        )
+        total += int(catalog.weight_multiplier * raw)
 
     if has_gear:
         total += 80

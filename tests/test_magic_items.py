@@ -657,13 +657,13 @@ def test_magic_instance_contributes_weight(data):
 
 
 def test_carry_capacity_keeps_band_0(data):
-    """Gauntlets +1000: 1400 cn raw → bands at 400 → still band 0 (move 120')."""
+    """Gauntlets +1000: 1400 cn raw -> bands at 400 -> still band 0 (move 120')."""
     from aose.engine.encumbrance import banding_weight_cn, weight_band, carried_weight_cn
     from aose.engine.magic import add_free_magic_item, equip_magic
     d = _with_magic(data)
     spec = _minimal_spec(race_id="human", ruleset=RuleSet(encumbrance="detailed"))
-    # torch: id="torch", weight_cn=20; 70 × 20 = 1400 cn exactly
-    spec.inventory = ["torch"] * 70
+    # 1400 gp coins = 1400 cn treasure weight (coins count 1 cn each)
+    spec.gold = 1400
     spec.magic_items = add_free_magic_item([], "gauntlets_of_ogre_power", d)
     spec.magic_items = equip_magic(spec.magic_items, spec.magic_items[0].instance_id, d)
     assert carried_weight_cn(spec, d) == 1400          # displayed raw

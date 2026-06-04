@@ -178,5 +178,6 @@ def test_valuables_view_and_zero_weight():
     assert len(sheet.valuables.jewellery) == 2
     damaged_row = next(j for j in sheet.valuables.jewellery if j.damaged)
     assert damaged_row.effective_value == 100
-    # Valuables never contribute weight.
-    assert carried_weight_cn(spec, data) == baseline_weight
+    # Gems weigh 1 cn each, jewellery 10 cn each (AOSE treasure table).
+    # 2 gems + 2 pieces = 2 + 20 = 22 cn
+    assert carried_weight_cn(spec, data) == baseline_weight + 22
