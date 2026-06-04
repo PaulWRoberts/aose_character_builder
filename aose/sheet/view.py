@@ -2,10 +2,12 @@ from pydantic import BaseModel, Field
 
 from aose.data.loader import GameData
 from aose.engine import ability_mods, armor_class, attack_bonus, hp, saves, spells as spell_engine
+from aose.engine import currency as currency_engine
 from aose.engine import spell_sources as spell_source_engine
 from aose.engine import valuables as valuables_engine
 from aose.engine.attacks import AttackProfile, attack_profiles
 from aose.engine.encumbrance import (
+    MAX_LOAD,
     EncumbranceTable,
     armor_movement_class,
     band_label,
@@ -13,6 +15,7 @@ from aose.engine.encumbrance import (
     carried_weight_cn,
     effective_movement,
     encumbrance_table,
+    treasure_weight_cn,
     weight_band,
 )
 from aose.engine.languages import broken_speech, known_languages
@@ -45,8 +48,10 @@ OPTIONAL_RULE_LABELS = {
 
 ENCUMBRANCE_DESCRIPTIONS = {
     "none": "Encumbrance is ignored entirely.",
-    "basic": "Tracks armour and significant loads only.",
-    "detailed": "Tracks every item's weight in coins.",
+    "basic": ("Movement is set by armour worn and whether you carry significant "
+              "treasure. Only treasure weight is tracked, against the 1,600 cn cap."),
+    "detailed": ("Movement is set by total weight: armour and weapons by listed "
+                 "weight, miscellaneous gear as a flat 80 cn, plus all treasure."),
 }
 
 
@@ -268,6 +273,12 @@ class CharacterSheet(BaseModel):
     ammo_load_options: dict[str, list[AmmoOption]] = Field(default_factory=dict)
     other_possessions: list[str] = Field(default_factory=list)
     notes: str = ""
+
+    coins: dict[str, int] = Field(default_factory=dict)   # {"pp":..,"gp":..,...}
+    treasure_value_gp: int = 0
+    treasure_weight_cn: int = 0
+    carrying_treasure: bool = False
+    max_load: int = MAX_LOAD
 
     enabled_optional_rules: list[str]
     encumbrance_mode: str
@@ -857,6 +868,14 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
         ammo_load_options=ammo_options,
         other_possessions=list(spec.other_possessions),
         notes=spec.notes,
+        coins={
+            "pp": spec.platinum, "gp": spec.gold, "ep": spec.electrum,
+            "sp": spec.silver, "cp": spec.copper,
+        },
+        treasure_value_gp=currency_engine.total_value_gp(spec),
+        treasure_weight_cn=treasure_weight_cn(spec, data),
+        carrying_treasure=spec.carrying_treasure,
+        max_load=MAX_LOAD,
         enabled_optional_rules=_enabled_optional_rules(spec.ruleset),
         encumbrance_mode=spec.ruleset.encumbrance,
         encumbrance_description=ENCUMBRANCE_DESCRIPTIONS.get(

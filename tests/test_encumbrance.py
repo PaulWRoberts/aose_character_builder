@@ -463,3 +463,22 @@ def test_detailed_table_shape_and_current(data):
     assert [r.movements[0] for r in t.rows] == [120, 90, 60, 30]
     current = [r for r in t.rows if r.is_current_row]
     assert len(current) == 1 and current[0].movements[0] == 90
+
+
+# ---------------------------------------------------------------------------
+# Task 10: sheet view wiring
+# ---------------------------------------------------------------------------
+from aose.sheet.view import build_sheet
+
+
+def test_sheet_exposes_purse_and_treasure(data):
+    s = _spec(encumbrance="basic")
+    s.gold = 5
+    s.silver = 30
+    s.gems = [GemStack(instance_id="g", value=100, count=2)]
+    sheet = build_sheet(s, data)
+    assert sheet.coins == {"pp": 0, "gp": 5, "ep": 0, "sp": 30, "cp": 0}
+    assert sheet.treasure_value_gp == 8   # 5gp + 30sp(=3gp)
+    assert sheet.treasure_weight_cn == 5 + 30 + 2
+    assert sheet.carrying_treasure is False
+    assert sheet.max_load == 1600
