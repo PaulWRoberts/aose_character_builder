@@ -128,6 +128,44 @@ def cancel_pending_level_up(spec: CharacterSpec, class_id: str) -> None:
     spec.pending_level_up.pop(class_id, None)
 
 
+def roll_pending_hp(spec: CharacterSpec, data: GameData, class_id: str,
+                    rng: Optional[random.Random] = None) -> int:
+    """Roll the new level's hit die and store the result in
+    ``spec.pending_level_up[class_id]``.
+
+    Does NOT advance the class or touch ``hp_rolls`` — call
+    :func:`confirm_level_up` to commit.  Raises ``ValueError`` if the class is
+    missing, at max, short on XP, at/beyond name level (no die rolled), or if
+    Strict Mode locks an existing pending roll.  Returns the rolled HP.
+    """
+    entry = next((e for e in spec.classes if e.class_id == class_id), None)
+    if entry is None:
+        raise ValueError(f"Character has no class {class_id!r}")
+
+    advancement = class_advancement(spec, data, entry)
+    if advancement.at_max:
+        raise ValueError(f"{advancement.name} is already at maximum level")
+    if not advancement.can_level:
+        raise ValueError(
+            f"Need {advancement.next_threshold} XP for {advancement.name} L"
+            f"{advancement.next_level}, have {advancement.current_xp}"
+        )
+
+    cls = data.classes[class_id]
+    if entry.level >= cls.name_level:
+        raise ValueError(
+            f"{advancement.name} L{advancement.next_level} is at or beyond name "
+            f"level — no Hit Die rolled; confirm directly."
+        )
+
+    if spec.ruleset.strict_mode and class_id in spec.pending_level_up:
+        raise ValueError("Hit points are already rolled and locked.")
+
+    new_hp = roll_hp(cls.hit_die, rng=rng)
+    spec.pending_level_up[class_id] = new_hp
+    return new_hp
+
+
 def level_up(spec: CharacterSpec, data: GameData, class_id: str,
              rng: Optional[random.Random] = None) -> int:
     """Advance the named class by one level and roll its hit die.

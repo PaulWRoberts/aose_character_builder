@@ -409,6 +409,72 @@ def test_level_up_at_name_level_minus_one_still_rolls(data):
     assert 1 <= result <= 8
 
 
+def test_roll_pending_hp_stores_in_pending(data):
+    """A successful roll lands in pending_level_up, leaves level & hp_rolls alone."""
+    from aose.engine.leveling import roll_pending_hp
+    spec = _spec(level=1, xp=2000)  # enough for L2 fighter (threshold 2000)
+    rng = random.Random(7)
+    rolled = roll_pending_hp(spec, data, "fighter", rng=rng)
+    assert 1 <= rolled <= 8
+    assert spec.pending_level_up == {"fighter": rolled}
+    assert spec.classes[0].level == 1
+    assert spec.classes[0].hp_rolls == [8]
+
+
+def test_roll_pending_hp_xp_short_raises(data):
+    from aose.engine.leveling import roll_pending_hp
+    spec = _spec(level=1, xp=500)
+    with pytest.raises(ValueError, match="Need 2000"):
+        roll_pending_hp(spec, data, "fighter")
+    assert spec.pending_level_up == {}
+
+
+def test_roll_pending_hp_at_max_raises(data):
+    from aose.engine.leveling import roll_pending_hp
+    spec = _spec(level=14, xp=999999, hp_rolls=[8] * 14)
+    with pytest.raises(ValueError, match="maximum level"):
+        roll_pending_hp(spec, data, "fighter")
+
+
+def test_roll_pending_hp_at_name_level_raises(data):
+    """At/beyond name level there is no Hit Die to roll — caller should
+    skip straight to confirm_level_up instead."""
+    from aose.engine.leveling import roll_pending_hp
+    cls = data.classes["fighter"]
+    nl = cls.name_level
+    threshold = cls.progression[nl + 1].xp_required
+    spec = _spec(level=nl, xp=threshold, hp_rolls=[8] * nl)
+    with pytest.raises(ValueError, match="name level"):
+        roll_pending_hp(spec, data, "fighter")
+
+
+def test_roll_pending_hp_strict_mode_locks_after_one_roll(data):
+    """Under Strict Mode, a second roll while a pending value exists raises."""
+    from aose.engine.leveling import roll_pending_hp
+    spec = _spec(level=1, xp=2000, ruleset=RuleSet(strict_mode=True))
+    roll_pending_hp(spec, data, "fighter", rng=random.Random(1))
+    with pytest.raises(ValueError, match="locked"):
+        roll_pending_hp(spec, data, "fighter", rng=random.Random(2))
+
+
+def test_roll_pending_hp_non_strict_allows_reroll(data):
+    """With Strict off, a second roll overwrites the pending value."""
+    from aose.engine.leveling import roll_pending_hp
+    spec = _spec(level=1, xp=2000, ruleset=RuleSet(strict_mode=False))
+    first = roll_pending_hp(spec, data, "fighter", rng=random.Random(1))
+    second = roll_pending_hp(spec, data, "fighter", rng=random.Random(2))
+    assert spec.pending_level_up == {"fighter": second}
+    # (first and second are independent; we just verify the second one stuck)
+    _ = first
+
+
+def test_roll_pending_hp_unknown_class_raises(data):
+    from aose.engine.leveling import roll_pending_hp
+    spec = _spec(level=1, xp=2000)
+    with pytest.raises(ValueError, match="no class"):
+        roll_pending_hp(spec, data, "cleric")
+
+
 def test_cancel_pending_level_up_clears_one_class(data):
     """Cancelling clears that class's pending entry without touching others."""
     from aose.engine.leveling import cancel_pending_level_up
