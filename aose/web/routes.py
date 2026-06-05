@@ -878,7 +878,10 @@ async def sheet_spell_source_add(request: Request, character_id: str):
     kind = form.get("kind", "scroll")
     caster_type = form.get("caster_type", "arcane")
     name = form.get("name", "")
-    list_id = form.get("list_id", "") or None
+    # list_id pins membership to one list — only meaningful for a spellbook. A
+    # scroll spans a whole magic type (arcane/divine), so its hidden list <select>
+    # value must be ignored; honouring it wrongly rejects off-list spells.
+    list_id = (form.get("list_id", "") or None) if kind == "spellbook" else None
     spell_ids = form.getlist("spell_ids")
     try:
         spec.spell_sources = spell_source_engine.add_spell_source(

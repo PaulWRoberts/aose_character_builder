@@ -332,7 +332,7 @@
             {% endfor %}
             {# Spell sources #}
             {% for src in sheet.spell_sources %}
-            <li><span>{{ src.name }}<span class="tag">{{ src.kind }}</span></span><span class="q">{% if src.kind == 'scroll' %}1{% endif %}</span></li>
+            <li class="clickable" data-modal="modal-source-{{ src.instance_id }}"><span>{{ src.name }}<span class="tag">{{ src.kind }}</span></span><span class="q">{% if src.kind == 'scroll' %}1{% endif %}</span></li>
             {% endfor %}
             {# Ammo #}
             {% for a in sheet.ammo %}
@@ -579,6 +579,28 @@
 {% for row in inventory_view.carried %}{{ item_modal(row, "carried", "carried", target_url_prefix) }}{% endfor %}
 {% for row in inventory_view.stashed %}{{ item_modal(row, "stashed", "stashed", target_url_prefix) }}{% endfor %}
 {% for row in inventory_view.equipped %}{{ item_modal(row, "equipped", "equipped", target_url_prefix) }}{% endfor %}
+
+{# MODALS: spell book / scroll contents (read-only; manage from the Documents tab) #}
+{% for src in sheet.spell_sources %}
+<div class="overlay modal" id="modal-source-{{ src.instance_id }}" role="dialog" aria-label="{{ src.name }}">
+  <div class="ov-head"><h3>{{ src.name }}</h3><button class="x" data-close>×</button></div>
+  <div class="ov-body">
+    <p class="hint" style="margin:0 0 10px">{{ src.kind }} · {{ src.caster_type }} · {{ src.entries | length }} spell{{ 's' if src.entries | length != 1 }}</p>
+    {% if src.entries %}
+    <ul style="list-style:none;padding:0;margin:0">
+      {% for e in src.entries %}
+      <li style="padding:3px 0;border-bottom:1px solid var(--hair)">{{ e.name }}
+        <span class="tag faint">L{{ e.level }}</span>
+        {% if e.copy_failed %}<span class="tag stamp">copy failed</span>{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    <p class="hint" style="margin:12px 0 0">Cast, copy, or remove from the
+      <button class="btn" data-drawer="drawer-equip" style="font-size:10px;padding:3px 7px;">Documents</button> tab.</p>
+  </div>
+</div>
+{% endfor %}
 
 {# MODAL: advancement #}
 <div class="overlay modal" id="modal-advance" role="dialog" aria-label="Advancement">

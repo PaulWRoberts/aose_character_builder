@@ -54,6 +54,34 @@ def test_new_spell_source_list_id_constraint(data):
                             list_id="magic_user")
 
 
+_EIGHT_MU = [
+    "magic_user_charm_person", "magic_user_detect_magic", "magic_user_floating_disc",
+    "magic_user_hold_portal", "magic_user_light", "magic_user_magic_missile",
+    "magic_user_protection_from_evil", "magic_user_read_languages",
+]
+
+
+def test_scroll_capped_at_seven_spells(data):
+    # The AOSE Magic Scrolls table tops out at 7 spells per scroll.
+    src = ss.new_spell_source("scroll", "arcane", _EIGHT_MU[:7], data)
+    assert len(src.entries) == 7
+    with pytest.raises(ss.SpellSourceError):
+        ss.new_spell_source("scroll", "arcane", _EIGHT_MU, data)  # 8 -> too many
+
+
+def test_spellbook_not_capped_at_seven(data):
+    # Spell books hold any number of spells; only scrolls are capped.
+    src = ss.new_spell_source("spellbook", "arcane", _EIGHT_MU, data)
+    assert len(src.entries) == 8
+
+
+def test_arcane_scroll_accepts_spells_from_any_arcane_list(data):
+    # A scroll spans a whole magic type, not one list — no list_id gating.
+    src = ss.new_spell_source("scroll", "arcane",
+                              ["magic_user_sleep", "illusionist_light"], data)
+    assert len(src.entries) == 2
+
+
 def test_add_and_remove(data):
     sources = ss.add_spell_source([], "scroll", "arcane",
                                   ["magic_user_magic_missile"], data, name="A")

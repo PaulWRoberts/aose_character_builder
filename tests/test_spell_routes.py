@@ -151,6 +151,21 @@ def test_add_and_remove_spell_source(client):
     assert load_character("mu", client._characters_dir).spell_sources == []
 
 
+def test_add_scroll_ignores_spellbook_list_id(client):
+    # Regression: the spellbook "Spell list" <select> is hidden (not disabled) for
+    # scrolls, so it still submits a list_id. A scroll spans a whole magic type, so
+    # the route must ignore list_id for scrolls — otherwise magic-user spells get
+    # rejected against the (alphabetically first) illusionist list.
+    _save_mu(client)
+    r = client.post("/character/mu/spell-sources/add",
+                    data={"kind": "scroll", "caster_type": "arcane", "name": "",
+                          "list_id": "illusionist",
+                          "spell_ids": ["magic_user_magic_missile", "magic_user_sleep"]})
+    assert r.status_code == 303
+    src = load_character("mu", client._characters_dir).spell_sources[-1]
+    assert {e.spell_id for e in src.entries} == {"magic_user_magic_missile", "magic_user_sleep"}
+
+
 def test_cast_from_scroll_route(client):
     _save_mu(client)
     src = _add_scroll(client, ["magic_user_magic_missile", "magic_user_sleep"])

@@ -24,6 +24,10 @@ from aose.models import (
 Kind = Literal["spellbook", "scroll"]
 CasterType = Literal["arcane", "divine"]
 
+# The AOSE Magic Scrolls table tops out at 7 spells per scroll (spell books are
+# uncapped).  See import/markdown/magic-items/advanced-fantasy_magic-scrolls-and-maps.md.
+MAX_SCROLL_SPELLS = 7
+
 
 class SpellSourceError(ValueError):
     """All spell-document validation / mutation errors (routes map to HTTP 400)."""
@@ -52,6 +56,8 @@ def new_spell_source(kind: Kind, caster_type: CasterType, spell_ids: list[str],
         caster_type = "arcane"
     if not spell_ids:
         raise SpellSourceError("a spell book / scroll must contain at least one spell")
+    if kind == "scroll" and len(spell_ids) > MAX_SCROLL_SPELLS:
+        raise SpellSourceError(f"a scroll holds at most {MAX_SCROLL_SPELLS} spells")
     if len(set(spell_ids)) != len(spell_ids):
         raise SpellSourceError("a document cannot list the same spell twice")
     for sid in spell_ids:

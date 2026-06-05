@@ -459,7 +459,7 @@
   <label class="f"><span class="lab">Name (optional)</span>
     <input type="text" name="name" placeholder="e.g. Rival's grimoire">
   </label>
-  <label class="f"><span class="lab">Spells (choose one or more)</span>
+  <label class="f"><span class="lab">Spells (choose one or more)<span id="ss-spell-cap" class="hint" style="font-weight:400;text-transform:none;letter-spacing:0"> — a scroll holds up to 7</span></span>
     <select name="spell_ids" id="ss-spells" multiple size="8">
       {% for grp in spell_source_add_options.arcane_lists %}
       {% for s in grp.spells %}
