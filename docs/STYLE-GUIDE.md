@@ -110,8 +110,12 @@ content grows and maps to a future mobile swipe-card.
 | Coin cell | `.coin` → `.d` + value | currency row |
 
 Conventions baked into the components:
-- **Everything with info is clickable** → opens the shared detail modal via
-  `data-modal="modal-feature"` (or `modal-spell`) with `data-title` / `data-text`.
+- **Everything with info is clickable** → opens a detail/management modal. Spell rows
+  and plain inventory rows (Equipped / Carried / Stashed) open a **per-row management
+  modal** (server-rendered, one per row) carrying cast/restore/clear or equip/stash/
+  drop/sell forms. Race/class feature chips use the shared `modal-feature` pattern
+  (`data-modal="modal-feature"` + `data-title`/`data-text`). The "Manage" drawers are
+  retained for bulk/creation work (memorise/forget/learn, shop, grants).
 - **Per-weapon to-hit shows `+N` roll bonus** (`atk.to_hit_ascending`), **never**
   an adjusted THAC0. The single base THAC0/attack lives in Combat; the full
   matrix is the `modal-matrix` click-through only.
@@ -143,10 +147,14 @@ To add an overlay:
 3. Real `<form action="/character/{{ character_id }}/…">` inside; never leave an
    empty `action`.
 
-**Templated detail modal:** `modal-feature` / `modal-spell` are filled from the
-trigger's `data-title` / `data-text` by the controller (`[data-role="title"]`,
-`[data-role="text"]`). Stateful spell ops live in the **spells drawer**, not the
-detail modal (keeps the modal static).
+**Templated detail modal:** `modal-feature` is filled from the trigger's `data-title` /
+`data-text` by the controller (`[data-role="title"]`, `[data-role="text"]`).
+
+**Per-spell and per-item modals** are rendered server-side (one per row) and carry their
+own cast/restore/clear or equip/stash/drop forms. The "Manage" drawers keep the bulk
+operations (memorise/forget/learn, shop, grants). To add a per-item modal: render it in
+the overlay block of `sheet.html` using the `item_modal` macro; for spells the loop in
+the `{% if sheet.spellbook %}` block already handles new rows automatically.
 
 ---
 

@@ -282,6 +282,13 @@ textarea{ width:100%; resize:vertical; }
     .print-only{ display:block; }
 }
 
+/* Click-to-manage inventory rows (per-item modal triggers). */
+.inv-cols li.clickable { cursor: pointer; }
+.inv-cols li.clickable:hover { color: var(--stamp); }
+
+/* Spell rows are already clickable via data-modal; ensure pointer shows. */
+.spell { cursor: pointer; }
+
 /* ============================================================
    LEGACY / SITE-WIDE styles kept for wizard, settings, index
    ============================================================ */
