@@ -166,6 +166,48 @@ def roll_pending_hp(spec: CharacterSpec, data: GameData, class_id: str,
     return new_hp
 
 
+def confirm_level_up(spec: CharacterSpec, data: GameData, class_id: str) -> int:
+    """Commit a level-up.
+
+    Sub-name-level: requires a pending HP roll in ``spec.pending_level_up``;
+    appends it to ``entry.hp_rolls``, clears the pending entry, bumps
+    ``entry.level``.  Returns the HP gained.
+
+    At/beyond name level: no Hit Die is rolled, so a pending roll is neither
+    needed nor consumed; bumps ``entry.level`` and returns 0.  (The flat
+    ``hp_after_name_level`` is applied by ``hp.py``.)
+
+    Raises ``ValueError`` if the class is missing, at max, short on XP, or if a
+    pending roll is required but absent.
+    """
+    entry = next((e for e in spec.classes if e.class_id == class_id), None)
+    if entry is None:
+        raise ValueError(f"Character has no class {class_id!r}")
+
+    advancement = class_advancement(spec, data, entry)
+    if advancement.at_max:
+        raise ValueError(f"{advancement.name} is already at maximum level")
+    if not advancement.can_level:
+        raise ValueError(
+            f"Need {advancement.next_threshold} XP for {advancement.name} L"
+            f"{advancement.next_level}, have {advancement.current_xp}"
+        )
+
+    cls = data.classes[class_id]
+    if entry.level >= cls.name_level:
+        entry.level += 1
+        return 0
+
+    if class_id not in spec.pending_level_up:
+        raise ValueError(
+            f"No pending HP roll for {advancement.name} — roll before confirming."
+        )
+    gained = spec.pending_level_up.pop(class_id)
+    entry.hp_rolls.append(gained)
+    entry.level += 1
+    return gained
+
+
 def level_up(spec: CharacterSpec, data: GameData, class_id: str,
              rng: Optional[random.Random] = None) -> int:
     """Advance the named class by one level and roll its hit die.

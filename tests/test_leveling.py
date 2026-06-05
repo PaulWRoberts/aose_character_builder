@@ -409,6 +409,58 @@ def test_level_up_at_name_level_minus_one_still_rolls(data):
     assert 1 <= result <= 8
 
 
+def test_confirm_level_up_applies_pending_and_clears(data):
+    """Sub-name-level confirm appends the pending roll, clears pending, bumps level."""
+    from aose.engine.leveling import roll_pending_hp, confirm_level_up
+    spec = _spec(level=1, xp=2000)
+    rolled = roll_pending_hp(spec, data, "fighter", rng=random.Random(3))
+    gained = confirm_level_up(spec, data, "fighter")
+    assert gained == rolled
+    assert spec.classes[0].level == 2
+    assert spec.classes[0].hp_rolls == [8, rolled]
+    assert spec.pending_level_up == {}
+
+
+def test_confirm_level_up_sub_name_level_requires_pending(data):
+    """Sub-name-level confirm with no pending roll raises."""
+    from aose.engine.leveling import confirm_level_up
+    spec = _spec(level=1, xp=2000)
+    with pytest.raises(ValueError, match="No pending HP roll"):
+        confirm_level_up(spec, data, "fighter")
+    assert spec.classes[0].level == 1
+
+
+def test_confirm_level_up_at_name_level_no_pending_needed(data):
+    """At/beyond name level: confirm succeeds without a pending roll;
+    level bumps; hp_rolls untouched; gained == 0."""
+    from aose.engine.leveling import confirm_level_up
+    cls = data.classes["fighter"]
+    nl = cls.name_level
+    threshold = cls.progression[nl + 1].xp_required
+    spec = _spec(level=nl, xp=threshold, hp_rolls=[8] * nl)
+    gained = confirm_level_up(spec, data, "fighter")
+    assert gained == 0
+    assert spec.classes[0].level == nl + 1
+    assert spec.classes[0].hp_rolls == [8] * nl
+
+
+def test_confirm_level_up_xp_short_raises(data):
+    from aose.engine.leveling import confirm_level_up
+    spec = _spec(level=1, xp=500)
+    # Even with a stray pending value, can_level governs.
+    spec.pending_level_up["fighter"] = 7
+    with pytest.raises(ValueError, match="Need 2000"):
+        confirm_level_up(spec, data, "fighter")
+    assert spec.classes[0].level == 1
+
+
+def test_confirm_level_up_at_max_raises(data):
+    from aose.engine.leveling import confirm_level_up
+    spec = _spec(level=14, xp=999999, hp_rolls=[8] * 14)
+    with pytest.raises(ValueError, match="maximum level"):
+        confirm_level_up(spec, data, "fighter")
+
+
 def test_roll_pending_hp_stores_in_pending(data):
     """A successful roll lands in pending_level_up, leaves level & hp_rolls alone."""
     from aose.engine.leveling import roll_pending_hp
