@@ -126,26 +126,64 @@ def test_rest_night_clear_empties_slots(client):
     assert load_character("mu", client._characters_dir).classes[0].slots == []
 
 
+def test_rest_full_day_roll_sets_pending(client):
+    _save_fighter(client)
+    r = client.post("/character/bran/rest/full-day/roll")
+    assert r.status_code == 303
+    spec = load_character("bran", client._characters_dir)
+    assert spec.pending_rest_heal in (1, 2, 3)
+
+
+def test_rest_full_day_roll_strict_locks_after_one(client):
+    _save_fighter(client)
+    client.post("/character/bran/rest/full-day/roll")
+    r = client.post("/character/bran/rest/full-day/roll")
+    assert r.status_code == 400
+
+
+def test_rest_full_day_roll_strict_off_allows_reroll(client):
+    spec = CharacterSpec(
+        name="Bran",
+        abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
+        race_id="human",
+        classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[12])],
+        alignment="neutral",
+        ruleset=RuleSet(strict_mode=False),
+    )
+    save_character("bran", spec, client._characters_dir)
+    client.post("/character/bran/rest/full-day/roll")
+    r = client.post("/character/bran/rest/full-day/roll")
+    assert r.status_code == 303
+
+
 def test_rest_full_day_heals_and_restores(client):
     _save_mu(client, spellbook=["magic_user_magic_missile"],
              slots=[SpellSlot(level=1, spell_id="magic_user_magic_missile", spent=True)])
     spec = load_character("mu", client._characters_dir)
     spec.damage_taken = 5
+    spec.pending_rest_heal = 3
     save_character("mu", spec, client._characters_dir)
-    r = client.post("/character/mu/rest/full-day",
-                    data={"mode": "restore", "heal_amount": 3})
+    r = client.post("/character/mu/rest/full-day", data={"mode": "restore"})
     assert r.status_code == 303
     after = load_character("mu", client._characters_dir)
     assert after.damage_taken == 2
     assert after.classes[0].slots[0].spent is False
+    assert after.pending_rest_heal is None
+
+
+def test_rest_full_day_no_pending_400(client):
+    _save_fighter(client)
+    r = client.post("/character/bran/rest/full-day", data={"mode": "keep"})
+    assert r.status_code == 400
 
 
 def test_rest_blocked_when_dead(client):
     _save_fighter(client, damage_taken=12)  # 0/12 → dead
     r = client.post("/character/bran/rest/night", data={"mode": "restore"})
     assert r.status_code == 400
-    r = client.post("/character/bran/rest/full-day",
-                    data={"mode": "restore", "heal_amount": 2})
+    r = client.post("/character/bran/rest/full-day/roll")
+    assert r.status_code == 400
+    r = client.post("/character/bran/rest/full-day", data={"mode": "restore"})
     assert r.status_code == 400
 
 

@@ -172,6 +172,8 @@ class CharacterSpec(BaseModel):
     # the rolled HP awaiting confirmation.  Cleared when the level-up is
     # confirmed or cancelled.  See aose/engine/leveling.py.
     pending_level_up: dict[str, int] = Field(default_factory=dict)
+    # 1d3 HP healing roll for full-day rest, awaiting confirmation.  Cleared on confirm.
+    pending_rest_heal: int | None = None
     # Play-state: temporary per-ability score adjustments set on the live sheet.
     # Signed deltas keyed by Ability; only non-zero entries are stored. They
     # stack with magic-item ability modifiers and clamp the final effective

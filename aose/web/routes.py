@@ -180,7 +180,6 @@ async def character_sheet(request: Request, character_id: str):
             "gold_grant_url": f"/character/{character_id}/gold",
             "coins": sheet.coins,
             "coins_url_prefix": f"/character/{character_id}",
-            "rest_heal_roll": dice.roll("1d3"),
             "spell_source_add_options": spell_source_add_options(game_data),
             # Equipment drawer tabs: Documents + Treasure (gated on presence)
             "spell_sources": sheet.spell_sources,
@@ -1018,18 +1017,33 @@ async def rest_night(request: Request, character_id: str, mode: str = Form("rest
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
+@router.post("/character/{character_id}/rest/full-day/roll")
+async def rest_full_day_roll(request: Request, character_id: str):
+    spec = _load_spec_or_404(request, character_id)
+    if hp.is_dead(spec, request.app.state.game_data):
+        raise HTTPException(400, "A dead character cannot rest")
+    if spec.ruleset.strict_mode and spec.pending_rest_heal is not None:
+        raise HTTPException(400, "Healing roll is already locked (Strict Mode)")
+    spec.pending_rest_heal = dice.roll("1d3")
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
 @router.post("/character/{character_id}/rest/full-day")
 async def rest_full_day(request: Request, character_id: str,
-                        mode: str = Form("restore"), heal_amount: int = Form(...)):
+                        mode: str = Form("restore")):
     spec = _load_spec_or_404(request, character_id)
     data = request.app.state.game_data
     if hp.is_dead(spec, data):
         raise HTTPException(400, "A dead character cannot rest")
+    if spec.pending_rest_heal is None:
+        raise HTTPException(400, "Roll the healing die first")
     spec.classes = [_apply_rest_mode(e, mode) for e in spec.classes]
     try:
-        spec.damage_taken = hp.apply_healing(spec, data, heal_amount)
+        spec.damage_taken = hp.apply_healing(spec, data, spec.pending_rest_heal)
     except ValueError as e:
         raise HTTPException(400, str(e))
+    spec.pending_rest_heal = None
     save_character(character_id, spec, request.app.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 

@@ -162,6 +162,7 @@ class SpellClassView(BaseModel):
     class_name: str
     caster_type: str            # "arcane" | "divine"
     can_learn: bool             # arcane only
+    can_forget: bool            # arcane + standard spell book + not strict mode
     known: list[SpellEntryView]
     slot_groups: list[SpellLevelGroup]
     learnable: list[SpellEntryView]
@@ -329,6 +330,9 @@ class CharacterSheet(BaseModel):
     treasure_weight_cn: int = 0
     carrying_treasure: bool = False
     max_load: int = MAX_LOAD
+
+    pending_rest_heal: int | None = None
+    strict_mode: bool = False
 
     enabled_optional_rules: list[str]
     encumbrance_mode: str
@@ -664,11 +668,17 @@ def spells_view(spec: CharacterSpec, data: GameData) -> list[SpellClassView]:
                 level=level, cap=caps[level],
                 free=caps[level] - len(filled), slots=filled,
             ))
+        is_arcane = ctype == "arcane"
         out.append(SpellClassView(
             class_id=entry.class_id,
             class_name=cls.name,
             caster_type=ctype,
-            can_learn=(ctype == "arcane"),
+            can_learn=is_arcane,
+            can_forget=(
+                is_arcane
+                and not spec.ruleset.advanced_spell_books
+                and not spec.ruleset.strict_mode
+            ),
             known=[_spell_entry(s) for s in known],
             slot_groups=groups,
             learnable=(
@@ -1039,4 +1049,6 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
         encumbrance_description=ENCUMBRANCE_DESCRIPTIONS.get(
             spec.ruleset.encumbrance, ""
         ),
+        pending_rest_heal=spec.pending_rest_heal,
+        strict_mode=spec.ruleset.strict_mode,
     )

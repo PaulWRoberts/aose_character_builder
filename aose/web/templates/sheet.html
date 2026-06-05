@@ -790,6 +790,17 @@
     {% endif %}
     <div class="ov-section">
       <h4>Full Day Rest</h4>
+      {% if sheet.pending_rest_heal is none %}
+      <form method="post" action="/character/{{ character_id }}/rest/full-day/roll">
+        <button class="btn solid" type="submit">Roll 1d3</button>
+      </form>
+      {% else %}
+      <p style="margin:0 0 8px">Rolled: <span class="stat-big">{{ sheet.pending_rest_heal }}</span></p>
+      {% if not sheet.strict_mode %}
+      <form method="post" action="/character/{{ character_id }}/rest/full-day/roll" style="margin-bottom:6px">
+        <button class="btn" type="submit">Re-roll</button>
+      </form>
+      {% endif %}
       <form method="post" action="/character/{{ character_id }}/rest/full-day">
         {% if sheet.spells %}
         <label class="f"><span class="lab">Spell loadout</span>
@@ -802,11 +813,9 @@
         {% else %}
         <input type="hidden" name="mode" value="keep">
         {% endif %}
-        <label class="f"><span class="lab">Healing (1d3)</span>
-          <input type="number" name="heal_amount" min="0" max="3" value="{{ rest_heal_roll }}">
-        </label>
         <button class="btn solid" type="submit" data-close>Full Day Rest</button>
       </form>
+      {% endif %}
     </div>
     {% endif %}
   </div>
