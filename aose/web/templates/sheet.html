@@ -271,7 +271,7 @@
           <div class="eqhead"><span>Weapon</span><span>hit · dmg · range</span></div>
           <ul>
             {% for atk in sheet.attacks %}
-            <li>
+            <li{% if atk.manageable_item_id %} class="clickable" data-modal="modal-item-equipped-{{ atk.manageable_item_id }}"{% endif %}>
               <span>
                 {{ atk.name }}{% if atk.count > 1 %} ×{{ atk.count }}{% endif %}
                 {% if atk.unarmed %}{% elif atk.name and sheet.magic_items | selectattr('name','equalto',atk.name) | list %}<span class="tag stamp">magic</span>{% endif %}
@@ -290,7 +290,7 @@
             {% endfor %}
             {# Equipped armour/shield #}
             {% for e in sheet.equipped %}
-            <li style="border-top:1px solid var(--hair);margin-top:4px;padding-top:4px">
+            <li{% if e.item_id %} class="clickable" data-modal="modal-item-equipped-{{ e.item_id }}"{% endif %} style="border-top:1px solid var(--hair);margin-top:4px;padding-top:4px">
               <span>{{ e.item_name }}</span>
               <span class="st">{{ e.slot | title }}</span>
             </li>
@@ -578,6 +578,7 @@
 {# MODALS: per-item inventory management #}
 {% for row in inventory_view.carried %}{{ item_modal(row, "carried", "carried", target_url_prefix) }}{% endfor %}
 {% for row in inventory_view.stashed %}{{ item_modal(row, "stashed", "stashed", target_url_prefix) }}{% endfor %}
+{% for row in inventory_view.equipped %}{{ item_modal(row, "equipped", "equipped", target_url_prefix) }}{% endfor %}
 
 {# MODAL: advancement #}
 <div class="overlay modal" id="modal-advance" role="dialog" aria-label="Advancement">

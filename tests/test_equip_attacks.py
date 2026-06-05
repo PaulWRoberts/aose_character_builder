@@ -469,3 +469,28 @@ def test_sheet_carried_and_stashed_items_are_clickable(tmp_path, data):
     # Carried item modal offers Stash + Drop; stashed offers Unstash.
     assert "/character/packrat/equipment/stash" in body
     assert "/character/packrat/equipment/unstash" in body
+
+
+def test_sheet_equipped_items_are_clickable(tmp_path, data):
+    from aose.characters import save_character
+    client = _make_client(tmp_path)
+    spec = CharacterSpec(
+        name="Sir Click",
+        abilities={"STR": 13, "INT": 10, "WIS": 10, "DEX": 11, "CON": 12, "CHA": 9},
+        race_id="human", alignment="neutral",
+        classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
+        inventory=["sword", "plate_mail"],
+        equipped_weapons=["sword"], equipped={"armor": "plate_mail"},
+    )
+    save_character("sir-click", spec, client._characters_dir)
+    body = client.get("/character/sir-click").text
+
+    # Equipped weapon (plain) and equipped armour both trigger and render modals.
+    assert 'data-modal="modal-item-equipped-sword"' in body
+    assert 'id="modal-item-equipped-sword"' in body
+    assert 'data-modal="modal-item-equipped-plate_mail"' in body
+    assert 'id="modal-item-equipped-plate_mail"' in body
+    # The equipped modal offers Unequip.
+    assert "/character/sir-click/equipment/unequip" in body
+    # Unarmed is never a trigger.
+    assert 'data-modal="modal-item-equipped-unarmed"' not in body
