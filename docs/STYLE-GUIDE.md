@@ -156,6 +156,15 @@ operations (memorise/forget/learn, shop, grants). To add a per-item modal: rende
 the overlay block of `sheet.html` using the `item_modal` macro; for spells the loop in
 the `{% if sheet.spellbook %}` block already handles new rows automatically.
 
+**Roll → Confirm at level-up.** Sub-name-level advancement is a deliberate two-step:
+a `POST …/level-up/{class_id}/roll` stores the HP in `CharacterSpec.pending_level_up`,
+then `POST …/confirm` commits it and bumps the level. Under Strict Mode the pending roll
+locks after one press; Strict off allows re-roll before confirm. At/beyond name level the
+roll step is skipped entirely — only `/confirm` is shown. Mirrors the wizard's L1 HP step.
+Per-class `modal-levelup-{class_id}` modals are rendered in the overlay block of
+`sheet.html` via `{% for m in sheet.level_up_modals %}`; `LevelUpModal` is built in
+`aose/sheet/view.py`.
+
 ---
 
 ## 6. ⚠️ Invariants & gotchas (learned the hard way)
