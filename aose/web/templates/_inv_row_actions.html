@@ -1,0 +1,54 @@
+{# Shared per-row inventory action buttons.  Imported `with context` so the
+   macro can read `inventory_view` (for the stow dropdown).  Used by both the
+   equipment drawer (`_equipment_ui.html`) and the sheet's per-item modals
+   (`sheet.html`).  `state` is "equipped" | "carried" | "stashed". #}
+{% macro inv_row_actions(row, target_url_prefix, state) %}
+    {% if state == "equipped" %}
+    <form method="post" action="{{ target_url_prefix }}/unequip" class="inline-form">
+        <input type="hidden" name="item_id" value="{{ row.id }}">
+        <button type="submit">Unequip</button>
+    </form>
+    {% elif state == "carried" and row.equippable and row.class_allowed %}
+    <form method="post" action="{{ target_url_prefix }}/equip" class="inline-form">
+        <input type="hidden" name="item_id" value="{{ row.id }}">
+        <button type="submit">Equip</button>
+    </form>
+    {% elif state == "carried" and row.equippable and not row.class_allowed %}
+    <span class="muted small" title="Your class cannot use this item">Not usable</span>
+    {% elif state == "stashed" %}
+    <form method="post" action="{{ target_url_prefix }}/unstash" class="inline-form">
+        <input type="hidden" name="item_id" value="{{ row.id }}">
+        <button type="submit">Unstash</button>
+    </form>
+    {% endif %}
+    {% set carried_bags = inventory_view.containers | selectattr("state", "equalto", "carried") | list %}
+    {% if state == "carried" and carried_bags %}
+    <form method="post" action="{{ target_url_prefix }}/stow" class="inline-form">
+        <input type="hidden" name="item_id" value="{{ row.id }}">
+        <select name="instance_id">
+            {% for c in carried_bags %}
+            <option value="{{ c.instance_id }}">{{ c.name }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit">Stow</button>
+    </form>
+    {% endif %}
+    {% if state in ("equipped", "carried") %}
+    <form method="post" action="{{ target_url_prefix }}/stash" class="inline-form">
+        <input type="hidden" name="item_id" value="{{ row.id }}">
+        <button type="submit" title="Move off-person; stops contributing to encumbrance">Stash</button>
+    </form>
+    {% endif %}
+    <form method="post" action="{{ target_url_prefix }}/remove" class="remove-form">
+        <input type="hidden" name="item_id" value="{{ row.id }}">
+        <input type="hidden" name="from_state" value="{{ state }}">
+        <button type="submit" name="mode" value="drop"
+                title="Throw away — no gold back">Drop</button>
+        <button type="submit" name="mode" value="sell"
+                title="Sell one for half its per-item price">Sell&nbsp;(+{{ row.sell_gp }}&nbsp;gp)</button>
+        {% if row.can_refund %}
+        <button type="submit" name="mode" value="refund"
+                title="Refund a full purchased stack">Refund{% if row.bundle_count > 1 %}&nbsp;stack&nbsp;of&nbsp;{{ row.bundle_count }}{% endif %}&nbsp;(+{{ row.cost_gp | int }}&nbsp;gp)</button>
+        {% endif %}
+    </form>
+{% endmacro %}
