@@ -245,6 +245,71 @@ def test_grant_xp_missing_character_404s(client):
     assert r.status_code == 404
 
 
+def test_level_up_roll_route_stores_pending_and_303s(client):
+    _seed(client, level=1, xp=2000)
+    r = client.post("/character/test/level-up/fighter/roll")
+    assert r.status_code == 303
+    assert r.headers["location"] == "/character/test"
+    spec = load_character("test", client._characters_dir)
+    assert "fighter" in spec.pending_level_up
+    assert 1 <= spec.pending_level_up["fighter"] <= 8
+    # Did NOT advance.
+    assert spec.classes[0].level == 1
+    assert len(spec.classes[0].hp_rolls) == 1
+
+
+def test_level_up_roll_route_strict_lock_400s(client):
+    """A second Roll under Strict Mode while a pending exists returns 400."""
+    _seed(client, level=1, xp=2000, ruleset=RuleSet(strict_mode=True))
+    client.post("/character/test/level-up/fighter/roll")
+    r = client.post("/character/test/level-up/fighter/roll")
+    assert r.status_code == 400
+    assert "locked" in r.json()["detail"].lower()
+
+
+def test_level_up_roll_route_xp_short_400s(client):
+    _seed(client, level=1, xp=500)
+    r = client.post("/character/test/level-up/fighter/roll")
+    assert r.status_code == 400
+
+
+def test_level_up_confirm_route_advances_and_clears_pending(client):
+    _seed(client, level=1, xp=2000)
+    client.post("/character/test/level-up/fighter/roll")
+    spec_before = load_character("test", client._characters_dir)
+    pending = spec_before.pending_level_up["fighter"]
+
+    r = client.post("/character/test/level-up/fighter/confirm")
+    assert r.status_code == 303
+    spec_after = load_character("test", client._characters_dir)
+    assert spec_after.classes[0].level == 2
+    assert spec_after.classes[0].hp_rolls == [8, pending]
+    assert spec_after.pending_level_up == {}
+
+
+def test_level_up_confirm_without_roll_400s(client):
+    """Sub-name-level confirm with no pending roll returns 400."""
+    _seed(client, level=1, xp=2000)
+    r = client.post("/character/test/level-up/fighter/confirm")
+    assert r.status_code == 400
+
+
+def test_level_up_cancel_route_clears_pending(client):
+    _seed(client, level=1, xp=2000)
+    client.post("/character/test/level-up/fighter/roll")
+    r = client.post("/character/test/level-up/fighter/cancel")
+    assert r.status_code == 303
+    spec = load_character("test", client._characters_dir)
+    assert spec.pending_level_up == {}
+    assert spec.classes[0].level == 1
+
+
+def test_level_up_cancel_is_idempotent(client):
+    _seed(client, level=1, xp=2000)
+    r = client.post("/character/test/level-up/fighter/cancel")
+    assert r.status_code == 303
+
+
 def test_level_up_route_advances_class(client):
     _seed(client, level=1, xp=2000)
     r = client.post("/character/test/level-up/fighter")

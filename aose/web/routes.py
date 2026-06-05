@@ -9,7 +9,13 @@ from aose.engine import currency as _currency, dice, hp, spells as spell_engine
 from aose.engine.currency import CurrencyError
 from aose.engine.equip import equip as _equip, unequip as _unequip
 from aose.engine.energy_drain import energy_drain as _energy_drain
-from aose.engine.leveling import grant_xp as _grant_xp, level_up as _level_up
+from aose.engine.leveling import (
+    grant_xp as _grant_xp,
+    level_up as _level_up,
+    roll_pending_hp as _roll_pending_hp,
+    confirm_level_up as _confirm_level_up,
+    cancel_pending_level_up as _cancel_pending_level_up,
+)
 from aose.engine.enchant import (
     IncompatibleBase,
     NoCharges as _EnchNoCharges,
@@ -374,6 +380,42 @@ async def level_up_class(request: Request, character_id: str, class_id: str):
         _level_up(spec, request.app.state.game_data, class_id)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/level-up/{class_id}/roll")
+async def level_up_roll(request: Request, character_id: str, class_id: str):
+    """Roll the new level's hit die into ``spec.pending_level_up[class_id]``
+    without advancing the class.  400 if the roll is rejected (XP short, at
+    max, at/beyond name level, or Strict-Mode lock)."""
+    spec = _load_spec_or_404(request, character_id)
+    try:
+        _roll_pending_hp(spec, request.app.state.game_data, class_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/level-up/{class_id}/confirm")
+async def level_up_confirm(request: Request, character_id: str, class_id: str):
+    """Commit a pending level-up: apply the pending HP roll (sub-name-level)
+    or just bump the level (at/beyond name level)."""
+    spec = _load_spec_or_404(request, character_id)
+    try:
+        _confirm_level_up(spec, request.app.state.game_data, class_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/level-up/{class_id}/cancel")
+async def level_up_cancel(request: Request, character_id: str, class_id: str):
+    """Idempotently clear any pending HP roll for this class."""
+    spec = _load_spec_or_404(request, character_id)
+    _cancel_pending_level_up(spec, class_id)
     save_character(character_id, spec, request.app.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
