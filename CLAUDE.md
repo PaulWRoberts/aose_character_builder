@@ -4,6 +4,10 @@ Python + FastAPI + Jinja2 character builder for Advanced Old-School Essentials.
 Pydantic v2 models, YAML data, no JS framework. Local-only single-user app
 (no auth model anywhere — every route mutates by URL).
 
+**Doing any sheet/UI work?** Read `docs/STYLE-GUIDE.md` first — the OSR-zine
+design system (tokens, components, overlay model) plus hard-won invariants
+(closed-overlay `pointer-events`, variable-font self-hosting, `no-cache` static).
+
 ## Running
 
 ```powershell
