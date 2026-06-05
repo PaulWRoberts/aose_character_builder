@@ -625,6 +625,27 @@
 </div>
 {% endfor %}
 
+{# MODAL: energy drain #}
+<div class="overlay modal" id="modal-drain" role="dialog" aria-label="Energy Drain">
+  <div class="ov-head"><h3>Energy Drain</h3><button class="x" data-close>×</button></div>
+  <div class="ov-body">
+    <p class="muted small">
+      Permanently drains experience levels LIFO from the most recently advanced
+      class.  Removes the matching Hit Dice and now-inaccessible spells.
+      This is a GM action and cannot be undone.
+    </p>
+    <form method="post" action="/character/{{ character_id }}/energy-drain"
+          onsubmit="return confirm('Energy drain ' + this.levels.value + ' level(s)? This is permanent.');">
+      <div class="inline-form">
+        <input type="number" name="levels" value="1" min="1">
+        <label><input type="radio" name="xp_mode" value="midpoint"> Midpoint</label>
+        <label><input type="radio" name="xp_mode" value="new_min" checked> New min</label>
+        <button class="btn danger" type="submit">Drain</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 {# MODAL: advancement #}
 <div class="overlay modal" id="modal-advance" role="dialog" aria-label="Advancement">
   <div class="ov-head"><h3>Advancement</h3><button class="x" data-close>×</button></div>
