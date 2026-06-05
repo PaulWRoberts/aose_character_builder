@@ -39,6 +39,7 @@ class ShopCategory(BaseModel):
 class InventoryRow(BaseModel):
     id: str
     name: str
+    description: str = ""        # catalog description (for the per-item detail modal)
     count: int
     weight_cn: int = 0          # per-unit weight; row total = count * weight_cn
     cost_gp: float = 0          # bundle price (what the shop charges per purchase)
@@ -137,6 +138,7 @@ def _build_row(item_id: str, count: int, data: GameData,
     return InventoryRow(
         id=item_id,
         name=item.name,
+        description=getattr(item, "description", "") or "",
         count=count,
         weight_cn=item.weight_cn,
         cost_gp=item.cost_gp,
