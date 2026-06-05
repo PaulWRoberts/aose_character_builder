@@ -197,10 +197,8 @@
           {% set visible_rows = lvl.rows if block.caster_type == "arcane" else lvl.rows|selectattr('ready')|list + lvl.rows|selectattr('spent')|list %}
           {% for row in (lvl.rows if block.caster_type == "arcane" else lvl.rows|selectattr('ready','gt',0)|list + lvl.rows|selectattr('spent','gt',0)|list) %}
           <div class="spell{% if row.ready == 0 and row.spent > 0 %} allspent{% endif %}"
-               data-modal="modal-spell"
-               data-title="{{ row.name }}"
-               data-text="{{ row.description | replace('"', '&quot;') }}">
-            <span class="snm">{{ row.name }}</span>
+               data-modal="modal-spell-{{ block.class_id }}-{{ row.spell_id }}-{{ 'r' if row.reversed else 'n' }}">
+            <span class="snm">{{ row.display_name }}</span>
             {% if row.ready > 0 or row.spent > 0 %}
             <span class="pips">
               {% for _ in range(row.ready) %}<i class="pip"></i>{% endfor %}
@@ -522,14 +520,50 @@
   <div class="ov-body"><p data-role="text" style="font-size:15px;margin:0"></p></div>
 </div>
 
-{# MODAL: spell detail (description-only; stateful ops in the spells drawer) #}
-<div class="overlay modal" id="modal-spell" role="dialog" aria-label="Spell">
-  <div class="ov-head"><h3 data-role="title">Spell</h3><button class="x" data-close>×</button></div>
+{# MODALS: per-spell management (cast / restore / clear) #}
+{% if sheet.spellbook %}
+{% for block in sheet.spellbook %}
+{% for lvl in block.levels %}
+{% for row in lvl.rows %}
+<div class="overlay modal" id="modal-spell-{{ block.class_id }}-{{ row.spell_id }}-{{ 'r' if row.reversed else 'n' }}"
+     role="dialog" aria-label="{{ row.display_name }}">
+  <div class="ov-head"><h3>{{ row.display_name }}</h3><button class="x" data-close>×</button></div>
   <div class="ov-body">
-    <p data-role="text" style="font-size:15px;margin:0"></p>
-    <p class="hint" style="margin-top:12px;">Use the <button class="btn" data-drawer="drawer-spells" style="font-size:10px;padding:3px 7px;">Manage Spells</button> drawer to memorise, cast, restore, or clear.</p>
+    <p style="font-size:15px;margin:0 0 12px">{{ row.description }}</p>
+    {% if row.ready_slots or row.spent_slots %}
+    <div class="row-actions">
+      {% if row.ready_slots %}
+      <form method="post" action="/character/{{ character_id }}/spells/cast" style="display:inline">
+        <input type="hidden" name="class_id" value="{{ block.class_id }}">
+        <input type="hidden" name="slot_index" value="{{ row.ready_slots[0] }}">
+        <button class="btn solid" type="submit" data-close>Cast</button>
+      </form>
+      {% endif %}
+      {% if row.spent_slots %}
+      <form method="post" action="/character/{{ character_id }}/spells/restore" style="display:inline">
+        <input type="hidden" name="class_id" value="{{ block.class_id }}">
+        <input type="hidden" name="slot_index" value="{{ row.spent_slots[0] }}">
+        <button class="btn" type="submit" data-close>Restore</button>
+      </form>
+      {% endif %}
+      {% if row.ready_slots or row.spent_slots %}
+      <form method="post" action="/character/{{ character_id }}/spells/clear" style="display:inline">
+        <input type="hidden" name="class_id" value="{{ block.class_id }}">
+        <input type="hidden" name="slot_index" value="{{ (row.ready_slots + row.spent_slots)[0] }}">
+        <button class="btn" type="submit" data-close>Clear</button>
+      </form>
+      {% endif %}
+    </div>
+    {% else %}
+    <p class="hint" style="margin:0">Memorise this spell from the
+      <button class="btn" data-drawer="drawer-spells" style="font-size:10px;padding:3px 7px;">Manage Spells</button> drawer.</p>
+    {% endif %}
   </div>
 </div>
+{% endfor %}
+{% endfor %}
+{% endfor %}
+{% endif %}
 
 {# MODAL: advancement #}
 <div class="overlay modal" id="modal-advance" role="dialog" aria-label="Advancement">

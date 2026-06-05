@@ -116,3 +116,38 @@ def test_caster_has_spells_group(tmp_path):
     client = TestClient(app, follow_redirects=False)
     html = client.get("/character/mage").text
     assert "Spells —" in html
+
+
+def test_sheet_per_spell_modal_with_cast_forms(tmp_path):
+    from aose.characters import save_character
+    from aose.data.loader import GameData
+    from aose.engine import spells as se
+    from aose.models import CharacterSpec, ClassEntry
+
+    data = GameData.load(DATA_DIR)
+    characters_dir = tmp_path / "characters"
+    examples_dir = tmp_path / "examples"
+    examples_dir.mkdir()
+
+    e = ClassEntry(class_id="magic_user", level=3, hp_rolls=[4, 3, 2],
+                   spellbook=["magic_user_magic_missile", "magic_user_light"])
+    cls = data.classes["magic_user"]
+    e = se.assign_slot(e, cls, data, level=1, spell_id="magic_user_light", reversed=True)
+    spec = CharacterSpec(
+        name="Raistlin",
+        abilities={"STR": 9, "INT": 16, "WIS": 9, "DEX": 12, "CON": 10, "CHA": 9},
+        race_id="human", classes=[e], alignment="neutral",
+    )
+    save_character("raistlin", spec, characters_dir)
+
+    app = create_app(data_dir=DATA_DIR, characters_dir=characters_dir,
+                     examples_dir=examples_dir)
+    client = TestClient(app)
+    body = client.get("/character/raistlin").text
+
+    # Reversed spell shows under its reverse name and has its own modal + cast form.
+    assert "Darkness" in body
+    assert 'id="modal-spell-magic_user-magic_user_light-r"' in body
+    assert "/character/raistlin/spells/cast" in body
+    # The old static placeholder modal is gone.
+    assert 'id="modal-spell"' not in body
