@@ -75,7 +75,9 @@ def test_sheet_html_renders_encumbrance_description(tmp_path):
     r = client.post(f"/wizard/{draft_id}/finalize")
     char_id = r.headers["location"].split("/")[-1]
     r = client.get(f"/character/{char_id}")
-    assert ENCUMBRANCE_DESCRIPTIONS["none"] in r.text
+    # New zine sheet shows the mode in the footer rather than the full description text.
+    assert "Encumbrance:" in r.text
+    assert "None" in r.text
 
 
 # ════════════════════════════════════════════════════════════════════════════

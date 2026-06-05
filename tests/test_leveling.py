@@ -278,7 +278,8 @@ def test_level_up_route_max_level_400s(client):
 def test_sheet_renders_total_xp_and_thresholds(client):
     _seed(client, level=1, xp=1500)
     r = client.get("/character/test")
-    assert "Total XP" in r.text
+    # New zine sheet uses "Experience" in the advancement modal (not "Total XP").
+    assert "Experience" in r.text
     assert "1500" in r.text
     assert "2000" in r.text  # next-level threshold
 

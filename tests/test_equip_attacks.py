@@ -329,7 +329,8 @@ def test_sheet_inventory_shows_equipped_section(client):
     actionable signal."""
     _seed(client, inventory=["sword"], equipped_weapons=["sword"])
     r = client.get("/character/test")
-    assert 'class="inv-section-head"' in r.text and ">Equipped" in r.text
+    # New zine sheet uses <h4> headers, not inv-section-head class.
+    assert "<h4>Equipped</h4>" in r.text
     assert 'action="/character/test/equipment/unequip"' in r.text
 
 
@@ -361,10 +362,10 @@ def test_ac_drops_with_armor_and_shield(client):
     _seed(client, inventory=["chain_mail", "shield"],
           equipped={"armor": "chain_mail", "shield": "shield"})
     r = client.get("/character/test")
-    # Look for AC 4 in the combat section
-    assert "Armor Class" in r.text
-    # Pull out the stat-big AC value
-    idx = r.text.index("Armor Class")
+    # New zine sheet uses "Armour Class" (UK spelling) label in the combat group.
+    assert "Armour Class" in r.text
+    # Pull out the AC region and verify the value (4 desc = chain mail 5 - shield 1).
+    idx = r.text.index("Armour Class")
     snippet = r.text[idx:idx + 400]
     assert "4" in snippet  # descending AC value
 

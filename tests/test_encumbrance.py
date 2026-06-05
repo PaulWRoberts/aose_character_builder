@@ -281,7 +281,8 @@ def test_sheet_html_renders_carried_weight_in_basic(tmp_path):
     spec = _spec(encumbrance="basic", inventory=["torch", "torch"])
     save_character("test", spec, client._characters_dir)
     r = client.get("/character/test")
-    assert "80 cn" in r.text
+    # New zine sheet shows "carried / max_load cn" in the inventory bar.
+    assert "80 / 1600 cn" in r.text
 
 
 def test_sheet_html_hides_carried_weight_in_none(tmp_path):

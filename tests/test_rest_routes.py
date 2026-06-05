@@ -154,7 +154,8 @@ def test_sheet_renders_hp_and_status(client):
     r = client.get("/character/bran")
     assert r.status_code == 200
     assert "7 / 12" in r.text       # current / max
-    assert "Alive" in r.text
+    # New zine sheet shows "is-dead" div only when dead; "Alive" is implicit (no label shown)
+    assert 'class="is-dead"' not in r.text
 
 
 def test_sheet_renders_dead_status(client):

@@ -398,8 +398,8 @@ def test_sheet_renders_add_button_alongside_buy(client):
     _seed_character(client, gold=50)
     r = client.get("/character/test")
     assert 'action="/character/test/equipment/add"' in r.text
-    # The Add button appears even when the user can't afford Buy
-    assert ">Add</button>" in r.text
+    # The add button appears (lowercase, link-style) even when the user can't afford Buy
+    assert ">add</button>" in r.text
 
 
 def test_wizard_add_route_grants_item_without_spending_gold(client):

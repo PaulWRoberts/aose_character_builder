@@ -368,4 +368,5 @@ def test_sheet_html_renders_per_weapon_section(client):
     r = client.get(f"/character/{char_id}")
     assert "Weapon Proficiencies" in r.text
     assert "Sword" in r.text
-    assert "&minus;2" in r.text
+    # New zine sheet uses Unicode minus (−) not HTML entity &minus;
+    assert "−2" in r.text or "&minus;2" in r.text

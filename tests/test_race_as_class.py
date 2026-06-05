@@ -221,12 +221,14 @@ def test_sheet_subtitle_omits_race_for_race_as_class(rac_client):
     r = rac_client.post(f"/wizard/{draft_id}/finalize")
     char_id = r.headers["location"].split("/")[-1]
     r = rac_client.get(f"/character/{char_id}")
-    # Subtitle should be just "Dwarf 1 · Lawful" — not "Dwarf · Dwarf 1 · Lawful"
-    # i.e. no double Dwarf in the subtitle.
-    subtitle_start = r.text.index('class="subtitle"')
-    subtitle_end = r.text.index("</p>", subtitle_start)
-    subtitle = r.text[subtitle_start:subtitle_end]
-    assert subtitle.count("Dwarf") == 1
+    # Pills should show just "Dwarf 1 · Lawful" — not "Dwarf · Dwarf 1 · Lawful"
+    # i.e. no double Dwarf when race_as_class is true.
+    # In the new zine design the race pill is omitted when race_as_class is true.
+    # Narrow to just the .tags div (not the full header — the XP track also shows adv.name).
+    tags_start = r.text.index('class="tags"')
+    tags_end = r.text.index('</div>', tags_start)
+    tags = r.text[tags_start:tags_end]
+    assert tags.count("Dwarf") == 1
 
 
 def test_sheet_subtitle_keeps_race_in_split_mode(split_client):
