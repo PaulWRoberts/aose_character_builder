@@ -447,3 +447,25 @@ def test_equipped_row_carries_item_id(data):
     )
     rows = _equipped(spec, data)
     assert rows[0].item_id == "plate_mail"
+
+
+def test_sheet_carried_and_stashed_items_are_clickable(tmp_path, data):
+    from aose.characters import save_character
+    client = _make_client(tmp_path)
+    spec = CharacterSpec(
+        name="Packrat",
+        abilities={"STR": 11, "INT": 10, "WIS": 10, "DEX": 11, "CON": 12, "CHA": 9},
+        race_id="human", alignment="neutral",
+        classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
+        inventory=["rope_50ft"], stashed=["torch"],
+    )
+    save_character("packrat", spec, client._characters_dir)
+    body = client.get("/character/packrat").text
+
+    assert 'data-modal="modal-item-carried-rope_50ft"' in body
+    assert 'id="modal-item-carried-rope_50ft"' in body
+    assert 'data-modal="modal-item-stashed-torch"' in body
+    assert 'id="modal-item-stashed-torch"' in body
+    # Carried item modal offers Stash + Drop; stashed offers Unstash.
+    assert "/character/packrat/equipment/stash" in body
+    assert "/character/packrat/equipment/unstash" in body

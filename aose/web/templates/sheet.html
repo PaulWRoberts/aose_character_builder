@@ -1,6 +1,16 @@
 {% extends "base.html" %}
 {% block title %}{{ sheet.name }} — Character Sheet{% endblock %}
 {% block content %}
+{% from "_inv_row_actions.html" import inv_row_actions with context %}
+{% macro item_modal(row, state, id_prefix, url_prefix) %}
+<div class="overlay modal" id="modal-item-{{ id_prefix }}-{{ row.id }}" role="dialog" aria-label="{{ row.name }}">
+  <div class="ov-head"><h3>{{ row.name }}</h3><button class="x" data-close>×</button></div>
+  <div class="ov-body">
+    {% if row.description %}<p style="font-size:15px;margin:0 0 12px">{{ row.description }}</p>{% endif %}
+    <div class="row-actions">{{ inv_row_actions(row, url_prefix, state) }}</div>
+  </div>
+</div>
+{% endmacro %}
 
 <div class="sheet-actions no-print">
     <a href="/character/{{ character_id }}/print" target="_blank" class="button primary">Print / Save PDF</a>
@@ -302,7 +312,7 @@
           <h4>Carried</h4>
           <ul>
             {% for row in inventory_view.carried %}
-            <li><span>{{ row.name }}{% if row.count > 1 %} ×{{ row.count }}{% endif %}</span><span class="q">{% if row.weight_cn is defined %}{{ row.weight_cn }}{% endif %} cn</span></li>
+            <li class="clickable" data-modal="modal-item-carried-{{ row.id }}"><span>{{ row.name }}{% if row.count > 1 %} ×{{ row.count }}{% endif %}</span><span class="q">{% if row.weight_cn is defined %}{{ row.weight_cn }}{% endif %} cn</span></li>
             {% endfor %}
             {# Carried containers #}
             {% for c in inventory_view.containers %}
@@ -336,7 +346,7 @@
           <h4>Stashed <span style="font-weight:400;color:var(--faint);font-size:9px">no weight</span></h4>
           <ul>
             {% for row in inventory_view.stashed %}
-            <li><span>{{ row.name }}{% if row.count > 1 %} ×{{ row.count }}{% endif %}</span><span class="q">—</span></li>
+            <li class="clickable" data-modal="modal-item-stashed-{{ row.id }}"><span>{{ row.name }}{% if row.count > 1 %} ×{{ row.count }}{% endif %}</span><span class="q">—</span></li>
             {% endfor %}
             {# Stashed containers #}
             {% for c in inventory_view.containers %}
@@ -564,6 +574,10 @@
 {% endfor %}
 {% endfor %}
 {% endif %}
+
+{# MODALS: per-item inventory management #}
+{% for row in inventory_view.carried %}{{ item_modal(row, "carried", "carried", target_url_prefix) }}{% endfor %}
+{% for row in inventory_view.stashed %}{{ item_modal(row, "stashed", "stashed", target_url_prefix) }}{% endfor %}
 
 {# MODAL: advancement #}
 <div class="overlay modal" id="modal-advance" role="dialog" aria-label="Advancement">
