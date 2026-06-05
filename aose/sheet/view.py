@@ -249,6 +249,20 @@ class SpellbookBlock(BaseModel):
     levels: list[SpellbookLevelGroup]
 
 
+class LevelUpModal(BaseModel):
+    class_id: str
+    class_name: str
+    current_level: int
+    next_level: int
+    hit_die: str
+    con_mod: int
+    at_name_level: bool
+    flat_hp: int
+    pending: int | None
+    strict_mode: bool
+    can_level: bool
+
+
 class CharacterSheet(BaseModel):
     name: str
     race_name: str
@@ -259,6 +273,7 @@ class CharacterSheet(BaseModel):
     next_level: int | None
     xp_to_next: int | None
     advancement: list[ClassAdvancement]      # one entry per class (own XP/level)
+    level_up_modals: list[LevelUpModal] = Field(default_factory=list)
 
     abilities: list[AbilityRow]
 
@@ -931,6 +946,26 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
     next_level, xp_to_next = _xp_to_next(spec, data)
     advancement_rows = all_advancement(spec, data)
 
+    eff_abilities = effective_abilities(spec, data)
+    con_mod = ability_mods.ability_modifier(eff_abilities[Ability.CON])
+    level_up_modal_list = []
+    for entry, adv in zip(spec.classes, advancement_rows):
+        cls = data.classes[entry.class_id]
+        next_lv = adv.next_level if adv.next_level is not None else entry.level + 1
+        level_up_modal_list.append(LevelUpModal(
+            class_id=entry.class_id,
+            class_name=cls.name,
+            current_level=entry.level,
+            next_level=next_lv,
+            hit_die=cls.hit_die,
+            con_mod=con_mod,
+            at_name_level=(entry.level >= cls.name_level),
+            flat_hp=cls.hp_after_name_level,
+            pending=spec.pending_level_up.get(entry.class_id),
+            strict_mode=spec.ruleset.strict_mode,
+            can_level=adv.can_level,
+        ))
+
     attacks = attack_profiles(spec, data)
     ammo_rows, ammo_options = ammo_view(spec, data)
 
@@ -944,6 +979,7 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
         next_level=next_level,
         xp_to_next=xp_to_next,
         advancement=advancement_rows,
+        level_up_modals=level_up_modal_list,
         abilities=abilities,
         max_hp=hp.max_hp(spec, data),
         current_hp=hp.current_hp(spec, data),

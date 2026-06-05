@@ -343,8 +343,7 @@ def test_level_up_route_max_level_400s(client):
 def test_sheet_renders_total_xp_and_thresholds(client):
     _seed(client, level=1, xp=1500)
     r = client.get("/character/test")
-    # New zine sheet uses "Experience" in the advancement modal (not "Total XP").
-    assert "Experience" in r.text
+    # XP numbers appear in the xp-track div in the header.
     assert "1500" in r.text
     assert "2000" in r.text  # next-level threshold
 
@@ -352,20 +351,24 @@ def test_sheet_renders_total_xp_and_thresholds(client):
 def test_sheet_shows_level_up_button_when_ready(client):
     _seed(client, level=1, xp=2500)
     r = client.get("/character/test")
-    assert "Level Up" in r.text
-    assert 'action="/character/test/level-up/fighter"' in r.text
+    # Header trigger button shows "Level Up →" only when can_level.
+    assert "Level Up →" in r.text
+    assert 'data-modal="modal-levelup-fighter"' in r.text
 
 
 def test_sheet_omits_level_up_button_when_short(client):
     _seed(client, level=1, xp=500)
     r = client.get("/character/test")
-    assert "/level-up/fighter" not in r.text
+    # "Level Up →" text (with the arrow) only appears on the header trigger
+    # button which is hidden when XP is short.
+    assert "Level Up →" not in r.text
 
 
 def test_sheet_shows_max_level_label(client):
     _seed(client, level=14, xp=999999, hp_rolls=[8] * 14)
     r = client.get("/character/test")
-    assert "max level" in r.text.lower()
+    # At max level the xp-track row shows a "Max" pill instead of a button.
+    assert ">Max<" in r.text
 
 
 def test_grant_xp_form_present(client):

@@ -646,46 +646,53 @@
   </div>
 </div>
 
-{# MODAL: advancement #}
-<div class="overlay modal" id="modal-advance" role="dialog" aria-label="Advancement">
-  <div class="ov-head"><h3>Advancement</h3><button class="x" data-close>×</button></div>
+{# MODAL: level-up — one per class entry (only triggerable when can_level) #}
+{% for m in sheet.level_up_modals %}
+<div class="overlay modal" id="modal-levelup-{{ m.class_id }}" role="dialog" aria-label="Level Up: {{ m.class_name }}">
+  <div class="ov-head">
+    <h3>{{ m.class_name }} — Level {{ m.next_level }}</h3>
+    <button class="x" data-close>×</button>
+  </div>
   <div class="ov-body">
-    {% for adv in sheet.advancement %}
-    <div class="ov-section">
-      <h4>{{ adv.name }} — Level {{ adv.current_level }}</h4>
-      <div class="kv"><span class="k">Experience</span><span class="v">{{ adv.current_xp }} / {{ adv.next_threshold or '—' }}</span></div>
-      {% if adv.can_level %}
-      <form method="post" action="/character/{{ character_id }}/level-up/{{ adv.class_id }}" style="margin-top:6px">
-        <button class="btn solid" type="submit">Level Up → {{ adv.next_level }}</button>
+    {% if m.at_name_level %}
+    <p class="muted small">
+      Past name level — gains a flat <strong>+{{ m.flat_hp }}</strong> HP. No Hit Die is rolled.
+    </p>
+    <form method="post" action="/character/{{ character_id }}/level-up/{{ m.class_id }}/confirm" class="inline-form">
+      <button class="btn solid" type="submit">Confirm Level Up</button>
+    </form>
+    <form method="post" action="/character/{{ character_id }}/level-up/{{ m.class_id }}/cancel" class="inline-form" style="margin-top:6px">
+      <button class="btn" type="submit">Cancel</button>
+    </form>
+    {% else %}
+    <p class="muted small">
+      Rolls <strong>1{{ m.hit_die }}</strong> for the new level. CON modifier:
+      <strong>{{ "%+d"|format(m.con_mod) }}</strong> (applied as part of total HP).
+    </p>
+    {% if m.pending is none %}
+    <form method="post" action="/character/{{ character_id }}/level-up/{{ m.class_id }}/roll" class="inline-form">
+      <button class="btn solid" type="submit">Roll HP</button>
+    </form>
+    {% else %}
+    <p>Rolled: <span class="stat-big">{{ m.pending }}</span></p>
+    <div class="inline-form" style="gap:6px">
+      {% if not m.strict_mode %}
+      <form method="post" action="/character/{{ character_id }}/level-up/{{ m.class_id }}/roll" class="inline-form">
+        <button class="btn" type="submit">Re-roll</button>
       </form>
-      {% else %}
-      <button class="btn" disabled style="margin-top:6px">{% if adv.at_max %}Max level{% else %}Level Up → {{ adv.next_level }}{% endif %}</button>
       {% endif %}
-    </div>
-    {% endfor %}
-    <div class="ov-section">
-      <h4>Award Experience</h4>
-      <form method="post" action="/character/{{ character_id }}/xp">
-        <div class="inline-form">
-          <input type="number" name="amount" value="100" step="50">
-          <button class="btn solid" type="submit">Grant XP</button>
-        </div>
+      <form method="post" action="/character/{{ character_id }}/level-up/{{ m.class_id }}/confirm" class="inline-form">
+        <button class="btn solid" type="submit">Confirm Level Up</button>
       </form>
     </div>
-    <div class="ov-section">
-      <h4>Energy Drain</h4>
-      <form method="post" action="/character/{{ character_id }}/energy-drain"
-            onsubmit="return confirm('Energy drain ' + this.levels.value + ' level(s)? This is permanent.');">
-        <div class="inline-form">
-          <input type="number" name="levels" value="1" min="1">
-          <label><input type="radio" name="xp_mode" value="midpoint"> Midpoint</label>
-          <label><input type="radio" name="xp_mode" value="new_min" checked> New min</label>
-          <button class="btn danger" type="submit">Drain</button>
-        </div>
-      </form>
-    </div>
+    {% endif %}
+    <form method="post" action="/character/{{ character_id }}/level-up/{{ m.class_id }}/cancel" class="inline-form" style="margin-top:6px">
+      <button class="btn" type="submit">Cancel</button>
+    </form>
+    {% endif %}
   </div>
 </div>
+{% endfor %}
 
 {# MODAL: to-hit matrix #}
 <div class="overlay modal" id="modal-matrix" role="dialog" aria-label="To-hit matrix">
