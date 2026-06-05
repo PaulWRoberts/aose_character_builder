@@ -31,20 +31,37 @@
       </div>
     </div>
     <div class="xp">
+      <div class="xp-controls">
+        <form method="post" action="/character/{{ character_id }}/xp" class="inline-form">
+          <label class="muted small">Add XP</label>
+          <input type="number" name="amount" value="100" step="50" style="width:90px">
+          <button class="btn solid" type="submit">Grant</button>
+        </form>
+        <button class="btn tool" data-modal="modal-drain">Energy Drain</button>
+      </div>
       {% for adv in sheet.advancement %}
       <div class="xp-track">
         <div class="cls">{{ adv.name }} L{{ adv.current_level }}</div>
         <div class="bar2">
-          {% if not adv.at_max %}
-          <i style="width:{{ (adv.current_xp / adv.next_threshold * 100)|round }}%"></i>
-          {% else %}
+          {% if adv.at_max %}
           <i style="width:100%"></i>
+          {% else %}
+          {%- set span = adv.next_threshold - adv.current_threshold -%}
+          {%- set into = adv.current_xp - adv.current_threshold -%}
+          {%- set pct = 0 if span <= 0 else ((into / span) * 100)|round -%}
+          {%- if pct < 0 -%}{%- set pct = 0 -%}{%- endif -%}
+          {%- if pct > 100 -%}{%- set pct = 100 -%}{%- endif -%}
+          <i style="width:{{ pct }}%"></i>
           {% endif %}
         </div>
         <div class="num">{{ adv.current_xp }} / {{ adv.next_threshold or '—' }}</div>
+        {% if adv.at_max %}
+        <span class="pill">Max</span>
+        {% elif adv.can_level %}
+        <button class="btn solid" data-modal="modal-levelup-{{ adv.class_id }}">Level Up → {{ adv.next_level }}</button>
+        {% endif %}
       </div>
       {% endfor %}
-      <button class="btn tool" data-modal="modal-advance">Advance</button>
     </div>
   </header>
 
@@ -125,14 +142,20 @@
       <section class="group">
         <div class="bar">Class &amp; Race Features</div>
         <div class="gbody scroll" style="max-height:300px">
-          <div class="chips">
+          <ul class="feat-list">
             {% for f in sheet.race_features %}
-            <button class="chip" data-modal="modal-feature" data-title="{{ f.name }}" data-text="{{ f.text }}">{{ f.name }} <span class="src">{{ f.source | replace("Race: ", "") }}</span></button>
+            <li class="info" data-modal="modal-feature" data-title="{{ f.name }}" data-text="{{ f.text }}">
+              <span>{{ f.name }}</span>
+              <span class="src">{{ f.source | replace("Race: ", "") }}</span>
+            </li>
             {% endfor %}
             {% for f in sheet.class_features %}
-            <button class="chip" data-modal="modal-feature" data-title="{{ f.name }}" data-text="{{ f.text }}">{{ f.name }} <span class="src">{{ f.source | replace("Class: ", "") }}</span></button>
+            <li class="info" data-modal="modal-feature" data-title="{{ f.name }}" data-text="{{ f.text }}">
+              <span>{{ f.name }}</span>
+              <span class="src">{{ f.source | replace("Class: ", "") }}</span>
+            </li>
             {% endfor %}
-          </div>
+          </ul>
           {% if sheet.weapon_proficiency_active %}
           <div class="subhead">Weapon Proficiencies
             {% if sheet.proficiencies %}
