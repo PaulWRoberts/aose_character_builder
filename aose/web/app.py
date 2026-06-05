@@ -2,8 +2,25 @@ from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
+from starlette.types import Scope
 
 from aose.data.loader import GameData
+
+
+class NoCacheStaticFiles(StaticFiles):
+    """Serve static files with ``Cache-Control: no-cache``.
+
+    This is a local-only single-user dev app run with ``uvicorn --reload``;
+    CSS/JS change often. ``no-cache`` forces the browser to revalidate on each
+    load, so an edited stylesheet is picked up on a normal refresh instead of
+    being served stale from the disk cache (which previously required a manual
+    hard-refresh to see overlay/CSS fixes).
+    """
+
+    async def get_response(self, path: str, scope: Scope):
+        response = await super().get_response(path, scope)
+        response.headers["Cache-Control"] = "no-cache"
+        return response
 
 from .routes import router
 from .settings_routes import router as settings_router
@@ -48,7 +65,7 @@ def create_app(
         _bootstrap_characters(characters_dir, examples_dir)
 
     static_dir = Path(__file__).parent / "static"
-    app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
+    app.mount("/static", NoCacheStaticFiles(directory=str(static_dir)), name="static")
 
     app.include_router(router)
     app.include_router(wizard_router)
