@@ -409,6 +409,32 @@ def test_level_up_at_name_level_minus_one_still_rolls(data):
     assert 1 <= result <= 8
 
 
+def test_advancement_current_threshold_l1_is_zero(data):
+    """L1 characters: current_threshold is 0 (display floor)."""
+    spec = _spec(level=1, xp=500)
+    adv = class_advancement(spec, data, spec.classes[0])
+    assert adv.current_threshold == 0
+
+
+def test_advancement_current_threshold_matches_progression(data):
+    """At L3 the current_threshold equals progression[3].xp_required."""
+    spec = _spec(level=3, xp=5000, hp_rolls=[8, 8, 8])
+    cls = data.classes["fighter"]
+    expected = cls.progression[3].xp_required
+    adv = class_advancement(spec, data, spec.classes[0])
+    assert adv.current_threshold == expected
+
+
+def test_advancement_current_threshold_at_max_level(data):
+    """At max level, current_threshold still reads the current level's floor."""
+    spec = _spec(level=14, xp=999999, hp_rolls=[8] * 14)
+    cls = data.classes["fighter"]
+    expected = cls.progression[14].xp_required
+    adv = class_advancement(spec, data, spec.classes[0])
+    assert adv.current_threshold == expected
+    assert adv.at_max is True
+
+
 def test_pending_level_up_defaults_empty_and_roundtrips(data, tmp_path):
     """The new pending_level_up dict defaults to empty and survives save/load."""
     from aose.characters import save_character, load_character

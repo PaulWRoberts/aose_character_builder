@@ -76,6 +76,7 @@ class ClassAdvancement(BaseModel):
     current_level: int
     next_level: int | None
     next_threshold: int | None  # XP the class needs for its next level
+    current_threshold: int      # XP floor of the current level (0 for L1)
     current_xp: int             # the class's own XP count
     can_level: bool
     at_max: bool
@@ -87,6 +88,8 @@ def class_advancement(spec: CharacterSpec, data: GameData,
     next_level = entry.level + 1
     eff_max = _effective_max_level(spec, data, entry)
     current = entry.xp
+    current_level_data = cls.progression.get(entry.level)
+    current_threshold = current_level_data.xp_required if current_level_data else 0
 
     if next_level > eff_max or next_level not in cls.progression:
         return ClassAdvancement(
@@ -95,6 +98,7 @@ def class_advancement(spec: CharacterSpec, data: GameData,
             current_level=entry.level,
             next_level=None,
             next_threshold=None,
+            current_threshold=current_threshold,
             current_xp=current,
             can_level=False,
             at_max=True,
@@ -107,6 +111,7 @@ def class_advancement(spec: CharacterSpec, data: GameData,
         current_level=entry.level,
         next_level=next_level,
         next_threshold=threshold,
+        current_threshold=current_threshold,
         current_xp=current,
         can_level=current >= threshold,
         at_max=False,
