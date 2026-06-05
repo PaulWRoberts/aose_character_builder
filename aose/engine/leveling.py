@@ -210,39 +210,20 @@ def confirm_level_up(spec: CharacterSpec, data: GameData, class_id: str) -> int:
 
 def level_up(spec: CharacterSpec, data: GameData, class_id: str,
              rng: Optional[random.Random] = None) -> int:
-    """Advance the named class by one level and roll its hit die.
+    """Advance the named class by one level in one shot.
 
-    Mutates ``spec`` in place: increments ``entry.level`` and appends the new
-    HP roll to ``entry.hp_rolls``.  Returns the new HP roll.  Raises
-    ``ValueError`` if the class is at max level, missing from the spec, or
-    short on XP.
-
-    HP rules: standard ``roll_hp(hit_die)`` until name level.  At or beyond
-    ``cls.name_level`` no die is rolled and ``hp_rolls`` is left unchanged
-    (returns 0); the flat post-name-level HP is applied by ``hp.py``.
-    Max-HP-at-L1 and Re-roll 1s/2s apply only at character creation.
+    Convenience wrapper around :func:`roll_pending_hp` and
+    :func:`confirm_level_up` for callers that don't need the interactive
+    Roll → Confirm split (tests, scripts, legacy route).  Sub-name-level:
+    rolls a fresh hit die, applies it, returns the new roll.  At/beyond name
+    level: bumps the level only, returns 0.
     """
     entry = next((e for e in spec.classes if e.class_id == class_id), None)
     if entry is None:
         raise ValueError(f"Character has no class {class_id!r}")
-
-    advancement = class_advancement(spec, data, entry)
-    if advancement.at_max:
-        raise ValueError(f"{advancement.name} is already at maximum level")
-    if not advancement.can_level:
-        raise ValueError(
-            f"Need {advancement.next_threshold} XP for {advancement.name} L"
-            f"{advancement.next_level}, have {advancement.current_xp}"
-        )
-
     cls = data.classes[class_id]
-    # At or beyond name level the class no longer rolls Hit Dice; it gains a
-    # flat `hp_after_name_level` per level instead (applied in hp.py, no CON).
     if entry.level >= cls.name_level:
-        entry.level += 1
-        return 0
-
-    new_hp = roll_hp(cls.hit_die, rng=rng)
-    entry.level += 1
-    entry.hp_rolls.append(new_hp)
-    return new_hp
+        return confirm_level_up(spec, data, class_id)
+    rolled = roll_pending_hp(spec, data, class_id, rng=rng)
+    confirm_level_up(spec, data, class_id)
+    return rolled
