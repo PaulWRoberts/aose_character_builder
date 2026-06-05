@@ -222,12 +222,16 @@ class ValuablesView(BaseModel):
 class SpellbookRow(BaseModel):
     spell_id: str
     name: str
+    display_name: str    # reverse name when reversed, else name
     level: int
     reversible: bool
+    reversed: bool = False
     description: str
     known: bool          # in book (arcane) / on accessible list (divine)
     ready: int           # memorised copies with casts remaining
     spent: int           # memorised copies already cast
+    ready_slots: list[int] = []   # ClassEntry.slots indices, ready (for cast)
+    spent_slots: list[int] = []   # ClassEntry.slots indices, spent (for restore)
 
 
 class SpellbookLevelGroup(BaseModel):
@@ -673,54 +677,63 @@ def spellbook_view(spec: CharacterSpec, data: GameData) -> list[SpellbookBlock]:
         caps = spell_engine.memorizable_slots(entry, cls)         # {level: cap}
         known = spell_engine.known_spells(entry, cls, data)       # book (arcane) / list (divine)
         known_ids = {s.id for s in known}
-        # tally memorised copies per (level, spell_id)
-        ready: dict[tuple[int, str], int] = {}
-        spent: dict[tuple[int, str], int] = {}
+        # tally memorised copies per (level, spell_id, reversed), tracking slot indices
+        ready: dict[tuple[int, str, bool], int] = {}
+        spent: dict[tuple[int, str, bool], int] = {}
+        ready_idx: dict[tuple[int, str, bool], list[int]] = {}
+        spent_idx: dict[tuple[int, str, bool], list[int]] = {}
         used_by_level: dict[int, int] = {}
-        for slot in entry.slots:
+        for i, slot in enumerate(entry.slots):
             if slot.spell_id is None:
                 continue
-            key = (slot.level, slot.spell_id)
+            key = (slot.level, slot.spell_id, slot.reversed)
             if slot.spent:
                 spent[key] = spent.get(key, 0) + 1
+                spent_idx.setdefault(key, []).append(i)
             else:
                 ready[key] = ready.get(key, 0) + 1
+                ready_idx.setdefault(key, []).append(i)
             used_by_level[slot.level] = used_by_level.get(slot.level, 0) + 1
+
+        def _row(spell, level: int, rev: bool) -> SpellbookRow:
+            key = (level, spell.id, rev)
+            return SpellbookRow(
+                spell_id=spell.id, name=spell.name,
+                display_name=_slot_display_name(spell, rev),
+                level=spell.level, reversible=spell.reversible, reversed=rev,
+                description=spell.description, known=spell.id in known_ids,
+                ready=ready.get(key, 0), spent=spent.get(key, 0),
+                ready_slots=ready_idx.get(key, []), spent_slots=spent_idx.get(key, []),
+            )
+
         levels: list[SpellbookLevelGroup] = []
         for level in sorted(caps):
             rows: list[SpellbookRow] = []
+            # (spell_id, reversed) combos that have at least one memorised copy here
+            memo_keys = {
+                (sid, rev)
+                for (lv, sid, rev) in list(ready.keys()) + list(spent.keys())
+                if lv == level
+            }
             if ctype == "arcane":
-                # Arcane: show all known spells at this level
                 level_known = [s for s in known if s.level == level]
-                extra_ids = (
-                    {sid for (lv, sid) in list(ready.keys()) + list(spent.keys()) if lv == level}
-                    - {s.id for s in level_known}
-                )
-                spells_at_level = level_known + [
-                    data.spells[i] for i in sorted(extra_ids) if i in data.spells
-                ]
-                for s in spells_at_level:
-                    rows.append(SpellbookRow(
-                        spell_id=s.id, name=s.name, level=s.level, reversible=s.reversible,
-                        description=s.description, known=s.id in known_ids,
-                        ready=ready.get((level, s.id), 0),
-                        spent=spent.get((level, s.id), 0),
-                    ))
+                known_ids_at_level = {s.id for s in level_known}
+                # 1) every known book spell (normal orientation)
+                for s in level_known:
+                    rows.append(_row(s, level, False))
+                # 2) reversed memorisations + any memorised spell not in the book
+                for (sid, rev) in sorted(memo_keys):
+                    if not rev and sid in known_ids_at_level:
+                        continue  # already emitted as a known row above
+                    s = data.spells.get(sid)
+                    if s is not None:
+                        rows.append(_row(s, level, rev))
             else:
                 # Divine: only show memorised spells (ready or spent)
-                memorised_ids_at_level = {
-                    sid for (lv, sid) in list(ready.keys()) + list(spent.keys()) if lv == level
-                }
-                for sid in sorted(memorised_ids_at_level):
+                for (sid, rev) in sorted(memo_keys):
                     s = data.spells.get(sid)
-                    if s is None:
-                        continue
-                    rows.append(SpellbookRow(
-                        spell_id=s.id, name=s.name, level=s.level, reversible=s.reversible,
-                        description=s.description, known=s.id in known_ids,
-                        ready=ready.get((level, s.id), 0),
-                        spent=spent.get((level, s.id), 0),
-                    ))
+                    if s is not None:
+                        rows.append(_row(s, level, rev))
             levels.append(SpellbookLevelGroup(
                 level=level, cap=caps[level],
                 used=used_by_level.get(level, 0), rows=rows,
