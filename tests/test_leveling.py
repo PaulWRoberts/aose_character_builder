@@ -409,6 +409,18 @@ def test_level_up_at_name_level_minus_one_still_rolls(data):
     assert 1 <= result <= 8
 
 
+def test_pending_level_up_defaults_empty_and_roundtrips(data, tmp_path):
+    """The new pending_level_up dict defaults to empty and survives save/load."""
+    from aose.characters import save_character, load_character
+    spec = _spec()
+    assert spec.pending_level_up == {}
+    spec.pending_level_up["fighter"] = 5
+    cdir = tmp_path / "chars"
+    save_character("pendtest", spec, cdir)
+    reloaded = load_character("pendtest", cdir)
+    assert reloaded.pending_level_up == {"fighter": 5}
+
+
 def test_level_up_then_drain_round_trips_max_hp(data):
     # Start at name level (9 rolls), record max HP, level to 10 (+2 fixed),
     # then drain back to 9. Max HP must return to the original value and the

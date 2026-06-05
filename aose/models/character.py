@@ -168,6 +168,10 @@ class CharacterSpec(BaseModel):
     # max(0, max_hp − damage_taken); dead == current HP 0.  Tracks live max_hp
     # shifts (e.g. a CON-altering magic item) without rewriting stored state.
     damage_taken: int = 0
+    # Per-class HP rolled but not yet confirmed at level-up.  Maps class_id ->
+    # the rolled HP awaiting confirmation.  Cleared when the level-up is
+    # confirmed or cancelled.  See aose/engine/leveling.py.
+    pending_level_up: dict[str, int] = Field(default_factory=dict)
     # Play-state: temporary per-ability score adjustments set on the live sheet.
     # Signed deltas keyed by Ability; only non-zero entries are stored. They
     # stack with magic-item ability modifiers and clamp the final effective
