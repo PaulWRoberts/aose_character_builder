@@ -511,7 +511,7 @@
                 <button class="btn link" type="submit">memorise (rev.)</button>
               </form>
               {% endif %}
-              {% if block.can_learn %}
+              {% if block.can_forget %}
               <form method="post" action="/character/{{ character_id }}/spells/forget" style="display:inline">
                 <input type="hidden" name="class_id" value="{{ block.class_id }}">
                 <input type="hidden" name="spell_id" value="{{ s.id }}">
@@ -666,7 +666,7 @@
     </form>
     {% else %}
     <p class="muted small">
-      Rolls <strong>1{{ m.hit_die }}</strong> for the new level. CON modifier:
+      Rolls <strong>{{ m.hit_die }}</strong> for the new level. CON modifier:
       <strong>{{ "%+d"|format(m.con_mod) }}</strong> (applied as part of total HP).
     </p>
     {% if m.pending is none %}
