@@ -421,3 +421,29 @@ def test_wizard_equip_and_unequip(tmp_path):
     char_id = r.headers["location"].split("/")[-1]
     spec = load_character(char_id, tmp_path / "characters")
     assert spec.equipped_weapons == ["sword"]
+
+
+def test_plain_equipped_weapon_has_manageable_item_id(data):
+    spec = CharacterSpec(
+        name="W", abilities={"STR": 13, "INT": 10, "WIS": 10, "DEX": 11, "CON": 12, "CHA": 9},
+        race_id="human", alignment="neutral",
+        classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
+        inventory=["sword"], equipped_weapons=["sword"],
+    )
+    profiles = attack_profiles(spec, data)
+    sword = next(p for p in profiles if p.weapon_id == "sword")
+    assert sword.manageable_item_id == "sword"
+    unarmed = next(p for p in profiles if p.unarmed)
+    assert unarmed.manageable_item_id is None
+
+
+def test_equipped_row_carries_item_id(data):
+    from aose.sheet.view import _equipped
+    spec = CharacterSpec(
+        name="A", abilities={"STR": 13, "INT": 10, "WIS": 10, "DEX": 11, "CON": 12, "CHA": 9},
+        race_id="human", alignment="neutral",
+        classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
+        inventory=["plate_mail"], equipped={"armor": "plate_mail"},
+    )
+    rows = _equipped(spec, data)
+    assert rows[0].item_id == "plate_mail"

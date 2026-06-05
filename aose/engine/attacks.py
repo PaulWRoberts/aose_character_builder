@@ -67,6 +67,7 @@ class AttackProfile(BaseModel):
     unarmed: bool = False
     unloaded: bool = False           # launcher with no ammo loaded
     loaded_ammo_name: str | None = None
+    manageable_item_id: str | None = None   # plain catalog weapon id → click-to-manage; None for enchanted/unarmed
 
 
 def _format_damage(base: str, mod: int) -> str:
@@ -88,7 +89,8 @@ def _profile_for(weapon: Weapon, spec: CharacterSpec, data: GameData,
                  count: int, eff: dict, base_thac0: int,
                  g_atk: int, g_dmg: int,
                  ammo_bonus: int = 0, ammo_conditional=None,
-                 ammo_name: str | None = None, unloaded: bool = False) -> AttackProfile:
+                 ammo_name: str | None = None, unloaded: bool = False,
+                 manageable_item_id: str | None = None) -> AttackProfile:
     str_mod = ability_modifier(eff[Ability.STR])
     dex_mod = ability_modifier(eff[Ability.DEX])
     base_attack = 19 - base_thac0
@@ -167,6 +169,7 @@ def _profile_for(weapon: Weapon, spec: CharacterSpec, data: GameData,
         unarmed=False,
         unloaded=unloaded,
         loaded_ammo_name=ammo_name,
+        manageable_item_id=manageable_item_id,
     )
 
 
@@ -222,7 +225,7 @@ def attack_profiles(spec: CharacterSpec, data: GameData) -> list[AttackProfile]:
             continue  # equipped_weapons should only contain weapons, defensive
         weapon_profiles.append(
             _profile_for(item, spec, data, count, eff, base_thac0, g_atk, g_dmg,
-                         **_ammo_args(item))
+                         manageable_item_id=item.id, **_ammo_args(item))
         )
     for resolved in equipped_enchanted(spec, data, "weapon"):
         weapon_profiles.append(

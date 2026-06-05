@@ -81,6 +81,7 @@ class SheetFeature(BaseModel):
 class EquippedRow(BaseModel):
     slot: str
     item_name: str
+    item_id: str = ""
 
 
 class ProficientWeaponView(BaseModel):
@@ -520,7 +521,7 @@ def _equipped(spec: CharacterSpec, data: GameData) -> list[EquippedRow]:
     rows: list[EquippedRow] = []
     for slot, item_id in spec.equipped.items():
         name = data.items[item_id].name if item_id in data.items else item_id
-        rows.append(EquippedRow(slot=slot, item_name=name))
+        rows.append(EquippedRow(slot=slot, item_name=name, item_id=item_id))
     return rows
 
 
