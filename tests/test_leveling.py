@@ -409,6 +409,24 @@ def test_level_up_at_name_level_minus_one_still_rolls(data):
     assert 1 <= result <= 8
 
 
+def test_cancel_pending_level_up_clears_one_class(data):
+    """Cancelling clears that class's pending entry without touching others."""
+    from aose.engine.leveling import cancel_pending_level_up
+    spec = _spec(multi=True, xp=8000)  # two classes
+    spec.pending_level_up = {"fighter": 6, "magic_user": 3}
+    cancel_pending_level_up(spec, "fighter")
+    assert spec.pending_level_up == {"magic_user": 3}
+
+
+def test_cancel_pending_level_up_is_idempotent(data):
+    """Cancelling a class with no pending entry is a no-op (no KeyError)."""
+    from aose.engine.leveling import cancel_pending_level_up
+    spec = _spec()
+    assert spec.pending_level_up == {}
+    cancel_pending_level_up(spec, "fighter")  # must not raise
+    assert spec.pending_level_up == {}
+
+
 def test_advancement_current_threshold_l1_is_zero(data):
     """L1 characters: current_threshold is 0 (display floor)."""
     spec = _spec(level=1, xp=500)

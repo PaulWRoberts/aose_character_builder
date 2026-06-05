@@ -123,6 +123,11 @@ def all_advancement(spec: CharacterSpec, data: GameData) -> list[ClassAdvancemen
     return [class_advancement(spec, data, e) for e in spec.classes]
 
 
+def cancel_pending_level_up(spec: CharacterSpec, class_id: str) -> None:
+    """Idempotently clear any pending level-up HP roll for ``class_id``."""
+    spec.pending_level_up.pop(class_id, None)
+
+
 def level_up(spec: CharacterSpec, data: GameData, class_id: str,
              rng: Optional[random.Random] = None) -> int:
     """Advance the named class by one level and roll its hit die.
