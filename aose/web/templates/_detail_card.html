@@ -11,7 +11,7 @@
     {% endfor %}
   </dl>
   {% endif %}
-  {% if card.description %}<p class="detail-desc">{{ card.description }}</p>{% endif %}
+  {% if card.description %}<div class="detail-desc prose">{{ card.description | markdown }}</div>{% endif %}
 </div>
 {% endif %}
 {% endmacro %}

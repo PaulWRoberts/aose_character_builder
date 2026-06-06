@@ -7,7 +7,7 @@
 <div class="overlay modal" id="modal-item-{{ id_prefix }}-{{ row.id }}" role="dialog" aria-label="{{ row.name }}">
   <div class="ov-head"><h3>{{ row.name }}</h3><button class="x" data-close>×</button></div>
   <div class="ov-body">
-    {% if row.description %}<p style="font-size:15px;margin:0 0 12px">{{ row.description }}</p>{% endif %}
+    {% if row.description %}<div class="prose">{{ row.description | markdown }}</div>{% endif %}
     <div class="row-actions">{{ inv_row_actions(row, url_prefix, state) }}</div>
   </div>
 </div>
@@ -571,7 +571,7 @@
      role="dialog" aria-label="{{ row.display_name }}">
   <div class="ov-head"><h3>{{ row.display_name }}</h3><button class="x" data-close>×</button></div>
   <div class="ov-body">
-    <p style="font-size:15px;margin:0 0 12px">{{ row.description }}</p>
+    <div class="prose">{{ row.description | markdown }}</div>
     {% if row.ready_slots or row.spent_slots %}
     <div class="row-actions">
       {% if row.ready_slots %}

@@ -151,3 +151,34 @@ def test_sheet_per_spell_modal_with_cast_forms(tmp_path):
     assert "/character/raistlin/spells/cast" in body
     # The old static placeholder modal is gone.
     assert 'id="modal-spell"' not in body
+
+
+def test_spell_modal_renders_markdown(tmp_path):
+    """A caster's spell modal body renders Markdown as HTML (paragraphs)."""
+    from fastapi.testclient import TestClient
+    from aose.characters import save_character
+    from aose.models import CharacterSpec, ClassEntry
+    from aose.web.app import create_app
+
+    characters_dir = tmp_path / "characters"
+    examples_dir = tmp_path / "examples"
+    examples_dir.mkdir()
+    app = create_app(
+        data_dir=DATA_DIR,
+        characters_dir=characters_dir, drafts_dir=tmp_path / "drafts",
+        examples_dir=examples_dir, settings_path=tmp_path / "settings.json",
+    )
+    spec = CharacterSpec(
+        name="Merlin",
+        abilities={"STR": 9, "INT": 16, "WIS": 9, "DEX": 12, "CON": 10, "CHA": 9},
+        race_id="human",
+        classes=[ClassEntry(class_id="magic_user", level=1, hp_rolls=[4],
+                            spellbook=["magic_user_charm_person"])],
+        alignment="neutral",
+    )
+    save_character("merlin", spec, characters_dir)
+    body = TestClient(app).get("/character/merlin").text
+    # Charm Person's description is multi-paragraph Markdown → rendered <p> tags,
+    # not raw text dropped into a single <p>.
+    assert "modal-spell-magic_user-magic_user_charm_person" in body
+    assert "<p>A single human" in body
