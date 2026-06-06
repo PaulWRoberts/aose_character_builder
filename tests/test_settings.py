@@ -393,3 +393,51 @@ def test_class_step_hides_advanced_when_disabled(client, tmp_path):
     r = client.get(f"/wizard/{draft_id}/class")
     assert 'value="fighter"' in r.text
     assert 'value="druid"' not in r.text
+
+
+def test_parser_disables_unchecked_sources():
+    rs = parse_ruleset_from_form(
+        _Form({"creation_method": "advanced"}),
+        source_ids=["ose_classic_fantasy", "ose_advanced_fantasy"],
+    )
+    # Advanced not checked -> disabled; Classic never disabled.
+    assert rs.disabled_sources == ["ose_advanced_fantasy"]
+
+
+def test_parser_keeps_checked_sources_enabled():
+    rs = parse_ruleset_from_form(
+        _Form({"creation_method": "advanced", "source_ose_advanced_fantasy": "on"}),
+        source_ids=["ose_classic_fantasy", "ose_advanced_fantasy"],
+    )
+    assert rs.disabled_sources == []
+
+
+def test_parser_never_disables_classic():
+    rs = parse_ruleset_from_form(
+        _Form({}),  # nothing checked
+        source_ids=["ose_classic_fantasy", "ose_advanced_fantasy"],
+    )
+    assert "ose_classic_fantasy" not in rs.disabled_sources
+
+
+def test_parser_without_source_ids_disables_nothing():
+    # Backward-compatible default for existing callers.
+    rs = parse_ruleset_from_form(_Form({"creation_method": "advanced"}))
+    assert rs.disabled_sources == []
+
+
+def test_settings_page_renders_sources_section(client):
+    r = client.get("/settings")
+    assert "Content Sources" in r.text
+    assert "Necrotic Gnome" in r.text
+    assert 'name="source_ose_advanced_fantasy"' in r.text
+    # Classic checkbox is present but disabled (locked on).
+    import re
+    assert re.search(r'name="source_ose_classic_fantasy"[^>]*\bdisabled\b', r.text)
+
+
+def test_post_settings_persists_disabled_source(client):
+    r = client.post("/settings", data={"creation_method": "advanced"})  # Advanced unchecked
+    assert r.status_code == 303
+    rs = load_settings(client._settings_path)
+    assert rs.disabled_sources == ["ose_advanced_fantasy"]

@@ -379,6 +379,11 @@ async def get_rules(request: Request, draft_id: str):
         "implemented_rules": IMPLEMENTED_RULES,
         "implemented_choice_groups": IMPLEMENTED_CHOICE_GROUPS,
         "advanced_options_group": ADVANCED_OPTIONS_GROUP,
+        "sources": sorted(
+            request.app.state.game_data.sources.values(),
+            key=lambda s: (not s.core, s.name),
+        ),
+        "classic_source_id": CLASSIC_SOURCE_ID,
     })
     return templates.TemplateResponse(request, "wizard.html", ctx)
 
@@ -436,7 +441,8 @@ async def post_rules(request: Request, draft_id: str):
     if blocked:
         return blocked
     form = await request.form()
-    new_rs = parse_ruleset_from_form(form)
+    source_ids = list(request.app.state.game_data.sources)
+    new_rs = parse_ruleset_from_form(form, source_ids=source_ids)
     old_rs = _ruleset_of(draft)
     _apply_rule_changes(draft, old_rs, new_rs)
     save_draft(draft_id, draft, _drafts_dir(request))

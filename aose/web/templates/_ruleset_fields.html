@@ -24,6 +24,25 @@
     </div>
 </fieldset>
 
+{% if sources %}
+<fieldset class="rule-group">
+    <legend>Content Sources</legend>
+    {% for src in sources %}
+    <label class="rule">
+        <input type="checkbox" name="source_{{ src.id }}"
+               {% if src.id == classic_source_id %}checked disabled{% elif src.id not in ruleset['disabled_sources'] %}checked{% endif %}>
+        <span class="rule-body">
+            <span class="rule-name">
+                {{ src.name }}
+                {% if src.core %}<span class="rule-core" title="Core source">core</span>{% endif %}
+            </span>
+            <span class="rule-desc">{{ src.publisher }}</span>
+        </span>
+    </label>
+    {% endfor %}
+</fieldset>
+{% endif %}
+
 {% for group_name, fields in rule_groups %}
 <fieldset class="rule-group"{% if group_name == advanced_options_group %} data-advanced-only{% endif %}>
     <legend>{{ group_name }}</legend>

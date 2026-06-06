@@ -6,6 +6,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from aose.web.templating import make_templates
 
 from aose.characters import load_settings, save_settings
+from aose.engine.sources import CLASSIC_SOURCE_ID
 from aose.models import RuleSet
 
 router = APIRouter()
@@ -112,6 +113,10 @@ def _settings_path(request: Request) -> Path:
 async def get_settings(request: Request):
     ruleset = load_settings(_settings_path(request))
     saved = request.query_params.get("saved") == "1"
+    sources = sorted(
+        request.app.state.game_data.sources.values(),
+        key=lambda s: (not s.core, s.name),
+    )
     return templates.TemplateResponse(
         request,
         "settings.html",
@@ -123,12 +128,14 @@ async def get_settings(request: Request):
             "implemented_rules": IMPLEMENTED_RULES,
             "implemented_choice_groups": IMPLEMENTED_CHOICE_GROUPS,
             "advanced_options_group": ADVANCED_OPTIONS_GROUP,
+            "sources": sources,
+            "classic_source_id": CLASSIC_SOURCE_ID,
             "saved": saved,
         },
     )
 
 
-def parse_ruleset_from_form(form) -> RuleSet:
+def parse_ruleset_from_form(form, source_ids=None) -> RuleSet:
     """Build a :class:`RuleSet` from the toggle/radio form fields used by the
     settings page AND the wizard's per-character rules step.
 
@@ -162,12 +169,20 @@ def parse_ruleset_from_form(form) -> RuleSet:
         if chosen in valid_values:
             choices[field] = chosen
 
-    return RuleSet(**bools, **choices)
+    disabled_sources = []
+    for sid in (source_ids or []):
+        if sid == CLASSIC_SOURCE_ID:
+            continue
+        if f"source_{sid}" not in form:
+            disabled_sources.append(sid)
+
+    return RuleSet(**bools, **choices, disabled_sources=disabled_sources)
 
 
 @router.post("/settings")
 async def post_settings(request: Request):
     form = await request.form()
-    new_ruleset = parse_ruleset_from_form(form)
+    source_ids = list(request.app.state.game_data.sources)
+    new_ruleset = parse_ruleset_from_form(form, source_ids=source_ids)
     save_settings(_settings_path(request), new_ruleset)
     return RedirectResponse("/settings?saved=1", status_code=303)
