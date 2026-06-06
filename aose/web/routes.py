@@ -2,7 +2,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
-from fastapi.templating import Jinja2Templates
+from aose.web.templating import make_templates
 
 from aose.characters.storage import list_character_ids, load_character, save_character
 from aose.engine import currency as _currency, dice, hp, spells as spell_engine
@@ -93,7 +93,7 @@ router = APIRouter()
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 STATIC_DIR = Path(__file__).parent / "static"
 
-templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+templates = make_templates(str(TEMPLATES_DIR))
 
 # Read print CSS once at import time so routes don't hit the filesystem per request.
 _PRINT_CSS = (STATIC_DIR / "print.css").read_text(encoding="utf-8")

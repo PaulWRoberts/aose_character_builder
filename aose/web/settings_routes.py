@@ -3,7 +3,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
+from aose.web.templating import make_templates
 
 from aose.characters import load_settings, save_settings
 from aose.models import RuleSet
@@ -11,7 +11,7 @@ from aose.models import RuleSet
 router = APIRouter()
 
 TEMPLATES_DIR = Path(__file__).parent / "templates"
-templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+templates = make_templates(str(TEMPLATES_DIR))
 
 
 RULE_LABELS = {

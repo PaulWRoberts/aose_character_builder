@@ -4,7 +4,7 @@ from typing import Any
 
 from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
+from aose.web.templating import make_templates
 
 from aose.characters import (
     delete_draft,
@@ -105,7 +105,7 @@ from aose.web.settings_routes import (
 router = APIRouter(prefix="/wizard")
 
 TEMPLATES_DIR = Path(__file__).parent / "templates"
-templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+templates = make_templates(str(TEMPLATES_DIR))
 
 STEP_LABELS = {
     "rules": "Rules",
