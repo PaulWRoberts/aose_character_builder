@@ -2,6 +2,7 @@
 {% block title %}{{ sheet.name }} — Character Sheet{% endblock %}
 {% block content %}
 {% from "_inv_row_actions.html" import inv_row_actions with context %}
+{% from "_detail_card.html" import detail_card with context %}
 {% macro item_modal(row, state, id_prefix, url_prefix) %}
 <div class="overlay modal" id="modal-item-{{ id_prefix }}-{{ row.id }}" role="dialog" aria-label="{{ row.name }}">
   <div class="ov-head"><h3>{{ row.name }}</h3><button class="x" data-close>×</button></div>
@@ -459,7 +460,8 @@
           <tbody>
           {# Slots filled at this level #}
           {% for sv in grp.slots %}
-          <tr>
+          {% set uid = "slot-" ~ block.class_id ~ "-" ~ sv.index %}
+          <tr data-detail-toggle="{{ uid }}" aria-expanded="false">
             <td>{{ sv.display_name }}</td>
             <td class="n">
               <span class="pips" style="display:inline-flex">
@@ -488,10 +490,14 @@
               </form>
             </td>
           </tr>
+          <tr class="row-detail collapsed" data-detail-for="{{ uid }}">
+            <td colspan="3">{{ detail_card(sv.detail) }}</td>
+          </tr>
           {% endfor %}
           {# Known spells for memorising #}
           {% for s in block.known %}
-          <tr>
+          {% set uid = "known-" ~ block.class_id ~ "-" ~ s.id %}
+          <tr data-detail-toggle="{{ uid }}" aria-expanded="false">
             <td style="{% if block.caster_type == 'arcane' %}color:var(--gray){% endif %}">{{ s.name }}</td>
             <td class="n">—</td>
             <td class="n">
@@ -519,6 +525,9 @@
               </form>
               {% endif %}
             </td>
+          </tr>
+          <tr class="row-detail collapsed" data-detail-for="{{ uid }}">
+            <td colspan="3">{{ detail_card(s.detail) }}</td>
           </tr>
           {% endfor %}
           </tbody>
