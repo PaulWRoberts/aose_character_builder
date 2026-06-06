@@ -193,3 +193,19 @@ def test_class_sources(data):
                 "duergar", "gnome", "half_elf", "half_orc", "illusionist",
                 "knight", "paladin", "ranger", "svirfneblin"):
         assert data.classes[cid].source == "ose_advanced_fantasy", cid
+
+
+def test_spell_list_sources(data):
+    assert data.spell_lists["magic_user"].source == "ose_classic_fantasy"
+    assert data.spell_lists["cleric"].source == "ose_classic_fantasy"
+    assert data.spell_lists["druid"].source == "ose_advanced_fantasy"
+    assert data.spell_lists["illusionist"].source == "ose_advanced_fantasy"
+
+
+def test_spell_sources_match_their_list(data):
+    for spell in data.spells.values():
+        lists = set(spell.spell_lists)
+        expected = ("ose_classic_fantasy"
+                    if lists & {"magic_user", "cleric"}
+                    else "ose_advanced_fantasy")
+        assert spell.source == expected, spell.id

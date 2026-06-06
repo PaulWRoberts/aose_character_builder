@@ -5,6 +5,7 @@
 - id: druid
   name: Druid
   caster_type: divine
+  source: ose_advanced_fantasy
   description: Divine spells granted by nature; the whole list is known.
 - id: cleric
   name: Cleric
@@ -13,4 +14,5 @@
 - id: illusionist
   name: Illusionist
   caster_type: arcane
+  source: ose_advanced_fantasy
   description: Arcane illusion spells learned through study and recorded in a spell book.

@@ -2,7 +2,7 @@
   name: "Cure Light Wounds"
   level: 1
   spell_lists: [cleric]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: "The caster or a creature touched"
   duration: "instant"
   description: |-
@@ -20,7 +20,7 @@
   name: "Detect Evil"
   level: 1
   spell_lists: [cleric]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: "120’"
   duration: "6 turns"
   description: |-
@@ -33,7 +33,7 @@
   name: "Detect Magic"
   level: 1
   spell_lists: [cleric]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: "60’"
   duration: "2 turns"
   description: |-
@@ -42,7 +42,7 @@
   name: "Light"
   level: 1
   spell_lists: [cleric]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: "120’"
   duration: "12 turns"
   description: |-
@@ -61,7 +61,7 @@
   name: "Protection from Evil"
   level: 1
   spell_lists: [cleric]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: "The caster"
   duration: "12 turns"
   description: |-
@@ -76,7 +76,7 @@
   name: "Purify Food and Water"
   level: 1
   spell_lists: [cleric]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: "10’"
   duration: "permanent"
   description: |-
@@ -91,7 +91,7 @@
   name: "Remove Fear"
   level: 1
   spell_lists: [cleric]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: "The caster or a creature touched"
   duration: "2 turns"
   description: |-
@@ -106,7 +106,7 @@
   name: "Resist Cold"
   level: 1
   spell_lists: [cleric]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: "30’"
   duration: "6 turns"
   description: |-
@@ -121,7 +121,7 @@
   name: "Bless"
   level: 2
   spell_lists: [cleric]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: "60’"
   duration: "6 turns"
   description: |-
@@ -139,7 +139,7 @@
   name: "Find Traps"
   level: 2
   spell_lists: [cleric]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: "30’"
   duration: "2 turns"
   description: |-
@@ -152,7 +152,7 @@
   name: "Hold Person"
   level: 2
   spell_lists: [cleric]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: "180’"
   duration: "9 turns"
   description: |-
@@ -166,7 +166,7 @@
   name: "Know Alignment"
   level: 2
   spell_lists: [cleric]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: "10’"
   duration: "1 round"
   description: |-
@@ -175,7 +175,7 @@
   name: "Resist Fire"
   level: 2
   spell_lists: [cleric]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: "30’"
   duration: "2 turns"
   description: |-
@@ -190,7 +190,7 @@
   name: "Silence 15’ Radius"
   level: 2
   spell_lists: [cleric]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: "180’"
   duration: "12 turns"
   description: |-
@@ -205,7 +205,7 @@
   name: "Snake Charm"
   level: 2
   spell_lists: [cleric]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: "60’"
   duration: "1d4+1 rounds or turns"
   description: |-
@@ -218,7 +218,7 @@
   name: "Speak with Animals"
   level: 2
   spell_lists: [cleric]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: "30’"
   duration: "6 turns"
   description: |-
@@ -233,7 +233,7 @@
   name: "Continual Light"
   level: 3
   spell_lists: [cleric]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: "120’"
   duration: "permanent"
   description: |-
@@ -252,7 +252,7 @@
   name: "Cure Disease"
   level: 3
   spell_lists: [cleric]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: "30’"
   duration: "instant"
   description: |-
@@ -280,7 +280,7 @@
   name: "Growth of Animal"
   level: 3
   spell_lists: [cleric]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: "120’"
   duration: "12 turns"
   description: |-
@@ -295,7 +295,7 @@
   name: "Locate Object"
   level: 3
   spell_lists: [cleric]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: "120’"
   duration: "6 turns"
   description: |-
@@ -309,7 +309,7 @@
   name: "Remove Curse"
   level: 3
   spell_lists: [cleric]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: "The caster or a creature touched"
   duration: "instant / Permanent (curse)"
   description: |-
@@ -332,7 +332,7 @@
   name: "Striking"
   level: 3
   spell_lists: [cleric]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: "30’"
   duration: "1 turn"
   description: |-
@@ -345,7 +345,7 @@
   name: "Create Water"
   level: 4
   spell_lists: [cleric]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: "Touch"
   duration: "permanent"
   description: |-
@@ -358,7 +358,7 @@
   name: "Cure Serious Wounds"
   level: 4
   spell_lists: [cleric]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: "The caster or a creature touched"
   duration: "instant"
   description: |-
@@ -373,7 +373,7 @@
   name: "Neutralize Poison"
   level: 4
   spell_lists: [cleric]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: "The caster or a creature or object touched"
   duration: "instant"
   description: |-
@@ -385,7 +385,7 @@
   name: "Protection from Evil 10’ Radius"
   level: 4
   spell_lists: [cleric]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: "10’ around the caster"
   duration: "12 turns"
   description: |-
@@ -400,7 +400,7 @@
   name: "Speak with Plants"
   level: 4
   spell_lists: [cleric]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: "30’"
   duration: "3 turns"
   description: |-
@@ -412,7 +412,7 @@
   name: "Sticks to Snakes"
   level: 4
   spell_lists: [cleric]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: "120’"
   duration: "6 turns"
   description: |-
@@ -431,7 +431,7 @@
   name: "Commune"
   level: 5
   spell_lists: [cleric]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: "The caster"
   duration: "3 turns"
   description: |-
@@ -446,7 +446,7 @@
   name: "Create Food"
   level: 5
   spell_lists: [cleric]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: "Appears in the caster’s presence"
   duration: "permanent"
   description: |-
@@ -459,7 +459,7 @@
   name: "Dispel Evil"
   level: 5
   spell_lists: [cleric]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: "30’"
   duration: "concentration (up to 1 turn) or instant (see below)"
   description: |-
@@ -472,7 +472,7 @@
   name: "Insect Plague"
   level: 5
   spell_lists: [cleric]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: "480’"
   duration: "concentration (up to 1 day)"
   description: |-
@@ -491,7 +491,7 @@
   name: "Quest"
   level: 5
   spell_lists: [cleric]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: "30’"
   duration: "until quest is completed / Instant (*remove quest*)"
   description: |-
@@ -516,7 +516,7 @@
   name: "Raise Dead"
   level: 5
   spell_lists: [cleric]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: "120’"
   duration: "instant"
   description: |-

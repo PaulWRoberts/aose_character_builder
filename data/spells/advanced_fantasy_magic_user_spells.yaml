@@ -2,7 +2,7 @@
   name: Charm Person
   level: 1
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: 120'
   duration: One or more days (see below)
   description: |-
@@ -29,7 +29,7 @@
   name: Detect Magic
   level: 1
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: 60'
   duration: 2 turns
   description: |-
@@ -38,7 +38,7 @@
   name: Floating Disc
   level: 1
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: 6'
   duration: 6 turns
   description: |-
@@ -55,7 +55,7 @@
   name: Hold Portal
   level: 1
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: 10'
   duration: 2d6 turns
   description: |-
@@ -68,7 +68,7 @@
   name: Light
   level: 1
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: 120'
   duration: 6 turns +1 per level
   description: |-
@@ -87,7 +87,7 @@
   name: Magic Missile
   level: 1
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: 150'
   duration: 1 turn
   description: |-
@@ -102,7 +102,7 @@
   name: Protection from Evil
   level: 1
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: The caster
   duration: 6 turns
   description: |-
@@ -117,7 +117,7 @@
   name: Read Languages
   level: 1
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: The caster
   duration: 2 turns
   description: |-
@@ -126,7 +126,7 @@
   name: Read Magic
   level: 1
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: The caster
   duration: 1 turn
   description: |-
@@ -143,7 +143,7 @@
   name: Shield
   level: 1
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: The caster
   duration: 2 turns
   description: |-
@@ -156,7 +156,7 @@
   name: Sleep
   level: 1
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: 240'
   duration: 4d4 turns
   description: |-
@@ -180,7 +180,7 @@
   name: Ventriloquism
   level: 1
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: 60'
   duration: 2 turns
   description: |-
@@ -189,7 +189,7 @@
   name: Continual Light
   level: 2
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: 120'
   duration: permanent
   description: |-
@@ -208,7 +208,7 @@
   name: Detect Evil
   level: 2
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: 60'
   duration: 2 turns
   description: |-
@@ -221,7 +221,7 @@
   name: Detect Invisible
   level: 2
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: 10' per level
   duration: 6 turns
   description: |-
@@ -230,7 +230,7 @@
   name: ESP
   level: 2
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: 60'
   duration: 12 turns
   description: |-
@@ -249,7 +249,7 @@
   name: Invisibility
   level: 2
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: 240'
   duration: Permanent (but may be broken, see below)
   description: |-
@@ -264,7 +264,7 @@
   name: Knock
   level: 2
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: 60'
   duration: 1 round
   description: |-
@@ -277,7 +277,7 @@
   name: Levitate
   level: 2
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: The caster
   duration: 6 turns +1 per level
   description: |-
@@ -292,7 +292,7 @@
   name: Locate Object
   level: 2
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: 60' +10' per level
   duration: 2 turns
   description: |-
@@ -306,7 +306,7 @@
   name: Mirror Image
   level: 2
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: The caster
   duration: 6 turns
   description: |-
@@ -319,7 +319,7 @@
   name: Phantasmal Force
   level: 2
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: 240'
   duration: Concentration
   description: |-
@@ -340,7 +340,7 @@
   name: Web
   level: 2
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: 10'
   duration: 48 turns
   description: |-
@@ -361,7 +361,7 @@
   name: Wizard Lock
   level: 2
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: 10'
   duration: permanent
   description: |-
@@ -380,7 +380,7 @@
   name: Clairvoyance
   level: 3
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: 60'
   duration: 12 turns
   description: |-
@@ -397,7 +397,7 @@
   name: Dispel Magic
   level: 3
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: 120'
   duration: instant
   description: |-
@@ -410,7 +410,7 @@
   name: Fire Ball
   level: 3
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: 240'
   duration: instant
   description: |-
@@ -421,7 +421,7 @@
   name: Fly
   level: 3
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: The caster or a creature touched
   duration: 1d6 turns +1 per level
   description: |-
@@ -434,7 +434,7 @@
   name: Haste
   level: 3
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: 240'
   duration: 3 turns
   description: |-
@@ -451,7 +451,7 @@
   name: Hold Person
   level: 3
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: 120'
   duration: 1 turn per level
   description: |-
@@ -465,7 +465,7 @@
   name: Infravision
   level: 3
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: The caster or a creature touched
   duration: 1 day
   description: |-
@@ -474,7 +474,7 @@
   name: Invisibility 10' Radius
   level: 3
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: 120'
   duration: Permanent (but may be broken, see below)
   description: |-
@@ -493,7 +493,7 @@
   name: Lightning Bolt
   level: 3
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: 180'
   duration: instant
   description: |-
@@ -506,7 +506,7 @@
   name: Protection from Evil 10' Radius
   level: 3
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: 10' around the caster
   duration: 12 turns
   description: |-
@@ -521,7 +521,7 @@
   name: Protection from Normal Missiles
   level: 3
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: 30'
   duration: 12 turns
   description: |-
@@ -530,7 +530,7 @@
   name: Water Breathing
   level: 3
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: 30'
   duration: 1 day
   description: |-
@@ -543,7 +543,7 @@
   name: Charm Monster
   level: 4
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: 120'
   duration: One or more days (see below)
   description: |-
@@ -570,7 +570,7 @@
   name: Confusion
   level: 4
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: 120'
   duration: 12 rounds
   description: |-
@@ -593,7 +593,7 @@
   name: Dimension Door
   level: 4
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: 10'
   duration: 1 round
   description: |-
@@ -611,7 +611,7 @@
   name: Growth of Plants
   level: 4
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: 120'
   duration: permanent
   description: |-
@@ -624,7 +624,7 @@
   name: Hallucinatory Terrain
   level: 4
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: 240'
   duration: Until touched
   description: |-
@@ -637,7 +637,7 @@
   name: Massmorph
   level: 4
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: 240'
   duration: permanent
   description: |-
@@ -652,7 +652,7 @@
   name: Polymorph Others
   level: 4
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: 60'
   duration: permanent
   description: |-
@@ -673,7 +673,7 @@
   name: Polymorph Self
   level: 4
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: The caster
   duration: 6 turns +1 per level
   description: |-
@@ -696,7 +696,7 @@
   name: Remove Curse
   level: 4
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: The caster or a creature touched
   duration: Instant / Permanent (curse)
   description: |-
@@ -719,7 +719,7 @@
   name: Wall of Fire
   level: 4
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: 60'
   duration: Concentration
   description: |-
@@ -738,7 +738,7 @@
   name: Wall of Ice
   level: 4
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: 120'
   duration: 12 turns
   description: |-
@@ -755,7 +755,7 @@
   name: Wizard Eye
   level: 4
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: 240'
   duration: 6 turns
   description: |-
@@ -772,7 +772,7 @@
   name: Animate Dead
   level: 5
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: 60'
   duration: permanent
   description: |-
@@ -795,7 +795,7 @@
   name: Cloudkill
   level: 5
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: 30'
   duration: 6 turns
   description: |-
@@ -812,7 +812,7 @@
   name: Conjure Elemental
   level: 5
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: 240'
   duration: Permanent (until dismissed or slain)
   description: |-
@@ -889,7 +889,7 @@
   name: Contact Higher Plane
   level: 5
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: The caster
   duration: One conversation
   description: |-
@@ -925,7 +925,7 @@
   name: Feeblemind
   level: 5
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: 240'
   duration: permanent
   description: |-
@@ -934,7 +934,7 @@
   name: Hold Monster
   level: 5
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: 120'
   duration: 6 turns +1 per level
   description: |-
@@ -948,7 +948,7 @@
   name: Magic Jar
   level: 5
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: The caster
   duration: Special
   description: |-
@@ -979,7 +979,7 @@
   name: Pass-Wall
   level: 5
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: 30'
   duration: 3 turns
   description: |-
@@ -988,7 +988,7 @@
   name: Telekinesis
   level: 5
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: 120'
   duration: Concentration (up to 6 rounds)
   description: |-
@@ -1005,7 +1005,7 @@
   name: Teleport
   level: 5
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: 10'
   duration: instant
   description: |-
@@ -1044,7 +1044,7 @@
   name: Transmute Rock to Mud
   level: 5
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: 120'
   duration: 3d6 days / Permanent (transmute mud to rock)
   description: |-
@@ -1061,7 +1061,7 @@
   name: Wall of Stone
   level: 5
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: 60'
   duration: permanent
   description: |-
@@ -1074,7 +1074,7 @@
   name: Anti-Magic Shell
   level: 6
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: The caster
   duration: 12 turns
   description: |-
@@ -1087,7 +1087,7 @@
   name: Control Weather
   level: 6
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: 240 yards around the caster
   duration: Concentration
   description: |-
@@ -1122,7 +1122,7 @@
   name: Death Spell
   level: 6
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: 240'
   duration: instant
   description: |-
@@ -1133,7 +1133,7 @@
   name: Disintegrate
   level: 6
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: 60'
   duration: instant
   description: |-
@@ -1146,7 +1146,7 @@
   name: Geas
   level: 6
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: 30'
   duration: Permanent / Instant (remove geas)
   description: |-
@@ -1169,7 +1169,7 @@
   name: Invisible Stalker
   level: 6
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: Summoned to caster's presence
   duration: One mission
   description: |-
@@ -1196,7 +1196,7 @@
   name: Lower Water
   level: 6
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: 240'
   duration: 10 turns
   description: |-
@@ -1205,7 +1205,7 @@
   name: Move Earth
   level: 6
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: 240'
   duration: 6 turns
   description: |-
@@ -1218,7 +1218,7 @@
   name: Part Water
   level: 6
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: 120'
   duration: 6 turns
   description: |-
@@ -1227,7 +1227,7 @@
   name: Projected Image
   level: 6
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: 240'
   duration: 6 turns
   description: |-
@@ -1244,7 +1244,7 @@
   name: Reincarnation
   level: 6
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: Appears in the caster's presence
   duration: permanent
   description: |-
@@ -1314,7 +1314,7 @@
   name: Stone to Flesh
   level: 6
   spell_lists: [magic_user]
-  source: "ose-advanced-fantasy"
+  source: ose_classic_fantasy
   range: 120'
   duration: permanent
   description: |-

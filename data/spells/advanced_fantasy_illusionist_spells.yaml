@@ -2,7 +2,7 @@
   name: Auditory Illusion
   level: 1
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: "240'"
   duration: "3 turns"
   description: |-
@@ -17,7 +17,7 @@
   name: Chromatic Orb
   level: 1
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: "60'"
   duration: instant
   description: |-
@@ -62,7 +62,7 @@
   name: Colour Spray
   level: 1
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: "20' long cone, 20' wide at end"
   duration: instant
   description: |-
@@ -83,7 +83,7 @@
   name: Dancing Lights
   level: 1
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: "40' + 10' per level"
   duration: "1 turn"
   description: |-
@@ -98,7 +98,7 @@
   name: Detect Illusion
   level: 1
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: The caster or a creature touched
   duration: "3 turns"
   description: |-
@@ -107,7 +107,7 @@
   name: Glamour
   level: 1
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: The caster
   duration: "2d6 rounds +2 per level"
   description: |-
@@ -130,7 +130,7 @@
   name: Hypnotism
   level: 1
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: "30'"
   duration: "1 round +1 per level"
   description: |-
@@ -153,7 +153,7 @@
   name: Light
   level: 1
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: "120'"
   duration: "6 turns +1 per level"
   description: |-
@@ -174,7 +174,7 @@
   name: Phantasmal Force
   level: 1
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: "240'"
   duration: concentration
   description: |-
@@ -197,7 +197,7 @@
   name: Read Magic
   level: 1
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: The caster
   duration: "1 turn"
   description: |-
@@ -214,7 +214,7 @@
   name: Spook
   level: 1
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: "10'"
   duration: Until broken (see below)
   description: |-
@@ -231,7 +231,7 @@
   name: Wall of Fog
   level: 1
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: "60'"
   duration: "1 turn"
   description: |-
@@ -246,7 +246,7 @@
   name: Blindness / Deafness
   level: 2
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: "30'"
   duration: permanent
   description: |-
@@ -261,7 +261,7 @@
   name: Blur
   level: 2
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: The caster
   duration: "1 turn"
   description: |-
@@ -274,7 +274,7 @@
   name: Detect Magic
   level: 2
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: "60'"
   duration: "2 turns"
   description: |-
@@ -283,7 +283,7 @@
   name: False Aura
   level: 2
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: "30'"
   duration: "1 turn"
   description: |-
@@ -296,7 +296,7 @@
   name: Fascinate
   level: 2
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: "30'"
   duration: See below
   description: |-
@@ -317,7 +317,7 @@
   name: Hypnotic Pattern
   level: 2
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: "30' square around the caster"
   duration: concentration
   description: |-
@@ -336,7 +336,7 @@
   name: Improved Phantasmal Force
   level: 2
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: "240'"
   duration: concentration
   description: |-
@@ -363,7 +363,7 @@
   name: Invisibility
   level: 2
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: "240'"
   duration: "permanent (but may be broken, see below)"
   description: |-
@@ -378,7 +378,7 @@
   name: Magic Mouth
   level: 2
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: Touch
   duration: permanent until triggered
   description: |-
@@ -395,7 +395,7 @@
   name: Mirror Image
   level: 2
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: The caster
   duration: "6 turns"
   description: |-
@@ -408,7 +408,7 @@
   name: Quasimorph
   level: 2
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: The caster
   duration: "3d4 rounds +2 per level"
   description: |-
@@ -431,7 +431,7 @@
   name: Whispering Wind
   level: 2
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: "1 mile per level"
   duration: special
   description: |-
@@ -448,7 +448,7 @@
   name: Blacklight
   level: 3
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: "60'"
   duration: "1 turn per level"
   description: |-
@@ -463,7 +463,7 @@
   name: Dispel Illusion
   level: 3
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: "10' per level"
   duration: instant
   description: |-
@@ -478,7 +478,7 @@
   name: Fear
   level: 3
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: "60' cone, 30' wide at end"
   duration: instant
   description: |-
@@ -491,7 +491,7 @@
   name: Hallucinatory Terrain
   level: 3
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: "240'"
   duration: Until touched
   description: |-
@@ -504,7 +504,7 @@
   name: "Invisibility 10' Radius"
   level: 3
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: "120'"
   duration: "permanent (but may be broken, see below)"
   description: |-
@@ -523,7 +523,7 @@
   name: Nondetection
   level: 3
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: The caster
   duration: "1 turn per level"
   description: |-
@@ -532,7 +532,7 @@
   name: Paralysation
   level: 3
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: "10' per level"
   duration: "6 turns or until cancelled"
   description: |-
@@ -551,7 +551,7 @@
   name: Phantom Steed
   level: 3
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: "10'"
   duration: "6 turns per level"
   description: |-
@@ -578,7 +578,7 @@
   name: Rope Trick
   level: 3
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: Touch
   duration: "2 turns per level"
   description: |-
@@ -601,7 +601,7 @@
   name: Spectral Force
   level: 3
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: "240'"
   duration: concentration
   description: |-
@@ -628,7 +628,7 @@
   name: Suggestion
   level: 3
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: "30'"
   duration: "4 turns +4 per level"
   description: |-
@@ -649,7 +649,7 @@
   name: Wraithform
   level: 3
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: The caster
   duration: "1 turn"
   description: |-
@@ -668,7 +668,7 @@
   name: Confusion
   level: 4
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: "120'"
   duration: "12 rounds"
   description: |-
@@ -691,7 +691,7 @@
   name: Dispel Magic
   level: 4
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: "120'"
   duration: instant
   description: |-
@@ -704,7 +704,7 @@
   name: Emotion
   level: 4
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: "10' per level"
   duration: concentration
   description: |-
@@ -723,7 +723,7 @@
   name: Illusory Stamina
   level: 4
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: Touch
   duration: "3 turns per level"
   description: |-
@@ -738,7 +738,7 @@
   name: Improved Invisibility
   level: 4
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: The caster or a creature touched
   duration: "4 rounds +1 per level"
   description: |-
@@ -755,7 +755,7 @@
   name: Massmorph
   level: 4
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: "240'"
   duration: permanent
   description: |-
@@ -770,7 +770,7 @@
   name: Minor Creation
   level: 4
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: Touch
   duration: "6 turns per level"
   description: |-
@@ -787,7 +787,7 @@
   name: Phantasmal Killer
   level: 4
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: "5' per level"
   duration: "1 round per level"
   description: |-
@@ -808,7 +808,7 @@
   name: Rainbow Pattern
   level: 4
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: "30' square around the caster"
   duration: concentration
   description: |-
@@ -831,7 +831,7 @@
   name: Shadow Monsters
   level: 4
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: "30'"
   duration: "1 round per level"
   description: |-
@@ -854,7 +854,7 @@
   name: Solid Fog
   level: 4
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: "60'"
   duration: "1 turn"
   description: |-
@@ -873,7 +873,7 @@
   name: Veil of Abandonment
   level: 4
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: "10' per level"
   duration: "1 turn per level"
   description: |-
@@ -890,7 +890,7 @@
   name: Chaos
   level: 5
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: "120'"
   duration: "12 rounds"
   description: |-
@@ -911,7 +911,7 @@
   name: Demi-Shadow Monsters
   level: 5
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: "30'"
   duration: "1 round per level"
   description: |-
@@ -934,7 +934,7 @@
   name: Illusion
   level: 5
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: "240'"
   duration: "1 round per level"
   description: |-
@@ -959,7 +959,7 @@
   name: Looking Glass
   level: 5
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: Touch
   duration: "1 round per level"
   description: |-
@@ -974,7 +974,7 @@
   name: Major Creation
   level: 5
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: Touch
   duration: "12 or 6 turns per level"
   description: |-
@@ -993,7 +993,7 @@
   name: Maze of Mirrors
   level: 5
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: "5' per level"
   duration: "Varies by subject's INT"
   description: |-
@@ -1018,7 +1018,7 @@
   name: Projected Image
   level: 5
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: "240'"
   duration: "6 turns"
   description: |-
@@ -1035,7 +1035,7 @@
   name: Seeming
   level: 5
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: "10'"
   duration: "12 hours"
   description: |-
@@ -1056,7 +1056,7 @@
   name: Shadowcast
   level: 5
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: "30'"
   duration: Up to 6 turns +1 per level
   description: |-
@@ -1079,7 +1079,7 @@
   name: Shadowy Transformation
   level: 5
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: The caster or a creature or object touched
   duration: "1d4 rounds +1 per level"
   description: |-
@@ -1108,7 +1108,7 @@
   name: Time Flow
   level: 5
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: "10'"
   duration: "6 turns per level"
   description: |-
@@ -1125,7 +1125,7 @@
   name: Visitation
   level: 5
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: Unlimited
   duration: "5 minutes"
   description: |-
@@ -1142,7 +1142,7 @@
   name: Acid Fog
   level: 6
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: "30'"
   duration: "1d4 rounds +1 per level"
   description: |-
@@ -1165,7 +1165,7 @@
   name: Dream Quest
   level: 6
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: "60'"
   duration: permanent until fulfilled
   description: |-
@@ -1186,7 +1186,7 @@
   name: Impersonation
   level: 6
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: The caster or a person touched
   duration: "1 turn per level"
   description: |-
@@ -1205,7 +1205,7 @@
   name: Manifest Dream
   level: 6
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: The caster
   duration: Varies by manifestation (see examples below)
   description: |-
@@ -1232,7 +1232,7 @@
   name: Mass Suggestion
   level: 6
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: "90'"
   duration: "4 turns +4 per level"
   description: |-
@@ -1255,7 +1255,7 @@
   name: Mislead
   level: 6
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: The caster
   duration: "1 round per level"
   description: |-
@@ -1280,7 +1280,7 @@
   name: Permanent Illusion
   level: 6
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: "240'"
   duration: permanent
   description: |-
@@ -1303,7 +1303,7 @@
   name: Shades
   level: 6
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: "30'"
   duration: "1 round per level"
   description: |-
@@ -1326,7 +1326,7 @@
   name: Through the Looking Glass
   level: 6
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: "10'"
   duration: "1 round per level"
   description: |-
@@ -1349,7 +1349,7 @@
   name: Triggered Illusion
   level: 6
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: "240'"
   duration: "permanent until triggered, then 1 round per level"
   description: |-
@@ -1374,7 +1374,7 @@
   name: True Seeing
   level: 6
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: The caster or a creature touched
   duration: "1 round per level"
   description: |-
@@ -1391,7 +1391,7 @@
   name: Vision
   level: 6
   spell_lists: [illusionist]
-  source: "ose-advanced-fantasy"
+  source: ose_advanced_fantasy
   range: The caster
   duration: "1 turn"
   description: |-
