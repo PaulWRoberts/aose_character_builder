@@ -355,3 +355,41 @@ def test_optional_staves_round_trips(client):
     assert re.search(
         r'name="optional_staves"[^>]*\bchecked\b', r2.text, re.DOTALL
     )
+
+
+def _new_draft_with_sources(client, drafts_dir, disabled):
+    """Start a draft, confirm abilities, and set disabled_sources directly."""
+    from aose.characters import load_draft, save_draft
+    r = client.get("/wizard/new")
+    draft_id = r.headers["location"].split("/")[2]
+    draft = load_draft(draft_id, drafts_dir)
+    draft["abilities"] = {"STR": 13, "INT": 13, "WIS": 13, "DEX": 13, "CON": 13, "CHA": 13}
+    draft["abilities_confirmed"] = True
+    draft["ruleset"]["disabled_sources"] = disabled
+    save_draft(draft_id, draft, drafts_dir)
+    return draft_id
+
+
+def test_race_step_hides_advanced_when_disabled(client, tmp_path):
+    draft_id = _new_draft_with_sources(client, tmp_path / "drafts", ["ose_advanced_fantasy"])
+    r = client.get(f"/wizard/{draft_id}/race")
+    assert 'value="human"' in r.text
+    assert 'value="elf"' not in r.text
+
+
+def test_race_step_shows_advanced_when_enabled(client, tmp_path):
+    draft_id = _new_draft_with_sources(client, tmp_path / "drafts", [])
+    r = client.get(f"/wizard/{draft_id}/race")
+    assert 'value="elf"' in r.text
+
+
+def test_class_step_hides_advanced_when_disabled(client, tmp_path):
+    # Basic creation so the class step renders without a race pick.
+    from aose.characters import load_draft, save_draft
+    draft_id = _new_draft_with_sources(client, tmp_path / "drafts", ["ose_advanced_fantasy"])
+    draft = load_draft(draft_id, tmp_path / "drafts")
+    draft["ruleset"]["separate_race_class"] = False
+    save_draft(draft_id, draft, tmp_path / "drafts")
+    r = client.get(f"/wizard/{draft_id}/class")
+    assert 'value="fighter"' in r.text
+    assert 'value="druid"' not in r.text

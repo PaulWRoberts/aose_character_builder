@@ -92,6 +92,7 @@ from aose.models import (
     RuleSet,
 )
 from aose.sheet.view import magic_items_view
+from aose.engine.sources import CLASSIC_SOURCE_ID, source_enabled
 from aose.web.settings_routes import (
     ADVANCED_OPTIONS_GROUP,
     CHOICE_GROUPS,
@@ -112,9 +113,9 @@ STEP_LABELS = {
     "abilities": "Abilities",
     "race": "Race",
     "class": "Class",
-    "adjust": "Ability Adjustments",
-    "class_setup": "Class Setup",
-    "identity": "Identity & Background",
+    "adjust": "Adjustments",
+    "class_setup": "HP & Skills",
+    "identity": "Identity",
     "equipment": "Equipment",
     "review": "Review",
 }
@@ -555,8 +556,11 @@ async def get_race(request: Request, draft_id: str):
         return redirect
     data = request.app.state.game_data
     abilities = draft["abilities"]
+    ruleset = _ruleset_of(draft)
     races = []
     for race in sorted(data.races.values(), key=lambda r: r.name):
+        if not source_enabled(race.source, ruleset):
+            continue
         effective = apply_racial_modifiers(abilities, race)
         ability_changes = [
             {
@@ -646,6 +650,8 @@ async def get_class(request: Request, draft_id: str):
         # Split mode hides race-as-class entries; race-as-class mode shows
         # everything (race-locked entries become the "demihuman as class" picks).
         if ruleset.separate_race_class and cls.race_locked:
+            continue
+        if not source_enabled(cls.source, ruleset):
             continue
 
         meets_abilities = _meets_ability_requirements(cls.ability_requirements, abilities)
