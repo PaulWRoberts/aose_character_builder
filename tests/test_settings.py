@@ -441,3 +441,31 @@ def test_post_settings_persists_disabled_source(client):
     assert r.status_code == 303
     rs = load_settings(client._settings_path)
     assert rs.disabled_sources == ["ose_advanced_fantasy"]
+
+
+def test_disabling_source_clears_orphaned_race(client, tmp_path):
+    from aose.characters import load_draft, save_draft
+    drafts = tmp_path / "drafts"
+    draft_id = _new_draft_with_sources(client, drafts, [])
+    client.post(f"/wizard/{draft_id}/race", data={"race_id": "elf"})
+    # Turn strict mode off so the rules step remains navigable after abilities confirmed.
+    draft = load_draft(draft_id, drafts)
+    draft["ruleset"]["strict_mode"] = False
+    save_draft(draft_id, draft, drafts)
+    # Re-post the rules step with Advanced now disabled (Advanced creation kept).
+    client.post(f"/wizard/{draft_id}/rules", data={"creation_method": "advanced"})
+    draft = load_draft(draft_id, drafts)
+    assert "race_id" not in draft
+
+
+def test_disabling_source_keeps_classic_race(client, tmp_path):
+    from aose.characters import load_draft, save_draft
+    drafts = tmp_path / "drafts"
+    draft_id = _new_draft_with_sources(client, drafts, [])
+    client.post(f"/wizard/{draft_id}/race", data={"race_id": "human"})
+    draft = load_draft(draft_id, drafts)
+    draft["ruleset"]["strict_mode"] = False
+    save_draft(draft_id, draft, drafts)
+    client.post(f"/wizard/{draft_id}/rules", data={"creation_method": "advanced"})
+    draft = load_draft(draft_id, drafts)
+    assert draft.get("race_id") == "human"

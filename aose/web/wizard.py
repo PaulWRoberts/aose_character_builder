@@ -388,7 +388,7 @@ async def get_rules(request: Request, draft_id: str):
     return templates.TemplateResponse(request, "wizard.html", ctx)
 
 
-def _apply_rule_changes(draft: dict[str, Any], old_rs: RuleSet, new_rs: RuleSet) -> None:
+def _apply_rule_changes(draft: dict[str, Any], old_rs: RuleSet, new_rs: RuleSet, data=None) -> None:
     """Save the new ruleset on the draft and apply targeted clears for any
     rule changes that would invalidate downstream choices.
 
@@ -433,6 +433,20 @@ def _apply_rule_changes(draft: dict[str, Any], old_rs: RuleSet, new_rs: RuleSet)
     if not new_rs.multiclassing and "class_ids" in draft:
         _clear_after_race(draft)
 
+    if data is not None and new_rs.disabled_sources != old_rs.disabled_sources:
+        race_id = draft.get("race_id")
+        if race_id in data.races and not source_enabled(
+            data.races[race_id].source, new_rs
+        ):
+            _clear_after_abilities(draft)
+            return
+        for cid in _class_ids(draft):
+            if cid in data.classes and not source_enabled(
+                data.classes[cid].source, new_rs
+            ):
+                _clear_after_race(draft)
+                break
+
 
 @router.post("/{draft_id}/rules")
 async def post_rules(request: Request, draft_id: str):
@@ -444,7 +458,7 @@ async def post_rules(request: Request, draft_id: str):
     source_ids = list(request.app.state.game_data.sources)
     new_rs = parse_ruleset_from_form(form, source_ids=source_ids)
     old_rs = _ruleset_of(draft)
-    _apply_rule_changes(draft, old_rs, new_rs)
+    _apply_rule_changes(draft, old_rs, new_rs, request.app.state.game_data)
     save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/{_next_incomplete_step(draft)}")
 
