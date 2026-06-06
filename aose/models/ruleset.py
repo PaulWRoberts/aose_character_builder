@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 EncumbranceMode = Literal["none", "basic", "detailed"]
@@ -23,3 +23,7 @@ class RuleSet(BaseModel):
     optional_staves: bool = False
 
     encumbrance: EncumbranceMode = "basic"
+
+    # Content sources to hide.  A source is enabled unless its id is listed
+    # here; Classic Fantasy is always enabled (never offered as a toggle).
+    disabled_sources: list[str] = Field(default_factory=list)
