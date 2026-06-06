@@ -371,3 +371,23 @@ def test_copy_chance_for_int_table():
     assert spells.copy_chance_for_int(17) == 85
     assert spells.copy_chance_for_int(18) == 90
     assert spells.copy_chance_for_int(20) == 90   # 18+
+
+
+def test_caster_candidates_respect_disabled_source():
+    from pathlib import Path
+    from aose.data.loader import GameData
+    from aose.web.wizard import _caster_entries
+
+    data = GameData.load(Path(__file__).parent.parent / "data")
+    # Illusionist casts from the Advanced 'illusionist' list. With Advanced
+    # disabled, its candidate list must be empty.
+    draft = {
+        "abilities": {"INT": 13, "WIS": 13},
+        "class_id": "illusionist",
+        "ruleset": {"disabled_sources": ["ose_advanced_fantasy"],
+                    "separate_race_class": True},
+    }
+    rows = _caster_entries(draft, data)
+    for row in rows:
+        if row["class_id"] == "illusionist":
+            assert row["candidates"] == []

@@ -1266,9 +1266,14 @@ def _caster_entries(draft: dict[str, Any], data) -> list[dict]:
             continue
         entry = ClassEntry(class_id=cid, level=1, spellbook=books.get(cid, []))
         ctype = spell_engine.caster_type_of(cls, data)
+        enabled_lists = {
+            lid for lid in cls.spell_lists
+            if lid in data.spell_lists
+            and source_enabled(data.spell_lists[lid].source, ruleset)
+        }
         candidates = sorted(
             (s for s in data.spells.values()
-             if set(s.spell_lists) & set(cls.spell_lists)
+             if set(s.spell_lists) & enabled_lists
              and s.level in spell_engine.accessible_levels(entry, cls)),
             key=lambda s: (s.level, s.name),
         )
