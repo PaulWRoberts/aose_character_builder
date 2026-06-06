@@ -1,0 +1,17 @@
+{# Shared structured detail renderer for inline row expanders.
+   `card` is a DetailCard view model: { stats: [{label, value}], description }.
+   Render only — no triggers/markup for the toggle (that lives in the row). #}
+{% macro detail_card(card) %}
+{% if card %}
+<div class="detail-card">
+  {% if card.stats %}
+  <dl class="detail-stats">
+    {% for s in card.stats %}
+    <div><dt>{{ s.label }}</dt><dd>{{ s.value }}</dd></div>
+    {% endfor %}
+  </dl>
+  {% endif %}
+  {% if card.description %}<p class="detail-desc">{{ card.description }}</p>{% endif %}
+</div>
+{% endif %}
+{% endmacro %}

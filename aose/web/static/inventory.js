@@ -17,3 +17,24 @@
         });
     });
 })();
+
+/* Inline row-detail toggle.
+ *
+ * A trigger row carries data-detail-toggle="<uid>"; its detail row carries
+ * data-detail-for="<uid>" and starts with class .collapsed. Clicking the
+ * trigger toggles .collapsed and flips aria-expanded. Clicks that originate
+ * inside a form/button/a/select are ignored so the row's own controls (cast,
+ * memorise, equip, buy, etc.) keep working. Independent toggles — no sibling
+ * auto-collapse. */
+(function () {
+    document.addEventListener("click", function (e) {
+        if (e.target.closest("form, button, a, select")) return;
+        const trigger = e.target.closest("[data-detail-toggle]");
+        if (!trigger) return;
+        const uid = trigger.getAttribute("data-detail-toggle");
+        const detail = document.querySelector(`[data-detail-for="${uid}"]`);
+        if (!detail) return;
+        const open = !detail.classList.toggle("collapsed");
+        trigger.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+})();

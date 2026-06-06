@@ -1,4 +1,5 @@
 {% from "_inv_row_actions.html" import inv_row_actions with context %}
+{% from "_detail_card.html" import detail_card with context %}
 {# Shared equipment UI partial — used by the wizard's equipment step and the
    live character sheet's equipment section (drawer).  Caller must supply:
      - target_url_prefix   e.g. "/wizard/{id}/equipment" or "/character/{id}/equipment"
@@ -52,12 +53,19 @@
     </thead>
     <tbody>
     {% for row in rows %}
-        <tr class="inv-row" data-item-id="{{ row.id }}">
+        {% set uid = "inv-" ~ state ~ "-" ~ row.id %}
+        <tr class="inv-row" data-item-id="{{ row.id }}"
+            data-detail-toggle="{{ uid }}" aria-expanded="false">
             <td>{{ row.name }}</td>
             <td class="n">{{ row.count }}</td>
             <td class="n">{{ (row.weight_cn * row.count) }}&nbsp;cn</td>
             <td class="n">{{ inv_row_actions(row, target_url_prefix, state) }}</td>
         </tr>
+        {% if row.detail %}
+        <tr class="row-detail collapsed" data-detail-for="{{ uid }}">
+            <td colspan="4">{{ detail_card(row.detail) }}</td>
+        </tr>
+        {% endif %}
     {% endfor %}
     </tbody>
 </table></div>
@@ -403,7 +411,8 @@
       </td>
     </tr>
     {% for e in src.entries %}
-    <tr class="child">
+    {% set uid = "doc-" ~ src.instance_id ~ "-" ~ e.spell_id %}
+    <tr class="child" data-detail-toggle="{{ uid }}" aria-expanded="false">
       <td>{{ e.name }} <span class="tag faint">L{{ e.level }}</span>
         {% if e.copy_failed %}<span class="tag stamp">copy failed</span>{% endif %}
       </td>
@@ -425,6 +434,11 @@
         {% endif %}
       </td>
     </tr>
+    {% if e.detail %}
+    <tr class="row-detail collapsed" data-detail-for="{{ uid }}">
+      <td colspan="2">{{ detail_card(e.detail) }}</td>
+    </tr>
+    {% endif %}
     {% endfor %}
     {% endfor %}
     </tbody>

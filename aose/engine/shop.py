@@ -16,6 +16,7 @@ from typing import Optional
 from pydantic import BaseModel
 
 from aose.data.loader import GameData
+from aose.engine.detail import DetailCard, item_card
 from aose.engine.dice import roll
 from aose.models import Container, ContainerInstance, Item
 
@@ -49,6 +50,7 @@ class InventoryRow(BaseModel):
     equipped_count: int = 0     # how many copies currently equipped (legacy flat view)
     bundle_count: int = 1        # units the shop sells per purchase
     can_refund: bool = True      # True when count >= bundle_count
+    detail: DetailCard | None = None   # structured card for the inline expander
 
 
 class ContainerView(BaseModel):
@@ -147,6 +149,7 @@ def _build_row(item_id: str, count: int, data: GameData,
         class_allowed=_class_allows(item, allowed_weapons, allowed_armor, allow_shields),
         bundle_count=bundle,
         can_refund=count >= bundle,
+        detail=item_card(item),
     )
 
 

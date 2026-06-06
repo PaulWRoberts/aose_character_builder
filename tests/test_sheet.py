@@ -187,3 +187,47 @@ def test_sheet_exposes_unarmored_and_overland(data):
     sheet = build_sheet(make_spec(), data)
     assert sheet.unarmored_ac_descending >= sheet.ac_descending  # armour only helps
     assert sheet.movement_overland == sheet.movement_base // 5
+
+
+def test_sheet_renders_inline_detail_rows(tmp_path):
+    """A caster with an item in inventory should render detail-toggle rows."""
+    from fastapi.testclient import TestClient
+    from aose.characters import save_character
+    from aose.engine import spells as se
+    from aose.web.app import create_app
+
+    characters_dir = tmp_path / "characters"
+    examples_dir = tmp_path / "examples"
+    examples_dir.mkdir()
+    app = create_app(
+        data_dir=DATA_DIR,
+        characters_dir=characters_dir,
+        drafts_dir=tmp_path / "drafts",
+        examples_dir=examples_dir,
+        settings_path=tmp_path / "settings.json",
+    )
+
+    data = GameData.load(DATA_DIR)
+    cls = data.classes["magic_user"]
+    MM = "magic_user_magic_missile"
+    e = ClassEntry(class_id="magic_user", level=3, hp_rolls=[4, 3, 2],
+                   spellbook=[MM])
+    e2 = se.assign_slot(e, cls, data, level=1, spell_id=MM)
+    spec = CharacterSpec(
+        name="Arcanist",
+        abilities={"STR": 9, "INT": 16, "WIS": 9, "DEX": 12, "CON": 10, "CHA": 9},
+        race_id="human", classes=[e2], alignment="neutral",
+        inventory=["dagger"],  # gives at least one item row
+    )
+    save_character("arcanist", spec, characters_dir)
+
+    client = TestClient(app, follow_redirects=False)
+    html = client.get("/character/arcanist").text
+
+    # Detail rows exist and are collapsed by default.
+    assert 'class="row-detail collapsed"' in html
+    assert "data-detail-for=" in html
+    # Triggers are present.
+    assert "data-detail-toggle=" in html
+    # The structured card markup renders.
+    assert "detail-card" in html
