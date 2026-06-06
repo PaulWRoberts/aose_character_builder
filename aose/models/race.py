@@ -19,6 +19,7 @@ class Race(BaseModel):
 
     id: str
     name: str
+    source: str = "ose_classic_fantasy"
     ability_requirements: dict[Ability, int] = Field(default_factory=dict)
     ability_maxima: dict[Ability, int] = Field(default_factory=dict)
     ability_minima: dict[Ability, int] = Field(default_factory=dict)

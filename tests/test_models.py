@@ -110,3 +110,30 @@ def test_valuable_models_defaults():
     )
     assert spec.gems == []
     assert spec.jewellery == []
+
+
+def test_content_models_default_to_classic_source():
+    from aose.models import (
+        AdventuringGear, CharClass, Enchantment, Race, Spell, SpellList,
+    )
+    from aose.models.enchantment import AppliesTo
+
+    gear = AdventuringGear(id="x", name="X", category="c", cost_gp=1, item_type="gear")
+    assert gear.source == "ose_classic_fantasy"
+
+    race = Race(id="x", name="X")
+    assert race.source == "ose_classic_fantasy"
+
+    cls = CharClass(id="x", name="X", prime_requisites=[], hit_die="1d6",
+                    weapons_allowed="all", armor_allowed="all", shields_allowed=True)
+    assert cls.source == "ose_classic_fantasy"
+
+    sl = SpellList(id="x", name="X", caster_type="arcane")
+    assert sl.source == "ose_classic_fantasy"
+
+    ench = Enchantment(id="x", name_template="{base} +1", kind="weapon",
+                       applies_to=AppliesTo(include=["any_weapon"]))
+    assert ench.source == "ose_classic_fantasy"
+
+    spell = Spell(id="x", name="X", level=1, range="0", duration="0", description="d")
+    assert spell.source == "ose_classic_fantasy"

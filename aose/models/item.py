@@ -15,6 +15,7 @@ class ItemBase(BaseModel):
     weight_cn: int = 0
     description: str | None = None   # long flavour / rules text
     magic: bool = False              # drives Magic Items section + Add-only acquisition
+    source: str = "ose_classic_fantasy"
 
 
 class WeaponDamage(BaseModel):

@@ -11,8 +11,7 @@ class Spell(BaseModel):
     # "druid"]). The list ID is decoupled from class ID, so race-as-class
     # entries can reuse a list (elf -> magic_user) without re-tagging spells.
     spell_lists: list[str] = Field(default_factory=list)
-    # Book of origin, for a future selector to group/filter/toggle by source.
-    source: str | None = None
+    source: str = "ose_classic_fantasy"
     range: str
     duration: str
     description: str

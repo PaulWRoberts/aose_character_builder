@@ -33,6 +33,7 @@ class CharClass(BaseModel):
 
     id: str
     name: str
+    source: str = "ose_classic_fantasy"
     prime_requisites: list[Ability]
     ability_requirements: dict[Ability, int] = Field(default_factory=dict)
     max_level: int = 14

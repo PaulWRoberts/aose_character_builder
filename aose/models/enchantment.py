@@ -29,6 +29,7 @@ class Enchantment(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     id: str
+    source: str = "ose_classic_fantasy"
     name_template: str                       # .format(base=base.name) → display name
     kind: Literal["weapon", "armor", "shield", "ammunition"]
     applies_to: AppliesTo
