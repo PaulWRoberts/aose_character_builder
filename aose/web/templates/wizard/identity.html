@@ -1,12 +1,12 @@
 <h2>Identity &amp; Background</h2>
 
 <form method="post" action="/wizard/{{ draft_id }}/identity" class="step-form">
-    <label class="field">
+    <label class="wfield">
         <span>Character Name</span>
         <input type="text" name="name" required value="{{ draft.name or '' }}" autofocus>
     </label>
 
-    <fieldset class="field">
+    <fieldset class="wfield">
         <legend>Alignment</legend>
         <div class="radio-stack">
         {% for a in alignments %}
@@ -20,12 +20,12 @@
     </fieldset>
 
     {% if show_skill %}
-    <fieldset class="field">
+    <fieldset class="wfield">
         <legend>Secondary Skill</legend>
         <p class="muted">A humble trade from before adventuring — we've rolled one;
            re-roll or pick another.</p>
         <div class="skill-row">
-            <label class="field">
+            <label class="wfield">
                 <span>Skill</span>
                 <select name="secondary_skill">
                     {% for s in skills %}
@@ -38,7 +38,7 @@
     </fieldset>
     {% endif %}
 
-    <fieldset class="field">
+    <fieldset class="wfield">
         <legend>Languages</legend>
         <p class="muted small">Native: {{ native_languages | join(", ") }}</p>
         {% if alignment_language %}

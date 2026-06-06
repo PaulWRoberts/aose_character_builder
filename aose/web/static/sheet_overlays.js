@@ -43,12 +43,7 @@
   });
   scrim.addEventListener('click', closeAll);
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAll(); });
-  document.querySelectorAll('.tabs').forEach(tabs => {
-    tabs.addEventListener('click', (e) => {
-      const t = e.target.closest('.tab'); if (!t) return;
-      const root = tabs.closest('.ov-body');
-      tabs.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x === t));
-      root.querySelectorAll('[data-pane]').forEach(p => p.hidden = (p.dataset.pane !== t.dataset.tab));
-    });
-  });
+  /* Equipment tab-switching lives in inventory.js (loaded by the shared
+     equipment partial) so it works on the wizard page too, which has no
+     overlay scrim / .ov-body. */
 })();

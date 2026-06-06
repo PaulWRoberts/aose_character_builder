@@ -18,6 +18,27 @@
     });
 })();
 
+/* Equipment tab switching.
+ *
+ * The shared equipment partial (`_equipment_ui.html`) renders a `.tabs` bar
+ * plus sibling `[data-pane]` panels inside a `.equip-ui` wrapper. This lives
+ * here (not sheet_overlays.js) so it works on the wizard's inline equipment
+ * step, which has no overlay scrim / `.ov-body`. Delegated so it binds whether
+ * the partial sits in the page flow or in the sheet drawer. */
+(function () {
+    document.addEventListener("click", function (e) {
+        const tab = e.target.closest(".tabs .tab");
+        if (!tab) return;
+        const tabs = tab.closest(".tabs");
+        const root = tabs.closest(".equip-ui") || tabs.parentElement;
+        if (!root) return;
+        tabs.querySelectorAll(".tab").forEach(x => x.classList.toggle("on", x === tab));
+        root.querySelectorAll("[data-pane]").forEach(p => {
+            p.hidden = (p.dataset.pane !== tab.dataset.tab);
+        });
+    });
+})();
+
 /* Inline row-detail toggle.
  *
  * A trigger row carries data-detail-toggle="<uid>"; its detail row carries
