@@ -137,6 +137,23 @@ selectable content is built:
 
 Disabled content is omitted from the lists exactly as if it weren't in the data.
 
+### Edge case: Advanced creation method + Classic-only sources
+
+In the data, every demihuman race file is Advanced; only `human` is Classic
+(by default — it is **not** in the Advanced list and keeps the baseline tag).
+So choosing the Advanced creation method (`separate_race_class = True`) while
+only Classic Fantasy is enabled leaves **Human as the only selectable race**.
+
+This is an accepted, valid state — "you're a Human with no optional rules":
+
+- `human` **must stay Classic-tagged** so it is always present as the baseline.
+- The race step handles a single-option (Human-only) list gracefully — no error,
+  no empty list (the list is never truly empty, since Human always survives the
+  filter).
+- **No coupling logic is added.** Picking Classic-only sources does not force the
+  Basic creation method or auto-disable the Advanced optional rules; the
+  combination is simply allowed to resolve to a plain Human.
+
 ## Filter UI (rules + settings pages)
 
 Both `/settings` (global default for new characters) and the wizard `/rules`
