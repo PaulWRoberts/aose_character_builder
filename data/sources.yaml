@@ -1,0 +1,8 @@
+- id: ose_classic_fantasy
+  name: Old School Essentials Classic Fantasy
+  publisher: Necrotic Gnome
+  core: true
+- id: ose_advanced_fantasy
+  name: Old School Essentials Advanced Fantasy
+  publisher: Necrotic Gnome
+  core: true

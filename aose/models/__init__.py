@@ -30,6 +30,7 @@ from .character import (
     MagicItemInstance, SpellSlot, SpellSource, SpellSourceEntry,
 )
 from .valuable import GemStack, JewelleryPiece
+from .source import Source
 
 __all__ = [
     "Ability",
@@ -69,4 +70,5 @@ __all__ = [
     "SpellSourceEntry",
     "GemStack",
     "JewelleryPiece",
+    "Source",
 ]

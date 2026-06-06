@@ -11,6 +11,7 @@ from aose.models import (
     Item,
     LanguageData,
     Race,
+    Source,
     Spell,
     SpellList,
     WeaponQuality,
@@ -118,6 +119,26 @@ def _load_languages(data_dir: Path) -> LanguageData:
     return LanguageData.model_validate(raw)
 
 
+def _load_sources(data_dir: Path) -> dict[str, Source]:
+    """Read ``sources.yaml`` (a list of mappings) into an id-keyed dict.
+
+    Returns an empty dict when the file is absent so minimal test fixtures
+    (a bare data dir) still load.
+    """
+    path = data_dir / "sources.yaml"
+    if not path.exists():
+        return {}
+    with path.open("r", encoding="utf-8") as f:
+        raw = yaml.safe_load(f) or []
+    if not isinstance(raw, list):
+        raise ValueError("sources.yaml must be a YAML list of mappings")
+    result: dict[str, Source] = {}
+    for obj in raw:
+        parsed = Source.model_validate(obj)
+        result[parsed.id] = parsed
+    return result
+
+
 def _load_enchantments(data_dir: Path) -> dict[str, Enchantment]:
     """Read ``enchantments.yaml`` (a list of mappings) into an id-keyed dict.
 
@@ -166,6 +187,7 @@ class GameData:
     secondary_skills: list[str] = field(default_factory=list)
     languages: LanguageData = field(default_factory=LanguageData)
     enchantments: dict[str, Enchantment] = field(default_factory=dict)
+    sources: dict[str, Source] = field(default_factory=dict)
 
     @classmethod
     def load(cls, data_dir: Path) -> "GameData":
@@ -179,4 +201,5 @@ class GameData:
             secondary_skills=_load_secondary_skills(data_dir),
             languages=_load_languages(data_dir),
             enchantments=_load_enchantments(data_dir),
+            sources=_load_sources(data_dir),
         )

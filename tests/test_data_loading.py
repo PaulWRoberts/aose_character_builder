@@ -161,3 +161,18 @@ def test_protection_scrolls_loaded():
         assert item.magic is True
         assert item.category == "scrolls"
         assert item.description
+
+
+def test_sources_loaded(data):
+    classic = data.sources["ose_classic_fantasy"]
+    assert classic.name == "Old School Essentials Classic Fantasy"
+    assert classic.publisher == "Necrotic Gnome"
+    assert classic.core is True
+    advanced = data.sources["ose_advanced_fantasy"]
+    assert advanced.name == "Old School Essentials Advanced Fantasy"
+    assert advanced.core is True
+
+
+def test_sources_absent_file_is_empty(tmp_path):
+    # A bare data dir (no sources.yaml) loads to an empty registry.
+    assert GameData.load(tmp_path).sources == {}
