@@ -65,6 +65,18 @@ override. Changing a rule mid-wizard applies targeted downstream clears
 Every flag in `RuleSet` is integrated end-to-end. The settings page never
 renders a "pending" badge — a regression test guards this.
 
+## Current state (2026-06-06, content sources)
+
+Content-source tagging and filtering just landed (13-task plan, on `main`). All new tests pass; 2 pre-existing breadcrumb-label failures in `test_wizard_class_setup` / `test_wizard_identity` are unrelated.
+
+- **`Source` model** — `aose/models/source.py`; `data/sources.yaml` (OSE Classic Fantasy + OSE Advanced Fantasy, both Necrotic Gnome, both core). Loaded into `GameData.sources`.
+- **`source` field** — added to `ItemBase`, `Race`, `CharClass`, `SpellList`, `Enchantment`, and `Spell`. Default `"ose_classic_fantasy"`; only Advanced-tagged entries carry `source: ose_advanced_fantasy` in YAML. Existing Classic content needs no edits.
+- **`RuleSet.disabled_sources: list[str]`** — empty default (no migration). Classic Fantasy is always enabled; never added to this list.
+- **`aose/engine/sources.py`** — `CLASSIC_SOURCE_ID` + `source_enabled(source_id, ruleset) -> bool` helper. Cycle-free (imports only models).
+- **Gating** — `source_enabled` applied in: wizard race step, wizard class step, `_caster_entries` spell candidates, `shop_categories(data, ruleset=None)`, `_enchant_choices(game_data, ruleset=None)`.
+- **Mid-wizard cascade** — `_apply_rule_changes` now accepts `data`; disabling a source clears an orphaned race pick (`_clear_after_abilities`) or class pick (`_clear_after_race`).
+- **Filter UI** — `_ruleset_fields.html` Sources fieldset (shared by `/settings` and wizard `/rules`). Classic renders checked+disabled. `parse_ruleset_from_form(form, source_ids=None)` computes `disabled_sources`. Spec/plan: `docs/superpowers/{specs,plans}/2026-06-06-content-sources*`.
+
 ## Current state (2026-06-04, sheet redesign)
 
 OSR-zine sheet redesign (prototype-3 port) just landed (on `feature/sheet-redesign`). All tests pass.
