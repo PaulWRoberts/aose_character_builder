@@ -21,6 +21,7 @@ from aose.engine.encumbrance import (
 )
 from aose.engine.languages import broken_speech, known_languages
 from aose.engine.leveling import ClassAdvancement, all_advancement
+from aose.engine.detail import DetailCard, spell_card
 from aose.engine.magic import active_modifiers, apply_modifiers, effective_abilities
 from aose.models import Ability, CharacterSpec, MagicItem, MagicItemInstance, RuleSet
 
@@ -137,6 +138,7 @@ class SpellEntryView(BaseModel):
     level: int
     description: str
     reversible: bool
+    detail: DetailCard | None = None
 
 
 class SlotView(BaseModel):
@@ -148,6 +150,7 @@ class SlotView(BaseModel):
     reversible: bool
     reversed: bool
     spent: bool
+    detail: DetailCard | None = None
 
 
 class SpellLevelGroup(BaseModel):
@@ -175,6 +178,7 @@ class SpellSourceEntryView(BaseModel):
     copy_failed: bool
     can_cast: bool
     can_copy: bool
+    detail: DetailCard | None = None
 
 
 class SpellSourceView(BaseModel):
@@ -624,6 +628,7 @@ def _spell_entry(spell) -> SpellEntryView:
     return SpellEntryView(
         id=spell.id, name=spell.name, level=spell.level,
         description=spell.description, reversible=spell.reversible,
+        detail=spell_card(spell),
     )
 
 
@@ -658,6 +663,7 @@ def spells_view(spec: CharacterSpec, data: GameData) -> list[SpellClassView]:
                     reversible=data.spells[slot.spell_id].reversible,
                     reversed=slot.reversed,
                     spent=slot.spent,
+                    detail=spell_card(data.spells[slot.spell_id], reversed=slot.reversed),
                 )
                 for i, slot in enumerate(entry.slots)
                 if slot.spell_id is not None
@@ -818,6 +824,7 @@ def spell_sources_view(spec: CharacterSpec, data: GameData) -> list[SpellSourceV
                 copy_failed=e.copy_failed,
                 can_cast=castable,
                 can_copy=e.spell_id in copyable,
+                detail=spell_card(spell) if spell else None,
             ))
         out.append(SpellSourceView(
             instance_id=source.instance_id,
