@@ -1,5 +1,6 @@
 id: drow
 name: Drow
+source: ose_advanced_fantasy
 ability_requirements:
   INT: 9
 ability_modifiers:

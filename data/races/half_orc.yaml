@@ -1,5 +1,6 @@
 id: half_orc
 name: Half-Orc
+source: ose_advanced_fantasy
 ability_modifiers:
   CHA: -2
   CON: 1

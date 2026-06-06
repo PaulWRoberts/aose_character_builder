@@ -1,5 +1,6 @@
 id: duergar
 name: Duergar
+source: ose_advanced_fantasy
 ability_requirements:
   CON: 9
   INT: 9

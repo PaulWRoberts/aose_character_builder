@@ -1,5 +1,6 @@
 id: svirfneblin
 name: Svirfneblin
+source: ose_advanced_fantasy
 ability_requirements:
   CON: 9
 infravision: 90

@@ -1,5 +1,6 @@
 id: dwarf
 name: Dwarf
+source: ose_advanced_fantasy
 ability_requirements:
   CON: 9
 ability_modifiers:

@@ -176,3 +176,10 @@ def test_sources_loaded(data):
 def test_sources_absent_file_is_empty(tmp_path):
     # A bare data dir (no sources.yaml) loads to an empty registry.
     assert GameData.load(tmp_path).sources == {}
+
+
+def test_race_sources(data):
+    assert data.races["human"].source == "ose_classic_fantasy"
+    for rid in ("drow", "duergar", "dwarf", "elf", "gnome", "half_elf",
+                "half_orc", "halfling", "svirfneblin"):
+        assert data.races[rid].source == "ose_advanced_fantasy", rid

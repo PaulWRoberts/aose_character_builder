@@ -1,5 +1,6 @@
 id: halfling
 name: Halfling
+source: ose_advanced_fantasy
 ability_requirements:
   CON: 9
   DEX: 9

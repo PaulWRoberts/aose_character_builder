@@ -1,5 +1,6 @@
 id: elf
 name: Elf
+source: ose_advanced_fantasy
 ability_requirements:
   INT: 9
 ability_modifiers:
