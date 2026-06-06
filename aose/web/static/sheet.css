@@ -289,6 +289,38 @@ textarea{ width:100%; resize:vertical; }
 /* Spell rows are already clickable via data-modal; ensure pointer shows. */
 .spell { cursor: pointer; }
 
+/* ── Inline row detail cards (drawer expanders) ── */
+.row-detail.collapsed { display: none; }
+.row-detail > td { padding: 0; background: var(--box-sunk); }
+.detail-card {
+  padding: 8px 12px;
+  border-top: 1px solid var(--hair);
+  font-family: var(--body);
+}
+.detail-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 2px 12px;
+  margin: 0 0 6px;
+}
+.detail-stats > div { display: flex; gap: 6px; align-items: baseline; }
+.detail-stats dt {
+  font-family: var(--display);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  font-size: 10px;
+  color: var(--gray);
+  margin: 0;
+}
+.detail-stats dd {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink);
+  font-variant-numeric: lining-nums tabular-nums;
+}
+.detail-desc { margin: 0; font-size: 13px; white-space: pre-wrap; color: var(--ink-2); }
+[data-detail-toggle] { cursor: pointer; }
+
 /* ============================================================
    LEGACY / SITE-WIDE styles kept for wizard, settings, index
    ============================================================ */
