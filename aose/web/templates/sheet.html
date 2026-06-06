@@ -494,8 +494,8 @@
             <td colspan="3">{{ detail_card(sv.detail) }}</td>
           </tr>
           {% endfor %}
-          {# Known spells for memorising #}
-          {% for s in block.known %}
+          {# Known spells for memorising — filtered to this level #}
+          {% for s in block.known if s.level == grp.level %}
           {% set uid = "known-" ~ block.class_id ~ "-" ~ s.id %}
           <tr data-detail-toggle="{{ uid }}" aria-expanded="false">
             <td style="{% if block.caster_type == 'arcane' %}color:var(--gray){% endif %}">{{ s.name }}</td>
@@ -533,13 +533,14 @@
           </tbody>
         </table>
         {# Learn a spell (arcane) #}
-        {% if block.can_learn and block.learnable %}
+        {% set level_learnable = block.learnable | selectattr('level', 'equalto', grp.level) | list %}
+        {% if block.can_learn and level_learnable %}
         <form method="post" action="/character/{{ character_id }}/spells/learn" style="margin-top:6px">
           <input type="hidden" name="class_id" value="{{ block.class_id }}">
           <label class="f"><span class="lab">Learn a spell</span>
             <select name="spell_id">
-              {% for s in block.learnable %}
-              <option value="{{ s.id }}">{{ s.name }} (L{{ s.level }})</option>
+              {% for s in level_learnable %}
+              <option value="{{ s.id }}">{{ s.name }}</option>
               {% endfor %}
             </select>
           </label>
