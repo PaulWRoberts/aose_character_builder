@@ -231,10 +231,8 @@ features:
   name: Turning the Undead
   text: |-
     Clerics can invoke the power of their deity to repel undead monsters encountered. To turn the undead, the player rolls 2d6. The referee then consults the table opposite, comparing the roll against the Hit Dice of the undead monsters targeted.
-  gained_at_level: 1
-- id: successful_turning
-  name: Successful Turning
-  text: |-
+
+    ### Successful Turning
     If the turning attempt succeeds, the player must roll 2d6 again to determine the number of HD affected (turned or destroyed).
 
     **Turned undead:** Will leave the area, if possible, and will not harm or make contact with the cleric.
@@ -255,6 +253,26 @@ features:
     T: The turning succeeds.
 
     D: The turning succeeds; the monsters are destroyed, not simply caused to flee.
+
+    Monster Hit Dice†
+
+    | Level | 1 | 2 | 2* | 3 | 4 | 5 | 6 | 7-9 |
+    |---|---|---|---|---|---|---|---|---|
+    | 1 | 7 | 9 | 11 | – | – | – | – | – |
+    | 2 | T | 7 | 9 | 11 | – | – | – | – |
+    | 3 | T | T | 7 | 9 | 11 | – | – | – |
+    | 4 | D | T | T | 7 | 9 | 11 | – | – |
+    | 5 | D | D | T | T | 7 | 9 | 11 | – |
+    | 6 | D | D | D | T | T | 7 | 9 | 11 |
+    | 7 | D | D | D | D | T | T | 7 | 9 |
+    | 8 | D | D | D | D | D | T | T | 7 |
+    | 9 | D | D | D | D | D | D | T | T |
+    | 10 | D | D | D | D | D | D | D | T |
+    | 11+ | D | D | D | D | D | D | D | D |
+
+    \* 2 HD monsters with a special ability (i.e. with an asterisk next to their HD rating, in the monster description).
+    
+    † At the referee’s option, the table may be expanded to include more powerful types of undead monsters.
   gained_at_level: 1
 - id: after_reaching_9th_level
   name: After Reaching 9th Level
@@ -263,7 +281,4 @@ features:
 
     Once a stronghold is established, the cleric will attract followers (5d6 × 10 fighters of level 1–2). These troops are completely devoted to the cleric, never checking morale. The referee decides which proportions of followers are 1st and 2nd level and which are bowmen, infantry, etc.
   gained_at_level: 9
-- id: turning_the_undead_2
-  name: Turning the Undead
-  text: "Monster Hit Dice†\n\n| Level | 1 | 2 | 2* | 3 | 4 | 5 | 6 | 7-9 |\n|---|---|---|---|---|---|---|---|---|\n| 1 | 7 | 9 | 11 | – | – | – | – | – |\n| 2 | T | 7 | 9 | 11 | – | – | – | – |\n| 3 | T | T | 7 | 9 | 11 | – | – | – |\n| 4 | D | T | T | 7 | 9 | 11 | – | – |\n| 5 | D | D | T | T | 7 | 9 | 11 | – |\n| 6 | D | D | D | T | T | 7 | 9 | 11 |\n| 7 | D | D | D | D | T | T | 7 | 9 |\n| 8 | D | D | D | D | D | T | T | 7 |\n| 9 | D | D | D | D | D | D | T | T |\n| 10 | D | D | D | D | D | D | D | T |\n| 11+ | D | D | D | D | D | D | D | D |\n\n* 2 HD monsters with a special ability (i.e. with an asterisk next to their HD rating, in the monster description).  \n† At the referee’s option, the table may be expanded to include more powerful types of undead monsters."
-  gained_at_level: 1
+
