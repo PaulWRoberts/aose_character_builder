@@ -6,6 +6,7 @@
 # Tables I–IV; Bag of Holding is already in containers.yaml — not duplicated.
 
 - id: alchemists_beaker
+  source: ose_advanced_fantasy
   item_type: magic
   name: Alchemist's Beaker
   category: miscellaneous_magic_items
@@ -21,6 +22,7 @@
     going inert. Mixing potions is dangerous.
 
 - id: amulet_of_protection_against_possession
+  source: ose_advanced_fantasy
   item_type: magic
   name: Amulet of Protection Against Possession
   category: miscellaneous_magic_items
@@ -45,6 +47,7 @@
     immune to all forms of ESP.
 
 - id: apparatus_of_the_crab
+  source: ose_advanced_fantasy
   item_type: magic
   name: Apparatus of the Crab
   category: miscellaneous_magic_items
@@ -62,6 +65,7 @@
     [19], 40 hull points. Holds 2 humans. Air for 1d4+1 hours when sealed.
 
 - id: arrow_of_location
+  source: ose_advanced_fantasy
   item_type: magic
   name: Arrow of Location
   category: miscellaneous_magic_items
@@ -88,6 +92,7 @@
     creatures may be affected, but only if the entire creature fits inside.
 
 - id: bag_of_transformation
+  source: ose_advanced_fantasy
   item_type: magic
   name: Bag of Transformation
   category: miscellaneous_magic_items
@@ -101,6 +106,7 @@
     (precious metals → lead, gems → rocks, magic items → normal items, etc.).
 
 - id: book_of_foul_corruption
+  source: ose_advanced_fantasy
   item_type: magic
   name: Book of Foul Corruption
   category: miscellaneous_magic_items
@@ -117,6 +123,7 @@
     Other (chaotic): unaffected. Vanishes after use.
 
 - id: book_of_infinite_spells
+  source: ose_advanced_fantasy
   item_type: magic
   name: Book of Infinite Spells
   category: miscellaneous_magic_items
@@ -132,6 +139,7 @@
     the page. When all pages are gone, the book is empty.
 
 - id: book_of_sublime_holiness
+  source: ose_advanced_fantasy
   item_type: magic
   name: Book of Sublime Holiness
   category: miscellaneous_magic_items
@@ -147,6 +155,7 @@
     damage. Vanishes after use.
 
 - id: boots_of_dancing
+  source: ose_advanced_fantasy
   item_type: magic
   name: Boots of Dancing
   category: miscellaneous_magic_items
@@ -195,6 +204,7 @@
     wilderness travel) and can leap up to 10' high and 30' horizontally.
 
 - id: bracers_of_armour
+  source: ose_advanced_fantasy
   item_type: magic
   name: Bracers of Armour
   category: miscellaneous_magic_items
@@ -211,6 +221,7 @@
     armour.
 
 - id: bracers_of_defencelessness
+  source: ose_advanced_fantasy
   item_type: magic
   name: Bracers of Defencelessness
   category: miscellaneous_magic_items
@@ -226,6 +237,7 @@
     Cannot be removed while cursed; requires magic (e.g. remove curse).
 
 - id: brooch_of_shielding
+  source: ose_advanced_fantasy
   item_type: magic
   name: Brooch of Shielding
   category: miscellaneous_magic_items
@@ -250,6 +262,7 @@
     passenger may be carried; with two riders, speed drops to 180' (60').
 
 - id: candle_of_invocation
+  source: ose_advanced_fantasy
   item_type: magic
   name: Candle of Invocation
   category: miscellaneous_magic_items
@@ -265,6 +278,7 @@
     extinguished and relit).
 
 - id: chime_of_opening
+  source: ose_advanced_fantasy
   item_type: magic
   name: Chime of Opening
   category: miscellaneous_magic_items
@@ -280,6 +294,7 @@
     chime shatters.
 
 - id: chime_of_ravening
+  source: ose_advanced_fantasy
   item_type: magic
   name: Chime of Ravening
   category: miscellaneous_magic_items
@@ -294,6 +309,7 @@
     vs spells to end the hunger.
 
 - id: cloak_of_defence
+  source: ose_advanced_fantasy
   item_type: magic
   name: Cloak of Defence
   category: miscellaneous_magic_items
@@ -311,6 +327,7 @@
     than leather, a shield, or magical armour.
 
 - id: cloak_of_flight
+  source: ose_advanced_fantasy
   item_type: magic
   name: Cloak of Flight
   category: miscellaneous_magic_items
@@ -325,6 +342,7 @@
     rest). May be used once per day.
 
 - id: cloak_of_poison
+  source: ose_advanced_fantasy
   item_type: magic
   name: Cloak of Poison
   category: miscellaneous_magic_items
@@ -338,6 +356,7 @@
     victim may then be revived by other magic.
 
 - id: cloak_of_the_manta_ray
+  source: ose_advanced_fantasy
   item_type: magic
   name: Cloak of the Manta Ray
   category: miscellaneous_magic_items
@@ -387,6 +406,7 @@
     thoughts even in unknown languages. Obstructed by lead or 2'+ of rock.
 
 - id: crystal_hypnosis_ball
+  source: ose_advanced_fantasy
   item_type: magic
   name: Crystal Hypnosis Ball
   category: miscellaneous_magic_items
@@ -401,6 +421,7 @@
     bringing the user under the remote intelligence's control.
 
 - id: cube_of_force
+  source: ose_advanced_fantasy
   item_type: magic
   name: Cube of Force
   category: miscellaneous_magic_items
@@ -417,6 +438,7 @@
     lightning bolt 4; horn of blasting/disintegrate 6.
 
 - id: cube_of_frost_resistance
+  source: ose_advanced_fantasy
   item_type: magic
   name: Cube of Frost Resistance
   category: miscellaneous_magic_items
@@ -431,6 +453,7 @@
     1 hour.
 
 - id: decanter_of_endless_water
+  source: ose_advanced_fantasy
   item_type: magic
   name: Decanter of Endless Water
   category: miscellaneous_magic_items
@@ -445,6 +468,7 @@
     A command word stops the flow.
 
 - id: deck_of_many_things
+  source: ose_advanced_fantasy
   item_type: magic
   name: Deck of Many Things
   category: miscellaneous_magic_items
@@ -495,6 +519,7 @@
     for 30 rounds.
 
 - id: drums_of_thunder
+  source: ose_advanced_fantasy
   item_type: magic
   name: Drums of Thunder
   category: miscellaneous_magic_items
@@ -507,6 +532,7 @@
     10' are also stunned and unable to move or act for 2d4 rounds.
 
 - id: dust_of_appearance
+  source: ose_advanced_fantasy
   item_type: magic
   name: Dust of Appearance
   category: miscellaneous_magic_items
@@ -521,6 +547,7 @@
     camouflage, displacement, and mirror imaging.
 
 - id: dust_of_disappearance
+  source: ose_advanced_fantasy
   item_type: magic
   name: Dust of Disappearance
   category: miscellaneous_magic_items
@@ -534,6 +561,7 @@
     gain +4 AC (not vs those who detect invisible).
 
 - id: dust_of_sneezing_and_choking
+  source: ose_advanced_fantasy
   item_type: magic
   name: Dust of Sneezing and Choking
   category: miscellaneous_magic_items
@@ -623,6 +651,7 @@
     nullified for one turn.
 
 - id: eyes_of_charming
+  source: ose_advanced_fantasy
   item_type: magic
   name: Eyes of Charming
   category: miscellaneous_magic_items
@@ -637,6 +666,7 @@
     until dispelled or the lenses are removed.
 
 - id: eyes_of_minuscule_sight
+  source: ose_advanced_fantasy
   item_type: magic
   name: Eyes of Minuscule Sight
   category: miscellaneous_magic_items
@@ -649,6 +679,7 @@
     other eye is closed.
 
 - id: eyes_of_petrification
+  source: ose_advanced_fantasy
   item_type: magic
   name: Eyes of Petrification
   category: miscellaneous_magic_items
@@ -660,6 +691,7 @@
     stone, without a saving throw.
 
 - id: eyes_of_the_eagle
+  source: ose_advanced_fantasy
   item_type: magic
   name: Eyes of the Eagle
   category: miscellaneous_magic_items
@@ -673,6 +705,7 @@
     closed.
 
 - id: feather_token
+  source: ose_advanced_fantasy
   item_type: magic
   name: Feather Token
   category: miscellaneous_magic_items
@@ -691,6 +724,7 @@
     damage, save vs spells or entangled 1d6+1 rounds).
 
 - id: figurine_of_wondrous_power
+  source: ose_advanced_fantasy
   item_type: magic
   name: Figurine of Wondrous Power
   category: miscellaneous_magic_items
@@ -726,6 +760,7 @@
     240' (80'); 3 passengers 180' (60').
 
 - id: folding_boat
+  source: ose_advanced_fantasy
   item_type: magic
   name: Folding Boat
   category: miscellaneous_magic_items
@@ -757,6 +792,7 @@
     character can carry 1,000 additional coins of weight.
 
 - id: gem_of_brightness
+  source: ose_advanced_fantasy
   item_type: magic
   name: Gem of Brightness
   category: miscellaneous_magic_items
@@ -773,6 +809,7 @@
     magic), 5 charges. Magical darkness negates the gem.
 
 - id: gem_of_monster_attraction
+  source: ose_advanced_fantasy
   item_type: magic
   name: Gem of Monster Attraction
   category: miscellaneous_magic_items
@@ -785,6 +822,7 @@
     character's person unless the curse is removed (e.g. remove curse).
 
 - id: gem_of_pristine_faceting
+  source: ose_advanced_fantasy
   item_type: magic
   name: Gem of Pristine Faceting
   category: miscellaneous_magic_items
@@ -798,6 +836,7 @@
     When all charges are spent, becomes a worthless stone sphere.
 
 - id: gem_of_seeing
+  source: ose_advanced_fantasy
   item_type: magic
   name: Gem of Seeing
   category: miscellaneous_magic_items
@@ -827,6 +866,7 @@
 
 # TODO: model the continuous DEX-step effect in a future pass (rolled_modifiers / ability:DEX).
 - id: gloves_of_dexterity
+  source: ose_advanced_fantasy
   item_type: magic
   name: Gloves of Dexterity
   category: miscellaneous_magic_items
@@ -842,6 +882,7 @@
     (GM: apply the DEX bonus via extra_modifiers when the item is acquired.)
 
 - id: gloves_of_swimming_and_climbing
+  source: ose_advanced_fantasy
   item_type: magic
   name: Gloves of Swimming and Climbing
   category: miscellaneous_magic_items
@@ -922,6 +963,7 @@
     (referee's discretion). May be used once per turn.
 
 - id: horn_of_cave_ins
+  source: ose_advanced_fantasy
   item_type: magic
   name: Horn of Cave-Ins
   category: miscellaneous_magic_items
@@ -937,6 +979,7 @@
     in 10' radius (save vs paralysis for half).
 
 - id: horn_of_frothing
+  source: ose_advanced_fantasy
   item_type: magic
   name: Horn of Frothing
   category: miscellaneous_magic_items
@@ -950,6 +993,7 @@
     rounds. Under normal circumstances, no effect.
 
 - id: horn_of_the_tritons
+  source: ose_advanced_fantasy
   item_type: magic
   name: Horn of the Tritons
   category: miscellaneous_magic_items
@@ -964,6 +1008,7 @@
     it.
 
 - id: horn_of_valhalla
+  source: ose_advanced_fantasy
   item_type: magic
   name: Horn of Valhalla
   category: miscellaneous_magic_items
@@ -980,6 +1025,7 @@
     opponents are slain, or 1 hour passes.
 
 - id: horseshoes_of_a_zephyr
+  source: ose_advanced_fantasy
   item_type: magic
   name: Horseshoes of a Zephyr
   category: miscellaneous_magic_items
@@ -992,6 +1038,7 @@
     must be worn for the magic to function.
 
 - id: horseshoes_of_speed
+  source: ose_advanced_fantasy
   item_type: magic
   name: Horseshoes of Speed
   category: miscellaneous_magic_items
@@ -1002,6 +1049,7 @@
     Iron horseshoes that double a horse's movement rate when all 4 are worn.
 
 - id: incense_of_meditation
+  source: ose_advanced_fantasy
   item_type: magic
   name: Incense of Meditation
   category: miscellaneous_magic_items
@@ -1017,6 +1065,7 @@
     roll). Recognizable by divine casters of 5th level+.
 
 - id: incense_of_obsession
+  source: ose_advanced_fantasy
   item_type: magic
   name: Incense of Obsession
   category: miscellaneous_magic_items
@@ -1031,6 +1080,7 @@
     The obsession lasts until all spells are cast or 24 hours elapse.
 
 - id: instant_fortress
+  source: ose_advanced_fantasy
   item_type: magic
   name: Instant Fortress
   category: miscellaneous_magic_items
@@ -1046,6 +1096,7 @@
     Deactivated only when empty.
 
 - id: ioun_stones
+  source: ose_advanced_fantasy
   item_type: magic
   name: Ioun Stones
   category: miscellaneous_magic_items
@@ -1069,6 +1120,7 @@
     (GM: apply ability/level/AC bonuses via extra_modifiers.)
 
 - id: iron_flask
+  source: ose_advanced_fantasy
   item_type: magic
   name: Iron Flask
   category: miscellaneous_magic_items
@@ -1085,6 +1137,7 @@
     utterly hostile if recaptured).
 
 - id: jug_of_endless_liquids
+  source: ose_advanced_fantasy
   item_type: magic
   name: Jug of Endless Liquids
   category: miscellaneous_magic_items
@@ -1100,6 +1153,7 @@
     pints.
 
 - id: libram_of_arcane_power
+  source: ose_advanced_fantasy
   item_type: magic
   name: Libram of Arcane Power
   category: miscellaneous_magic_items
@@ -1115,6 +1169,7 @@
     become permanently insane. Vanishes after use.
 
 - id: loadstone
+  source: ose_advanced_fantasy
   item_type: magic
   name: Loadstone
   category: miscellaneous_magic_items
@@ -1129,6 +1184,7 @@
     removed (e.g. remove curse).
 
 - id: luckstone
+  source: ose_advanced_fantasy
   item_type: magic
   name: Luckstone
   category: miscellaneous_magic_items
@@ -1143,6 +1199,7 @@
     similar rolls.
 
 - id: lyre_of_building
+  source: ose_advanced_fantasy
   item_type: magic
   name: Lyre of Building
   category: miscellaneous_magic_items
@@ -1157,6 +1214,7 @@
     3 turns. If disturbed while playing, 50% chance effects are negated.
 
 - id: marvellous_pigments
+  source: ose_advanced_fantasy
   item_type: magic
   name: Marvellous Pigments
   category: miscellaneous_magic_items
@@ -1198,6 +1256,7 @@
     90'. (GM: apply continuous thought-reading effects as needed.)
 
 - id: medallion_of_thought_projection
+  source: ose_advanced_fantasy
   item_type: magic
   name: Medallion of Thought Projection
   category: miscellaneous_magic_items
@@ -1224,6 +1283,7 @@
     Breaking the mirror releases those trapped.
 
 - id: mirror_of_mental_prowess
+  source: ose_advanced_fantasy
   item_type: magic
   name: Mirror of Mental Prowess
   category: miscellaneous_magic_items
@@ -1238,6 +1298,7 @@
     ask a short true question about a creature viewed in the mirror.
 
 - id: mirror_of_opposition
+  source: ose_advanced_fantasy
   item_type: magic
   name: Mirror of Opposition
   category: miscellaneous_magic_items
@@ -1252,6 +1313,7 @@
     equipment.
 
 - id: necklace_of_adaptation
+  source: ose_advanced_fantasy
   item_type: magic
   name: Necklace of Adaptation
   category: miscellaneous_magic_items
@@ -1264,6 +1326,7 @@
     underwater, in a vacuum, or any other airless environment.
 
 - id: necklace_of_fireballs
+  source: ose_advanced_fantasy
   item_type: magic
   name: Necklace of Fireballs
   category: miscellaneous_magic_items
@@ -1282,6 +1345,7 @@
     20: 1×11d6, 2×9d6, 2×7d6, 2×5d6, 2×3d6.
 
 - id: necklace_of_strangulation
+  source: ose_advanced_fantasy
   item_type: magic
   name: Necklace of Strangulation
   category: miscellaneous_magic_items
@@ -1295,6 +1359,7 @@
     the necklace remains until the corpse rots away (~1 month), then loosens.
 
 - id: net_of_aquatic_snaring
+  source: ose_advanced_fantasy
   item_type: magic
   name: Net of Aquatic Snaring
   category: miscellaneous_magic_items
@@ -1308,6 +1373,7 @@
     cannot be cut by mundane means.
 
 - id: net_of_snaring
+  source: ose_advanced_fantasy
   item_type: magic
   name: Net of Snaring
   category: miscellaneous_magic_items
@@ -1321,6 +1387,7 @@
     strength can escape; strands cannot be cut by mundane means.
 
 - id: oil_of_insubstantiality
+  source: ose_advanced_fantasy
   item_type: magic
   name: Oil of Insubstantiality
   category: miscellaneous_magic_items
@@ -1334,6 +1401,7 @@
     magic. Duration: 1d4+4 turns.
 
 - id: oil_of_slipperiness
+  source: ose_advanced_fantasy
   item_type: magic
   name: Oil of Slipperiness
   category: miscellaneous_magic_items
@@ -1348,6 +1416,7 @@
     slipping. Duration: 8 hours.
 
 - id: pearl_of_power
+  source: ose_advanced_fantasy
   item_type: magic
   name: Pearl of Power
   category: miscellaneous_magic_items
@@ -1361,6 +1430,7 @@
     2nd; 11–14: 3rd; 15–17: 4th; 18–19: 5th; 20: 6th.
 
 - id: pearl_of_wisdom
+  source: ose_advanced_fantasy
   item_type: magic
   name: Pearl of Wisdom
   category: miscellaneous_magic_items
@@ -1374,6 +1444,7 @@
 
 # TODO: model the poison-save bonus in a future pass (save:poison once that target exists).
 - id: periapt_of_proof_against_poison
+  source: ose_advanced_fantasy
   item_type: magic
   name: Periapt of Proof Against Poison
   category: miscellaneous_magic_items
@@ -1389,6 +1460,7 @@
     (GM: apply the save bonus via extra_modifiers.)
 
 - id: periapt_of_foul_rotting
+  source: ose_advanced_fantasy
   item_type: magic
   name: Periapt of Foul Rotting
   category: miscellaneous_magic_items
@@ -1406,6 +1478,7 @@
 
 # TODO: model the continuous disease-immunity effect in a future pass.
 - id: periapt_of_health
+  source: ose_advanced_fantasy
   item_type: magic
   name: Periapt of Health
   category: miscellaneous_magic_items
@@ -1420,6 +1493,7 @@
     (GM: apply disease immunity via extra_modifiers or DM note.)
 
 - id: periapt_of_wound_closure
+  source: ose_advanced_fantasy
   item_type: magic
   name: Periapt of Wound Closure
   category: miscellaneous_magic_items
@@ -1433,6 +1507,7 @@
     magically non-healable damage normally.
 
 - id: phylactery_of_betrayal
+  source: ose_advanced_fantasy
   item_type: magic
   name: Phylactery of Betrayal
   category: miscellaneous_magic_items
@@ -1447,6 +1522,7 @@
     be removed once active; requires magic (e.g. remove curse).
 
 - id: phylactery_of_faithfulness
+  source: ose_advanced_fantasy
   item_type: magic
   name: Phylactery of Faithfulness
   category: miscellaneous_magic_items
@@ -1460,6 +1536,7 @@
     about deity disfavour.
 
 - id: phylactery_of_longevity
+  source: ose_advanced_fantasy
   item_type: magic
   name: Phylactery of Longevity
   category: miscellaneous_magic_items
@@ -1472,6 +1549,7 @@
     the character is only 3 years older).
 
 - id: pipes_of_the_sewers
+  source: ose_advanced_fantasy
   item_type: magic
   name: Pipes of the Sewers
   category: miscellaneous_magic_items
@@ -1487,6 +1565,7 @@
     Can also take over control of rats controlled by another (30% chance/round).
 
 - id: portable_hole
+  source: ose_advanced_fantasy
   item_type: magic
   name: Portable Hole
   category: miscellaneous_magic_items
@@ -1501,6 +1580,7 @@
     recreate the hole (contains enough air for one turn).
 
 - id: purse_of_plentiful_coin
+  source: ose_advanced_fantasy
   item_type: magic
   name: Purse of Plentiful Coin
   category: miscellaneous_magic_items
@@ -1514,6 +1594,7 @@
     gp). If completely emptied: the purse permanently loses its power.
 
 - id: restorative_ointment
+  source: ose_advanced_fantasy
   item_type: magic
   name: Restorative Ointment
   category: miscellaneous_magic_items
@@ -1525,6 +1606,7 @@
     cures 1d4+8 hp of wounds; or cures any disease; or cures any poison.
 
 - id: robe_of_blending
+  source: ose_advanced_fantasy
   item_type: magic
   name: Robe of Blending
   category: miscellaneous_magic_items
@@ -1540,6 +1622,7 @@
     Allies see the character normally.
 
 - id: robe_of_eyes
+  source: ose_advanced_fantasy
   item_type: magic
   name: Robe of Eyes
   category: miscellaneous_magic_items
@@ -1554,6 +1637,7 @@
     robe blinds the character for 1d3 rounds; continual light for 2d4 rounds.
 
 - id: robe_of_powerlessness
+  source: ose_advanced_fantasy
   item_type: magic
   name: Robe of Powerlessness
   category: miscellaneous_magic_items
@@ -1566,6 +1650,7 @@
     remove the curse; requires magic (e.g. remove curse).
 
 - id: robe_of_scintillating_colours
+  source: ose_advanced_fantasy
   item_type: magic
   name: Robe of Scintillating Colours
   category: miscellaneous_magic_items
@@ -1582,6 +1667,7 @@
 
 # TODO: model the continuous AC/save bonus in a future pass (depends on robe alignment).
 - id: robe_of_the_archmagi
+  source: ose_advanced_fantasy
   item_type: magic
   name: Robe of the Archmagi
   category: miscellaneous_magic_items
@@ -1597,6 +1683,7 @@
     (GM: apply AC and save bonuses via extra_modifiers.)
 
 - id: robe_of_useful_items
+  source: ose_advanced_fantasy
   item_type: magic
   name: Robe of Useful Items
   category: miscellaneous_magic_items
@@ -1626,6 +1713,7 @@
     coins of weight.
 
 - id: rope_of_entanglement
+  source: ose_advanced_fantasy
   item_type: magic
   name: Rope of Entanglement
   category: miscellaneous_magic_items
@@ -1639,6 +1727,7 @@
     through, becomes non-magical. Repairs any damage to itself in 6 turns.
 
 - id: rope_of_strangulation
+  source: ose_advanced_fantasy
   item_type: magic
   name: Rope of Strangulation
   category: miscellaneous_magic_items
@@ -1653,6 +1742,7 @@
     or severing (AC -2 [21], 22 hp; cut = non-magical).
 
 - id: rug_of_suffocation
+  source: ose_advanced_fantasy
   item_type: magic
   name: Rug of Suffocation
   category: miscellaneous_magic_items
@@ -1666,6 +1756,7 @@
     in 1d4+2 rounds. Freed by dispel magic.
 
 - id: saw_of_felling
+  source: ose_advanced_fantasy
   item_type: magic
   name: Saw of Felling
   category: miscellaneous_magic_items
@@ -1679,6 +1770,7 @@
     After 6 turns of sawing, the character must rest for 6 turns.
 
 - id: scarab_of_chaos
+  source: ose_advanced_fantasy
   item_type: magic
   name: Scarab of Chaos
   category: miscellaneous_magic_items
@@ -1695,6 +1787,7 @@
     attack their own group.
 
 - id: scarab_of_death
+  source: ose_advanced_fantasy
   item_type: magic
   name: Scarab of Death
   category: miscellaneous_magic_items
@@ -1722,6 +1815,7 @@
     before it is spent.
 
 - id: scarab_of_rage
+  source: ose_advanced_fantasy
   item_type: magic
   name: Scarab of Rage
   category: miscellaneous_magic_items
@@ -1737,6 +1831,7 @@
     AC penalty. Duration: 1d6+6 rounds.
 
 - id: spade_of_mighty_digging
+  source: ose_advanced_fantasy
   item_type: magic
   name: Spade of Mighty Digging
   category: miscellaneous_magic_items
@@ -1750,6 +1845,7 @@
     rounds of digging, rest for 5 rounds.
 
 - id: sphere_of_annihilation
+  source: ose_advanced_fantasy
   item_type: magic
   name: Sphere of Annihilation
   category: miscellaneous_magic_items
@@ -1767,6 +1863,7 @@
     1d4 rounds. Multiple casters may vie for control.
 
 - id: sweet_water
+  source: ose_advanced_fantasy
   item_type: magic
   name: Sweet Water
   category: miscellaneous_magic_items
@@ -1780,6 +1877,7 @@
     Poisoned liquid: up to 6 quarts.
 
 - id: talisman_of_the_sphere
+  source: ose_advanced_fantasy
   item_type: magic
   name: Talisman of the Sphere
   category: miscellaneous_magic_items
@@ -1794,6 +1892,7 @@
     suffer 5d6 damage.
 
 - id: vacuous_grimoire
+  source: ose_advanced_fantasy
   item_type: magic
   name: Vacuous Grimoire
   category: miscellaneous_magic_items
@@ -1808,6 +1907,7 @@
     on it first.
 
 - id: well_of_many_worlds
+  source: ose_advanced_fantasy
   item_type: magic
   name: Well of Many Worlds
   category: miscellaneous_magic_items
@@ -2070,6 +2170,7 @@
 # ─── Rods, Staves, Wands ──────────────────────────────────────────────────────
 
 - id: rod_immovable
+  source: ose_advanced_fantasy
   item_type: magic
   name: Immovable Rod
   category: magic_rods_staves_wands
@@ -2084,6 +2185,7 @@
     move it). A second command word releases it. No charges; unlimited use.
 
 - id: rod_absorption
+  source: ose_advanced_fantasy
   item_type: magic
   name: Rod of Absorption
   category: magic_rods_staves_wands
@@ -2112,6 +2214,7 @@
     Effect: the touched item becomes utterly non-magical. One use only.
 
 - id: rod_captivation
+  source: ose_advanced_fantasy
   item_type: magic
   name: Rod of Captivation
   category: magic_rods_staves_wands
@@ -2127,6 +2230,7 @@
     nature/alignment may be ignored). Duration: 1 turn per charge.
 
 - id: rod_lordly_might
+  source: ose_advanced_fantasy
   item_type: magic
   name: Rod of Lordly Might
   category: magic_rods_staves_wands
@@ -2147,6 +2251,7 @@
     Once all charges expended, studs a–e no longer function.
 
 - id: rod_parrying
+  source: ose_advanced_fantasy
   item_type: magic
   name: Rod of Parrying
   category: magic_rods_staves_wands
@@ -2160,6 +2265,7 @@
     (cannot parry while retreating). No charges; unlimited use.
 
 - id: rod_resurrection
+  source: ose_advanced_fantasy
   item_type: magic
   name: Rod of Resurrection
   category: magic_rods_staves_wands
@@ -2175,6 +2281,7 @@
     per day.
 
 - id: rod_striking
+  source: ose_advanced_fantasy
   item_type: magic
   name: Rod of Striking
   category: magic_rods_staves_wands
@@ -2207,6 +2314,7 @@
     concentrating.
 
 - id: staff_dispelling
+  source: ose_advanced_fantasy
   item_type: magic
   name: Staff of Dispelling
   category: magic_rods_staves_wands
@@ -2275,6 +2383,7 @@
     on a successful hit. Only one charge may be spent per strike.
 
 - id: staff_swarming_insects
+  source: ose_advanced_fantasy
   item_type: magic
   name: Staff of Swarming Insects
   category: magic_rods_staves_wands
@@ -2290,6 +2399,7 @@
     than 5 [14] are unaffected.
 
 - id: staff_of_the_healer
+  source: ose_advanced_fantasy
   item_type: magic
   name: Staff of the Healer
   category: magic_rods_staves_wands
@@ -2338,6 +2448,7 @@
     8 damage per remaining charge (wielder also suffers this damage).
 
 - id: staff_of_the_woodlands
+  source: ose_advanced_fantasy
   item_type: magic
   name: Staff of the Woodlands
   category: magic_rods_staves_wands
@@ -2443,6 +2554,7 @@
     Concealed items also glow, but the light might not be visible.
 
 - id: wand_magic_missiles
+  source: ose_advanced_fantasy
   item_type: magic
   name: Wand of Magic Missiles
   category: magic_rods_staves_wands
@@ -2508,6 +2620,7 @@
     others). An unwilling subject may save vs wands to negate.
 
 - id: wand_radiance
+  source: ose_advanced_fantasy
   item_type: magic
   name: Wand of Radiance
   category: magic_rods_staves_wands
@@ -2534,6 +2647,7 @@
     Reveals the location of any secret door within 20'.
 
 - id: wand_summoning
+  source: ose_advanced_fantasy
   item_type: magic
   name: Wand of Summoning
   category: magic_rods_staves_wands

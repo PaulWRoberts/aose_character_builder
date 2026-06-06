@@ -27,6 +27,7 @@
   description: "+1 normally; +3 to attack and damage versus undead."
 
 - id: short_sword_of_quickness
+  source: ose_advanced_fantasy
   name_template: "{base} +2, Quickness"
   kind: weapon
   applies_to:
@@ -38,6 +39,7 @@
     in the round, as if they had won initiative.
 
 - id: luck_blade
+  source: ose_advanced_fantasy
   name_template: "{base} +1, Luck Blade"
   kind: weapon
   applies_to:
@@ -52,6 +54,7 @@
     Charges: The sword grants a total of 1d4 wishes.
 
 - id: trident_fish_command
+  source: ose_advanced_fantasy
   name_template: "{base} +1, Fish Command"
   kind: weapon
   applies_to:
@@ -95,6 +98,7 @@
   description: "+2 to attack and damage rolls while these arrows are loaded."
 
 - id: arrow_slaying
+  source: ose_advanced_fantasy
   name_template: "{base} of Slaying"
   kind: ammunition
   applies_to: {include: [arrow]}
@@ -119,6 +123,7 @@
   description: "+2 to attack and damage rolls while these bolts are loaded."
 
 - id: sling_bullet_impact
+  source: ose_advanced_fantasy
   name_template: "{base} +1, Impact"
   kind: ammunition
   applies_to: {include: [sling_stone]}
@@ -216,6 +221,7 @@
 
 # Sword enchantments
 - id: sword_minus_1_berserker
+  source: ose_advanced_fantasy
   name_template: "{base} -1, Berserker"
   kind: weapon
   applies_to: {include: [sword]}
@@ -289,6 +295,7 @@
   description: "+1 normally; +3 to attack and damage versus regenerating creatures."
 
 - id: sword_plus_1_vs_reptiles
+  source: ose_advanced_fantasy
   name_template: "{base} +1, +3 vs Reptiles"
   kind: weapon
   applies_to: {include: [sword]}
@@ -297,6 +304,7 @@
   description: "+1 normally; +3 to attack and damage versus reptiles."
 
 - id: sword_plus_1_vs_shapechangers
+  source: ose_advanced_fantasy
   name_template: "{base} +1, +3 vs Shape Changers"
   kind: weapon
   applies_to: {include: [sword]}
@@ -305,6 +313,7 @@
   description: "+1 normally; +3 to attack and damage versus shape changers."
 
 - id: sword_dragon_slayer
+  source: ose_advanced_fantasy
   name_template: "{base} +1, Dragon Slayer"
   kind: weapon
   applies_to: {include: [sword]}
@@ -340,6 +349,7 @@
     treants and undead. Blazes until commanded to cease.
 
 - id: sword_frost_brand
+  source: ose_advanced_fantasy
   name_template: "{base} +1, Frost Brand"
   kind: weapon
   applies_to: {include: [sword]}
@@ -353,6 +363,7 @@
     damage reduced by 1 per die (minimum 1).
 
 - id: sword_giant_slayer
+  source: ose_advanced_fantasy
   name_template: "{base} +1, Giant Slayer"
   kind: weapon
   applies_to: {include: [sword]}
@@ -379,6 +390,7 @@
     120', as the magic-user spell locate object. May be used once per day.
 
 - id: sword_sharpness
+  source: ose_advanced_fantasy
   name_template: "{base} +1, Sharpness"
   kind: weapon
   applies_to: {include: [sword]}
@@ -389,6 +401,7 @@
     Against larger-than-human targets: only 19 or 20; against stone/metal: only 20.
 
 - id: sword_sun_blade
+  source: ose_advanced_fantasy
   name_template: "{base} +1, Sun Blade"
   kind: weapon
   applies_to: {include: [sword]}
@@ -411,6 +424,7 @@
     Charges: The sword grants a total of 1d4 wishes, spoken aloud.
 
 - id: sword_wounding
+  source: ose_advanced_fantasy
   name_template: "{base} +1, Wounding"
   kind: weapon
   applies_to: {include: [sword]}
@@ -439,6 +453,7 @@
     spell charm person. May be used up to three times a week.
 
 - id: sword_dancing
+  source: ose_advanced_fantasy
   name_template: "{base} +2, Dancing"
   kind: weapon
   applies_to: {include: [sword]}
@@ -450,6 +465,7 @@
     returns to hand. Range: within 30' of owner.
 
 - id: sword_nine_lives_stealer
+  source: ose_advanced_fantasy
   name_template: "{base} +2, Nine Lives Stealer"
   kind: weapon
   applies_to: {include: [sword]}
@@ -462,6 +478,7 @@
     Non-living creatures are unaffected.
 
 - id: sword_venger
+  source: ose_advanced_fantasy
   name_template: "{base} +2, Venger"
   kind: weapon
   applies_to: {include: [sword]}
@@ -473,6 +490,7 @@
     against each opponent who attacked the wielder in melee this round.
 
 - id: sword_vorpal
+  source: ose_advanced_fantasy
   name_template: "{base} +2, Vorpal"
   kind: weapon
   applies_to: {include: [sword]}
@@ -491,6 +509,7 @@
   description: "+3 to attack and damage rolls."
 
 - id: sword_defender
+  source: ose_advanced_fantasy
   name_template: "{base} +3, Defender"
   kind: weapon
   applies_to: {include: [sword]}
@@ -505,6 +524,7 @@
     GM and is not modelled as a passive modifier.)
 
 - id: sword_holy_avenger
+  source: ose_advanced_fantasy
   name_template: "{base} +3, Holy Avenger"
   kind: weapon
   applies_to: {include: [sword]}
@@ -541,6 +561,7 @@
   description: "+1 to attack and damage rolls."
 
 - id: crossbow_distance
+  source: ose_advanced_fantasy
   name_template: "{base} +1, Distance"
   kind: weapon
   applies_to: {include: [crossbow]}
@@ -550,6 +571,7 @@
     Ranges: 5'–160' / 161'–320' / 321'–480'.
 
 - id: crossbow_speed
+  source: ose_advanced_fantasy
   name_template: "{base} +1, Speed"
   kind: weapon
   applies_to: {include: [crossbow]}
@@ -562,6 +584,7 @@
     had won initiative.
 
 - id: crossbow_accuracy
+  source: ose_advanced_fantasy
   name_template: "{base} +2, Accuracy"
   kind: weapon
   applies_to: {include: [crossbow]}
@@ -578,6 +601,7 @@
   description: "+1 to attack and damage rolls."
 
 - id: dagger_buckle
+  source: ose_advanced_fantasy
   name_template: "{base} +1, Buckle"
   kind: weapon
   applies_to: {include: [dagger]}
@@ -588,6 +612,7 @@
     Returning: Touch the blade to the belt and will it to transform back.
 
 - id: dagger_throwing
+  source: ose_advanced_fantasy
   name_template: "{base} +1, Throwing"
   kind: weapon
   applies_to: {include: [dagger]}
@@ -598,6 +623,7 @@
     Damage: When used as a missile weapon, inflicts double damage on a hit.
 
 - id: dagger_venomous
+  source: ose_advanced_fantasy
   name_template: "{base} +1, Venomous"
   kind: weapon
   applies_to: {include: [dagger]}
@@ -615,6 +641,7 @@
   description: "+2 normally; +3 to attack and damage versus orcs, goblins, and kobolds."
 
 - id: dagger_biter
+  source: ose_advanced_fantasy
   name_template: "{base} +2, Biter"
   kind: weapon
   applies_to: {include: [dagger]}
@@ -626,6 +653,7 @@
     Against wood or stone: On a successful hit, inflicts maximum damage.
 
 - id: javelin_of_lightning
+  source: ose_advanced_fantasy
   name_template: "{base} of Lightning"
   kind: weapon
   applies_to: {include: [javelin]}
@@ -637,6 +665,7 @@
     the target who was hit may not save). The javelin is consumed on use.
 
 - id: javelin_of_seeking
+  source: ose_advanced_fantasy
   name_template: "{base} of Seeking"
   kind: weapon
   applies_to: {include: [javelin]}
@@ -656,6 +685,7 @@
   description: "+1 to attack and damage rolls."
 
 - id: mace_disrupting
+  source: ose_advanced_fantasy
   name_template: "{base} +1, Disrupting"
   kind: weapon
   applies_to: {include: [mace]}
@@ -688,6 +718,7 @@
   description: "+1 to attack and damage rolls."
 
 - id: spear_backbiter
+  source: ose_advanced_fantasy
   name_template: "{base} -1, Backbiter"
   kind: weapon
   applies_to: {include: [spear]}
@@ -720,6 +751,7 @@
   description: "+3 to attack and damage rolls."
 
 - id: staff_growing
+  source: ose_advanced_fantasy
   name_template: "{base} +1, Growing"
   kind: weapon
   applies_to: {include: [staff]}
@@ -731,6 +763,7 @@
     Reach: The wielder can attack foes at up to the staff's length distant.
 
 - id: trident_yearning
+  source: ose_advanced_fantasy
   name_template: "{base} -2, Yearning"
   kind: weapon
   applies_to: {include: [trident]}
@@ -743,6 +776,7 @@
     underwater.
 
 - id: trident_submission
+  source: ose_advanced_fantasy
   name_template: "{base} +1, Submission"
   kind: weapon
   applies_to: {include: [trident]}
@@ -754,6 +788,7 @@
     Demoralised: Must make a morale check or surrender; lasts 2d4 rounds.
 
 - id: trident_warning
+  source: ose_advanced_fantasy
   name_template: "{base} +2, Warning"
   kind: weapon
   applies_to: {include: [trident]}
@@ -788,6 +823,7 @@
     Range: 60'. After being thrown, returns to the wielder's hands.
 
 - id: war_hammer_thunderbolts
+  source: ose_advanced_fantasy
   name_template: "{base} +3, Thunderbolts"
   kind: weapon
   applies_to: {include: [war_hammer]}

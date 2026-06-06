@@ -209,3 +209,76 @@ def test_spell_sources_match_their_list(data):
                     if lists & {"magic_user", "cleric"}
                     else "ose_advanced_fantasy")
         assert spell.source == expected, spell.id
+
+
+ADVANCED_MAGIC_ITEM_IDS = {
+    "alchemists_beaker", "amulet_of_protection_against_possession",
+    "apparatus_of_the_crab", "arrow_of_location", "bag_of_transformation",
+    "book_of_foul_corruption", "book_of_infinite_spells",
+    "book_of_sublime_holiness", "boots_of_dancing", "bracers_of_armour",
+    "bracers_of_defencelessness", "brooch_of_shielding", "candle_of_invocation",
+    "chime_of_opening", "chime_of_ravening", "cloak_of_defence",
+    "cloak_of_flight", "cloak_of_poison", "cloak_of_the_manta_ray",
+    "crystal_hypnosis_ball", "cube_of_force", "cube_of_frost_resistance",
+    "decanter_of_endless_water", "deck_of_many_things", "drums_of_thunder",
+    "dust_of_appearance", "dust_of_disappearance", "dust_of_sneezing_and_choking",
+    "eyes_of_charming", "eyes_of_minuscule_sight", "eyes_of_petrification",
+    "eyes_of_the_eagle", "feather_token", "figurine_of_wondrous_power",
+    "folding_boat", "gem_of_brightness", "gem_of_monster_attraction",
+    "gem_of_pristine_faceting", "gem_of_seeing", "gloves_of_dexterity",
+    "gloves_of_swimming_and_climbing", "horn_of_cave_ins", "horn_of_frothing",
+    "horn_of_the_tritons", "horn_of_valhalla", "horseshoes_of_a_zephyr",
+    "horseshoes_of_speed", "incense_of_meditation", "incense_of_obsession",
+    "instant_fortress", "ioun_stones", "iron_flask", "jug_of_endless_liquids",
+    "libram_of_arcane_power", "loadstone", "luckstone", "lyre_of_building",
+    "marvellous_pigments", "medallion_of_thought_projection",
+    "mirror_of_mental_prowess", "mirror_of_opposition", "necklace_of_adaptation",
+    "necklace_of_fireballs", "necklace_of_strangulation", "net_of_aquatic_snaring",
+    "net_of_snaring", "oil_of_insubstantiality", "oil_of_slipperiness",
+    "pearl_of_power", "pearl_of_wisdom", "periapt_of_foul_rotting",
+    "periapt_of_health", "periapt_of_proof_against_poison",
+    "periapt_of_wound_closure", "phylactery_of_betrayal",
+    "phylactery_of_faithfulness", "phylactery_of_longevity", "pipes_of_the_sewers",
+    "portable_hole", "purse_of_plentiful_coin", "restorative_ointment",
+    "robe_of_blending", "robe_of_eyes", "robe_of_powerlessness",
+    "robe_of_scintillating_colours", "robe_of_the_archmagi", "robe_of_useful_items",
+    "rod_absorption", "rod_captivation", "rod_immovable", "rod_lordly_might",
+    "rod_parrying", "rod_resurrection", "rod_striking", "rope_of_entanglement",
+    "rope_of_strangulation", "rug_of_suffocation", "saw_of_felling",
+    "scarab_of_chaos", "scarab_of_death", "scarab_of_rage", "spade_of_mighty_digging",
+    "sphere_of_annihilation", "staff_dispelling", "staff_of_the_healer",
+    "staff_of_the_woodlands", "staff_swarming_insects", "sweet_water",
+    "talisman_of_the_sphere", "vacuous_grimoire", "wand_magic_missiles",
+    "wand_radiance", "wand_summoning", "well_of_many_worlds",
+}
+
+ADVANCED_ENCHANTMENT_IDS = {
+    "short_sword_of_quickness", "sword_minus_1_berserker", "sword_plus_1_vs_reptiles",
+    "sword_plus_1_vs_shapechangers", "sword_dragon_slayer", "sword_frost_brand",
+    "sword_giant_slayer", "luck_blade", "sword_sharpness", "sword_sun_blade",
+    "sword_wounding", "sword_dancing", "sword_nine_lives_stealer", "sword_venger",
+    "sword_vorpal", "sword_defender", "sword_holy_avenger", "arrow_slaying",
+    "crossbow_distance", "crossbow_speed", "crossbow_accuracy", "dagger_buckle",
+    "dagger_throwing", "dagger_venomous", "dagger_biter", "javelin_of_lightning",
+    "javelin_of_seeking", "mace_disrupting", "sling_bullet_impact", "spear_backbiter",
+    "staff_growing", "trident_yearning", "trident_fish_command", "trident_submission",
+    "trident_warning", "war_hammer_thunderbolts",
+}
+
+
+def test_magic_item_sources(data):
+    assert len(ADVANCED_MAGIC_ITEM_IDS) == 114
+    for iid, item in data.items.items():
+        if iid in ADVANCED_MAGIC_ITEM_IDS:
+            assert item.source == "ose_advanced_fantasy", iid
+        else:
+            assert item.source == "ose_classic_fantasy", iid
+
+
+def test_enchantment_sources(data):
+    assert len(ADVANCED_ENCHANTMENT_IDS) == 36
+    for eid, ench in data.enchantments.items():
+        if eid in ADVANCED_ENCHANTMENT_IDS:
+            assert ench.source == "ose_advanced_fantasy", eid
+        else:
+            assert ench.source == "ose_classic_fantasy", eid
