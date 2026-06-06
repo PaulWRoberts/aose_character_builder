@@ -1399,7 +1399,7 @@ def _equipment_context(draft: dict[str, Any], game_data) -> dict:
         "enchanted_rows": [],
         "magic_acquisition": False,
         "enchant_choices": [],
-        "shop": shop_categories(game_data),
+        "shop": shop_categories(game_data, _ruleset_of(draft)),
         "remove_modes": REMOVE_MODES,
         "ammo_rows": ammo_rows,
         "ammo_load_options": load_options,

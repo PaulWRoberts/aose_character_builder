@@ -765,3 +765,18 @@ def test_enchanted_equip_charge_note_remove_roundtrip(tmp_path):
     client.post("/character/test/equipment/remove-enchanted", data={"instance_id": iid})
     spec = load_character("test", client._characters_dir)
     assert spec.enchanted == []
+
+
+def test_enchant_choices_filter_by_source():
+    from pathlib import Path
+    from aose.data.loader import GameData
+    from aose.models import RuleSet
+    from aose.web.routes import _enchant_choices
+
+    data = GameData.load(Path(__file__).parent.parent / "data")
+    rs = RuleSet(disabled_sources=["ose_advanced_fantasy"])
+    all_ids = {c["id"] for c in _enchant_choices(data)}
+    filtered_ids = {c["id"] for c in _enchant_choices(data, rs)}
+    assert "sword_frost_brand" in all_ids       # Advanced
+    assert "sword_frost_brand" not in filtered_ids
+    assert "sword_plus_1" in filtered_ids       # generic, Classic

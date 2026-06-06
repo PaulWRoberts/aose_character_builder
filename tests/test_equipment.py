@@ -456,3 +456,19 @@ def test_grant_gold_negative_clamps_at_zero(client):
 def test_grant_gold_missing_character_404s(client):
     r = client.post("/character/nobody/gold", data={"amount": "100"})
     assert r.status_code == 404
+
+
+def test_shop_categories_filters_by_source():
+    from pathlib import Path
+    from aose.data.loader import GameData
+    from aose.engine.shop import shop_categories
+    from aose.models import RuleSet
+
+    data = GameData.load(Path(__file__).parent.parent / "data")
+    rs = RuleSet(disabled_sources=["ose_advanced_fantasy"])
+    all_ids = {i.id for cat in shop_categories(data) for i in cat.items}
+    filtered_ids = {i.id for cat in shop_categories(data, rs) for i in cat.items}
+    # A known Advanced magic item drops out; a mundane Classic item stays.
+    assert "luckstone" in all_ids
+    assert "luckstone" not in filtered_ids
+    assert "backpack" in filtered_ids  # mundane gear is Classic

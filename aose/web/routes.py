@@ -85,6 +85,7 @@ from aose.engine import valuables as valuables_engine
 from aose.engine.valuables import ValuableError
 from aose.engine import possessions as possessions_engine
 from aose.engine.possessions import PossessionError
+from aose.engine.sources import source_enabled
 from aose.models import Ability, Ammunition
 from aose.sheet.view import build_sheet, spell_source_add_options
 
@@ -99,11 +100,13 @@ templates = make_templates(str(TEMPLATES_DIR))
 _PRINT_CSS = (STATIC_DIR / "print.css").read_text(encoding="utf-8")
 
 
-def _enchant_choices(game_data):
+def _enchant_choices(game_data, ruleset=None):
     """Picker data: each enchantment with its compatible base items, sorted by kind then id."""
     from aose.engine.enchant import compatible_bases
     out = []
     for ench in sorted(game_data.enchantments.values(), key=lambda e: (e.kind, e.id)):
+        if ruleset is not None and not source_enabled(ench.source, ruleset):
+            continue
         bases = compatible_bases(ench, game_data)
         if not bases:
             continue
@@ -168,8 +171,8 @@ async def character_sheet(request: Request, character_id: str):
             "enchanted_rows": [v for v in sheet.magic_items
                                if v.instance_id in {e.instance_id for e in spec.enchanted}],
             "magic_acquisition": True,
-            "enchant_choices": _enchant_choices(game_data),
-            "shop": shop_categories(game_data),
+            "enchant_choices": _enchant_choices(game_data, spec.ruleset),
+            "shop": shop_categories(game_data, spec.ruleset),
             "remove_modes": REMOVE_MODES,
             "target_url_prefix": f"/character/{character_id}/equipment",
             "ammo_rows": sheet.ammo,

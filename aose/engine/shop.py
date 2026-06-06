@@ -18,7 +18,8 @@ from pydantic import BaseModel
 from aose.data.loader import GameData
 from aose.engine.detail import DetailCard, item_card
 from aose.engine.dice import roll
-from aose.models import Container, ContainerInstance, Item
+from aose.engine.sources import source_enabled
+from aose.models import Container, ContainerInstance, Item, RuleSet
 
 
 class ShopItem(BaseModel):
@@ -86,12 +87,15 @@ def _category_label(cid: str) -> str:
     return cid.replace("_", " ").title()
 
 
-def shop_categories(data: GameData) -> list[ShopCategory]:
+def shop_categories(data: GameData, ruleset: RuleSet | None = None) -> list[ShopCategory]:
     """Group every item in ``data.items`` by its ``category`` field, sorted
     alphabetically.  Within a category, items are sorted by cost then name so
-    the cheap stuff is at the top."""
+    the cheap stuff is at the top.  When ``ruleset`` is given, items from a
+    disabled source are omitted."""
     by_cat: dict[str, list[Item]] = {}
     for item in data.items.values():
+        if ruleset is not None and not source_enabled(item.source, ruleset):
+            continue
         by_cat.setdefault(item.category, []).append(item)
 
     out: list[ShopCategory] = []
