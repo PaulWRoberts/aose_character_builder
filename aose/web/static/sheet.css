@@ -166,7 +166,7 @@ table.t tbody tr + tr td{ border-top:1px solid var(--hair); }
 .kv .v.stamp{ color:var(--stamp); }
 
 /* ── spells: book partitioned by level + cast pips ─────────── */
-.lvl-head{ font-family:var(--display); font-weight:600; font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:#f7f5ed; background:var(--ink); padding:2px 8px; margin:10px 0 4px; display:flex; justify-content:space-between; }
+.lvl-head{ font-family:var(--display); font-weight:600; font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink); border-bottom:1.5px solid var(--ink); padding:0 0 3px; margin:10px 0 4px; display:flex; justify-content:space-between; }
 .lvl-head:first-child{ margin-top:0; }
 .spell{ display:flex; align-items:center; gap:8px; padding:3px 2px; cursor:pointer; }
 .spell + .spell{ border-top:1px solid var(--hair); }
@@ -318,8 +318,37 @@ textarea{ width:100%; resize:vertical; }
   color: var(--ink);
   font-variant-numeric: lining-nums tabular-nums;
 }
-.detail-desc { margin: 0; font-size: 13px; white-space: pre-wrap; color: var(--ink-2); }
+.detail-desc { margin: 0; font-size: 13px; color: var(--ink-2); }
 [data-detail-toggle] { cursor: pointer; }
+
+/* ── Rendered-Markdown prose (feature / spell / item descriptions) ── */
+.prose { font-size: 14px; line-height: 1.5; color: var(--ink); overflow-x: auto; }
+.prose > :first-child { margin-top: 0; }
+.prose > :last-child { margin-bottom: 0; }
+.prose p { margin: 0 0 10px; }
+.prose strong { font-weight: 700; }
+.prose em { font-style: italic; }
+.prose ul, .prose ol { margin: 0 0 10px; padding-left: 20px; }
+.prose li { margin: 2px 0; }
+.prose table {
+  border-collapse: collapse;
+  margin: 4px 0 12px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums lining;
+}
+.prose th, .prose td {
+  border: 1px solid var(--hair);
+  padding: 3px 8px;
+  text-align: center;
+}
+.prose th {
+  font-family: var(--display);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 11px;
+  background: var(--ink);
+  color: #f7f5ed;
+}
 
 /* ============================================================
    LEGACY / SITE-WIDE styles kept for wizard, settings, index
