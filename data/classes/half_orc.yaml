@@ -1,5 +1,6 @@
 id: half_orc
 name: Half-Orc
+source: ose_advanced_fantasy
 prime_requisites:
 - DEX
 - STR

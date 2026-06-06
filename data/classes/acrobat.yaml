@@ -1,5 +1,6 @@
 id: acrobat
 name: Acrobat
+source: ose_advanced_fantasy
 prime_requisites:
 - DEX
 non_reducible_abilities:

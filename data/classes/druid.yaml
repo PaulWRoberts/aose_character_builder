@@ -1,5 +1,6 @@
 id: druid
 name: Druid
+source: ose_advanced_fantasy
 prime_requisites:
 - WIS
 max_level: 14

@@ -1,5 +1,6 @@
 id: knight
 name: Knight
+source: ose_advanced_fantasy
 prime_requisites:
 - STR
 ability_requirements:

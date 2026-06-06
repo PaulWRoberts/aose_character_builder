@@ -1,5 +1,6 @@
 id: illusionist
 name: Illusionist
+source: ose_advanced_fantasy
 prime_requisites:
 - INT
 ability_requirements:

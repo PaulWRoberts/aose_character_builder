@@ -1,5 +1,6 @@
 id: barbarian
 name: Barbarian
+source: ose_advanced_fantasy
 prime_requisites:
 - CON
 - STR

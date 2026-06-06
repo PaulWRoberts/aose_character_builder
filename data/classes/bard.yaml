@@ -1,5 +1,6 @@
 id: bard
 name: Bard
+source: ose_advanced_fantasy
 prime_requisites:
 - CHA
 ability_requirements:

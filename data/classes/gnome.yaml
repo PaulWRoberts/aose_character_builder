@@ -1,5 +1,6 @@
 id: gnome
 name: Gnome
+source: ose_advanced_fantasy
 prime_requisites:
 - DEX
 - INT

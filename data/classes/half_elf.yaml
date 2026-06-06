@@ -1,5 +1,6 @@
 id: half_elf
 name: Half-Elf
+source: ose_advanced_fantasy
 prime_requisites:
 - INT
 - STR

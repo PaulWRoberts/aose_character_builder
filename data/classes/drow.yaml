@@ -1,5 +1,6 @@
 id: drow
 name: Drow
+source: ose_advanced_fantasy
 prime_requisites:
 - STR
 - WIS

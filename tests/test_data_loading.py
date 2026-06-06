@@ -183,3 +183,13 @@ def test_race_sources(data):
     for rid in ("drow", "duergar", "dwarf", "elf", "gnome", "half_elf",
                 "half_orc", "halfling", "svirfneblin"):
         assert data.races[rid].source == "ose_advanced_fantasy", rid
+
+
+def test_class_sources(data):
+    for cid in ("cleric", "fighter", "magic_user", "thief",
+                "dwarf", "elf", "halfling"):
+        assert data.classes[cid].source == "ose_classic_fantasy", cid
+    for cid in ("acrobat", "assassin", "barbarian", "bard", "drow", "druid",
+                "duergar", "gnome", "half_elf", "half_orc", "illusionist",
+                "knight", "paladin", "ranger", "svirfneblin"):
+        assert data.classes[cid].source == "ose_advanced_fantasy", cid
