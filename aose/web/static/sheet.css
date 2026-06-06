@@ -191,6 +191,11 @@ table.t tbody tr + tr td{ border-top:1px solid var(--hair); }
 .treasure-chip .d{ font-family:var(--display); font-size:8.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--stamp); }
 .treasure-chip .c{ font-weight:700; color:var(--stamp); font-variant-numeric:lining-nums tabular-nums; }
 
+.feat-list{ list-style:none; margin:0; padding:0; }
+.feat-list li{ font-size:13px; padding:2px 4px; display:flex; justify-content:space-between; gap:6px; }
+.feat-list li.info{ cursor:pointer; } .feat-list li.info:hover{ background:#fff6da; }
+.feat-list .src{ color:var(--faint); font-size:11px; font-family:var(--display); letter-spacing:.04em; white-space:nowrap; }
+
 .inv-cols{ display:grid; grid-template-columns:1.5fr 1.4fr 1fr; gap:16px; }
 .inv-cols h4{ font-family:var(--display); font-weight:600; font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink); margin:0 0 5px; border-bottom:1.5px solid var(--ink); padding-bottom:3px; }
 .inv-cols ul{ list-style:none; margin:0; padding:0; }
