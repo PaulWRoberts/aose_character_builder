@@ -9,21 +9,26 @@ import functools
 
 import markdown as _md
 from fastapi.templating import Jinja2Templates
-from markupsafe import Markup
 
 
 @functools.lru_cache(maxsize=None)
-def render_markdown(text: str | None) -> Markup:
-    """Render a Markdown string to safe HTML.
+def render_markdown(text: str | None) -> str:
+    """Render a Markdown string to HTML.
 
-    Returns an empty ``Markup`` for ``None``/empty input.  Cached because
-    descriptions are static catalog data — the same string renders identically
-    on every request.
+    Returns a plain ``str`` (not ``Markup``) so Jinja's autoescaping works
+    correctly in both contexts:
+
+    - Block content: ``{{ desc | markdown | safe }}`` — the ``safe`` filter
+      opts in to rendering the tags as HTML.
+    - Attribute values: ``{{ desc | markdown }}`` — Jinja escapes ``<`` →
+      ``&lt;`` so the rendered HTML is safely embedded as an attribute string.
+
+    Returns ``""`` for ``None``/empty input.  Cached because descriptions are
+    static catalog data — the same string renders identically on every request.
     """
     if not text:
-        return Markup("")
-    html = _md.markdown(text, extensions=["tables", "sane_lists"])
-    return Markup(html)
+        return ""
+    return _md.markdown(text, extensions=["tables", "sane_lists"])
 
 
 def make_templates(directory: str) -> Jinja2Templates:

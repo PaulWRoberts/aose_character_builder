@@ -8,7 +8,7 @@
   }
   function fill(panel, t){
     panel.querySelectorAll('[data-role="title"]').forEach(el => { if (t.title) el.textContent = t.title; });
-    panel.querySelectorAll('[data-role="text"]').forEach(el => { if (t.text) el.textContent = t.text; });
+    panel.querySelectorAll('[data-role="text"]').forEach(el => { if (t.text) el.innerHTML = t.text; });
     panel.querySelectorAll('[data-role="ability"]').forEach(el => { if (t.ability) el.textContent = t.ability; });
   }
   function place(panel, trigger){

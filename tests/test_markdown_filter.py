@@ -1,4 +1,4 @@
-from markupsafe import Markup
+from markupsafe import Markup  # used to verify we do NOT return Markup
 
 from aose.web.templating import render_markdown
 
@@ -26,11 +26,14 @@ def test_blank_line_separates_paragraphs():
     assert out.count("<p>") == 2
 
 
-def test_none_and_empty_render_empty_markup():
-    assert render_markdown(None) == Markup("")
-    assert render_markdown("") == Markup("")
+def test_none_and_empty_render_empty_string():
+    assert render_markdown(None) == ""
+    assert render_markdown("") == ""
 
 
-def test_return_type_is_markup():
+def test_return_type_is_plain_str_not_markup():
+    # Must be a plain str so Jinja auto-escapes it in attribute contexts
+    # (data-text="{{ desc | markdown }}") while block contexts use | safe.
     out = render_markdown("plain")
-    assert isinstance(out, Markup)
+    assert isinstance(out, str)
+    assert not isinstance(out, Markup)

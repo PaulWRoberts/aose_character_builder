@@ -7,7 +7,7 @@
 <div class="overlay modal" id="modal-item-{{ id_prefix }}-{{ row.id }}" role="dialog" aria-label="{{ row.name }}">
   <div class="ov-head"><h3>{{ row.name }}</h3><button class="x" data-close>×</button></div>
   <div class="ov-body">
-    {% if row.description %}<div class="prose">{{ row.description | markdown }}</div>{% endif %}
+    {% if row.description %}<div class="prose">{{ row.description | markdown | safe }}</div>{% endif %}
     <div class="row-actions">{{ inv_row_actions(row, url_prefix, state) }}</div>
   </div>
 </div>
@@ -145,13 +145,13 @@
         <div class="gbody scroll" style="max-height:300px">
           <ul class="feat-list">
             {% for f in sheet.race_features %}
-            <li class="info" data-modal="modal-feature" data-title="{{ f.name }}" data-text="{{ f.text }}">
+            <li class="info" data-modal="modal-feature" data-title="{{ f.name }}" data-text="{{ f.text | markdown }}">
               <span>{{ f.name }}</span>
               <span class="src">{{ f.source | replace("Race: ", "") }}</span>
             </li>
             {% endfor %}
             {% for f in sheet.class_features %}
-            <li class="info" data-modal="modal-feature" data-title="{{ f.name }}" data-text="{{ f.text }}">
+            <li class="info" data-modal="modal-feature" data-title="{{ f.name }}" data-text="{{ f.text | markdown }}">
               <span>{{ f.name }}</span>
               <span class="src">{{ f.source | replace("Class: ", "") }}</span>
             </li>
@@ -171,7 +171,7 @@
             <button class="chip{% if w.specialised %} gilt{% endif %}"
                     data-modal="modal-feature"
                     data-title="{{ w.name }}{% if w.specialised %} (Specialised){% endif %}"
-                    data-text="{% if w.specialised %}Weapon specialisation: +1 to hit and +1 damage with the {{ w.name }}.{% else %}Proficient — no non-proficiency penalty.{% endif %}">
+                    data-text="{{ (('Weapon specialisation: +1 to hit and +1 damage with the ' ~ w.name ~ '.') if w.specialised else 'Proficient — no non-proficiency penalty.') | markdown }}">
               {{ w.name }}{% if w.specialised %} <span class="src">specialised</span>{% endif %}
             </button>
             {% endfor %}
@@ -322,7 +322,7 @@
             {# Worn magic items #}
             {% for mi in sheet.magic_items %}
             {% if mi.equipped %}
-            <li class="info" data-modal="modal-feature" data-title="{{ mi.name }}" data-text="{{ mi.description or '' }}">
+            <li class="info" data-modal="modal-feature" data-title="{{ mi.name }}" data-text="{{ (mi.description or '') | markdown }}">
               <span>{{ mi.name }} <span class="tag stamp">magic</span></span>
               <span class="st">{% for chip in mi.modifier_summary %}{{ chip }}{% if not loop.last %}, {% endif %}{% endfor %}</span>
             </li>
@@ -571,7 +571,7 @@
      role="dialog" aria-label="{{ row.display_name }}">
   <div class="ov-head"><h3>{{ row.display_name }}</h3><button class="x" data-close>×</button></div>
   <div class="ov-body">
-    <div class="prose">{{ row.description | markdown }}</div>
+    <div class="prose">{{ row.description | markdown | safe }}</div>
     {% if row.ready_slots or row.spent_slots %}
     <div class="row-actions">
       {% if row.ready_slots %}
