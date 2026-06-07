@@ -1,9 +1,29 @@
 from aose.data.loader import GameData
-from aose.models import CharacterSpec
+from aose.models import Ability, CharacterSpec, Modifier
 
+from .ability_mods import ability_modifier
 from .features import all_modifiers
+from .magic import effective_abilities
 
 SAVE_FLOOR = 2
+
+_WIS_UNCONDITIONAL = ("save:spells", "save:wands")
+_WIS_CONDITIONAL = ("save:death", "save:paralysis")   # magical-origin only
+
+
+def wisdom_save_modifiers(spec: CharacterSpec, data: GameData) -> list[Modifier]:
+    """WIS modifier vs magical effects. Unconditional on spells/wands (always
+    magical); conditional (``magical``) on death/paralysis; never breath. Empty
+    when the WIS modifier is 0."""
+    wis = ability_modifier(effective_abilities(spec, data)[Ability.WIS])
+    if wis == 0:
+        return []
+    mods = [Modifier(target=t, op="add", value=wis, source="Wisdom") for t in _WIS_UNCONDITIONAL]
+    mods += [
+        Modifier(target=t, op="add", value=wis, condition="magical", source="Wisdom")
+        for t in _WIS_CONDITIONAL
+    ]
+    return mods
 
 
 def _level_data(cls, level: int):
