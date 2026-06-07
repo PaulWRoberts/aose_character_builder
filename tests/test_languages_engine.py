@@ -12,6 +12,7 @@ from aose.engine.languages import (
     display_name,
     granted_languages,
     known_languages,
+    literacy,
     native_languages,
     validate_languages,
 )
@@ -176,3 +177,28 @@ def test_granted_languages_excluded_from_learnable():
     already = set(native_languages(data.races["gnome"])) | set(granted_languages(spec, data))
     avail = available_additional(data.languages, already)
     assert "secret_language_of_burrowing_mammals" not in avail
+
+
+# ── Task 6: literacy ─────────────────────────────────────────────────────────
+
+@pytest.mark.parametrize("int_score,expected", [
+    (3, "illiterate"), (5, "illiterate"),
+    (6, "basic"), (8, "basic"),
+    (9, "literate"), (16, "literate"),
+])
+def test_literacy_tiers_from_int(int_score, expected):
+    data = _data()
+    spec = _spec("human", "fighter", int_score=int_score)
+    assert literacy(spec, data) == expected
+
+
+def test_barbarian_illiterate_at_level_1_regardless_of_int():
+    data = _data()
+    spec = _spec("human", "barbarian", level=1, int_score=16)
+    assert literacy(spec, data) == "illiterate"
+
+
+def test_barbarian_literate_at_level_2_per_int_table():
+    data = _data()
+    spec = _spec("human", "barbarian", level=2, int_score=16)
+    assert literacy(spec, data) == "literate"

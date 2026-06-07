@@ -151,6 +151,8 @@ features:
   name: Literacy
   text: A 1st level barbarian cannot read or write, irrespective of INT score.
   gained_at_level: 1
+  mechanical:
+    illiterate_below_level: 2
 - id: agile_fighting
   name: Agile Fighting
   text: |-

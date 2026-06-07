@@ -138,3 +138,28 @@ def validate_languages(chosen, race, alignment, final_int, lang_data) -> None:
     for lang in chosen:
         if lang.casefold() not in allowed:
             raise LanguageError(f"{lang!r} is not a selectable additional language.")
+
+
+def literacy(spec, data) -> str:
+    """Literacy state: ``"illiterate"`` (INT <= 5), ``"basic"`` (6-8), or
+    ``"literate"`` (>= 9). A class feature may force illiteracy below a level via
+    ``mechanical['illiterate_below_level']`` (barbarian: illiterate at level 1)."""
+    int_score = spec.abilities[Ability.INT]
+    if int_score <= 5:
+        tier = "illiterate"
+    elif int_score <= 8:
+        tier = "basic"
+    else:
+        tier = "literate"
+
+    for entry in spec.classes:
+        cls = data.classes.get(entry.class_id)
+        if cls is None:
+            continue
+        for feat in cls.features:
+            if not feat.mechanical:
+                continue
+            floor = feat.mechanical.get("illiterate_below_level")
+            if floor is not None and entry.level < floor:
+                return "illiterate"
+    return tier
