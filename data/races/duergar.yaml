@@ -92,6 +92,7 @@ features:
   granted_modifiers:
   - target: save:death
     op: add
+    condition: poison
     scale:
       by: ability:CON
       table:
@@ -119,6 +120,7 @@ features:
         18: 5
   - target: save:paralysis
     op: add
+    condition: paralysis
     scale:
       by: ability:CON
       table:

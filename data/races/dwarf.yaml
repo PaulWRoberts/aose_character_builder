@@ -79,6 +79,7 @@ features:
   granted_modifiers:
   - target: save:death
     op: add
+    condition: poison
     scale:
       by: ability:CON
       table:
