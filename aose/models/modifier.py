@@ -20,8 +20,10 @@ class Modifier(BaseModel):
 
     ``target`` grammar (unknown targets are ignored — forward-compatible):
     ``ability:STR``…``ability:CHA``, ``ac``, ``save:all``,
-    ``save:death|wands|paralysis|breath|spells``, ``attack``, ``damage``,
-    ``carry_capacity``, ``thac0``.
+    ``save:death|wands|paralysis|breath|spells``,
+    ``save:vs:<thing>`` (cross-cutting situational bonus — e.g. ``save:vs:fire``;
+    never folded into a headline, surfaced by ``situational_save_bonuses``),
+    ``attack``, ``damage``, ``carry_capacity``, ``thac0``.
 
     ``condition`` is open-ended free text (``None`` = unconditional).  Each
     derivation recognises only the conditions it can evaluate in context
