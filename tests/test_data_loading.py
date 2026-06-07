@@ -106,9 +106,9 @@ def test_languages_loaded(data):
     assert langs.alignment["law"] == "Lawful"
     assert langs.alignment["neutral"] == "Neutral"
     assert langs.alignment["chaos"] == "Chaotic"
-    assert "Elvish" in langs.additional
-    # UTF-8 diacritic survives the load round-trip.
-    assert "Doppelgänger" in langs.additional
+    assert "elvish" in langs.additional
+    # UTF-8 diacritic survives the load round-trip (registry value, not the id).
+    assert langs.names.get("doppelganger") == "Doppelgänger"
 
 
 def test_character_spec_languages_defaults_empty():

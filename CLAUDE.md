@@ -65,6 +65,18 @@ override. Changing a rule mid-wizard applies targeted downstream clears
 Every flag in `RuleSet` is integrated end-to-end. The settings page never
 renders a "pending" badge — a regression test guards this.
 
+## Current state (2026-06-07, languages/literacy/WIS-saves)
+
+Languages, literacy, and WIS magic-save improvements just landed (11-task plan, on `feature/languages-literacy-wisdom-saves`). All new tests pass; 2 pre-existing breadcrumb-label failures unchanged.
+
+- **Language registry** — `LanguageData.names: dict[str, str]` maps every language id to its book-authoritative display name (diacritics/casing exact). `display_name(id, lang_data)` does registry lookup with a title-case fallback for any unregistered id. `data/languages.yaml` `additional:` is now a list of ids; the registry maps them to display names.
+- **Granted languages** — `granted_languages(spec, data)` (engine, pure) walks race features (all) and class features (level-gated) collecting `feature.mechanical["languages"]` ids. Gnome burrowing-mammals tongue and druid's `druidic` are granted this way. Granted tongues appear in the known list but never in the INT-pick learnable list. The wizard identity page shows them under "Granted:" and excludes them from the checkbox options.
+- **Literacy** — `literacy(spec, data)` returns `"illiterate"` (INT ≤ 5), `"basic"` (INT 6–8), or `"literate"` (INT ≥ 9). A class feature's `mechanical.illiterate_below_level` forces `"illiterate"` until the character's level reaches that value. Barbarian: `illiterate_below_level: 2` (illiterate at level 1 only, per the book). Sheet displays a Literacy line in the Languages group.
+- **Conditional racial resilience (data fix)** — dwarf/halfling `save:death` resilience granted modifiers gain `condition: poison`; duergar `save:paralysis` gains `condition: paralysis`. These bonuses cover only *part* of their umbrella save category (poison ≠ death-ray; paralysis ≠ petrification) so they are now excluded from the headline number and appear only as conditional lines in the breakdown modal.
+- **WIS magic-save modifiers** — `wisdom_save_modifiers(spec, data)` builds synthetic `Modifier` objects from effective WIS. Unconditional on `save:spells` and `save:wands` (always magical); conditional (`magical`) on `save:death` and `save:paralysis`; never on `save:breath`.
+- **`saving_throws_detail()`** — new engine function returning `dict[str, SaveBreakdown]`. Each `SaveBreakdown` carries `base` (class progression), `modified` (headline — unconditional mods only, floored at 2), and `lines: list[SaveModLine]` (each `add` modifier with `source`, `bonus`, `conditional`, `note`). `saving_throws()` delegates to it. Condition notes: `magical` → "magical effects only", `poison` → "poison only (not death magic)", `paralysis` → "paralysis only (not petrification)".
+- **Sheet saves UI** — `SheetSave` now carries `base`, `modified`, and `lines` (replacing the old `target`). Each save row is clickable; a per-save breakdown modal shows Base → Modified, every modifier line as `+N bonus` / `−N penalty`, conditional lines flagged with their note.
+
 ## Current state (2026-06-07, weighted secondary skills)
 
 Book-faithful weighted secondary-skill distribution + "roll for two skills" outcome just landed (9-task plan, on `main`). 1225 tests pass; 2 pre-existing breadcrumb-label failures unchanged.
