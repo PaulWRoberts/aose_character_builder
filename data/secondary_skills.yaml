@@ -1,53 +1,37 @@
-# Secondary skills (AOSE optional rule).  Edit this file to match the table
-# from your rulebook of choice — entries are read in order and rolled with a
-# uniform distribution at the wizard's secondary-skill step.
-- Animal Trainer
-- Armourer
-- Baker
-- Blacksmith
-- Boatman
-- Bookbinder
-- Bowyer / Fletcher
-- Brewer
-- Butcher
-- Carpenter
-- Cartographer
-- Cobbler
-- Cook
-- Engineer
-- Farmer
-- Fisher
-- Forester
-- Furrier
-- Gambler
-- Glass Blower
-- Healer
-- Herbalist
-- Hunter
-- Innkeeper
-- Jeweller
-- Lawyer
-- Leatherworker
-- Locksmith
-- Mason
-- Merchant
-- Miller
-- Miner
-- Minstrel
-- Navigator
-- Painter
-- Potter
-- Sailor
-- Scribe
-- Shepherd
-- Smelter
-- Soldier
-- Tailor
-- Tanner
-- Teamster
-- Trader
-- Trapper
-- Vintner
-- Weaponsmith
-- Weaver
-- Woodcutter
+# Secondary skills (AOSE Advanced Fantasy optional rule). Each entry has a
+# `weight` = number of d100 faces its book range spans. The single
+# `roll_twice: true` entry means "roll for two skills". Weights must sum to 100.
+# Edit to match your rulebook of choice; the loader validates the sum and the
+# single roll-twice entry on startup.
+- {name: Animal Trainer,      weight: 3}    # 01-03
+- {name: Armourer,            weight: 2}    # 04-05
+- {name: Baker,               weight: 4}    # 06-09
+- {name: Blacksmith,          weight: 3}    # 10-12
+- {name: Bookbinder,          weight: 1}    # 13
+- {name: Bowyer / Fletcher,   weight: 3}    # 14-16
+- {name: Brewer,              weight: 4}    # 17-20
+- {name: Butcher,             weight: 3}    # 21-23
+- {name: Carpenter,           weight: 3}    # 24-26
+- {name: Chandler,            weight: 2}    # 27-28
+- {name: Cooper,              weight: 5}    # 29-33
+- {name: Coppersmith,         weight: 2}    # 34-35
+- {name: Farmer,              weight: 11}   # 36-46
+- {name: Fisher,              weight: 4}    # 47-50
+- {name: Furrier,             weight: 4}    # 51-54
+- {name: Glassblower,         weight: 1}    # 55
+- {name: Huntsman,            weight: 4}    # 56-59
+- {name: Lapidary / Jeweller, weight: 3}    # 60-62
+- {name: Lorimer,             weight: 4}    # 63-66
+- {name: Mapmaker,            weight: 1}    # 67
+- {name: Mason,               weight: 2}    # 68-69
+- {name: Miner,               weight: 4}    # 70-73
+- {name: Potter,              weight: 3}    # 74-76
+- {name: Roper,               weight: 2}    # 77-78
+- {name: Seafarer,            weight: 3}    # 79-81
+- {name: Shipwright,          weight: 3}    # 82-84
+- {name: Tailor,              weight: 3}    # 85-87
+- {name: Tanner,              weight: 3}    # 88-90
+- {name: Thatcher / Roofer,   weight: 3}    # 91-93
+- {name: Woodcutter,          weight: 3}    # 94-96
+- {name: Vintner,             weight: 2}    # 97-98
+- {name: "Roll for two skills", weight: 2, roll_twice: true}  # 99-00
