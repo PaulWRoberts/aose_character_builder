@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 
 from aose.characters import load_character, load_draft, save_settings
 from aose.data.loader import GameData, _load_secondary_skills
-from aose.models import RuleSet
+from aose.models import CharacterSpec, ClassEntry, RuleSet
 from aose.web.app import create_app
 
 PROJECT_ROOT = Path(__file__).parent.parent
@@ -96,6 +96,41 @@ def test_loader_rejects_no_roll_twice(tmp_path):
 def test_game_data_exposes_skills():
     data = GameData.load(DATA_DIR)
     assert "Blacksmith" in [e.name for e in data.secondary_skills]
+
+
+# ── CharacterSpec model unit tests ─────────────────────────────────────────
+
+
+def _minimal_spec_kwargs(**over):
+    base = dict(
+        name="X",
+        abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
+        race_id="dwarf",
+        classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[6])],
+        alignment="law",
+    )
+    base.update(over)
+    return base
+
+
+def test_spec_secondary_skills_defaults_empty():
+    spec = CharacterSpec(**_minimal_spec_kwargs())
+    assert spec.secondary_skills == []
+
+
+def test_spec_accepts_list_of_skills():
+    spec = CharacterSpec(**_minimal_spec_kwargs(secondary_skills=["Farmer", "Mason"]))
+    assert spec.secondary_skills == ["Farmer", "Mason"]
+
+
+def test_spec_migrates_legacy_singular_none():
+    spec = CharacterSpec(**_minimal_spec_kwargs(secondary_skill=None))
+    assert spec.secondary_skills == []
+
+
+def test_spec_migrates_legacy_singular_string():
+    spec = CharacterSpec(**_minimal_spec_kwargs(secondary_skill="Blacksmith"))
+    assert spec.secondary_skills == ["Blacksmith"]
 
 
 # ── Wizard flow helpers ─────────────────────────────────────────────────────

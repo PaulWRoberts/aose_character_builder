@@ -205,7 +205,7 @@ class CharacterSpec(BaseModel):
     # Weightless; free to acquire; never in `inventory`.
     gems: list[GemStack] = Field(default_factory=list)
     jewellery: list[JewelleryPiece] = Field(default_factory=list)
-    secondary_skill: str | None = None
+    secondary_skills: list[str] = Field(default_factory=list)
     # Free-text "other possessions" — discrete entries, each an implied item the
     # DM handed out ("a bronze key"). Untracked: no weight, value, or encumbrance.
     other_possessions: list[str] = Field(default_factory=list)
@@ -249,4 +249,22 @@ class CharacterSpec(BaseModel):
                     if isinstance(c, dict) and "xp" not in c:
                         c["xp"] = share
             data = {k: v for k, v in data.items() if k != "xp"}
+        return data
+
+    @model_validator(mode="before")
+    @classmethod
+    def _migrate_legacy_secondary_skill(cls, data):
+        """Coerce the pre-roll-for-two singular ``secondary_skill`` (str|None)
+        into the list-valued ``secondary_skills`` so old saves load under
+        ``extra='forbid'``."""
+        if isinstance(data, dict) and "secondary_skill" in data:
+            legacy = data["secondary_skill"]
+            data = {k: v for k, v in data.items() if k != "secondary_skill"}
+            if "secondary_skills" not in data:
+                if legacy is None:
+                    data["secondary_skills"] = []
+                elif isinstance(legacy, str):
+                    data["secondary_skills"] = [legacy]
+                else:
+                    data["secondary_skills"] = legacy
         return data
