@@ -181,3 +181,45 @@ def test_barbarian_agile_ac_shows_in_unarmored_display_even_when_armoured():
     # The unarmoured display reflects the no-armour scenario -> bonus applies.
     barb = _barbarian(4, equipped={"armor": "chain_mail"})
     assert unarmored_ac(barb, DATA)[0] == 8
+
+
+# ── Task 5: halfling missile bonus ──────────────────────────────────────────
+
+def _profiles(spec):
+    from aose.engine.attacks import attack_profiles
+    return {p.weapon_id: p for p in attack_profiles(spec, DATA)}
+
+
+def test_halfling_missile_bonus_applies_to_ranged_only():
+    from aose.models import CharacterSpec, ClassEntry
+    # Halfling fighter, STR/DEX 10 (+0). short_bow is ranged; unarmed is melee.
+    spec = CharacterSpec(
+        name="H", abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
+        race_id="halfling", classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
+        alignment="neutral", equipped_weapons=["short_bow"],
+    )
+    profs = _profiles(spec)
+    assert profs["short_bow"].to_hit_ascending == 1   # +1 missile bonus
+    assert profs["unarmed"].to_hit_ascending == 0     # melee: no bonus
+
+
+def test_non_halfling_has_no_missile_bonus():
+    from aose.models import CharacterSpec, ClassEntry
+    spec = CharacterSpec(
+        name="Hu", abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
+        race_id="human", classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
+        alignment="neutral", equipped_weapons=["short_bow"],
+    )
+    assert _profiles(spec)["short_bow"].to_hit_ascending == 0
+
+
+def test_classic_halfling_missile_bonus_not_doubled():
+    # Race-as-class halfling: race_id == "halfling" AND class == halfling.
+    # The bonus must apply exactly once (race grant only).
+    from aose.models import CharacterSpec, ClassEntry
+    spec = CharacterSpec(
+        name="Hc", abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
+        race_id="halfling", classes=[ClassEntry(class_id="halfling", level=1, hp_rolls=[6])],
+        alignment="neutral", equipped_weapons=["short_bow"],
+    )
+    assert _profiles(spec)["short_bow"].to_hit_ascending == 1   # +1, not +2
