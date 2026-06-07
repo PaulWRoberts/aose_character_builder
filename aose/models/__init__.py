@@ -31,6 +31,7 @@ from .character import (
 )
 from .valuable import GemStack, JewelleryPiece
 from .source import Source
+from .secondary_skill import SecondarySkillEntry
 
 __all__ = [
     "Ability",
@@ -73,4 +74,5 @@ __all__ = [
     "GemStack",
     "JewelleryPiece",
     "Source",
+    "SecondarySkillEntry",
 ]
