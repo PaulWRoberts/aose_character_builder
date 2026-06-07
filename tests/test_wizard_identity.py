@@ -166,31 +166,37 @@ def test_identity_hides_skill_section_when_rule_off(tmp_path):
 
 def test_identity_shows_and_autorolls_skill_when_rule_on(tmp_path):
     from aose.data.loader import GameData
+    from aose.engine.secondary_skills import selectable_names
     client = _make_client(tmp_path, RuleSet(secondary_skills=True))
     draft_id = _drive_to_identity(client)
     r = client.get(f"/wizard/{draft_id}/identity")
     assert "Secondary Skill" in r.text
     draft = load_draft(draft_id, client._drafts_dir)
-    assert draft["secondary_skill"] in GameData.load(DATA_DIR).secondary_skills
+    rolled = draft["secondary_skill"]
+    assert isinstance(rolled, list) and len(rolled) >= 1
+    valid = selectable_names(GameData.load(DATA_DIR).secondary_skills)
+    assert all(s in valid for s in rolled)
 
 
 def test_identity_skill_reroll_changes_value(tmp_path):
-    client = _make_client(tmp_path, RuleSet(secondary_skills=True))
+    # Reroll requires strict_mode=False.
+    client = _make_client(tmp_path, RuleSet(secondary_skills=True, strict_mode=False))
     draft_id = _drive_to_identity(client)
     client.get(f"/wizard/{draft_id}/identity")
     before = load_draft(draft_id, client._drafts_dir)["secondary_skill"]
-    for _ in range(10):
+    for _ in range(20):
         client.post(f"/wizard/{draft_id}/identity/skill-reroll")
         after = load_draft(draft_id, client._drafts_dir)["secondary_skill"]
         if after != before:
             return
-    pytest.fail("Re-roll never changed the skill after 10 tries")
+    pytest.fail("Re-roll never changed the skill after 20 tries")
 
 
 def test_identity_requires_skill_when_rule_on(tmp_path):
-    client = _make_client(tmp_path, RuleSet(secondary_skills=True))
+    # Non-strict: an invalid submitted skill is rejected.
+    client = _make_client(tmp_path, RuleSet(secondary_skills=True, strict_mode=False))
     draft_id = _drive_to_identity(client)
-    # Post a non-skill payload; skill must be supplied and valid.
+    client.get(f"/wizard/{draft_id}/identity")
     r = client.post(
         f"/wizard/{draft_id}/identity",
         data={"name": "X", "alignment": "law", "secondary_skill": "Astronaut"},
@@ -206,8 +212,7 @@ def test_class_change_clears_alignment_keeps_name_and_skill(tmp_path):
     client.get(f"/wizard/{draft_id}/identity")  # auto-rolls skill
     client.post(
         f"/wizard/{draft_id}/identity",
-        data={"name": "Keeper", "alignment": "law",
-              "secondary_skill": load_draft(draft_id, client._drafts_dir)["secondary_skill"]},
+        data={"name": "Keeper", "alignment": "law"},
     )
     # Go back and change the class.
     client.post(f"/wizard/{draft_id}/class", data={"class_id": "thief"})
