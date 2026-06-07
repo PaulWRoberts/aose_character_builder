@@ -10,5 +10,6 @@ class LanguageData(BaseModel):
     """
     model_config = ConfigDict(extra="forbid")
 
+    names: dict[str, str] = Field(default_factory=dict)
     alignment: dict[str, str] = Field(default_factory=dict)
     additional: list[str] = Field(default_factory=list)

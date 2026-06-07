@@ -9,6 +9,7 @@ from aose.engine.languages import (
     alignment_language,
     available_additional,
     broken_speech,
+    display_name,
     known_languages,
     native_languages,
     validate_languages,
@@ -132,3 +133,16 @@ def test_validate_languages_rejects_unknown():
     human = data.races["human"]
     with pytest.raises(LanguageError):
         validate_languages(["Klingon"], human, "law", 18, data.languages)
+
+
+def test_display_name_uses_registry():
+    data = _data()
+    assert display_name("common", data.languages) == "Common"
+    assert display_name("deepcommon", data.languages) == "Deepcommon"
+    assert display_name("lizard_man", data.languages) == "Lizard man"
+
+
+def test_display_name_fallback_titlecases_unregistered_id():
+    data = _data()
+    assert display_name("language_of_earth_elementals", data.languages) == \
+        "Language of earth elementals"

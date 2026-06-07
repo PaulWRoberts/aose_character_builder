@@ -13,6 +13,16 @@ class LanguageError(ValueError):
     """Raised when a language selection is invalid."""
 
 
+def display_name(lang_id: str, lang_data) -> str:
+    """Proper display name for a language id. Registry first; otherwise a
+    readable fallback (underscores -> spaces, first letter capitalised) so any
+    data-discovered language still renders with a proper name."""
+    registered = lang_data.names.get(lang_id)
+    if registered:
+        return registered
+    return lang_id.replace("_", " ").capitalize()
+
+
 def additional_language_count(int_score: int) -> int:
     """Number of additional languages granted by *final* INT (OSE table)."""
     if int_score >= 18:
