@@ -55,7 +55,7 @@ def test_build_sheet_saves_ordered(data):
     sheet = build_sheet(make_spec(), data)
     assert [s.name for s in sheet.saves] == ["death", "wands", "paralysis", "breath", "spells"]
     assert sheet.saves[0].label == "Death / Poison"
-    assert sheet.saves[0].target == 9  # L1 fighter base 12 − 3 dwarf resilience (CON 14)
+    assert sheet.saves[0].modified == 12  # L1 fighter death base; dwarf poison bonus conditional
 
 
 def test_build_sheet_movement(data):
@@ -231,6 +231,21 @@ def test_sheet_renders_inline_detail_rows(tmp_path):
     assert "data-detail-toggle=" in html
     # The structured card markup renders.
     assert "detail-card" in html
+
+
+def test_sheet_save_exposes_breakdown(data):
+    spec = CharacterSpec(
+        name="T",
+        abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 13, "CHA": 10},
+        race_id="dwarf", alignment="neutral",
+        classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[5])],
+    )
+    sheet = build_sheet(spec, data)
+    death = next(s for s in sheet.saves if s.name == "death")
+    assert death.base == 12
+    assert death.modified == 12   # poison bonus is conditional, not in headline
+    poison = [ln for ln in death.lines if ln.note.startswith("poison")]
+    assert poison and poison[0].bonus == 3 and poison[0].conditional is True
 
 
 def test_sheet_languages_use_display_names_and_include_granted(data):

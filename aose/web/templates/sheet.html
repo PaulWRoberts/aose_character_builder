@@ -127,10 +127,10 @@
           <div class="subhead">Saving Throws</div>
           <div class="saves">
             {% for s in sheet.saves %}
-            <div class="save">
+            <div class="save clickable" data-modal="modal-save-{{ s.name }}">
               <span class="cap">{{ s.label[0] }}</span>
               <span class="nm">{{ s.label }}</span>
-              <span class="tg">{{ s.target }}</span>
+              <span class="tg">{{ s.modified }}{% if s.modified != s.base %}<sup class="muted">({{ s.base }})</sup>{% endif %}</span>
             </div>
             {% endfor %}
           </div>
@@ -640,6 +640,29 @@
   <div class="ov-head"><h3 data-role="title">Detail</h3><button class="x" data-close>×</button></div>
   <div class="ov-body"><p data-role="text" style="font-size:15px;margin:0"></p></div>
 </div>
+
+{# MODALS: per-save breakdown #}
+{% for s in sheet.saves %}
+<div class="overlay modal" id="modal-save-{{ s.name }}" role="dialog" aria-label="{{ s.label }} save">
+  <div class="ov-head"><h3>{{ s.label }}</h3><button class="x" data-close>×</button></div>
+  <div class="ov-body" style="font-size:14px">
+    <p style="margin:0 0 6px">Base <strong>{{ s.base }}</strong> → Modified <strong>{{ s.modified }}</strong></p>
+    {% if s.lines %}
+    <ul style="list-style:none;margin:0;padding:0">
+      {% for ln in s.lines %}
+      <li style="margin:2px 0">
+        <strong>{{ ln.source }}:</strong>
+        {% if ln.bonus >= 0 %}+{{ ln.bonus }} bonus{% else %}{{ ln.bonus }} penalty{% endif %}
+        {% if ln.conditional %}<span class="muted"> — {{ ln.note }}</span>{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="muted" style="margin:0">No modifiers — base value applies.</p>
+    {% endif %}
+  </div>
+</div>
+{% endfor %}
 
 {# MODALS: per-spell management (cast / restore / clear) #}
 {% if sheet.spellbook %}

@@ -69,10 +69,19 @@ class AbilityRow(BaseModel):
     modified: bool = False
 
 
+class SheetSaveLine(BaseModel):
+    source: str
+    bonus: int
+    conditional: bool
+    note: str
+
+
 class SheetSave(BaseModel):
     name: str
     label: str
-    target: int
+    base: int
+    modified: int
+    lines: list[SheetSaveLine]
 
 
 class SheetFeature(BaseModel):
@@ -1002,11 +1011,21 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
 
     desc_ac, asc_ac = armor_class.armor_class(spec, data)
     un_desc, un_asc = _unarmored_ac(spec, data)
-    save_dict = saves.saving_throws(spec, data)
+    save_detail = saves.saving_throws_detail(spec, data)
     save_rows = [
-        SheetSave(name=name, label=SAVE_LABELS[name], target=save_dict[name])
+        SheetSave(
+            name=name,
+            label=SAVE_LABELS[name],
+            base=save_detail[name].base,
+            modified=save_detail[name].modified,
+            lines=[
+                SheetSaveLine(source=ln.source, bonus=ln.bonus,
+                              conditional=ln.conditional, note=ln.note)
+                for ln in save_detail[name].lines
+            ],
+        )
         for name in SAVE_ORDER
-        if name in save_dict
+        if name in save_detail
     ]
 
     next_level, xp_to_next = _xp_to_next(spec, data)
