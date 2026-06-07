@@ -280,3 +280,28 @@ def test_classic_dwarf_resilience_not_doubled():
     high = _saves("dwarf", "dwarf", 13, hp=8)   # +3
     low = _saves("dwarf", "dwarf", 6, hp=8)     # +0
     assert low["death"] - high["death"] == 3    # exactly 3 (not 6)
+
+
+# ── Task 7: kineticist AC migrated off the column ───────────────────────────
+
+KINETICIST_AC = {1: 9, 2: 8, 3: 7, 4: 6, 5: 5, 6: 4, 7: 3, 8: 2,
+                 9: 1, 10: 0, 11: -1, 12: -2, 13: -3, 14: -3}
+
+
+@pytest.mark.parametrize("level,expected", KINETICIST_AC.items())
+def test_kineticist_ac_matches_old_column(level, expected):
+    # DEX 10 (+0) -> unarmoured descending AC == the granted `ac set` value.
+    from aose.engine.armor_class import unarmored_ac
+    from aose.models import CharacterSpec, ClassEntry
+    spec = CharacterSpec(
+        name="K", abilities={"STR": 10, "INT": 10, "WIS": 13, "DEX": 10, "CON": 10, "CHA": 10},
+        race_id="human", classes=[ClassEntry(class_id="kineticist", level=level, hp_rolls=[6])],
+        alignment="neutral",
+    )
+    assert unarmored_ac(spec, DATA)[0] == expected
+
+
+def test_class_level_data_no_longer_has_armor_class_field():
+    from aose.models import ClassLevelData
+    with pytest.raises(Exception):
+        ClassLevelData(xp_required=0, thac0=19, saves={"death": 13}, armor_class=5)

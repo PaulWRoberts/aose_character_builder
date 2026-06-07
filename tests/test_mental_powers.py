@@ -57,14 +57,11 @@ def test_spell_list_accepts_mental_caster_type():
     assert sl.caster_type == "mental"
 
 
-def test_class_level_data_new_columns_default_none():
+def test_class_level_data_powers_known_defaults_none():
     from aose.models.character_class import ClassLevelData
     ld = ClassLevelData(xp_required=0, thac0=19, saves={"death": 13})
-    assert ld.armor_class is None
     assert ld.powers_known is None
-    ld2 = ClassLevelData(xp_required=0, thac0=19, saves={"death": 13},
-                         armor_class=5, powers_known=4)
-    assert ld2.armor_class == 5
+    ld2 = ClassLevelData(xp_required=0, thac0=19, saves={"death": 13}, powers_known=4)
     assert ld2.powers_known == 4
 
 
@@ -315,8 +312,6 @@ def test_kineticist_class_loaded():
     assert cls.armor_allowed == []
     assert cls.shields_allowed is False
     assert cls.prime_requisites == [Ability.DEX, Ability.WIS]
-    assert cls.progression[1].armor_class == 9
-    assert cls.progression[14].armor_class == -3
     assert cls.progression[1].powers_known == 3
     assert cls.progression[14].powers_known == 9
     assert cls.progression[1].spell_slots is None

@@ -17,85 +17,71 @@ progression:
   1:
     xp_required: 0
     thac0: 19
-    armor_class: 9
     powers_known: 3
     saves: {death: 13, wands: 14, paralysis: 13, breath: 16, spells: 15}
   2:
     xp_required: 2000
     thac0: 19
-    armor_class: 8
     powers_known: 3
     saves: {death: 13, wands: 14, paralysis: 13, breath: 16, spells: 15}
   3:
     xp_required: 4000
     thac0: 19
-    armor_class: 7
     powers_known: 4
     saves: {death: 13, wands: 14, paralysis: 13, breath: 16, spells: 15}
   4:
     xp_required: 8000
     thac0: 19
-    armor_class: 6
     powers_known: 4
     saves: {death: 13, wands: 14, paralysis: 13, breath: 16, spells: 15}
   5:
     xp_required: 16000
     thac0: 17
-    armor_class: 5
     powers_known: 5
     saves: {death: 12, wands: 13, paralysis: 11, breath: 14, spells: 13}
   6:
     xp_required: 32000
     thac0: 17
-    armor_class: 4
     powers_known: 5
     saves: {death: 12, wands: 13, paralysis: 11, breath: 14, spells: 13}
   7:
     xp_required: 64000
     thac0: 17
-    armor_class: 3
     powers_known: 6
     saves: {death: 12, wands: 13, paralysis: 11, breath: 14, spells: 13}
   8:
     xp_required: 120000
     thac0: 17
-    armor_class: 2
     powers_known: 6
     saves: {death: 12, wands: 13, paralysis: 11, breath: 14, spells: 13}
   9:
     xp_required: 240000
     thac0: 14
-    armor_class: 1
     powers_known: 7
     saves: {death: 10, wands: 11, paralysis: 9, breath: 12, spells: 10}
   10:
     xp_required: 360000
     thac0: 14
-    armor_class: 0
     powers_known: 7
     saves: {death: 10, wands: 11, paralysis: 9, breath: 12, spells: 10}
   11:
     xp_required: 480000
     thac0: 14
-    armor_class: -1
     powers_known: 8
     saves: {death: 10, wands: 11, paralysis: 9, breath: 12, spells: 10}
   12:
     xp_required: 600000
     thac0: 14
-    armor_class: -2
     powers_known: 8
     saves: {death: 10, wands: 11, paralysis: 9, breath: 12, spells: 10}
   13:
     xp_required: 720000
     thac0: 12
-    armor_class: -3
     powers_known: 9
     saves: {death: 8, wands: 9, paralysis: 7, breath: 10, spells: 8}
   14:
     xp_required: 840000
     thac0: 12
-    armor_class: -3
     powers_known: 9
     saves: {death: 8, wands: 9, paralysis: 7, breath: 10, spells: 8}
 features:
@@ -109,6 +95,25 @@ features:
   text: |-
     As a kineticist advances in level, their honed reactions and ability to deflect attacks grant them an improved Armour Class, as shown on the class table.
   gained_at_level: 1
+  granted_modifiers:
+  - target: ac
+    op: set
+    scale:
+      by: level
+      table:
+        1: 9
+        2: 8
+        3: 7
+        4: 6
+        5: 5
+        6: 4
+        7: 3
+        8: 2
+        9: 1
+        10: 0
+        11: -1
+        12: -2
+        13: -3
 - id: mental_defence
   name: Mental Defence
   text: |-
