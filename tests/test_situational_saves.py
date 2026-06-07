@@ -93,3 +93,28 @@ def test_ignores_non_add_ops(monkeypatch):
         return [Modifier(target="save:vs:fire", op="set", value=2, source="Weird")]
     monkeypatch.setattr(saves, "all_modifiers", fake_all)
     assert saves.situational_save_bonuses(_spec(), DATA) == []
+
+
+# ── Task 2: view model tests ──────────────────────────────────────────────────
+
+from aose.sheet.view import build_sheet, SheetSituationalSave
+
+
+def test_build_sheet_exposes_situational_saves_for_druid():
+    spec = CharacterSpec(
+        name="Druid", classes=[ClassEntry(class_id="druid", level=1)],
+        abilities={"STR": 9, "INT": 9, "WIS": 13, "DEX": 9, "CON": 9, "CHA": 9},
+        race_id="human", alignment="neutral",
+    )
+    sheet = build_sheet(spec, DATA)
+    energy = [s for s in sheet.situational_saves if s.source == "Energy Resistance"]
+    assert len(energy) == 1
+    assert energy[0].bonus == 2
+    assert energy[0].vs == "fire & lightning"
+
+
+def test_sheet_situational_save_joins_three_things():
+    s = SheetSituationalSave.from_bonus_things(2, ["a", "b", "c"], "Src")
+    assert s.vs == "a, b & c"
+    one = SheetSituationalSave.from_bonus_things(1, ["solo"], "Src")
+    assert one.vs == "solo"

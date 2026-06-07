@@ -99,6 +99,22 @@ class SheetSave(BaseModel):
     lines: list[SheetSaveLine]
 
 
+class SheetSituationalSave(BaseModel):
+    bonus: int
+    vs: str            # joined display, e.g. "fire & lightning"
+    source: str
+
+    @classmethod
+    def from_bonus_things(cls, bonus: int, things: list[str], source: str) -> "SheetSituationalSave":
+        if len(things) <= 1:
+            vs = things[0] if things else ""
+        elif len(things) == 2:
+            vs = f"{things[0]} & {things[1]}"
+        else:
+            vs = ", ".join(things[:-1]) + f" & {things[-1]}"
+        return cls(bonus=bonus, vs=vs, source=source)
+
+
 class SheetFeature(BaseModel):
     name: str
     text: str
@@ -338,6 +354,7 @@ class CharacterSheet(BaseModel):
     attack_bonus: int
 
     saves: list[SheetSave]
+    situational_saves: list[SheetSituationalSave]
 
     languages: list[str]
     literacy: str                    # "illiterate" / "basic" / "literate"
@@ -1110,6 +1127,10 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
         for name in SAVE_ORDER
         if name in save_detail
     ]
+    situational_save_rows = [
+        SheetSituationalSave.from_bonus_things(b.bonus, b.things, b.source)
+        for b in saves.situational_save_bonuses(spec, data)
+    ]
 
     next_level, xp_to_next = _xp_to_next(spec, data)
     advancement_rows = all_advancement(spec, data)
@@ -1160,6 +1181,7 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
         thac0=attack_bonus.thac0(spec, data),
         attack_bonus=attack_bonus.attack_bonus(spec, data),
         saves=save_rows,
+        situational_saves=situational_save_rows,
         languages=[
             display_name(lang, data.languages)
             for lang in known_languages(
