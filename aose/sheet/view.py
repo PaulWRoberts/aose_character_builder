@@ -331,7 +331,7 @@ class CharacterSheet(BaseModel):
     inventory: list[str]
     attacks: list[AttackProfile]
 
-    secondary_skill: str | None
+    secondary_skills: list[str]
     proficiencies: ProficiencyView | None
     weapon_proficiency_active: bool
     weapon_qualities_reference: list[WeaponQualityRef]
@@ -1076,7 +1076,7 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
         equipped=_equipped(spec, data),
         inventory=_inventory(spec, data),
         attacks=attacks,
-        secondary_skill=spec.secondary_skill,
+        secondary_skills=list(spec.secondary_skills),
         proficiencies=_proficiency_view(spec, data),
         weapon_proficiency_active=spec.ruleset.weapon_proficiency,
         weapon_qualities_reference=_weapon_qualities_reference(spec, data),
