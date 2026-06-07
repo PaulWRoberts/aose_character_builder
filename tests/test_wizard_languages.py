@@ -55,7 +55,7 @@ def test_identity_renders_language_section_with_native_and_pickers(tmp_path):
     r = client.get(f"/wizard/{draft_id}/identity")
     assert r.status_code == 200
     assert "Languages" in r.text
-    assert "common" in r.text                       # native tongue shown
+    assert "Common" in r.text                       # native tongue, display name
     assert "up to 2" in r.text                      # slot hint in template
     assert 'name="language"' in r.text              # at least one checkbox
 
@@ -74,11 +74,11 @@ def test_identity_stores_chosen_languages(tmp_path):
     draft_id = _drive_to_identity(client, HIGH_INT)  # INT 16 -> 2 allowed
     r = client.post(
         f"/wizard/{draft_id}/identity",
-        data={"name": "Sage", "alignment": "law", "language": ["Dragon", "Ogre"]},
+        data={"name": "Sage", "alignment": "law", "language": ["dragon", "ogre"]},
     )
     assert r.status_code == 303
     draft = load_draft(draft_id, client._drafts_dir)
-    assert draft["languages"] == ["Dragon", "Ogre"]
+    assert draft["languages"] == ["dragon", "ogre"]
 
 
 def test_identity_allows_fewer_than_max_languages(tmp_path):
@@ -120,7 +120,7 @@ def test_finalized_character_keeps_languages(tmp_path):
     draft_id = _drive_to_identity(client, HIGH_INT)
     client.post(
         f"/wizard/{draft_id}/identity",
-        data={"name": "Polyglot", "alignment": "law", "language": ["Dragon"]},
+        data={"name": "Polyglot", "alignment": "law", "language": ["dragon"]},
     )
     client.get(f"/wizard/{draft_id}/equipment")          # rolls gold
     client.post(f"/wizard/{draft_id}/equipment", data={})  # -> review
@@ -139,9 +139,9 @@ def test_languages_cleared_when_race_changes(tmp_path):
     draft_id = _drive_to_identity(client, HIGH_INT)
     client.post(
         f"/wizard/{draft_id}/identity",
-        data={"name": "Shifter", "alignment": "law", "language": ["Dragon"]},
+        data={"name": "Shifter", "alignment": "law", "language": ["dragon"]},
     )
-    assert load_draft(draft_id, client._drafts_dir)["languages"] == ["Dragon"]
+    assert load_draft(draft_id, client._drafts_dir)["languages"] == ["dragon"]
     # Go back and change race (elf meets INT 16).
     client.post(f"/wizard/{draft_id}/race", data={"race_id": "elf"})
     assert "languages" not in load_draft(draft_id, client._drafts_dir)
@@ -152,8 +152,17 @@ def test_languages_cleared_when_adjustments_change(tmp_path):
     draft_id = _drive_to_identity(client, HIGH_INT)
     client.post(
         f"/wizard/{draft_id}/identity",
-        data={"name": "Tuner", "alignment": "law", "language": ["Dragon"]},
+        data={"name": "Tuner", "alignment": "law", "language": ["dragon"]},
     )
     # Re-submitting the adjust step clears languages (final INT may move).
     client.post(f"/wizard/{draft_id}/adjust", data={})
     assert "languages" not in load_draft(draft_id, client._drafts_dir)
+
+
+def test_identity_does_not_offer_granted_language_as_pick(tmp_path):
+    client = _make_client(tmp_path)
+    # Human druid: druidic is granted by the Languages feature.
+    draft_id = _drive_to_identity(client, HIGH_INT, race="human", cls="druid")
+    r = client.get(f"/wizard/{draft_id}/identity")
+    # Granted tongues must never appear as a learnable checkbox value.
+    assert 'value="druidic"' not in r.text

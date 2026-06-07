@@ -53,6 +53,9 @@
         {% if alignment_language %}
         <p class="muted small">Alignment tongue: {{ alignment_language }}</p>
         {% endif %}
+        {% if granted_languages %}
+        <p class="muted small">Granted: {{ granted_languages | join(", ") }}</p>
+        {% endif %}
         {% if broken_speech %}
         <p class="muted small">Your character speaks only in broken sentences (INT 3) — no additional languages.</p>
         {% endif %}
@@ -61,9 +64,9 @@
         <div class="checkbox-stack">
         {% for lang in language_options %}
             <label class="checkbox-row">
-                <input type="checkbox" name="language" value="{{ lang }}"
-                       {% if lang in chosen_languages %}checked{% endif %}>
-                <span>{{ lang }}</span>
+                <input type="checkbox" name="language" value="{{ lang.id }}"
+                       {% if lang.id in chosen_languages %}checked{% endif %}>
+                <span>{{ lang.name }}</span>
             </label>
         {% endfor %}
         </div>

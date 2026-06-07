@@ -935,15 +935,34 @@ def _identity_alignment_options(draft: dict[str, Any], data) -> list[dict]:
     ]
 
 
+def _draft_spec_for_languages(draft: dict[str, Any], data):
+    """A throwaway CharacterSpec for granted_languages lookup (race + classes).
+    Returns None if the draft has no race/class chosen yet."""
+    from aose.models import CharacterSpec, ClassEntry
+
+    race_id = draft.get("race_id")
+    class_ids = draft.get("class_ids") or ([draft["class_id"]] if draft.get("class_id") else [])
+    if not race_id or not class_ids:
+        return None
+    abil = _creation_abilities(draft, data)
+    return CharacterSpec(
+        name=draft.get("name") or "draft",
+        abilities=abil,
+        race_id=race_id,
+        alignment=draft.get("alignment") or "neutral",
+        classes=[ClassEntry(class_id=c, level=1, hp_rolls=[1]) for c in class_ids],
+    )
+
+
 def _languages_context(draft: dict[str, Any], data) -> dict:
-    """Languages section state for the Identity page: native list (from race),
-    the alignment tongue for the *current* draft alignment (if chosen yet), the
-    INT-gated additional pickers, and the broken-speech note."""
+    """Languages section state for the Identity page."""
     from aose.engine.languages import (
         additional_language_count,
         alignment_language,
         available_additional,
         broken_speech,
+        display_name,
+        granted_languages,
         native_languages,
     )
 
@@ -958,11 +977,20 @@ def _languages_context(draft: dict[str, Any], data) -> dict:
         align_tongue = alignment_language(alignment, data.languages)
         already.add(align_tongue)
 
+    # Granted (class/race feature) tongues are known, never learnable.
+    spec_like = _draft_spec_for_languages(draft, data)
+    granted = granted_languages(spec_like, data) if spec_like else []
+    already.update(granted)
+
     chosen = draft.get("languages", [])
-    options = available_additional(data.languages, already)
+    options = [
+        {"id": lang_id, "name": display_name(lang_id, data.languages)}
+        for lang_id in available_additional(data.languages, already)
+    ]
     return {
-        "native_languages": native,
+        "native_languages": [display_name(n, data.languages) for n in native],
         "alignment_language": align_tongue,
+        "granted_languages": [display_name(g, data.languages) for g in granted],
         "language_slots": additional_language_count(final_int),
         "language_options": options,
         "chosen_languages": chosen,
