@@ -41,21 +41,29 @@ def client(tmp_path):
 
 def test_loader_reads_real_skills_file():
     skills = _load_secondary_skills(DATA_DIR)
-    assert len(skills) > 20
-    assert "Blacksmith" in skills
-    assert "Healer" in skills
+    names = [e.name for e in skills]
+    assert "Blacksmith" in names
+    assert "Farmer" in names
+    assert sum(e.weight for e in skills) == 100
+    assert sum(1 for e in skills if e.roll_twice) == 1
 
 
 def test_loader_returns_empty_when_file_missing(tmp_path):
     assert _load_secondary_skills(tmp_path) == []
 
 
-def test_loader_strips_blanks_and_dedupes(tmp_path):
+def test_loader_dedupes_by_name(tmp_path):
     (tmp_path / "secondary_skills.yaml").write_text(
-        yaml.safe_dump(["Healer", "", "Healer", "  Mason  ", "Mason"]),
+        yaml.safe_dump([
+            {"name": "Healer", "weight": 50},
+            {"name": "Healer", "weight": 10},  # dropped (dup name)
+            {"name": "Mason", "weight": 48},
+            {"name": "Roll for two skills", "weight": 2, "roll_twice": True},
+        ]),
         encoding="utf-8",
     )
-    assert _load_secondary_skills(tmp_path) == ["Healer", "Mason"]
+    skills = _load_secondary_skills(tmp_path)
+    assert [e.name for e in skills] == ["Healer", "Mason", "Roll for two skills"]
 
 
 def test_loader_rejects_non_list(tmp_path):
@@ -64,9 +72,30 @@ def test_loader_rejects_non_list(tmp_path):
         _load_secondary_skills(tmp_path)
 
 
+def test_loader_rejects_bad_weight_sum(tmp_path):
+    (tmp_path / "secondary_skills.yaml").write_text(
+        yaml.safe_dump([
+            {"name": "Healer", "weight": 50},
+            {"name": "Roll for two skills", "weight": 2, "roll_twice": True},
+        ]),
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError):
+        _load_secondary_skills(tmp_path)
+
+
+def test_loader_rejects_no_roll_twice(tmp_path):
+    (tmp_path / "secondary_skills.yaml").write_text(
+        yaml.safe_dump([{"name": "Healer", "weight": 100}]),
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError):
+        _load_secondary_skills(tmp_path)
+
+
 def test_game_data_exposes_skills():
     data = GameData.load(DATA_DIR)
-    assert "Blacksmith" in data.secondary_skills
+    assert "Blacksmith" in [e.name for e in data.secondary_skills]
 
 
 # ── Wizard flow helpers ─────────────────────────────────────────────────────

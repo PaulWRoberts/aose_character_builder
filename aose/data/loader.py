@@ -11,6 +11,7 @@ from aose.models import (
     Item,
     LanguageData,
     Race,
+    SecondarySkillEntry,
     Source,
     Spell,
     SpellList,
@@ -59,11 +60,12 @@ def _load_items(directory: Path) -> dict[str, Item]:
     return result
 
 
-def _load_secondary_skills(data_dir: Path) -> list[str]:
-    """Read ``secondary_skills.yaml`` as a flat list of skill names.
+def _load_secondary_skills(data_dir: Path) -> list[SecondarySkillEntry]:
+    """Read ``secondary_skills.yaml`` as a weighted table of skill entries.
 
-    Returns an empty list if the file is absent so the loader stays usable
-    in test fixtures that pass minimal data dirs.
+    Each item is a mapping ``{name, weight, [roll_twice]}``.  Returns an empty
+    list if the file is absent (keeps minimal test data dirs usable).  When
+    present, weights must sum to 100 and exactly one entry must be ``roll_twice``.
     """
     path = data_dir / "secondary_skills.yaml"
     if not path.exists():
@@ -71,16 +73,33 @@ def _load_secondary_skills(data_dir: Path) -> list[str]:
     with path.open("r", encoding="utf-8") as f:
         raw = yaml.safe_load(f) or []
     if not isinstance(raw, list):
-        raise ValueError("secondary_skills.yaml must be a YAML list of strings")
-    skills = [str(s).strip() for s in raw if str(s).strip()]
-    # Preserve order but drop duplicates so re-roll distributions stay uniform.
+        raise ValueError("secondary_skills.yaml must be a YAML list of mappings")
+    entries: list[SecondarySkillEntry] = []
     seen: set[str] = set()
-    unique: list[str] = []
-    for skill in skills:
-        if skill not in seen:
-            seen.add(skill)
-            unique.append(skill)
-    return unique
+    for obj in raw:
+        if not isinstance(obj, dict):
+            raise ValueError(
+                "secondary_skills.yaml entries must be mappings with name/weight"
+            )
+        entry = SecondarySkillEntry.model_validate(obj)
+        if entry.name in seen:
+            continue
+        seen.add(entry.name)
+        entries.append(entry)
+    if not entries:
+        return []
+    total = sum(e.weight for e in entries)
+    if total != 100:
+        raise ValueError(
+            f"secondary_skills.yaml weights must sum to 100 (got {total})"
+        )
+    roll_twice_count = sum(1 for e in entries if e.roll_twice)
+    if roll_twice_count != 1:
+        raise ValueError(
+            "secondary_skills.yaml must have exactly one roll_twice entry "
+            f"(got {roll_twice_count})"
+        )
+    return entries
 
 
 def _load_spell_lists(data_dir: Path) -> dict[str, SpellList]:
@@ -184,7 +203,7 @@ class GameData:
     spell_lists: dict[str, SpellList] = field(default_factory=dict)
     items: dict[str, Item] = field(default_factory=dict)
     qualities: dict[str, WeaponQuality] = field(default_factory=dict)
-    secondary_skills: list[str] = field(default_factory=list)
+    secondary_skills: list[SecondarySkillEntry] = field(default_factory=list)
     languages: LanguageData = field(default_factory=LanguageData)
     enchantments: dict[str, Enchantment] = field(default_factory=dict)
     sources: dict[str, Source] = field(default_factory=dict)
