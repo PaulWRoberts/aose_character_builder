@@ -82,9 +82,9 @@ def test_identity_step_sits_after_class_setup(tmp_path):
     draft_id = _drive_to_identity(client)
     r = client.get(f"/wizard/{draft_id}/identity")
     assert r.status_code == 200
-    # Breadcrumb order: Class Setup precedes Identity precedes Equipment.
+    # Breadcrumb order: HP & Skills precedes Identity precedes Equipment.
     body = r.text
-    assert body.index("Class Setup") < body.index("Identity")
+    assert body.index("HP &amp; Skills") < body.index("Identity")
     assert body.index("Identity") < body.index("Equipment")
 
 

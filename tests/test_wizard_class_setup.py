@@ -350,11 +350,11 @@ def test_breadcrumb_shows_single_class_setup(tmp_path):
     _drive_to_class_setup(client, draft_id)
     r = client.get(f"/wizard/{draft_id}/class_setup")
     bc = _breadcrumb(r.text)
-    assert "Class Setup" in bc
+    assert "HP &amp; Skills" in bc
     assert "Hit Points" not in bc
     assert "Proficiencies" not in bc
-    # Exactly one occurrence of the Class Setup label in the breadcrumb.
-    assert bc.count("Class Setup") == 1
+    # Exactly one occurrence of the step label in the breadcrumb.
+    assert bc.count("HP &amp; Skills") == 1
 
 
 def test_class_setup_incomplete_until_hp(tmp_path):

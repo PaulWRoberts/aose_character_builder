@@ -81,12 +81,12 @@ full sweep: druid Energy Resistance (`save:vs:fire`/`save:vs:lightning` +2),
 svirfneblin Illusion Resistance (`save:vs:illusion` +2), kineticist Mental
 Defence (`save:vs:mental_powers` +2), knight Strength of Will
 (`save:vs:charm`/`save:vs:hold` +4, `save:vs:illusion` +2, gained at level 3).
-1289 tests pass; 2 pre-existing breadcrumb failures unchanged. Spec/plan:
+1291 tests pass. Spec/plan:
 `docs/superpowers/{specs,plans}/2026-06-07-situational-save-bonuses*`.
 
 ## Current state (2026-06-07, languages/literacy/WIS-saves)
 
-Languages, literacy, and WIS magic-save improvements just landed (11-task plan, on `feature/languages-literacy-wisdom-saves`). All new tests pass; 2 pre-existing breadcrumb-label failures unchanged.
+Languages, literacy, and WIS magic-save improvements just landed (11-task plan, on `feature/languages-literacy-wisdom-saves`). All new tests pass.
 
 - **Language registry** — `LanguageData.names: dict[str, str]` maps every language id to its book-authoritative display name (diacritics/casing exact). `display_name(id, lang_data)` does registry lookup with a title-case fallback for any unregistered id. `data/languages.yaml` `additional:` is now a list of ids; the registry maps them to display names.
 - **Granted languages** — `granted_languages(spec, data)` (engine, pure) walks race features (all) and class features (level-gated) collecting `feature.mechanical["languages"]` ids. Gnome burrowing-mammals tongue and druid's `druidic` are granted this way. Granted tongues appear in the known list but never in the INT-pick learnable list. The wizard identity page shows them under "Granted:" and excludes them from the checkbox options.
@@ -98,7 +98,7 @@ Languages, literacy, and WIS magic-save improvements just landed (11-task plan, 
 
 ## Current state (2026-06-07, weighted secondary skills)
 
-Book-faithful weighted secondary-skill distribution + "roll for two skills" outcome just landed (9-task plan, on `main`). 1225 tests pass; 2 pre-existing breadcrumb-label failures unchanged.
+Book-faithful weighted secondary-skill distribution + "roll for two skills" outcome just landed (9-task plan, on `main`). 1225 tests pass.
 
 - **`SecondarySkillEntry`** — new model (`aose/models/secondary_skill.py`): `{name, weight: int≥1, roll_twice: bool=False}`. Replaces the old flat `list[str]` in `GameData.secondary_skills`.
 - **`data/secondary_skills.yaml`** — replaced with the exact AOSE Advanced Fantasy d100 table (31 trades + 1 `roll_twice` entry, weights summing to 100). Loader validates the sum and exactly-one roll-twice on startup.
@@ -111,7 +111,7 @@ Book-faithful weighted secondary-skill distribution + "roll for two skills" outc
 
 ## Current state (2026-06-06, feature-granted modifiers)
 
-Data-driven class/race bonuses via `GrantedModifier` just landed (7-task plan, on `main`). All new tests pass; 2 pre-existing breadcrumb-label failures in `test_wizard_class_setup` / `test_wizard_identity` are unchanged.
+Data-driven class/race bonuses via `GrantedModifier` just landed (7-task plan, on `main`). All new tests pass.
 
 - **`GrantedModifier` + `Scaling`** — `aose/models/modifier.py` gains two new models. `GrantedModifier` declares a modifier a class/race feature grants (same `target`/`op` grammar as `Modifier`; plus `condition: str | None` (open-ended, e.g. `"unarmored"`, `"ranged"`) and exactly one of `value` (flat) or `scale` (a `Scaling` with `by: level|ability:X` + banded `table: dict[int, int]`)). `Modifier` gains `condition: str | None = None` and `source: str = ""` (feature name, for future hover). `ClassFeature` and `RaceFeature` each gain `granted_modifiers: list[GrantedModifier]`.
 - **`engine/features.py`** — new cycle-free module. `_band_lookup` (greatest key ≤ input; 0 below lowest band); `resolve_value` (flat or banded, level or effective ability); `feature_modifiers(spec, data) -> list[Modifier]` (walks class features gated by `gained_at_level`, and all race features; level-scaling is class-only); `all_modifiers = active_modifiers (magic) + feature_modifiers`. Import DAG: `models/loader → magic → features → {armor_class, saves, attacks}`.
@@ -121,7 +121,7 @@ Data-driven class/race bonuses via `GrantedModifier` just landed (7-task plan, o
 
 ## Current state (2026-06-06, mental powers + Kineticist)
 
-Mental powers caster type and Kineticist class just landed (12-task plan, on `main`). All new tests pass; the 2 pre-existing breadcrumb-label failures in `test_wizard_class_setup` / `test_wizard_identity` are unchanged.
+Mental powers caster type and Kineticist class just landed (12-task plan, on `main`). All new tests pass.
 
 - **`mental` caster type** — `SpellList.caster_type` and `engine/spells.py::CasterType` now include `"mental"`. Known powers reuse `ClassEntry.spellbook` (arcane and mental are both "chosen subset"; divine still knows-all). `ClassEntry.powers_used: int = 0` tracks the daily-use pool counter (pool = `2 × level`, computed; no slot levels). Engine helpers in `spells.py`: `powers_known_cap`, `learnable_spells` (mental: all on-list not yet known), `learn` / `forget` (cap-enforced), `beginning_spell_count` (mental: reads `powers_known` column), `power_pool` / `spend_power` / `restore_power` / `reset_powers`. Rest (`/rest/night`, `/rest/full-day`) calls `reset_powers` on all entries — a no-op for non-mental. `spells_view` and `spellbook_view` skip mental; new `mental_powers_view` → `MentalPowersBlock` in `CharacterSheet`. Routes: `/powers/{learn,forget,spend,restore,reset}`. Wizard `_casts_at_level_1` recognises mental (via `powers_known`); spells step handles selection + validation; source gating (`carcass_crawler_1`) already generic.
 - **Level-based AC** — originally `ClassLevelData.armor_class`; that column has since been retired onto the generic `GrantedModifier` path (see "feature-granted modifiers" section above). Kineticist AC is now a level-scaled `ac set` granted modifier.
@@ -131,7 +131,7 @@ Mental powers caster type and Kineticist class just landed (12-task plan, on `ma
 
 ## Current state (2026-06-06, content sources)
 
-Content-source tagging and filtering just landed (13-task plan, on `main`). All new tests pass; 2 pre-existing breadcrumb-label failures in `test_wizard_class_setup` / `test_wizard_identity` are unrelated.
+Content-source tagging and filtering just landed (13-task plan, on `main`). All new tests pass.
 
 - **`Source` model** — `aose/models/source.py`; `data/sources.yaml` (OSE Classic Fantasy + OSE Advanced Fantasy, both Necrotic Gnome, both core). Loaded into `GameData.sources`.
 - **`source` field** — added to `ItemBase`, `Race`, `CharClass`, `SpellList`, `Enchantment`, and `Spell`. Default `"ose_classic_fantasy"`; only Advanced-tagged entries carry `source: ose_advanced_fantasy` in YAML. Existing Classic content needs no edits.
