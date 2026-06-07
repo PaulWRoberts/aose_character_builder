@@ -3,6 +3,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
 from .ability import Ability
+from .modifier import GrantedModifier
 
 
 class RaceFeature(BaseModel):
@@ -12,6 +13,7 @@ class RaceFeature(BaseModel):
     name: str
     text: str
     mechanical: dict[str, Any] | None = None
+    granted_modifiers: list[GrantedModifier] = Field(default_factory=list)
 
 
 class Race(BaseModel):

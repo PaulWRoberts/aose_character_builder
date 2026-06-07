@@ -3,6 +3,7 @@ from typing import Any, Literal, Union
 from pydantic import BaseModel, ConfigDict, Field
 
 from .ability import Ability
+from .modifier import GrantedModifier
 
 
 class ClassLevelData(BaseModel):
@@ -30,6 +31,7 @@ class ClassFeature(BaseModel):
     text: str
     gained_at_level: int = 1
     mechanical: dict[str, Any] | None = None
+    granted_modifiers: list[GrantedModifier] = Field(default_factory=list)
 
 
 AllowedList = Union[list[str], Literal["all"]]

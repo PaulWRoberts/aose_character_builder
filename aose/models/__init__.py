@@ -23,7 +23,7 @@ from .item import (
     Poison,
     WeaponDamage,
 )
-from .modifier import Modifier, RolledModifier
+from .modifier import GrantedModifier, Modifier, RolledModifier, Scaling
 from .enchantment import AppliesTo, Enchantment
 from .character import (
     AmmoStack, CharacterSpec, ClassEntry, ContainerInstance, EnchantedInstance,
@@ -55,8 +55,10 @@ __all__ = [
     "MagicItem",
     "Poison",
     "WeaponDamage",
+    "GrantedModifier",
     "Modifier",
     "RolledModifier",
+    "Scaling",
     "AppliesTo",
     "Enchantment",
     "AmmoStack",
