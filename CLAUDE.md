@@ -65,6 +65,19 @@ override. Changing a rule mid-wizard applies targeted downstream clears
 Every flag in `RuleSet` is integrated end-to-end. The settings page never
 renders a "pending" badge — a regression test guards this.
 
+## Current state (2026-06-07, weighted secondary skills)
+
+Book-faithful weighted secondary-skill distribution + "roll for two skills" outcome just landed (9-task plan, on `main`). 1225 tests pass; 2 pre-existing breadcrumb-label failures unchanged.
+
+- **`SecondarySkillEntry`** — new model (`aose/models/secondary_skill.py`): `{name, weight: int≥1, roll_twice: bool=False}`. Replaces the old flat `list[str]` in `GameData.secondary_skills`.
+- **`data/secondary_skills.yaml`** — replaced with the exact AOSE Advanced Fantasy d100 table (31 trades + 1 `roll_twice` entry, weights summing to 100). Loader validates the sum and exactly-one roll-twice on startup.
+- **`aose/engine/secondary_skills.py`** (new, cycle-free) — `selectable_names(entries)` (excludes roll-twice), `roll(entries, rng=None)` (weighted pick; roll-twice expands to two distinct trades, never nests; raises `SecondarySkillError` on empty table or impossible expansion).
+- **`CharacterSpec.secondary_skill: str|None`** → **`secondary_skills: list[str]`** (default `[]`). A `model_validator` coerces legacy saves (`None`→`[]`, `str`→`[str]`).
+- **Strict Mode** — roll happens once on first `GET /identity` and is locked. Re-roll POST returns 400; submitted skill on `POST /identity` is ignored. No back-nav lock (skill is cosmetic).
+- **Non-strict Mode** — re-roll button calls `roll(...)` fresh (may yield 1 or 2 skills). Single manual dropdown collapses to one skill on submit. Both controls always available.
+- **Templates** — `identity.html` shows locked read-only text under strict, or rolled display + re-roll button + manual dropdown under non-strict. `sheet.html`, `sheet_print.html`, `wizard/review.html` render `", ".join(secondary_skills)`; section hidden when empty.
+- Spec/plan: `docs/superpowers/{specs,plans}/2026-06-06-weighted-secondary-skills*`.
+
 ## Current state (2026-06-06, feature-granted modifiers)
 
 Data-driven class/race bonuses via `GrantedModifier` just landed (7-task plan, on `main`). All new tests pass; 2 pre-existing breadcrumb-label failures in `test_wizard_class_setup` / `test_wizard_identity` are unchanged.
