@@ -103,10 +103,10 @@ def test_sheet_composes_native_alignment_and_chosen_languages():
         name="Linguist",
         abilities={"STR": 10, "INT": 16, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
         race_id="human", classes=[ClassEntry(class_id="fighter")],
-        alignment="law", languages=["Dragon", "Ogre"],
+        alignment="law", languages=["dragon", "ogre"],
     )
     sheet = build_sheet(spec, data)
-    assert "common" in sheet.languages          # native
+    assert "Common" in sheet.languages          # native, display name
     assert "Lawful" in sheet.languages          # alignment tongue
     assert "Dragon" in sheet.languages and "Ogre" in sheet.languages
     assert sheet.broken_speech is False
@@ -231,3 +231,26 @@ def test_sheet_renders_inline_detail_rows(tmp_path):
     assert "data-detail-toggle=" in html
     # The structured card markup renders.
     assert "detail-card" in html
+
+
+def test_sheet_languages_use_display_names_and_include_granted(data):
+    spec = CharacterSpec(
+        name="G",
+        abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
+        race_id="gnome", alignment="neutral",
+        classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[5])],
+    )
+    sheet = build_sheet(spec, data)
+    assert "Common" in sheet.languages
+    assert "Secret language of burrowing mammals" in sheet.languages
+
+
+def test_sheet_exposes_literacy(data):
+    spec = CharacterSpec(
+        name="B",
+        abilities={"STR": 10, "INT": 16, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
+        race_id="human", alignment="neutral",
+        classes=[ClassEntry(class_id="barbarian", level=1, hp_rolls=[5])],
+    )
+    sheet = build_sheet(spec, data)
+    assert sheet.literacy == "illiterate"

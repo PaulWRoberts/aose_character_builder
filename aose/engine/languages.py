@@ -94,11 +94,12 @@ def available_additional(lang_data, already_known: set[str]) -> list[str]:
     return out
 
 
-def known_languages(chosen, race, alignment, lang_data) -> list[str]:
-    """Native + alignment tongue + chosen additional, order-stable + deduped
-    (case-insensitive)."""
+def known_languages(chosen, race, alignment, lang_data, granted=()) -> list[str]:
+    """Native + alignment tongue + granted (class/race feature) + chosen
+    additional, order-stable + deduped (case-insensitive)."""
     ordered = list(native_languages(race))
     ordered.append(alignment_language(alignment, lang_data))
+    ordered.extend(granted)
     ordered.extend(chosen)
     out: list[str] = []
     seen: set[str] = set()

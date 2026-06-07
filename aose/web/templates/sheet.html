@@ -196,6 +196,7 @@
         <div class="gbody scroll" style="max-height:230px">
           <div class="subhead">Languages</div>
           <p style="margin:0 0 4px">{{ sheet.languages | join(", ") if sheet.languages else "—" }}</p>
+          <p style="margin:0 0 4px;font-size:11px;">Literacy: <strong>{{ sheet.literacy | capitalize }}</strong></p>
           {% if sheet.broken_speech %}<p style="margin:0 0 4px;font-size:11px;color:var(--stamp);">Speaks only in broken sentences (INT 3).</p>{% endif %}
           {% if sheet.secondary_skills %}
           <div class="subhead">Secondary Skill</div>

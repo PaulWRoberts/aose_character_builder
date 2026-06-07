@@ -19,7 +19,9 @@ from aose.engine.encumbrance import (
     treasure_weight_cn,
     weight_band,
 )
-from aose.engine.languages import broken_speech, known_languages
+from aose.engine.languages import (
+    broken_speech, display_name, granted_languages, known_languages, literacy,
+)
 from aose.engine.leveling import ClassAdvancement, all_advancement
 from aose.engine.detail import DetailCard, spell_card
 from aose.engine.magic import active_modifiers, apply_modifiers, effective_abilities
@@ -314,6 +316,7 @@ class CharacterSheet(BaseModel):
     saves: list[SheetSave]
 
     languages: list[str]
+    literacy: str                    # "illiterate" / "basic" / "literate"
     broken_speech: bool              # INT 3 — speaks only in broken sentences
     movement_base: int               # effective exploration move (after encumbrance)
     movement_encounter: int          # = movement_base // 3
@@ -1055,7 +1058,14 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
         thac0=attack_bonus.thac0(spec, data),
         attack_bonus=attack_bonus.attack_bonus(spec, data),
         saves=save_rows,
-        languages=known_languages(spec.languages, race, spec.alignment, data.languages),
+        languages=[
+            display_name(lang, data.languages)
+            for lang in known_languages(
+                spec.languages, race, spec.alignment, data.languages,
+                granted=granted_languages(spec, data),
+            )
+        ],
+        literacy=literacy(spec, data),
         broken_speech=broken_speech(spec.abilities[Ability.INT]),
         movement_base=effective_movement(spec, data),
         movement_encounter=effective_movement(spec, data) // 3,
