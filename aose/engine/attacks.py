@@ -31,7 +31,8 @@ from aose.engine.ability_mods import ability_modifier
 from aose.engine.attack_bonus import thac0
 from aose.engine.ammo import is_unloaded, loaded_bonus, loaded_stack, resolve_ammo
 from aose.engine.enchant import equipped_enchanted
-from aose.engine.magic import active_modifiers, effective_abilities
+from aose.engine.features import all_modifiers
+from aose.engine.magic import effective_abilities
 from aose.engine.proficiency import (
     base_weapon_id,
     is_proficient,
@@ -77,11 +78,20 @@ def _format_damage(base: str, mod: int) -> str:
     return f"{base}{sign}{abs(mod)}"
 
 
-def _global_atk_dmg(spec: CharacterSpec, data: GameData) -> tuple[int, int]:
-    """Sum global ``attack`` and ``damage`` add-modifiers from active magic items."""
-    mods = active_modifiers(spec, data)
-    atk = sum(m.value for m in mods if m.target == "attack" and m.op == "add")
-    dmg = sum(m.value for m in mods if m.target == "damage" and m.op == "add")
+def _atk_dmg(mods, *, melee: bool, ranged: bool) -> tuple[int, int]:
+    """Sum global ``attack``/``damage`` add-modifiers that apply to a weapon of
+    this kind.  Unconditional always; ``ranged``/``melee`` gated by the weapon;
+    any other condition is situational and excluded from the number."""
+    def applies(m) -> bool:
+        if m.condition is None:
+            return True
+        if m.condition == "ranged":
+            return ranged
+        if m.condition == "melee":
+            return melee
+        return False
+    atk = sum(m.value for m in mods if m.target == "attack" and m.op == "add" and applies(m))
+    dmg = sum(m.value for m in mods if m.target == "damage" and m.op == "add" and applies(m))
     return atk, dmg
 
 
@@ -205,7 +215,7 @@ def attack_profiles(spec: CharacterSpec, data: GameData) -> list[AttackProfile]:
     """
     eff = effective_abilities(spec, data)
     base_thac0 = thac0(spec, data)
-    g_atk, g_dmg = _global_atk_dmg(spec, data)
+    mods = all_modifiers(spec, data)
 
     def _ammo_args(weapon):
         if not weapon.accepts_ammo:
@@ -223,14 +233,17 @@ def attack_profiles(spec: CharacterSpec, data: GameData) -> list[AttackProfile]:
         item = data.items.get(weapon_id)
         if not isinstance(item, Weapon):
             continue  # equipped_weapons should only contain weapons, defensive
+        g_atk, g_dmg = _atk_dmg(mods, melee=item.melee, ranged=item.ranged)
         weapon_profiles.append(
             _profile_for(item, spec, data, count, eff, base_thac0, g_atk, g_dmg,
                          manageable_item_id=item.id, **_ammo_args(item))
         )
     for resolved in equipped_enchanted(spec, data, "weapon"):
+        g_atk, g_dmg = _atk_dmg(mods, melee=resolved.melee, ranged=resolved.ranged)
         weapon_profiles.append(
             _profile_for(resolved, spec, data, 1, eff, base_thac0, g_atk, g_dmg,
                          **_ammo_args(resolved))
         )
     weapon_profiles.sort(key=lambda p: p.name)
-    return [_unarmed_profile(spec, eff, base_thac0, g_atk, g_dmg), *weapon_profiles]
+    u_atk, u_dmg = _atk_dmg(mods, melee=True, ranged=False)
+    return [_unarmed_profile(spec, eff, base_thac0, u_atk, u_dmg), *weapon_profiles]

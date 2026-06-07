@@ -1,7 +1,7 @@
 from aose.data.loader import GameData
 from aose.models import CharacterSpec
 
-from .magic import active_modifiers
+from .features import all_modifiers
 
 SAVE_FLOOR = 2
 
@@ -27,7 +27,9 @@ def saving_throws(spec: CharacterSpec, data: GameData) -> dict[str, int]:
             if name not in best or value < best[name]:
                 best[name] = value
 
-    mods = active_modifiers(spec, data)
+    # Saves recognise no V1 conditions; situational (conditioned) save mods are
+    # excluded from the number until a derivation learns to evaluate them.
+    mods = [m for m in all_modifiers(spec, data) if m.condition is None]
     for name in list(best):
         wanted = ("save:all", f"save:{name}")
         target = best[name]

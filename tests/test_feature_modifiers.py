@@ -116,3 +116,22 @@ def test_feature_modifiers_empty_for_plain_character():
     )
     assert feature_modifiers(spec, DATA) == []
     assert all_modifiers(spec, DATA) == active_modifiers(spec, DATA)
+
+
+# ── Task 3: consumer wiring + conditions ────────────────────────────────────
+
+def test_ac_set_modifier_shows_in_unarmored_display():
+    # An `ac set 6` magic item now reflects in the unarmoured value (was ignored
+    # when ac-set lived inside the worn-armour gate). DEX 10 -> +0 -> descending 6.
+    from aose.engine.armor_class import unarmored_ac
+    from aose.models import CharacterSpec, ClassEntry, MagicItemInstance, Modifier
+    spec = CharacterSpec(
+        name="T", abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
+        race_id="human", classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
+        alignment="neutral",
+        magic_items=[MagicItemInstance(
+            instance_id="i1", catalog_id="bracers_of_armour", equipped=True,
+            extra_modifiers=[Modifier(target="ac", op="set", value=6)],
+        )],
+    )
+    assert unarmored_ac(spec, DATA) == (6, 13)
