@@ -18,6 +18,16 @@ _CONDITION_NOTES = {
     "paralysis": "paralysis only (not petrification)",
 }
 
+_VS_DISPLAY = {
+    "illusion": "illusions",
+}
+"""Display name for a ``save:vs:<thing>`` suffix. Unregistered things fall back
+to ``thing.replace("_", " ")``."""
+
+
+def _vs_display(thing: str) -> str:
+    return _VS_DISPLAY.get(thing, thing.replace("_", " "))
+
 
 def wisdom_save_modifiers(spec: CharacterSpec, data: GameData) -> list[Modifier]:
     """WIS modifier vs magical effects. Unconditional on spells/wands (always
@@ -46,6 +56,15 @@ class SaveBreakdown(BaseModel):
     base: int            # class progression best (no modifiers)
     modified: int        # headline (unconditional modifiers, floored)
     lines: list[SaveModLine]
+
+
+class SituationalSaveBonus(BaseModel):
+    """A broad cross-cutting save bonus that applies whenever a particular kind
+    of effect (``things``) forces a save, regardless of category. Sourced from a
+    ``save:vs:<thing>`` modifier on a race/class feature or magic item."""
+    source: str          # feature/item name, or "—"
+    bonus: int
+    things: list[str]    # display names, sorted
 
 
 def _level_data(cls, level: int):
@@ -106,6 +125,27 @@ def saving_throws_detail(spec: CharacterSpec, data: GameData) -> dict[str, SaveB
             for m in relevant if m.op == "add"
         ]
         out[name] = SaveBreakdown(category=name, base=base_val, modified=modified, lines=lines)
+    return out
+
+
+def situational_save_bonuses(spec: CharacterSpec, data: GameData) -> list[SituationalSaveBonus]:
+    """Cross-cutting ``save:vs:<thing>`` bonuses from features and magic items,
+    grouped by ``(source, value)`` with their things collected. Never folded
+    into any per-category headline."""
+    groups: dict[tuple[str, int], list[str]] = {}
+    for m in all_modifiers(spec, data):
+        if m.op != "add" or not m.target.startswith("save:vs:"):
+            continue
+        thing = _vs_display(m.target.split("save:vs:", 1)[1])
+        key = (m.source or "—", m.value)
+        bucket = groups.setdefault(key, [])
+        if thing not in bucket:
+            bucket.append(thing)
+    out = [
+        SituationalSaveBonus(source=src, bonus=val, things=sorted(things))
+        for (src, val), things in groups.items()
+    ]
+    out.sort(key=lambda b: (b.source, -b.bonus))
     return out
 
 
