@@ -85,12 +85,13 @@ def test_thac0_fighter_l4(data):
 
 
 def test_saves_fighter_l1(data):
+    # Thorin is a dwarf (CON 14 → +3 resilience on death/wands/spells).
     spec = make_spec()
     s = saves.saving_throws(spec, data)
-    assert s == {"death": 12, "wands": 13, "paralysis": 14, "breath": 15, "spells": 16}
+    assert s == {"death": 9, "wands": 10, "paralysis": 14, "breath": 15, "spells": 13}
 
 
 def test_saves_fighter_l4_better(data):
     spec = make_spec(level=4)
     s = saves.saving_throws(spec, data)
-    assert s["death"] == 10
+    assert s["death"] == 7  # L4 base 10 − 3 dwarf resilience

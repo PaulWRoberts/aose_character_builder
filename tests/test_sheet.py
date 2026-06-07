@@ -55,7 +55,7 @@ def test_build_sheet_saves_ordered(data):
     sheet = build_sheet(make_spec(), data)
     assert [s.name for s in sheet.saves] == ["death", "wands", "paralysis", "breath", "spells"]
     assert sheet.saves[0].label == "Death / Poison"
-    assert sheet.saves[0].target == 12
+    assert sheet.saves[0].target == 9  # L1 fighter base 12 − 3 dwarf resilience (CON 14)
 
 
 def test_build_sheet_movement(data):
