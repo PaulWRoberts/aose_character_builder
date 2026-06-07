@@ -28,23 +28,23 @@ alignment:
   neutral: Neutral
   chaos: Chaotic
 additional:
-  - Bugbear
-  - Doppelgänger
-  - Dragon
-  - Dwarvish
-  - Elvish
-  - Gargoyle
-  - Gnoll
-  - Gnomish
-  - Goblin
-  - Halfling
-  - Harpy
-  - Hobgoblin
-  - Kobold
-  - Lizard man
-  - Medusa
-  - Minotaur
-  - Ogre
-  - Orcish
-  - Pixie
-  - Human dialect
+  - bugbear
+  - doppelganger
+  - dragon
+  - dwarvish
+  - elvish
+  - gargoyle
+  - gnoll
+  - gnomish
+  - goblin
+  - halfling
+  - harpy
+  - hobgoblin
+  - kobold
+  - lizard_man
+  - medusa
+  - minotaur
+  - ogre
+  - orcish
+  - pixie
+  - human_dialect

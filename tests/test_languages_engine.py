@@ -59,22 +59,18 @@ def test_available_additional_excludes_known_case_insensitively():
     data = _data()
     elf = data.races["elf"]  # native incl. elvish, gnoll, hobgoblin, orcish
     avail = available_additional(data.languages, set(native_languages(elf)))
-    # Title-case "Elvish" must be excluded even though native is "elvish".
-    assert "Elvish" not in avail
-    assert "Gnoll" not in avail
-    assert "Orcish" not in avail
-    # Something the elf doesn't natively speak is still offered.
-    assert "Dragon" in avail
-    # No duplicates.
+    assert "elvish" not in avail
+    assert "gnoll" not in avail
+    assert "orcish" not in avail
+    assert "dragon" in avail            # something the elf doesn't speak
     assert len(avail) == len(set(avail))
 
 
 def test_known_languages_composes_and_dedupes_in_order():
     data = _data()
     human = data.races["human"]  # native: ["common"]
-    known = known_languages(["Dragon"], human, "law", data.languages)
-    # native, then alignment, then chosen — stable order.
-    assert known == ["common", "Lawful", "Dragon"]
+    known = known_languages(["dragon"], human, "law", data.languages)
+    assert known == ["common", "Lawful", "dragon"]
 
 
 def test_known_languages_dedupes_case_insensitively():
