@@ -174,6 +174,12 @@ def test_skill_section_hidden_in_identity_when_rule_inactive(client, tmp_path):
     assert "Secondary Skill" not in r.text
 
 
+# ── Helpers ────────────────────────────────────────────────────────────────
+
+def _disable_strict(client):
+    save_settings(client._settings_path, RuleSet(secondary_skills=True, strict_mode=False))
+
+
 # ── Auto-roll on GET /identity ─────────────────────────────────────────────
 
 def test_identity_get_auto_rolls_skill_on_first_visit(client):
@@ -185,15 +191,16 @@ def test_identity_get_auto_rolls_skill_on_first_visit(client):
     assert r.status_code == 200
 
     draft = load_draft(draft_id, client._drafts_dir)
-    assert draft["secondary_skill"] in GameData.load(DATA_DIR).secondary_skills
+    rolled = draft["secondary_skill"]
+    assert isinstance(rolled, list) and len(rolled) >= 1
+    names = [e.name for e in GameData.load(DATA_DIR).secondary_skills]
+    assert all(s in names for s in rolled)
 
 
 def test_identity_get_does_not_replace_existing_skill(client):
     draft_id = _drive_to_identity(client)
-    # First visit auto-rolls
     client.get(f"/wizard/{draft_id}/identity")
     first = load_draft(draft_id, client._drafts_dir)["secondary_skill"]
-    # Second visit must not re-roll
     client.get(f"/wizard/{draft_id}/identity")
     second = load_draft(draft_id, client._drafts_dir)["secondary_skill"]
     assert first == second
@@ -201,20 +208,21 @@ def test_identity_get_does_not_replace_existing_skill(client):
 
 # ── Re-roll via /identity/skill-reroll ────────────────────────────────────
 
-def test_skill_reroll_changes_skill(client):
+def test_skill_reroll_changes_skill_when_not_strict(client):
+    _disable_strict(client)
     draft_id = _drive_to_identity(client)
     client.get(f"/wizard/{draft_id}/identity")
     before = load_draft(draft_id, client._drafts_dir)["secondary_skill"]
-    # Try a few times — uniform random over ~50 entries should differ quickly.
-    for _ in range(10):
+    for _ in range(20):
         client.post(f"/wizard/{draft_id}/identity/skill-reroll")
         after = load_draft(draft_id, client._drafts_dir)["secondary_skill"]
         if after != before:
             return
-    pytest.fail("Re-roll never changed the skill after 10 tries")
+    pytest.fail("Re-roll never changed the skill after 20 tries")
 
 
-def test_skill_reroll_redirects_to_identity(client):
+def test_skill_reroll_redirects_to_identity_when_not_strict(client):
+    _disable_strict(client)
     draft_id = _drive_to_identity(client)
     client.get(f"/wizard/{draft_id}/identity")
     r = client.post(f"/wizard/{draft_id}/identity/skill-reroll")
@@ -222,21 +230,54 @@ def test_skill_reroll_redirects_to_identity(client):
     assert r.headers["location"] == f"/wizard/{draft_id}/identity"
 
 
+def test_skill_reroll_rejected_when_strict(client):
+    draft_id = _drive_to_identity(client)
+    client.get(f"/wizard/{draft_id}/identity")
+    r = client.post(f"/wizard/{draft_id}/identity/skill-reroll")
+    assert r.status_code == 400
+
+
+def test_identity_get_hides_controls_when_strict(client):
+    draft_id = _drive_to_identity(client)
+    r = client.get(f"/wizard/{draft_id}/identity")
+    assert "Re-roll skill" not in r.text
+
+
+def test_identity_get_shows_controls_when_not_strict(client):
+    _disable_strict(client)
+    draft_id = _drive_to_identity(client)
+    r = client.get(f"/wizard/{draft_id}/identity")
+    assert "Re-roll skill" in r.text
+
+
 # ── POST /identity with skill ──────────────────────────────────────────────
 
-def test_post_identity_persists_skill_and_advances(client):
+def test_post_identity_manual_pick_collapses_to_one_when_not_strict(client):
+    _disable_strict(client)
     draft_id = _drive_to_identity(client)
-    client.get(f"/wizard/{draft_id}/identity")  # auto-roll
+    client.get(f"/wizard/{draft_id}/identity")
     r = client.post(
         f"/wizard/{draft_id}/identity",
-        data={"name": "Gloin", "alignment": "law", "secondary_skill": "Healer"},
+        data={"name": "Gloin", "alignment": "law", "secondary_skill": "Mason"},
     )
     assert r.status_code == 303
     assert r.headers["location"] == f"/wizard/{draft_id}/equipment"
-    assert load_draft(draft_id, client._drafts_dir)["secondary_skill"] == "Healer"
+    assert load_draft(draft_id, client._drafts_dir)["secondary_skill"] == ["Mason"]
 
 
-def test_post_identity_rejects_unknown_skill(client):
+def test_post_identity_strict_ignores_submitted_skill(client):
+    draft_id = _drive_to_identity(client)
+    client.get(f"/wizard/{draft_id}/identity")
+    locked = load_draft(draft_id, client._drafts_dir)["secondary_skill"]
+    client.post(
+        f"/wizard/{draft_id}/identity",
+        data={"name": "Gloin", "alignment": "law", "secondary_skill": "Mason"},
+    )
+    assert load_draft(draft_id, client._drafts_dir)["secondary_skill"] == locked
+
+
+def test_post_identity_rejects_unknown_skill_when_not_strict(client):
+    _disable_strict(client)
     draft_id = _drive_to_identity(client)
     client.get(f"/wizard/{draft_id}/identity")
     r = client.post(
@@ -255,34 +296,42 @@ def _finish_wizard(client, draft_id):
     return r.headers["location"].split("/")[-1]
 
 
-def test_skill_persists_to_character_and_sheet(client):
+def test_two_skill_result_persists_and_renders(client):
+    _disable_strict(client)
     draft_id = _drive_to_identity(client)
     client.get(f"/wizard/{draft_id}/identity")
+    # Force a known two-skill result directly into the draft.
+    from aose.characters import save_draft
+    draft = load_draft(draft_id, client._drafts_dir)
+    draft["secondary_skill"] = ["Farmer", "Mason"]
+    save_draft(draft_id, draft, client._drafts_dir)
+    # POST with no skill field -> keep the two-skill list
     client.post(
         f"/wizard/{draft_id}/identity",
-        data={"name": "Gloin", "alignment": "law", "secondary_skill": "Blacksmith"},
+        data={"name": "Gloin", "alignment": "law"},
     )
     char_id = _finish_wizard(client, draft_id)
 
     spec = load_character(char_id, client._characters_dir)
-    assert spec.secondary_skill == "Blacksmith"
+    assert spec.secondary_skills == ["Farmer", "Mason"]
 
     r = client.get(f"/character/{char_id}")
     assert "Secondary Skill" in r.text
-    assert "Blacksmith" in r.text
+    assert "Farmer, Mason" in r.text
 
 
 def test_skill_appears_on_print_page(client):
+    _disable_strict(client)
     draft_id = _drive_to_identity(client)
     client.get(f"/wizard/{draft_id}/identity")
     client.post(
         f"/wizard/{draft_id}/identity",
-        data={"name": "Gloin", "alignment": "law", "secondary_skill": "Scribe"},
+        data={"name": "Gloin", "alignment": "law", "secondary_skill": "Mason"},
     )
     char_id = _finish_wizard(client, draft_id)
     r = client.get(f"/character/{char_id}/print")
     assert "Secondary Skill" in r.text
-    assert "Scribe" in r.text
+    assert "Mason" in r.text
 
 
 def test_skill_does_not_render_when_absent(client):
@@ -301,13 +350,14 @@ def test_skill_does_not_render_when_absent(client):
 # ── Review page shows the skill ────────────────────────────────────────────
 
 def test_review_page_includes_skill(client):
+    _disable_strict(client)
     draft_id = _drive_to_identity(client)
     client.get(f"/wizard/{draft_id}/identity")
     client.post(
         f"/wizard/{draft_id}/identity",
-        data={"name": "Gloin", "alignment": "law", "secondary_skill": "Cartographer"},
+        data={"name": "Gloin", "alignment": "law", "secondary_skill": "Mason"},
     )
     client.post(f"/wizard/{draft_id}/equipment/roll-gold")
     client.post(f"/wizard/{draft_id}/equipment")
     r = client.get(f"/wizard/{draft_id}/review")
-    assert "Cartographer" in r.text
+    assert "Mason" in r.text

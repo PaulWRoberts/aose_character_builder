@@ -910,14 +910,16 @@ async def post_adjust(request: Request, draft_id: str):
 # ── Secondary skill helpers (reused by identity routes) ────────────────────
 
 def _available_skills(request: Request) -> list[str]:
-    return request.app.state.game_data.secondary_skills
+    from aose.engine.secondary_skills import selectable_names
+    return selectable_names(request.app.state.game_data.secondary_skills)
 
 
-def _roll_skill(request: Request) -> str | None:
-    skills = _available_skills(request)
-    if not skills:
+def _roll_skill(request: Request) -> list[str] | None:
+    from aose.engine.secondary_skills import roll
+    entries = request.app.state.game_data.secondary_skills
+    if not entries:
         return None
-    return random.choice(skills)
+    return roll(entries)
 
 
 # ── Identity & Background (name + alignment + optional skill, after class setup)
@@ -987,10 +989,14 @@ async def get_identity(request: Request, draft_id: str):
                 "Secondary Skills rule is active but data/secondary_skills.yaml is empty.",
             )
         if "secondary_skill" not in draft:
-            draft["secondary_skill"] = random.choice(skills)
+            rolled = _roll_skill(request)
+            if rolled is None:
+                raise HTTPException(500, "No secondary skills configured.")
+            draft["secondary_skill"] = rolled
             save_draft(draft_id, draft, _drafts_dir(request))
         ctx["skills"] = skills
-        ctx["current_skill"] = draft.get("secondary_skill")
+        ctx["skill_locked"] = rs.strict_mode
+        ctx["current_skills"] = draft.get("secondary_skill") or []
     ctx.update(_languages_context(draft, data))
     return templates.TemplateResponse(request, "wizard.html", ctx)
 
@@ -998,6 +1004,8 @@ async def get_identity(request: Request, draft_id: str):
 @router.post("/{draft_id}/identity/skill-reroll")
 async def post_identity_skill_reroll(request: Request, draft_id: str):
     draft = _load(request, draft_id)
+    if _ruleset_of(draft).strict_mode:
+        raise HTTPException(400, "Secondary skill is locked in Strict Mode.")
     form = await request.form()
 
     name = (form.get("name") or "").strip()
@@ -1039,10 +1047,16 @@ async def post_identity(request: Request, draft_id: str):
         raise HTTPException(400, "Invalid alignment for the chosen class(es).")
 
     if rs.secondary_skills:
-        secondary_skill = form.get("secondary_skill")
-        if secondary_skill not in _available_skills(request):
-            raise HTTPException(400, f"Unknown skill: {secondary_skill!r}")
-        draft["secondary_skill"] = secondary_skill
+        if rs.strict_mode:
+            # Locked: keep whatever was rolled on first visit; ignore the form.
+            draft.setdefault("secondary_skill", [])
+        else:
+            submitted = form.get("secondary_skill")
+            if submitted:
+                if submitted not in _available_skills(request):
+                    raise HTTPException(400, f"Unknown skill: {submitted!r}")
+                draft["secondary_skill"] = [submitted]  # manual collapses to one
+            # No submission -> keep the current draft value (re-rolled list).
 
     from aose.engine.languages import LanguageError, validate_languages
 
@@ -1884,7 +1898,7 @@ def _draft_to_spec(draft: dict[str, Any], data) -> CharacterSpec:
         race_id=draft["race_id"],
         classes=classes,
         alignment=draft["alignment"],
-        secondary_skill=draft.get("secondary_skill"),
+        secondary_skills=list(draft.get("secondary_skill") or []),
         languages=list(draft.get("languages", [])),
         weapon_proficiencies=list((draft.get("proficiencies") or {}).get("weapons", [])),
         weapon_specialisations=list((draft.get("proficiencies") or {}).get("specialisations", [])),
