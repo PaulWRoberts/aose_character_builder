@@ -24,6 +24,21 @@ def test_druid_energy_resistance_groups_fire_and_lightning():
     assert energy[0].things == ["fire", "lightning"]
 
 
+def test_svirfneblin_illusion_resistance():
+    from aose.models import CharacterSpec, ClassEntry
+    spec = CharacterSpec(
+        name="S", classes=[ClassEntry(class_id="fighter", level=1)],
+        race_id="svirfneblin",
+        abilities={"STR": 9, "INT": 9, "WIS": 9, "DEX": 9, "CON": 9, "CHA": 9},
+        alignment="law",
+    )
+    result = saves.situational_save_bonuses(spec, DATA)
+    illusion = [b for b in result if b.source == "Illusion Resistance"]
+    assert len(illusion) == 1
+    assert illusion[0].bonus == 2
+    assert illusion[0].things == ["illusions"]
+
+
 def test_situational_bonus_never_changes_a_headline():
     # WIS 9 → zero WIS modifier, isolating the check to save:vs:* leakage only.
     from aose.models import CharacterSpec, ClassEntry

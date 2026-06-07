@@ -85,6 +85,8 @@ features:
   mechanical:
     save_bonus: 2
     save_category: illusions
+  granted_modifiers:
+  - {target: "save:vs:illusion", op: add, value: 2}
 - id: speak_with_earth_elementals
   name: Speak With Earth Elementals
   text: Can speak with natives of the plane of elemental earth.
