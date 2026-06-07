@@ -135,3 +135,49 @@ def test_ac_set_modifier_shows_in_unarmored_display():
         )],
     )
     assert unarmored_ac(spec, DATA) == (6, 13)
+
+
+# ── Task 4: barbarian agile AC ──────────────────────────────────────────────
+
+def _barbarian(level, *, dex=10, **kw):
+    from aose.models import CharacterSpec, ClassEntry
+    base = dict(
+        name="B", abilities={"STR": 13, "INT": 10, "WIS": 10, "DEX": dex, "CON": 13, "CHA": 10},
+        race_id="human", classes=[ClassEntry(class_id="barbarian", level=level, hp_rolls=[8])],
+        alignment="neutral",
+    )
+    base.update(kw)
+    return CharacterSpec(**base)
+
+
+def test_barbarian_agile_ac_unarmored_at_l4():
+    from aose.engine.armor_class import armor_class
+    # L4, no armour, DEX 10 -> +0: descending 9 - 1 (agile) = 8.
+    assert armor_class(_barbarian(4), DATA)[0] == 8
+
+
+def test_barbarian_agile_ac_absent_before_l4():
+    from aose.engine.armor_class import armor_class
+    # gained_at_level 4: L3 has no bonus -> descending 9.
+    assert armor_class(_barbarian(3), DATA)[0] == 9
+
+
+def test_barbarian_agile_ac_dropped_when_armoured():
+    from aose.engine.armor_class import armor_class
+    # With chain_mail worn, the unarmored-conditioned bonus drops: a barbarian
+    # L4 in chainmail has the same AC as a fighter L1 in the same chainmail.
+    from aose.models import CharacterSpec, ClassEntry
+    barb = _barbarian(4, equipped={"armor": "chain_mail"})
+    fighter = CharacterSpec(
+        name="F", abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
+        race_id="human", classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
+        alignment="neutral", equipped={"armor": "chain_mail"},
+    )
+    assert armor_class(barb, DATA)[0] == armor_class(fighter, DATA)[0]
+
+
+def test_barbarian_agile_ac_shows_in_unarmored_display_even_when_armoured():
+    from aose.engine.armor_class import unarmored_ac
+    # The unarmoured display reflects the no-armour scenario -> bonus applies.
+    barb = _barbarian(4, equipped={"armor": "chain_mail"})
+    assert unarmored_ac(barb, DATA)[0] == 8
