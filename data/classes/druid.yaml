@@ -251,6 +251,9 @@ features:
   text: |-
     Druids gain a +2 bonus to saving throws against electricity (lightning) and fire.
   gained_at_level: 1
+  granted_modifiers:
+  - {target: "save:vs:fire", op: add, value: 2}
+  - {target: "save:vs:lightning", op: add, value: 2}
 - id: identification
   name: Identification
   text: |-

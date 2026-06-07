@@ -1,0 +1,40 @@
+from pathlib import Path
+
+from aose.data.loader import GameData
+from aose.engine import saves
+
+_DATA_DIR = Path(__file__).parent.parent / "data"
+DATA = GameData.load(_DATA_DIR)
+
+
+def _druid(level=1):
+    from aose.models import CharacterSpec, ClassEntry
+    return CharacterSpec(
+        name="D", classes=[ClassEntry(class_id="druid", level=level)],
+        abilities={"STR": 9, "INT": 9, "WIS": 13, "DEX": 9, "CON": 9, "CHA": 9},
+        race_id="human", alignment="neutral",
+    )
+
+
+def test_druid_energy_resistance_groups_fire_and_lightning():
+    result = saves.situational_save_bonuses(_druid(), DATA)
+    energy = [b for b in result if b.source == "Energy Resistance"]
+    assert len(energy) == 1
+    assert energy[0].bonus == 2
+    assert energy[0].things == ["fire", "lightning"]
+
+
+def test_situational_bonus_never_changes_a_headline():
+    # WIS 9 → zero WIS modifier, isolating the check to save:vs:* leakage only.
+    from aose.models import CharacterSpec, ClassEntry
+    spec = CharacterSpec(
+        name="D", classes=[ClassEntry(class_id="druid", level=1)],
+        abilities={"STR": 9, "INT": 9, "WIS": 9, "DEX": 9, "CON": 9, "CHA": 9},
+        race_id="human", alignment="neutral",
+    )
+    detail = saves.saving_throws_detail(spec, DATA)
+    cls = DATA.classes["druid"]
+    prog = cls.progression[1].saves
+    for name, val in prog.items():
+        assert detail[name].modified == val, f"{name} headline changed"
+        assert all("vs " not in ln.note for ln in detail[name].lines)
