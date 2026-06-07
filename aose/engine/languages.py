@@ -2,11 +2,12 @@
 
 Imports only models (no engine, no web).  Native languages come from the race;
 the alignment tongue is auto-determined by alignment; additional languages are
-INT-gated player picks.  All exclusion/dedup comparisons are case-insensitive
-(race langs are lowercase ids like ``elvish``; the additional list is
-title-case display names like ``Elvish``).
+INT-gated player picks.  All ids are lowercase; the ``names`` registry maps
+them to proper display names.
 """
 from __future__ import annotations
+
+from aose.models import Ability
 
 
 class LanguageError(ValueError):
@@ -37,6 +38,35 @@ def additional_language_count(int_score: int) -> int:
 def broken_speech(int_score: int) -> bool:
     """INT 3 speaks in broken sentences — a display note, grants 0 additional."""
     return int_score == 3
+
+
+def granted_languages(spec, data) -> list[str]:
+    """Special languages a character's race/class *features* grant — order-stable,
+    deduped case-insensitively. Read from ``feature.mechanical['languages']``.
+    Race features always count; class features are gated by ``gained_at_level``."""
+    out: list[str] = []
+    seen: set[str] = set()
+
+    def _add(ids):
+        for lang_id in ids or []:
+            key = lang_id.casefold()
+            if key not in seen:
+                seen.add(key)
+                out.append(lang_id)
+
+    race = data.races.get(spec.race_id)
+    if race is not None:
+        for feat in race.features:
+            if feat.mechanical:
+                _add(feat.mechanical.get("languages"))
+    for entry in spec.classes:
+        cls = data.classes.get(entry.class_id)
+        if cls is None:
+            continue
+        for feat in cls.features:
+            if feat.gained_at_level <= entry.level and feat.mechanical:
+                _add(feat.mechanical.get("languages"))
+    return out
 
 
 def native_languages(race) -> list[str]:

@@ -261,6 +261,9 @@ features:
   text: |-
     Druids speak a secret tongue known only to their sect. At each level above 2nd, a druid also learns to speak a language used by creatures of Sylvan forests (e.g. dryads, green dragons, pixies, treants).
   gained_at_level: 1
+  mechanical:
+    languages:
+    - druidic
 - id: pass_without_trace
   name: Pass Without Trace
   text: |-

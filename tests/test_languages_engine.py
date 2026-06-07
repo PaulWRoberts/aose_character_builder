@@ -10,6 +10,7 @@ from aose.engine.languages import (
     available_additional,
     broken_speech,
     display_name,
+    granted_languages,
     known_languages,
     native_languages,
     validate_languages,
@@ -142,3 +143,36 @@ def test_display_name_fallback_titlecases_unregistered_id():
     data = _data()
     assert display_name("language_of_earth_elementals", data.languages) == \
         "Language of earth elementals"
+
+
+# ── Task 5: granted_languages ────────────────────────────────────────────────
+
+def _spec(race_id, class_id, *, level=1, int_score=10):
+    from aose.models import CharacterSpec, ClassEntry
+    return CharacterSpec(
+        name="G",
+        abilities={"STR": 10, "INT": int_score, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
+        race_id=race_id, alignment="neutral",
+        classes=[ClassEntry(class_id=class_id, level=level, hp_rolls=[5])],
+    )
+
+
+def test_granted_languages_from_race_feature():
+    data = _data()
+    spec = _spec("gnome", "fighter")
+    granted = granted_languages(spec, data)
+    assert "secret_language_of_burrowing_mammals" in granted
+
+
+def test_granted_languages_from_class_feature_gated_by_level():
+    data = _data()
+    spec = _spec("human", "druid", level=1)
+    assert "druidic" in granted_languages(spec, data)
+
+
+def test_granted_languages_excluded_from_learnable():
+    data = _data()
+    spec = _spec("gnome", "fighter")
+    already = set(native_languages(data.races["gnome"])) | set(granted_languages(spec, data))
+    avail = available_additional(data.languages, already)
+    assert "secret_language_of_burrowing_mammals" not in avail
