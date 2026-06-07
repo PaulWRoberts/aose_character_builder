@@ -81,3 +81,31 @@ features:
       '11_14': 3
       '15_17': 4
       '18': 5
+  granted_modifiers:
+  - target: save:death
+    op: add
+    scale:
+      by: ability:CON
+      table:
+        7: 2
+        11: 3
+        15: 4
+        18: 5
+  - target: save:spells
+    op: add
+    scale:
+      by: ability:CON
+      table:
+        7: 2
+        11: 3
+        15: 4
+        18: 5
+  - target: save:wands
+    op: add
+    scale:
+      by: ability:CON
+      table:
+        7: 2
+        11: 3
+        15: 4
+        18: 5

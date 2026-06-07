@@ -70,6 +70,25 @@ features:
       '11_14': 3
       '15_17': 4
       '18': 5
+  granted_modifiers:
+  - target: save:spells
+    op: add
+    scale:
+      by: ability:CON
+      table:
+        7: 2
+        11: 3
+        15: 4
+        18: 5
+  - target: save:wands
+    op: add
+    scale:
+      by: ability:CON
+      table:
+        7: 2
+        11: 3
+        15: 4
+        18: 5
 - id: speak_with_burrowing_mammals
   name: Speak with Burrowing Mammals
   text: Knows the secret language of burrowing mammals such as badgers and moles.

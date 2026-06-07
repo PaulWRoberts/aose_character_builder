@@ -223,3 +223,60 @@ def test_classic_halfling_missile_bonus_not_doubled():
         alignment="neutral", equipped_weapons=["short_bow"],
     )
     assert _profiles(spec)["short_bow"].to_hit_ascending == 1   # +1, not +2
+
+
+# ── Task 6: CON-scaled resilience saves ─────────────────────────────────────
+
+def _saves(race_id, class_id, con, *, level=1, hp=8):
+    from aose.engine.saves import saving_throws
+    from aose.models import CharacterSpec, ClassEntry
+    spec = CharacterSpec(
+        name="R", abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": con, "CHA": 10},
+        race_id=race_id, classes=[ClassEntry(class_id=class_id, level=level, hp_rolls=[hp])],
+        alignment="neutral",
+    )
+    return saving_throws(spec, DATA)
+
+
+def test_dwarf_resilience_plus3_at_con13():
+    base = _saves("human", "fighter", 13)
+    dwarf = _saves("dwarf", "fighter", 13)
+    assert dwarf["death"] == base["death"] - 3      # poison/death
+    assert dwarf["spells"] == base["spells"] - 3
+    assert dwarf["wands"] == base["wands"] - 3
+    assert dwarf["paralysis"] == base["paralysis"]  # unaffected
+    assert dwarf["breath"] == base["breath"]
+
+
+def test_dwarf_resilience_zero_at_low_con():
+    base = _saves("human", "fighter", 6)
+    dwarf = _saves("dwarf", "fighter", 6)
+    assert dwarf["death"] == base["death"]          # +0 below band
+
+
+def test_dwarf_resilience_plus5_at_con18():
+    base = _saves("human", "fighter", 18)
+    dwarf = _saves("dwarf", "fighter", 18)
+    assert dwarf["death"] == base["death"] - 5
+
+
+def test_gnome_magic_resistance_excludes_poison():
+    base = _saves("human", "fighter", 13)
+    gnome = _saves("gnome", "fighter", 13)
+    assert gnome["spells"] == base["spells"] - 3
+    assert gnome["wands"] == base["wands"] - 3
+    assert gnome["death"] == base["death"]          # no poison bonus for gnomes
+
+
+def test_duergar_resilience_includes_paralysis():
+    base = _saves("human", "fighter", 13)
+    duergar = _saves("duergar", "fighter", 13)
+    assert duergar["paralysis"] == base["paralysis"] - 3
+    assert duergar["death"] == base["death"] - 3
+
+
+def test_classic_dwarf_resilience_not_doubled():
+    # Race-as-class dwarf: race_id == "dwarf" AND class == dwarf. Bonus once.
+    high = _saves("dwarf", "dwarf", 13, hp=8)   # +3
+    low = _saves("dwarf", "dwarf", 6, hp=8)     # +0
+    assert low["death"] - high["death"] == 3    # exactly 3 (not 6)
