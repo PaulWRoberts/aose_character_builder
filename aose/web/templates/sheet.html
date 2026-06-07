@@ -115,10 +115,9 @@
           <div class="abilities">
             {% for ab in sheet.abilities %}
             <div class="abil-cell">
-              <span class="ab">{{ ab.ability[:3] }}</span>
-              <span class="sc">{{ ab.score }}{% if ab.modified %}<span class="star" title="Modified by equipment or magic">✦</span>{% endif %}</span>
+              <span class="ab clickable" data-modal="modal-ability-{{ ab.ability }}">{{ ab.ability[:3] }}{% if ab.has_conditional %}<span class="cond-mark" title="Has a conditional modifier — tap for details">★</span>{% endif %}</span>
+              <span class="sc clickable" data-modal="modal-ability-{{ ab.ability }}">{{ ab.score }}{% if ab.score != ab.base_score %}<sup class="muted">({{ ab.base_score }})</sup>{% endif %}</span>
               <span class="rt">
-                <span class="md">{{ "%+d"|format(ab.modifier) }}</span>
                 <span class="tmp editable" data-pop="pop-temp" data-ability="{{ ab.ability }}">tmp {% if ab.temp_delta == 0 %}±0{% else %}{{ "%+d"|format(ab.temp_delta) }}{% endif %}</span>
               </span>
             </div>
@@ -129,7 +128,7 @@
             {% for s in sheet.saves %}
             <div class="save clickable" data-modal="modal-save-{{ s.name }}">
               <span class="cap">{{ s.label[0] }}</span>
-              <span class="nm">{{ s.label }}</span>
+              <span class="nm">{{ s.label }}{% if s.lines | selectattr("conditional") | list %} <span class="cond-mark">★</span>{% endif %}</span>
               <span class="tg">{{ s.modified }}{% if s.modified != s.base %}<sup class="muted">({{ s.base }})</sup>{% endif %}</span>
             </div>
             {% endfor %}
@@ -659,6 +658,36 @@
     </ul>
     {% else %}
     <p class="muted" style="margin:0">No modifiers — base value applies.</p>
+    {% endif %}
+  </div>
+</div>
+{% endfor %}
+
+{# MODALS: per-ability breakdown + reference-table row #}
+{% for ab in sheet.abilities %}
+<div class="overlay modal" id="modal-ability-{{ ab.ability }}" role="dialog" aria-label="{{ ab.ability }}">
+  <div class="ov-head"><h3>{{ ab.ability }}</h3><button class="x" data-close>×</button></div>
+  <div class="ov-body" style="font-size:14px">
+    <p style="margin:0 0 6px">Base <strong>{{ ab.base_score }}</strong> → Computed <strong>{{ ab.score }}</strong></p>
+    {% if ab.lines %}
+    <ul style="list-style:none;margin:0 0 10px;padding:0">
+      {% for ln in ab.lines %}
+      <li style="margin:2px 0">
+        <strong>{{ ln.source }}:</strong> {{ ln.effect }}
+        {% if ln.conditional %}<span class="muted"> — conditional{% if ln.note %} ({{ ln.note }}){% endif %}</span>{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="muted" style="margin:0 0 10px">No modifiers — base value applies.</p>
+    {% endif %}
+    {% if ab.table %}
+    <div class="subhead" style="margin:0 0 4px">At {{ ab.ability }} {{ ab.score }}</div>
+    <table class="kv" style="width:100%">
+      {% for c in ab.table %}
+      <tr><td>{{ c.label }}</td><td class="num">{{ c.value }}</td></tr>
+      {% endfor %}
+    </table>
     {% endif %}
   </div>
 </div>

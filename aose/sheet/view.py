@@ -59,14 +59,29 @@ ENCUMBRANCE_DESCRIPTIONS = {
 }
 
 
+class AbilityModLine(BaseModel):
+    source: str           # item/feature name, or "Temporary"
+    effect: str           # "+2", "−1", "set to 18" …
+    conditional: bool     # True when the modifier carries a condition
+    note: str             # condition label ("" when unconditional)
+
+
+class AbilityTableCell(BaseModel):
+    label: str            # column name (e.g. "Open Doors")
+    value: str            # banded value for the computed score
+
+
 class AbilityRow(BaseModel):
     ability: str
-    score: int            # final effective score (clamped)
+    score: int            # final effective score (clamped) — the headline
     modifier: int
     base_score: int = 0   # real underlying score
     equip_delta: int = 0  # magic-effective minus base (works for add & set ops)
     temp_delta: int = 0   # temporary modifier (signed)
     modified: bool = False
+    lines: list[AbilityModLine] = Field(default_factory=list)
+    table: list[AbilityTableCell] = Field(default_factory=list)
+    has_conditional: bool = False
 
 
 class SheetSaveLine(BaseModel):
@@ -984,11 +999,54 @@ def ammo_view(spec, data: GameData) -> tuple[list[AmmoRow], dict[str, list[AmmoO
     return ammo_rows, load_options
 
 
+def _effect_str(m) -> str:
+    """Human-readable effect for an ability modifier line."""
+    if m.op == "add":
+        return f"+{m.value}" if m.value >= 0 else f"−{abs(m.value)}"
+    if m.op == "set":
+        return f"set to {m.value}"
+    if m.op == "set_min":
+        return f"at least {m.value}"
+    if m.op == "set_max":
+        return f"at most {m.value}"
+    return str(m.value)
+
+
+def _labeled_ability_mods(spec: CharacterSpec, data: GameData) -> list[tuple]:
+    """``(modifier, source_label)`` for every equipped item's ``ability:*``
+    modifier. The label is the modifier's own ``source`` if set, else the
+    catalog/enchantment display name."""
+    out: list[tuple] = []
+    for inst in spec.magic_items:
+        if not inst.equipped:
+            continue
+        catalog = data.items.get(inst.catalog_id)
+        name = getattr(catalog, "name", inst.catalog_id)
+        item_mods = list(catalog.modifiers) if isinstance(catalog, MagicItem) else []
+        item_mods += list(inst.extra_modifiers)
+        out += [(m, m.source or name) for m in item_mods if m.target.startswith("ability:")]
+    for inst in spec.enchanted:
+        if not inst.equipped:
+            continue
+        ench = data.enchantments.get(inst.enchantment_id)
+        name = getattr(ench, "name", inst.enchantment_id)
+        ench_mods = list(ench.modifiers) if ench is not None else []
+        ench_mods += list(inst.extra_modifiers)
+        out += [(m, m.source or name) for m in ench_mods if m.target.startswith("ability:")]
+    return out
+
+
 def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
     race = data.races[spec.race_id]
 
     eff = effective_abilities(spec, data)
     mods = active_modifiers(spec, data)
+    labeled_ability_mods = _labeled_ability_mods(spec, data)
+    prime_abilities = {
+        a.value
+        for entry in spec.classes
+        for a in data.classes[entry.class_id].prime_requisites
+    }
     abilities = []
     for ab in ABILITY_ORDER:
         base = spec.abilities[ab]
@@ -999,14 +1057,39 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
             else base
         )
         final = eff[ab]
+
+        lines = [
+            AbilityModLine(
+                source=label,
+                effect=_effect_str(m),
+                conditional=m.condition is not None,
+                note=m.condition or "",
+            )
+            for (m, label) in labeled_ability_mods if m.target == target
+        ]
+        temp = spec.temp_ability_modifiers.get(ab, 0)
+        if temp:
+            lines.append(AbilityModLine(
+                source="Temporary",
+                effect=f"+{temp}" if temp >= 0 else f"−{abs(temp)}",
+                conditional=False, note="",
+            ))
+
         abilities.append(AbilityRow(
             ability=ab.value,
             score=final,
             modifier=ability_mods.ability_modifier(final),
             base_score=base,
             equip_delta=after_equip - base,
-            temp_delta=spec.temp_ability_modifiers.get(ab, 0),
+            temp_delta=temp,
             modified=(final != base),
+            lines=lines,
+            has_conditional=any(ln.conditional for ln in lines),
+            table=[
+                AbilityTableCell(label=lbl, value=val)
+                for lbl, val in ability_mods.ability_table_row(
+                    ab.value, final, is_prime=ab.value in prime_abilities)
+            ],
         ))
 
     desc_ac, asc_ac = armor_class.armor_class(spec, data)

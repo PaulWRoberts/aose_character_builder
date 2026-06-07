@@ -19,6 +19,66 @@ def ability_modifier(score: int) -> int:
     return _MOD_TABLE[score]
 
 
+# ── Per-ability reference tables (AOSE ability-modifier tables) ────────────
+# Each column is a banded lookup: keyed by the lowest score of each band; the
+# cell for a score is the entry for the greatest key <= score. Values are the
+# exact book display strings (minus sign U+2212).
+
+def _band(table: dict[int, str], score: int) -> str:
+    chosen = table[min(table)]
+    for threshold in sorted(table):
+        if score >= threshold:
+            chosen = table[threshold]
+    return chosen
+
+
+_MELEE = {3: "−3", 4: "−2", 6: "−1", 9: "None", 13: "+1", 16: "+2", 18: "+3"}
+_OPEN_DOORS = {3: "1-in-6", 9: "2-in-6", 13: "3-in-6", 16: "4-in-6", 18: "5-in-6"}
+
+_INT_LANGUAGES = {
+    3: "Native (broken speech)", 4: "Native", 13: "Native + 1 additional",
+    16: "Native + 2 additional", 18: "Native + 3 additional",
+}
+_INT_LITERACY = {3: "Illiterate", 6: "Basic", 9: "Literate"}
+
+_DEX_AC = {3: "−3", 4: "−2", 6: "−1", 9: "None", 13: "+1", 16: "+2", 18: "+3"}
+_DEX_INIT = {3: "−2", 4: "−1", 9: "None", 13: "+1", 18: "+2"}
+
+_CHA_REACTIONS = {3: "−2", 4: "−1", 9: "None", 13: "+1", 18: "+2"}
+_CHA_RETAINERS_MAX = {3: "1", 4: "2", 6: "3", 9: "4", 13: "5", 16: "6", 18: "7"}
+_CHA_RETAINERS_LOYALTY = {3: "4", 4: "5", 6: "6", 9: "7", 13: "8", 16: "9", 18: "10"}
+
+# WIS magic saves, CON hit points, and STR/DEX melee all equal the standard
+# ability-modifier column.
+_MODIFIER_COL = _MELEE
+
+_PRIME_XP = {3: "−20%", 6: "−10%", 9: "None", 13: "+5%", 16: "+10%"}
+
+# ability -> ordered list of (column label, banded table)
+_ABILITY_COLUMNS: dict[str, list[tuple[str, dict[int, str]]]] = {
+    "STR": [("Melee", _MELEE), ("Open Doors", _OPEN_DOORS)],
+    "INT": [("Spoken Languages", _INT_LANGUAGES), ("Literacy", _INT_LITERACY)],
+    "DEX": [("AC", _DEX_AC), ("Missile", _DEX_AC), ("Initiative", _DEX_INIT)],
+    "WIS": [("Magic Saves", _MODIFIER_COL)],
+    "CON": [("Hit Points", _MODIFIER_COL)],
+    "CHA": [("NPC Reactions", _CHA_REACTIONS),
+            ("Retainers Max", _CHA_RETAINERS_MAX),
+            ("Retainers Loyalty", _CHA_RETAINERS_LOYALTY)],
+}
+
+
+def ability_table_row(ability: str, score: int, *,
+                      is_prime: bool = False) -> list[tuple[str, str]]:
+    """Return the relevant reference-table row for ``ability`` at the COMPUTED
+    ``score`` as ordered ``(label, value)`` cells. When ``is_prime`` is set the
+    prime-requisite XP-modifier cell is appended."""
+    cells = [(label, _band(table, score))
+             for label, table in _ABILITY_COLUMNS[ability]]
+    if is_prime:
+        cells.append(("XP Modifier", _band(_PRIME_XP, score)))
+    return cells
+
+
 def prime_requisite_xp_multiplier(score: int) -> float:
     if score <= 5:
         return 0.80

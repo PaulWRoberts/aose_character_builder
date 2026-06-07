@@ -128,10 +128,13 @@ body{ margin:0; font-family:var(--body); font-size:15px; line-height:1.32; color
 .abilities{ display:grid; grid-template-columns:repeat(2,1fr); gap:7px; }
 .abil-cell{ border:2px solid var(--ink); background:var(--box); display:grid; grid-template-columns:auto 1fr auto; align-items:center; }
 .abil-cell .ab{ background:var(--ink); color:#f7f5ed; font-family:var(--display); font-weight:600; letter-spacing:.08em; text-transform:uppercase; font-size:10px; padding:0 7px; align-self:stretch; display:flex; align-items:center; }
+.abil-cell .ab.clickable{ cursor:pointer; }
+.abil-cell .ab .cond-mark{ color:var(--stamp); font-size:9px; vertical-align:super; margin-left:1px; }
 .abil-cell .sc{ font-size:22px; font-weight:600; text-align:center; font-variant-numeric:lining-nums tabular-nums; }
-.abil-cell .sc .star{ color:var(--stamp); font-size:12px; vertical-align:super; }
+.abil-cell .sc.clickable{ cursor:pointer; }
+.abil-cell .sc.clickable:hover{ color:var(--stamp); }
+.abil-cell .sc sup{ font-size:11px; font-weight:400; margin-left:1px; }
 .abil-cell .rt{ font-family:var(--display); text-align:right; padding-right:7px; font-size:11px; }
-.abil-cell .rt .md{ font-weight:600; }
 .abil-cell .rt .tmp{ display:block; font-size:9px; color:var(--gray); cursor:pointer; }
 .abil-cell .rt .tmp:hover{ color:var(--stamp); }
 
@@ -139,6 +142,7 @@ body{ margin:0; font-family:var(--body); font-size:15px; line-height:1.32; color
 .save{ display:flex; align-items:center; gap:8px; }
 .save .cap{ font-family:var(--display); font-weight:700; font-size:16px; width:22px; height:22px; display:flex; align-items:center; justify-content:center; background:var(--ink); color:#f7f5ed; flex:none; }
 .save .nm{ flex:1; font-size:13px; }
+.save .nm .cond-mark{ color:var(--stamp); font-size:11px; vertical-align:super; }
 .save .tg{ font-family:var(--display); font-weight:600; font-size:15px; border:1.5px solid var(--ink); padding:0 8px; background:var(--box); font-variant-numeric:lining-nums tabular-nums; }
 
 /* ── tables / chips / kv (shared) ──────────────────────────── */
