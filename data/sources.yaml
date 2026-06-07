@@ -6,3 +6,7 @@
   name: Old School Essentials Advanced Fantasy
   publisher: Necrotic Gnome
   core: true
+- id: carcass_crawler_1
+  name: Carcass Crawler Issue 1
+  publisher: Necrotic Gnome
+  core: false

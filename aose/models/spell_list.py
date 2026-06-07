@@ -13,6 +13,6 @@ class SpellList(BaseModel):
 
     id: str
     name: str
-    caster_type: Literal["arcane", "divine"]
+    caster_type: Literal["arcane", "divine", "mental"]
     source: str = "ose_classic_fantasy"
     description: str | None = None

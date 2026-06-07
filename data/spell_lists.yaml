@@ -16,3 +16,8 @@
   caster_type: arcane
   source: ose_advanced_fantasy
   description: Arcane illusion spells learned through study and recorded in a spell book.
+- id: kineticist
+  name: Mental Powers
+  caster_type: mental
+  source: carcass_crawler_1
+  description: Mental powers fuelled by the manipulation of internal kinetic force.

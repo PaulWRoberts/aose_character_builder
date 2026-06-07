@@ -254,6 +254,24 @@ class SpellbookBlock(BaseModel):
     levels: list[SpellbookLevelGroup]
 
 
+class MentalPowerRow(BaseModel):
+    power_id: str
+    name: str
+    detail: DetailCard | None = None
+
+
+class MentalPowersBlock(BaseModel):
+    class_id: str
+    class_name: str
+    cap: int                       # powers known at this level
+    known: list[MentalPowerRow]
+    addable: list[MentalPowerRow]  # on-list powers not yet known
+    can_add: bool                  # len(known) < cap
+    uses_total: int                # 2 x level
+    uses_used: int
+    uses_remaining: int
+
+
 class LevelUpModal(BaseModel):
     class_id: str
     class_name: str
@@ -321,6 +339,7 @@ class CharacterSheet(BaseModel):
     magic_items: list[MagicItemView]
     spells: list[SpellClassView]
     spellbook: list[SpellbookBlock] = Field(default_factory=list)
+    mental_powers: list[MentalPowersBlock] = Field(default_factory=list)
     spell_sources: list[SpellSourceView] = Field(default_factory=list)
     valuables: ValuablesView = Field(default_factory=lambda: ValuablesView(
         gems=[], jewellery=[], total_value=0))
@@ -647,7 +666,7 @@ def spells_view(spec: CharacterSpec, data: GameData) -> list[SpellClassView]:
     for entry in spec.classes:
         cls = data.classes[entry.class_id]
         ctype = spell_engine.caster_type_of(cls, data)
-        if ctype is None:
+        if ctype is None or ctype == "mental":
             continue
         known = spell_engine.known_spells(entry, cls, data)
         caps = spell_engine.memorizable_slots(entry, cls)
@@ -704,7 +723,7 @@ def spellbook_view(spec: CharacterSpec, data: GameData) -> list[SpellbookBlock]:
     for entry in spec.classes:
         cls = data.classes[entry.class_id]
         ctype = spell_engine.caster_type_of(cls, data)
-        if ctype is None:
+        if ctype is None or ctype == "mental":
             continue
         caps = spell_engine.memorizable_slots(entry, cls)         # {level: cap}
         known = spell_engine.known_spells(entry, cls, data)       # book (arcane) / list (divine)
@@ -773,6 +792,33 @@ def spellbook_view(spec: CharacterSpec, data: GameData) -> list[SpellbookBlock]:
         out.append(SpellbookBlock(
             class_id=entry.class_id, class_name=cls.name,
             caster_type=ctype, levels=levels,
+        ))
+    return out
+
+
+def mental_powers_view(spec: CharacterSpec, data: GameData) -> list[MentalPowersBlock]:
+    """One block per mental caster class: known powers, addable powers, and the
+    daily-use pool (2 x level activations)."""
+    out: list[MentalPowersBlock] = []
+    for entry in spec.classes:
+        cls = data.classes[entry.class_id]
+        if spell_engine.caster_type_of(cls, data) != "mental":
+            continue
+        cap = spell_engine.powers_known_cap(entry, cls)
+        known = [
+            MentalPowerRow(power_id=s.id, name=s.name, detail=spell_card(s))
+            for s in spell_engine.known_spells(entry, cls, data)
+        ]
+        addable = [
+            MentalPowerRow(power_id=s.id, name=s.name, detail=spell_card(s))
+            for s in spell_engine.learnable_spells(entry, cls, data)
+        ]
+        total = spell_engine.power_pool(entry)
+        out.append(MentalPowersBlock(
+            class_id=entry.class_id, class_name=cls.name, cap=cap,
+            known=known, addable=addable, can_add=len(known) < cap,
+            uses_total=total, uses_used=entry.powers_used,
+            uses_remaining=max(0, total - entry.powers_used),
         ))
     return out
 
@@ -1037,6 +1083,7 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
         magic_items=_magic_items(spec, data) + enchanted_items_view(spec.enchanted, data),
         spells=spells_view(spec, data),
         spellbook=spellbook_view(spec, data),
+        mental_powers=mental_powers_view(spec, data),
         spell_sources=spell_sources_view(spec, data),
         valuables=valuables_view(spec),
         ammo=ammo_rows,

@@ -178,9 +178,10 @@ def _class_ids(draft: dict[str, Any]) -> list[str]:
 
 
 def _casts_at_level_1(cls) -> bool:
-    """True if the class has a spell list and at least one spell slot at L1."""
+    """True if the class casts at L1: has a spell list and either L1 spell slots
+    (arcane/divine) or L1 mental powers known."""
     row = cls.progression.get(1)
-    return bool(cls.spell_lists) and bool(row and row.spell_slots)
+    return bool(cls.spell_lists) and bool(row and (row.spell_slots or row.powers_known))
 
 
 # ── Downstream-clear helpers (used when the user navigates back and changes
@@ -1291,10 +1292,11 @@ def _caster_entries(draft: dict[str, Any], data) -> list[dict]:
             if lid in data.spell_lists
             and source_enabled(data.spell_lists[lid].source, ruleset)
         }
+        accessible = spell_engine.accessible_levels(entry, cls)
         candidates = sorted(
             (s for s in data.spells.values()
              if set(s.spell_lists) & enabled_lists
-             and s.level in spell_engine.accessible_levels(entry, cls)),
+             and (ctype == "mental" or s.level in accessible)),
             key=lambda s: (s.level, s.name),
         )
         rows.append({
@@ -1302,7 +1304,7 @@ def _caster_entries(draft: dict[str, Any], data) -> list[dict]:
             "class_name": cls.name,
             "caster_type": ctype,
             "required": (spell_engine.beginning_spell_count(entry, cls, int_score, ruleset)
-                         if ctype == "arcane" else 0),
+                         if ctype in ("arcane", "mental") else 0),
             "advanced": ruleset.advanced_spell_books,
             "candidates": [{"id": s.id, "name": s.name, "level": s.level,
                             "description": s.description,
@@ -1328,7 +1330,7 @@ async def post_spells(request: Request, draft_id: str):
             continue
         entry = ClassEntry(class_id=cid, level=1)
         ctype = spell_engine.caster_type_of(cls, data)
-        if ctype != "arcane":
+        if ctype == "divine":
             # Divine casters know their whole list; there is no spellbook to
             # build, so nothing is chosen here.
             books[cid] = []
@@ -1336,17 +1338,18 @@ async def post_spells(request: Request, draft_id: str):
         chosen = form.getlist(f"spell_{cid}")
         chosen = list(dict.fromkeys(chosen))
         required = spell_engine.beginning_spell_count(entry, cls, int_score, ruleset)
+        noun = "power" if ctype == "mental" else "starting spell"
         if len(chosen) != required:
             raise HTTPException(
-                400, f"{cls.name} must choose exactly {required} starting spell(s); "
+                400, f"{cls.name} must choose exactly {required} {noun}(s); "
                      f"got {len(chosen)}."
             )
         accessible = spell_engine.accessible_levels(entry, cls)
         for sid in chosen:
             spell = data.spells.get(sid)
-            if spell is None or not (set(spell.spell_lists) & set(cls.spell_lists)) \
-                    or spell.level not in accessible:
-                raise HTTPException(400, f"{sid!r} is not a valid {cls.name} starting spell.")
+            on_list = spell is not None and bool(set(spell.spell_lists) & set(cls.spell_lists))
+            if not on_list or (ctype == "arcane" and spell.level not in accessible):
+                raise HTTPException(400, f"{sid!r} is not a valid {cls.name} {noun}.")
         books[cid] = chosen
 
     draft["spellbooks"] = books

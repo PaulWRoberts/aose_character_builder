@@ -36,6 +36,19 @@ def armor_class(spec: CharacterSpec, data: GameData, *,
             if m.target == "ac" and m.op == "set":
                 base = min(base, m.value)
 
+    # Class-granted base AC (e.g. a class whose reactions improve AC by level).
+    # Best (lowest descending) across classes; applies whether or not armour is
+    # worn — it is not worn armour, so the unarmoured display reflects it too.
+    class_acs = []
+    for entry in spec.classes:
+        cls_obj = data.classes.get(entry.class_id)
+        if cls_obj is not None and entry.level in cls_obj.progression:
+            col = cls_obj.progression[entry.level].armor_class
+            if col is not None:
+                class_acs.append(col)
+    if class_acs:
+        base = min(base, min(class_acs))
+
     shield_bonus = 0
     if use_shield:
         shield_id = spec.equipped.get("shield")

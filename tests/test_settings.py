@@ -437,10 +437,13 @@ def test_settings_page_renders_sources_section(client):
 
 
 def test_post_settings_persists_disabled_source(client):
-    r = client.post("/settings", data={"creation_method": "advanced"})  # Advanced unchecked
+    r = client.post("/settings", data={"creation_method": "advanced"})  # no source boxes checked
     assert r.status_code == 303
     rs = load_settings(client._settings_path)
-    assert rs.disabled_sources == ["ose_advanced_fantasy"]
+    # All non-core sources are disabled when their checkboxes are unchecked.
+    assert "ose_advanced_fantasy" in rs.disabled_sources
+    assert "carcass_crawler_1" in rs.disabled_sources
+    assert "ose_classic_fantasy" not in rs.disabled_sources  # core: always enabled
 
 
 def test_disabling_source_clears_orphaned_race(client, tmp_path):

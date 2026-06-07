@@ -128,13 +128,17 @@ class ClassEntry(BaseModel):
     # characters keep the whole award here.  See aose/engine/leveling.py.
     xp: int = 0
     hp_rolls: list[int] = Field(default_factory=list)
-    # Known spells (arcane spellbook).  Empty for divine casters, who know
+    # Known spells/powers chosen by the character: the arcane spell book, or a
+    # mental caster's known mental powers.  Empty for divine casters, who know
     # their whole list automatically; see aose/engine/spells.py.
     spellbook: list[str] = Field(default_factory=list)
     # Daily memorized loadout as individual slots; duplicates allowed (two slots,
     # same spell_id).  Hard-capped per spell level by spell_slots.  Replaces the
     # old flat ``prepared`` list — each slot also tracks reversed/spent state.
     slots: list[SpellSlot] = Field(default_factory=list)
+    # Mental-powers daily-use pool counter: activations spent today. The pool
+    # size is 2 x level (computed in spells.py); 0 for non-mental classes.
+    powers_used: int = 0
 
     @model_validator(mode="before")
     @classmethod

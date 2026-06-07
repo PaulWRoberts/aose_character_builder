@@ -1,0 +1,130 @@
+id: kineticist
+name: Kineticist
+source: carcass_crawler_1
+prime_requisites:
+- DEX
+- WIS
+max_level: 14
+hit_die: 1d6
+name_level: 9
+hp_after_name_level: 2
+weapons_allowed: all
+armor_allowed: []
+shields_allowed: false
+spell_lists:
+- kineticist
+progression:
+  1:
+    xp_required: 0
+    thac0: 19
+    armor_class: 9
+    powers_known: 3
+    saves: {death: 13, wands: 14, paralysis: 13, breath: 16, spells: 15}
+  2:
+    xp_required: 2000
+    thac0: 19
+    armor_class: 8
+    powers_known: 3
+    saves: {death: 13, wands: 14, paralysis: 13, breath: 16, spells: 15}
+  3:
+    xp_required: 4000
+    thac0: 19
+    armor_class: 7
+    powers_known: 4
+    saves: {death: 13, wands: 14, paralysis: 13, breath: 16, spells: 15}
+  4:
+    xp_required: 8000
+    thac0: 19
+    armor_class: 6
+    powers_known: 4
+    saves: {death: 13, wands: 14, paralysis: 13, breath: 16, spells: 15}
+  5:
+    xp_required: 16000
+    thac0: 17
+    armor_class: 5
+    powers_known: 5
+    saves: {death: 12, wands: 13, paralysis: 11, breath: 14, spells: 13}
+  6:
+    xp_required: 32000
+    thac0: 17
+    armor_class: 4
+    powers_known: 5
+    saves: {death: 12, wands: 13, paralysis: 11, breath: 14, spells: 13}
+  7:
+    xp_required: 64000
+    thac0: 17
+    armor_class: 3
+    powers_known: 6
+    saves: {death: 12, wands: 13, paralysis: 11, breath: 14, spells: 13}
+  8:
+    xp_required: 120000
+    thac0: 17
+    armor_class: 2
+    powers_known: 6
+    saves: {death: 12, wands: 13, paralysis: 11, breath: 14, spells: 13}
+  9:
+    xp_required: 240000
+    thac0: 14
+    armor_class: 1
+    powers_known: 7
+    saves: {death: 10, wands: 11, paralysis: 9, breath: 12, spells: 10}
+  10:
+    xp_required: 360000
+    thac0: 14
+    armor_class: 0
+    powers_known: 7
+    saves: {death: 10, wands: 11, paralysis: 9, breath: 12, spells: 10}
+  11:
+    xp_required: 480000
+    thac0: 14
+    armor_class: -1
+    powers_known: 8
+    saves: {death: 10, wands: 11, paralysis: 9, breath: 12, spells: 10}
+  12:
+    xp_required: 600000
+    thac0: 14
+    armor_class: -2
+    powers_known: 8
+    saves: {death: 10, wands: 11, paralysis: 9, breath: 12, spells: 10}
+  13:
+    xp_required: 720000
+    thac0: 12
+    armor_class: -3
+    powers_known: 9
+    saves: {death: 8, wands: 9, paralysis: 7, breath: 10, spells: 8}
+  14:
+    xp_required: 840000
+    thac0: 12
+    armor_class: -3
+    powers_known: 9
+    saves: {death: 8, wands: 9, paralysis: 7, breath: 10, spells: 8}
+features:
+- id: combat
+  name: Combat
+  text: |-
+    Kineticists can use all weapons, but cannot use armour or shields, instead relying on their honed reactions and mental powers for defence in battle.
+  gained_at_level: 1
+- id: armour_class
+  name: Armour Class
+  text: |-
+    As a kineticist advances in level, their honed reactions and ability to deflect attacks grant them an improved Armour Class, as shown on the class table.
+  gained_at_level: 1
+- id: mental_defence
+  name: Mental Defence
+  text: |-
+    Kineticists gain a +2 bonus to all saving throws against mental powers, including the powers of other kineticists.
+  gained_at_level: 1
+- id: mental_powers
+  name: Mental Powers
+  text: |-
+    Kineticists know a number of mental powers depending on their level, as shown on the class table. Mental powers are chosen by the referee, who may allow the player to choose.
+
+    **Frequency of use:** Twice per day per level, a kineticist may activate one of the mental powers they know. (A 2nd level kineticist may activate four powers per day.)
+
+    **Activating:** Mental powers take effect instantly at the beginning of the character's initiative. A kineticist may activate a power and perform other actions (e.g. moving, attacking) in the same round. Mental powers take effect at the beginning of the combat sequence, before movement. A kineticist cannot activate more than one power in a single round.
+  gained_at_level: 1
+- id: after_reaching_9th_level
+  name: After Reaching 9th Level
+  text: |-
+    A kineticist may establish an academy where they teach their skills to students. The kineticist will attract 1d6 apprentices, who are of level 1d4.
+  gained_at_level: 9

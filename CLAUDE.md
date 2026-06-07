@@ -65,6 +65,16 @@ override. Changing a rule mid-wizard applies targeted downstream clears
 Every flag in `RuleSet` is integrated end-to-end. The settings page never
 renders a "pending" badge — a regression test guards this.
 
+## Current state (2026-06-06, mental powers + Kineticist)
+
+Mental powers caster type and Kineticist class just landed (12-task plan, on `main`). All new tests pass; the 2 pre-existing breadcrumb-label failures in `test_wizard_class_setup` / `test_wizard_identity` are unchanged.
+
+- **`mental` caster type** — `SpellList.caster_type` and `engine/spells.py::CasterType` now include `"mental"`. Known powers reuse `ClassEntry.spellbook` (arcane and mental are both "chosen subset"; divine still knows-all). `ClassEntry.powers_used: int = 0` tracks the daily-use pool counter (pool = `2 × level`, computed; no slot levels). Engine helpers in `spells.py`: `powers_known_cap`, `learnable_spells` (mental: all on-list not yet known), `learn` / `forget` (cap-enforced), `beginning_spell_count` (mental: reads `powers_known` column), `power_pool` / `spend_power` / `restore_power` / `reset_powers`. Rest (`/rest/night`, `/rest/full-day`) calls `reset_powers` on all entries — a no-op for non-mental. `spells_view` and `spellbook_view` skip mental; new `mental_powers_view` → `MentalPowersBlock` in `CharacterSheet`. Routes: `/powers/{learn,forget,spend,restore,reset}`. Wizard `_casts_at_level_1` recognises mental (via `powers_known`); spells step handles selection + validation; source gating (`carcass_crawler_1`) already generic.
+- **Level-based AC column** — `ClassLevelData.armor_class: int | None` (generic; any class can set it). `engine/armor_class.py` folds the best (lowest descending) class-granted AC across all classes into `base`, outside the `use_armor` block so unarmoured display reflects it too. DEX and shield still apply on top. No code keys on any class id.
+- **`carcass_crawler_1` source** — `data/sources.yaml` (Necrotic Gnome, `core: false`). Disabling it hides the Kineticist from the wizard class list and clears its powers from the spells-step candidates.
+- **Kineticist data** — `data/classes/kineticist.yaml` (DEX/WIS prime reqs, d6, all weapons, no armour/shields, `spell_lists: [kineticist]`, L1-14 progression with `armor_class` and `powers_known` columns). `data/spells/carcass_crawler_kineticist_powers.yaml` (9 powers). `data/spell_lists.yaml` kineticist entry (`caster_type: mental`). Spec/plan: `docs/superpowers/{specs,plans}/2026-06-06-mental-powers-and-kineticist*`.
+- **Sheet UI** — Column 3 opens for `sheet.spellbook or sheet.mental_powers`. Mental Powers section: daily-use pool pips, Use/Restore/Reset buttons, known-power list. Management drawer: known powers with full detail cards (Forget), Learn-a-power select (gated by cap).
+
 ## Current state (2026-06-06, content sources)
 
 Content-source tagging and filtering just landed (13-task plan, on `main`). All new tests pass; 2 pre-existing breadcrumb-label failures in `test_wizard_class_setup` / `test_wizard_identity` are unrelated.

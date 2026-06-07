@@ -12,7 +12,7 @@ from typing import Literal
 from aose.data.loader import GameData
 from aose.models import CharClass, ClassEntry, ClassLevelData, RuleSet, Spell, SpellSlot
 
-CasterType = Literal["arcane", "divine"]
+CasterType = Literal["arcane", "divine", "mental"]
 
 
 class SpellError(ValueError):
@@ -61,6 +61,12 @@ def memorizable_slots(entry: ClassEntry, cls: CharClass) -> dict[int, int]:
     return dict(row.spell_slots)
 
 
+def powers_known_cap(entry: ClassEntry, cls: CharClass) -> int:
+    """Mental caster: number of powers known at the entry's level (table column)."""
+    row = _level_row(entry, cls)
+    return (row.powers_known or 0) if row is not None else 0
+
+
 def _on_class_lists(spell: Spell, cls: CharClass) -> bool:
     return bool(set(spell.spell_lists) & set(cls.spell_lists))
 
@@ -72,7 +78,7 @@ def known_spells(entry: ClassEntry, cls: CharClass, data: GameData) -> list[Spel
     divine: every spell on the class's lists at an accessible level (by level,name).
     """
     ctype = caster_type_of(cls, data)
-    if ctype == "arcane":
+    if ctype in ("arcane", "mental"):
         return [data.spells[s] for s in entry.spellbook if s in data.spells]
     if ctype == "divine":
         levels = accessible_levels(entry, cls)
@@ -85,11 +91,19 @@ def known_spells(entry: ClassEntry, cls: CharClass, data: GameData) -> list[Spel
 
 
 def learnable_spells(entry: ClassEntry, cls: CharClass, data: GameData) -> list[Spell]:
-    """Arcane-only: accessible-level spells on the class's lists not yet known."""
-    if caster_type_of(cls, data) != "arcane":
+    """Arcane: accessible-level spells on the class's lists not yet known.
+    Mental: every on-list power not yet known (no level filter)."""
+    ctype = caster_type_of(cls, data)
+    known = set(entry.spellbook)
+    if ctype == "mental":
+        return sorted(
+            (s for s in data.spells.values()
+             if _on_class_lists(s, cls) and s.id not in known),
+            key=lambda s: (s.level, s.name),
+        )
+    if ctype != "arcane":
         return []
     levels = accessible_levels(entry, cls)
-    known = set(entry.spellbook)
     return sorted(
         (s for s in data.spells.values()
          if _on_class_lists(s, cls) and s.level in levels and s.id not in known),
@@ -122,11 +136,15 @@ def copy_chance_for_int(int_score: int) -> int:
 
 def beginning_spell_count(entry: ClassEntry, cls: CharClass, int_score: int,
                           ruleset: RuleSet) -> int:
-    """How many spells an arcane caster begins with.
+    """How many spells/powers a caster begins with.
 
-    advanced rule: INT-table lookup.  standard: total memorizable at the
-    entry's level (sum of slots; 1 for an L1 magic-user).
+    mental: powers-known cap at the entry's level (reads the progression column).
+    advanced arcane rule: INT-table lookup.
+    standard arcane: total memorizable at the entry's level (sum of slots).
     """
+    row = _level_row(entry, cls)
+    if row is not None and row.powers_known is not None:
+        return powers_known_cap(entry, cls)
     if ruleset.advanced_spell_books:
         return beginning_spells_for_int(int_score)
     return sum(memorizable_slots(entry, cls).values())
@@ -143,11 +161,25 @@ def _require_spell(data: GameData, spell_id: str) -> Spell:
 
 def learn(entry: ClassEntry, cls: CharClass, data: GameData, ruleset: RuleSet,
           spell_id: str) -> ClassEntry:
-    """Add a spell to an arcane caster's spellbook.
+    """Add a spell/power to a caster's known set.
 
-    Enforces: arcane only; spell on a class list and at an accessible level;
-    not already known; and (standard rules) the per-level spellbook cap."""
-    if caster_type_of(cls, data) != "arcane":
+    mental: power on the class list, not already known, under the powers-known cap.
+    arcane: spell on a class list and at an accessible level; not already known;
+    and (standard rules) the per-level spellbook cap."""
+    ctype = caster_type_of(cls, data)
+    if ctype == "mental":
+        spell = _require_spell(data, spell_id)
+        if not _on_class_lists(spell, cls):
+            raise SpellError(f"{spell_id!r} is not a {cls.id!r} mental power")
+        if spell_id in entry.spellbook:
+            raise SpellError(f"{spell_id!r} is already known")
+        cap = powers_known_cap(entry, cls)
+        if len(entry.spellbook) >= cap:
+            raise SpellError(
+                f"Only {cap} mental power(s) may be known at this level"
+            )
+        return entry.model_copy(update={"spellbook": [*entry.spellbook, spell_id]})
+    if ctype != "arcane":
         raise SpellError(f"{cls.id!r} is not an arcane caster; nothing to learn")
     if ruleset.advanced_spell_books:
         raise SpellError(
@@ -256,3 +288,30 @@ def restore_all_slots(entry: ClassEntry) -> ClassEntry:
 def clear_all_slots(entry: ClassEntry) -> ClassEntry:
     """Drop the whole loadout, ready for a fresh pick."""
     return entry.model_copy(update={"slots": []})
+
+
+# ── Mental-powers daily-use pool (play state) ──────────────────────────────
+
+def power_pool(entry: ClassEntry) -> int:
+    """Total mental-power activations available per day: 2 x level."""
+    return 2 * entry.level
+
+
+def spend_power(entry: ClassEntry) -> ClassEntry:
+    """Spend one daily activation.  Raises if none remain."""
+    if entry.powers_used >= power_pool(entry):
+        raise SpellError("No mental-power uses remaining today")
+    return entry.model_copy(update={"powers_used": entry.powers_used + 1})
+
+
+def restore_power(entry: ClassEntry) -> ClassEntry:
+    """Un-spend one activation (undo / referee override).  Raises at zero."""
+    if entry.powers_used <= 0:
+        raise SpellError("No spent mental-power uses to restore")
+    return entry.model_copy(update={"powers_used": entry.powers_used - 1})
+
+
+def reset_powers(entry: ClassEntry) -> ClassEntry:
+    """Refresh the whole daily pool (e.g. on rest).  No-op for non-mental
+    entries, whose ``powers_used`` is always 0."""
+    return entry.model_copy(update={"powers_used": 0})

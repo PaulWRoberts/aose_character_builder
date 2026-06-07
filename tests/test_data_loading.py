@@ -205,10 +205,14 @@ def test_spell_list_sources(data):
 def test_spell_sources_match_their_list(data):
     for spell in data.spells.values():
         lists = set(spell.spell_lists)
-        expected = ("ose_classic_fantasy"
-                    if lists & {"magic_user", "cleric"}
-                    else "ose_advanced_fantasy")
-        assert spell.source == expected, spell.id
+        # A spell's source must match the source of at least one of its spell
+        # lists.  This allows spells from non-OSE sources (e.g. carcass_crawler_1)
+        # without hard-coding the source mapping.
+        list_sources = {data.spell_lists[lid].source
+                        for lid in lists if lid in data.spell_lists}
+        assert spell.source in list_sources, (
+            f"{spell.id}: source {spell.source!r} not in list sources {list_sources}"
+        )
 
 
 ADVANCED_MAGIC_ITEM_IDS = {

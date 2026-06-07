@@ -912,6 +912,65 @@ async def sheet_spell_clear(request: Request, character_id: str,
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
+# ── Mental powers on the live sheet ────────────────────────────────────────
+
+@router.post("/character/{character_id}/powers/learn")
+async def sheet_power_learn(request: Request, character_id: str,
+                            class_id: str = Form(...), power_id: str = Form(...)):
+    spec = _load_spec_or_404(request, character_id)
+    data = request.app.state.game_data
+    idx = _find_class_entry(spec, class_id)
+    try:
+        spec.classes[idx] = spell_engine.learn(
+            spec.classes[idx], data.classes[class_id], data, spec.ruleset, power_id)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/powers/forget")
+async def sheet_power_forget(request: Request, character_id: str,
+                             class_id: str = Form(...), power_id: str = Form(...)):
+    spec = _load_spec_or_404(request, character_id)
+    idx = _find_class_entry(spec, class_id)
+    try:
+        spec.classes[idx] = spell_engine.forget(spec.classes[idx], power_id)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+def _power_pool_op(request: Request, character_id: str, class_id: str, op):
+    spec = _load_spec_or_404(request, character_id)
+    idx = _find_class_entry(spec, class_id)
+    try:
+        spec.classes[idx] = op(spec.classes[idx])
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/powers/spend")
+async def sheet_power_spend(request: Request, character_id: str,
+                            class_id: str = Form(...)):
+    return _power_pool_op(request, character_id, class_id, spell_engine.spend_power)
+
+
+@router.post("/character/{character_id}/powers/restore")
+async def sheet_power_restore(request: Request, character_id: str,
+                              class_id: str = Form(...)):
+    return _power_pool_op(request, character_id, class_id, spell_engine.restore_power)
+
+
+@router.post("/character/{character_id}/powers/reset")
+async def sheet_power_reset(request: Request, character_id: str,
+                            class_id: str = Form(...)):
+    return _power_pool_op(request, character_id, class_id, spell_engine.reset_powers)
+
+
 # ── Spell books & scrolls on the live sheet ────────────────────────────────
 
 @router.post("/character/{character_id}/spell-sources/add")
@@ -996,10 +1055,9 @@ async def sheet_spell_source_copy(request: Request, character_id: str,
 # ── Rest ──────────────────────────────────────────────────────────────────
 
 def _apply_rest_mode(entry, mode: str):
-    """Apply a rest spell-option to one class entry.
-
-    restore → un-spend the existing loadout; clear → drop it; keep → unchanged.
-    Non-casters have no slots, so every mode is a no-op for them."""
+    """Apply a rest spell-option to one class entry, and refresh the mental-power
+    daily pool (a new day).  Non-casters/non-mental: pool reset is a no-op."""
+    entry = spell_engine.reset_powers(entry)
     if mode == "restore":
         return spell_engine.restore_all_slots(entry)
     if mode == "clear":

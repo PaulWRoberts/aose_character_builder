@@ -1,0 +1,157 @@
+- id: accelerated_motion
+  name: Accelerated Motion
+  level: 1
+  spell_lists: [kineticist]
+  source: carcass_crawler_1
+  range: The kineticist
+  duration: 1 round
+  description: |-
+    The kineticist makes a rapid burst of movement, driven by an internal surge of kinetic force.
+
+    **Movement:** The kineticist's movement rate is doubled.
+
+    **Melee attacks:** The kineticist may make multiple melee attacks per round. The number depends on level:
+
+    | Level | Attacks per Round |
+    |---|---|
+    | 1–4 | 2 |
+    | 5–8 | 3 |
+    | 9–12 | 4 |
+    | 13+ | 5 |
+
+- id: control_density
+  name: Control Density
+  level: 1
+  spell_lists: [kineticist]
+  source: carcass_crawler_1
+  range: The kineticist
+  duration: 1 round per level
+  description: |-
+    The kineticist focuses kinetic force to alter the effective density of their own body, becoming lighter or heavier.
+
+    **Lighter:** The kineticist becomes so light that they barely touch the ground. They leave no tracks in soft surfaces and can walk across the surface of water.
+
+    **Heavier:** The kineticist is rooted to the spot, immune to attacks or effects that would cause them to fall or be pushed.
+
+- id: crush_life
+  name: Crush Life
+  level: 1
+  spell_lists: [kineticist]
+  source: carcass_crawler_1
+  range: 30'
+  duration: Concentration, up to 1 round per level
+  description: |-
+    The kineticist focuses precise kinetic pressure onto the vital organs of a living target within range, crushing the life out of them by constricting breathing, blood flow, etc.
+
+    **Damage:** The target suffers 1d3 points of damage per round.
+
+    **Stun:** The target is unable to move or act unless they make a saving throw versus paralysis. A save is required each round.
+
+    **Restrictions:** Non-living creatures (e.g. undead, constructs) are unaffected.
+
+    **Concentration:** Being distracted (e.g. attacked) or performing any other action (except moving) causes the power to end.
+
+- id: kinetic_fist
+  name: Kinetic Fist
+  level: 1
+  spell_lists: [kineticist]
+  source: carcass_crawler_1
+  range: The kineticist
+  duration: 1 round per level
+  description: |-
+    The kineticist's unarmed attacks are charged with focused kinetic energy, making their bare hands deadly weapons.
+
+    **Damage:** The kineticist's unarmed attacks inflict increased damage, by level:
+
+    | Level | Unarmed Damage |
+    |---|---|
+    | 1–4 | 2d4 |
+    | 5–8 | 2d6 |
+    | 9–12 | 2d8 |
+    | 13+ | 2d12 |
+
+    **Invulnerable monsters:** Kinetically charged attacks can harm monsters immune to mundane damage (e.g. only harmed by magic or silver weapons).
+
+- id: kinetic_leap
+  name: Kinetic Leap
+  level: 1
+  spell_lists: [kineticist]
+  source: carcass_crawler_1
+  range: 10' + 10' per level
+  duration: Instant
+  description: |-
+    The kineticist propels their own body with a surge of kinetic force, allowing them to make a superhuman leap.
+
+    **Leap:** The kineticist can leap to any location within range, including vertically.
+
+- id: kinetic_shield
+  name: Kinetic Shield
+  level: 1
+  spell_lists: [kineticist]
+  source: carcass_crawler_1
+  range: The kineticist
+  duration: Concentration, up to 1 round per level
+  description: |-
+    A shield of kinetic energy whirls around the kineticist's body, deflecting attacks.
+
+    **Missiles:** The kineticist is completely immune to small, non-magical missiles. No protection against hurled boulders or enchanted arrows.
+
+    **Melee attacks:** Opponents suffer a −2 penalty to melee attack rolls against the kineticist.
+
+    **Energy attacks:** The kineticist gains a +2 bonus to saving throws versus magic wands, rods, and staves, breath weapons, and energy attacks.
+
+    **Concentration:** Performing any other action (except moving) causes the power to end.
+
+- id: kinetic_wave
+  name: Kinetic Wave
+  level: 1
+  spell_lists: [kineticist]
+  source: carcass_crawler_1
+  range: 30'
+  duration: Instant
+  description: |-
+    A wave of kinetic force surges from the kineticist's hand at a single target in range.
+
+    **Push:** The target must save vs paralysis or be thrown back by the kinetic force.
+
+    **If the save fails:** The target suffers 1d6 damage and is thrown away from the kineticist to a distance of 10' per level of the kineticist.
+
+- id: telekinetic_attack
+  name: Telekinetic Attack
+  level: 1
+  spell_lists: [kineticist]
+  source: carcass_crawler_1
+  range: 10' per level
+  duration: Instant
+  description: |-
+    The kineticist telekinetically lifts an object within range and hurls it at a nearby opponent.
+
+    **Weight:** Up to 200 coins of weight per level of the kineticist may be lifted.
+
+    **Range:** The targeted creature must be within 60' of the object.
+
+    **Saving throw:** The target must save versus wands or be hit by the hurled object, suffering damage.
+
+    **Damage:** Depends on the weight of the object hurled:
+
+    | Object's Weight (Coins) | Damage |
+    |---|---|
+    | Up to 200 | 2d4 |
+    | 201–400 | 2d6 |
+    | 401–800 | 3d6 |
+    | 801–1,500 | 4d6 |
+    | 1,501 or more | 5d6 |
+
+- id: throw_weapon
+  name: Throw Weapon
+  level: 1
+  spell_lists: [kineticist]
+  source: carcass_crawler_1
+  range: 10' per level
+  duration: Instant
+  description: |-
+    The kineticist throws a melee weapon they are holding in a precise, arcing flight. The weapon attacks a target within range and then returns to the kineticist's hand.
+
+    **Attack:** The thrown weapon is handled as a missile attack roll with a +4 bonus.
+
+    **Damage:** If the attack hits, any damage dealt is doubled.

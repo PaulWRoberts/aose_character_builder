@@ -13,6 +13,13 @@ class ClassLevelData(BaseModel):
     saves: dict[str, int]
     # spell_level -> slot count; only set on spellcasting classes
     spell_slots: dict[int, int] | None = None
+    # Descending Armour Class granted by the class at this level (e.g. a class
+    # whose honed reactions improve AC as it advances). Read generically by the
+    # AC engine (best/lowest across classes); None for classes without it.
+    armor_class: int | None = None
+    # Number of "mental powers" known at this level (the mental caster type's
+    # analogue of the magic-user's spell-book size). None for non-mental classes.
+    powers_known: int | None = None
 
 
 class ClassFeature(BaseModel):
