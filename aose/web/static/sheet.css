@@ -144,6 +144,9 @@ body{ margin:0; font-family:var(--body); font-size:15px; line-height:1.32; color
 .save .nm{ flex:1; font-size:13px; }
 .save .nm .cond-mark{ color:var(--stamp); font-size:11px; vertical-align:super; }
 .save .tg{ font-family:var(--display); font-weight:600; font-size:15px; border:1.5px solid var(--ink); padding:0 8px; background:var(--box); font-variant-numeric:lining-nums tabular-nums; }
+.save-notes{ display:flex; flex-direction:column; gap:2px; margin-top:5px; padding-top:4px; border-top:1.5px dashed var(--ink); }
+.save-note{ font-size:11px; line-height:1.25; color:var(--ink-2); font-variant-numeric:lining-nums tabular-nums; }
+.save-note .muted{ color:var(--gray); }
 
 /* ── tables / chips / kv (shared) ──────────────────────────── */
 table.t{ width:100%; border-collapse:collapse; }

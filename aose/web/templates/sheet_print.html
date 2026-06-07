@@ -75,6 +75,13 @@
             {% endfor %}
             </tbody>
         </table>
+        {% if sheet.situational_saves %}
+        <div class="save-notes-print">
+            {% for sn in sheet.situational_saves %}
+            <div class="muted small">+{{ sn.bonus }} vs {{ sn.vs }} ({{ sn.source }})</div>
+            {% endfor %}
+        </div>
+        {% endif %}
     </section>
 
     <section class="section">

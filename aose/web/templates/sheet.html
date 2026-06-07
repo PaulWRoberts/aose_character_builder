@@ -133,6 +133,14 @@
             </div>
             {% endfor %}
           </div>
+          {% if sheet.situational_saves %}
+          <div class="save-notes">
+            {% for sn in sheet.situational_saves %}
+            <div class="save-note">+{{ sn.bonus }} vs {{ sn.vs }}
+              <span class="muted">({{ sn.source }})</span></div>
+            {% endfor %}
+          </div>
+          {% endif %}
         </div>
       </section>
     </div>
