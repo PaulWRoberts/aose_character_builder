@@ -277,7 +277,6 @@ def test_duergar_resilience_includes_paralysis():
     assert duergar["spells"] == base["spells"] - 3    # full-category bonus stays
 
 
-@pytest.mark.skip(reason="needs Task 9 saving_throws_detail")
 def test_classic_dwarf_resilience_single_poison_line():
     from aose.engine.saves import saving_throws_detail
     from aose.models import CharacterSpec, ClassEntry

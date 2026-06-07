@@ -1,3 +1,5 @@
+from pydantic import BaseModel
+
 from aose.data.loader import GameData
 from aose.models import Ability, CharacterSpec, Modifier
 
@@ -9,6 +11,12 @@ SAVE_FLOOR = 2
 
 _WIS_UNCONDITIONAL = ("save:spells", "save:wands")
 _WIS_CONDITIONAL = ("save:death", "save:paralysis")   # magical-origin only
+
+_CONDITION_NOTES = {
+    "magical": "magical effects only",
+    "poison": "poison only (not death magic)",
+    "paralysis": "paralysis only (not petrification)",
+}
 
 
 def wisdom_save_modifiers(spec: CharacterSpec, data: GameData) -> list[Modifier]:
@@ -26,6 +34,20 @@ def wisdom_save_modifiers(spec: CharacterSpec, data: GameData) -> list[Modifier]
     return mods
 
 
+class SaveModLine(BaseModel):
+    source: str          # feature/item name, or "Wisdom"
+    bonus: int           # +N = bonus (better), -N = penalty (worse)
+    conditional: bool    # True when the modifier carries a condition
+    note: str            # condition note ("" when unconditional)
+
+
+class SaveBreakdown(BaseModel):
+    category: str        # death / wands / paralysis / breath / spells
+    base: int            # class progression best (no modifiers)
+    modified: int        # headline (unconditional modifiers, floored)
+    lines: list[SaveModLine]
+
+
 def _level_data(cls, level: int):
     if level in cls.progression:
         return cls.progression[level]
@@ -35,10 +57,7 @@ def _level_data(cls, level: int):
     return cls.progression[max(available)]
 
 
-def saving_throws(spec: CharacterSpec, data: GameData) -> dict[str, int]:
-    """Best (lowest) save in each category across all classes, then magic
-    modifiers.  ``add`` improves (target -= value); ``set`` / bounds use literal
-    save numbers.  Targets clamp at ``SAVE_FLOOR``."""
+def _base_saves(spec: CharacterSpec, data: GameData) -> dict[str, int]:
     best: dict[str, int] = {}
     for entry in spec.classes:
         cls = data.classes[entry.class_id]
@@ -46,21 +65,51 @@ def saving_throws(spec: CharacterSpec, data: GameData) -> dict[str, int]:
         for name, value in ld.saves.items():
             if name not in best or value < best[name]:
                 best[name] = value
+    return best
 
-    # Saves recognise no V1 conditions; situational (conditioned) save mods are
-    # excluded from the number until a derivation learns to evaluate them.
-    mods = [m for m in all_modifiers(spec, data) if m.condition is None]
-    for name in list(best):
+
+def _all_save_mods(spec: CharacterSpec, data: GameData) -> list[Modifier]:
+    return all_modifiers(spec, data) + wisdom_save_modifiers(spec, data)
+
+
+def saving_throws_detail(spec: CharacterSpec, data: GameData) -> dict[str, SaveBreakdown]:
+    """Per-category base, headline (unconditional mods only), and every
+    contributing add-modifier as a line (conditional ones flagged, excluded from
+    the headline)."""
+    base = _base_saves(spec, data)
+    mods = _all_save_mods(spec, data)
+    out: dict[str, SaveBreakdown] = {}
+    for name, base_val in base.items():
         wanted = ("save:all", f"save:{name}")
-        target = best[name]
-        sets = [m.value for m in mods if m.op == "set" and m.target in wanted]
+        relevant = [m for m in mods if m.target in wanted]
+        uncond = [m for m in relevant if m.condition is None]
+
+        target = base_val
+        sets = [m.value for m in uncond if m.op == "set"]
         if sets:
             target = sets[-1]
-        target -= sum(m.value for m in mods if m.op == "add" and m.target in wanted)
-        for m in mods:
-            if m.target in wanted and m.op == "set_min":
+        target -= sum(m.value for m in uncond if m.op == "add")
+        for m in uncond:
+            if m.op == "set_min":
                 target = max(target, m.value)
-            elif m.target in wanted and m.op == "set_max":
+            elif m.op == "set_max":
                 target = min(target, m.value)
-        best[name] = max(SAVE_FLOOR, target)
-    return best
+        modified = max(SAVE_FLOOR, target)
+
+        lines = [
+            SaveModLine(
+                source=m.source or "—",
+                bonus=m.value,
+                conditional=m.condition is not None,
+                note=_CONDITION_NOTES.get(m.condition, "") if m.condition else "",
+            )
+            for m in relevant if m.op == "add"
+        ]
+        out[name] = SaveBreakdown(category=name, base=base_val, modified=modified, lines=lines)
+    return out
+
+
+def saving_throws(spec: CharacterSpec, data: GameData) -> dict[str, int]:
+    """Headline (modified) save number per category — thin view over
+    ``saving_throws_detail``."""
+    return {name: bd.modified for name, bd in saving_throws_detail(spec, data).items()}

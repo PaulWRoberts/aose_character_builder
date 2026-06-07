@@ -51,3 +51,43 @@ def test_wisdom_mods_negative_penalty():
     mods = wisdom_save_modifiers(_spec(wis=4), DATA)    # -2
     assert all(m.value == -2 for m in mods)
     assert all(m.source == "Wisdom" for m in mods)
+
+
+def test_detail_headline_includes_wis_on_spells_only():
+    from aose.engine.saves import saving_throws, saving_throws_detail
+    base = saving_throws(_spec(wis=10), DATA)
+    hi = saving_throws_detail(_spec(wis=16), DATA)        # +2
+    assert hi["spells"].modified == base["spells"] - 2    # WIS in headline
+    assert hi["wands"].modified == base["wands"] - 2
+    assert hi["death"].modified == base["death"]          # conditional: not in headline
+    assert hi["paralysis"].modified == base["paralysis"]
+    assert hi["breath"].modified == base["breath"]
+
+
+def test_detail_death_has_conditional_wis_line():
+    from aose.engine.saves import saving_throws_detail
+    detail = saving_throws_detail(_spec(wis=16), DATA)
+    wis_lines = [ln for ln in detail["death"].lines
+                 if ln.source == "Wisdom" and ln.conditional]
+    assert len(wis_lines) == 1
+    assert wis_lines[0].bonus == 2
+    assert "magical" in wis_lines[0].note
+
+
+def test_detail_base_is_class_progression():
+    from aose.engine.saves import saving_throws_detail
+    detail = saving_throws_detail(_spec(wis=16), DATA)
+    # Base excludes all modifiers; fighter L1 death base is 12.
+    assert detail["death"].base == 12
+
+
+def test_detail_dwarf_poison_and_spells_lines():
+    from aose.engine.saves import saving_throws_detail
+    detail = saving_throws_detail(_spec(con=13, race="dwarf"), DATA)
+    # spells: unconditional resilience line, in the headline.
+    spells_res = [ln for ln in detail["spells"].lines if ln.source == "Resilience"]
+    assert spells_res and spells_res[0].conditional is False and spells_res[0].bonus == 3
+    # death: conditional poison line, NOT in the headline.
+    death_res = [ln for ln in detail["death"].lines if ln.source == "Resilience"]
+    assert death_res and death_res[0].conditional is True
+    assert death_res[0].note.startswith("poison")
