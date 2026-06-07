@@ -119,6 +119,8 @@ features:
   text: |-
     Kineticists gain a +2 bonus to all saving throws against mental powers, including the powers of other kineticists.
   gained_at_level: 1
+  granted_modifiers:
+  - {target: "save:vs:mental_powers", op: add, value: 2}
 - id: mental_powers
   name: Mental Powers
   text: |-

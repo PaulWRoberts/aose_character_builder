@@ -197,6 +197,10 @@ features:
 
     **Beguilement:** Knights gain a +4 bonus to saving throws against hold spells, charms, mind control, hypnotism, suggestion, etc. They gain a +2 bonus to saving throws against illusion, and gain a saving throw (one is not normally allowed) against sleep spells.
   gained_at_level: 3
+  granted_modifiers:
+  - {target: "save:vs:charm", op: add, value: 4}
+  - {target: "save:vs:hold", op: add, value: 4}
+  - {target: "save:vs:illusion", op: add, value: 2}
 - id: stronghold
   name: Stronghold
   text: |-
