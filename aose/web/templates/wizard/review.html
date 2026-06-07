@@ -48,8 +48,8 @@
             <div class="stat-row"><span>Move</span><span>{{ sheet.movement_base }}'/turn</span></div>
             <div class="stat-row"><span>XP to L{{ sheet.next_level }}</span><span>{{ sheet.xp_to_next }}</span></div>
             <div class="stat-row"><span>Languages</span><span>{{ sheet.languages | join(", ") }}</span></div>
-            {% if sheet.secondary_skill %}
-            <div class="stat-row"><span>Skill</span><span>{{ sheet.secondary_skill }}</span></div>
+            {% if sheet.secondary_skills %}
+            <div class="stat-row"><span>Skill</span><span>{{ sheet.secondary_skills | join(", ") }}</span></div>
             {% endif %}
             {% if sheet.weapon_proficiency_active %}
             <div class="stat-row"><span>Profs</span><span>{{ sheet.proficiencies.weapons | map(attribute='name') | join(", ") if (sheet.proficiencies and sheet.proficiencies.weapons) else "—" }}</span></div>

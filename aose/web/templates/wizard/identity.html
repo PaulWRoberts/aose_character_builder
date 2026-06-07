@@ -22,19 +22,28 @@
     {% if show_skill %}
     <fieldset class="wfield">
         <legend>Secondary Skill</legend>
+        {% if skill_locked %}
+        <p class="muted">A humble trade rolled at character creation (Strict Mode — locked).</p>
+        <p style="margin:0">{{ current_skills | join(", ") if current_skills else "—" }}</p>
+        {% else %}
         <p class="muted">A humble trade from before adventuring — we've rolled one;
-           re-roll or pick another.</p>
+           re-roll, or choose a single skill instead.</p>
+        <p style="margin:0 0 6px"><strong>Rolled:</strong>
+           {{ current_skills | join(", ") if current_skills else "—" }}</p>
         <div class="skill-row">
             <label class="wfield">
-                <span>Skill</span>
+                <span>Or choose a skill</span>
                 <select name="secondary_skill">
+                    <option value="">— keep rolled —</option>
                     {% for s in skills %}
-                    <option value="{{ s }}" {% if s == current_skill %}selected{% endif %}>{{ s }}</option>
+                    <option value="{{ s }}"
+                        {% if current_skills | length == 1 and s == current_skills[0] %}selected{% endif %}>{{ s }}</option>
                     {% endfor %}
                 </select>
             </label>
             <button type="submit" formaction="/wizard/{{ draft_id }}/identity/skill-reroll" formnovalidate>Re-roll skill</button>
         </div>
+        {% endif %}
     </fieldset>
     {% endif %}
 

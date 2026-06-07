@@ -197,9 +197,9 @@
           <div class="subhead">Languages</div>
           <p style="margin:0 0 4px">{{ sheet.languages | join(", ") if sheet.languages else "—" }}</p>
           {% if sheet.broken_speech %}<p style="margin:0 0 4px;font-size:11px;color:var(--stamp);">Speaks only in broken sentences (INT 3).</p>{% endif %}
-          {% if sheet.secondary_skill %}
+          {% if sheet.secondary_skills %}
           <div class="subhead">Secondary Skill</div>
-          <p style="margin:0 0 4px">{{ sheet.secondary_skill }}</p>
+          <p style="margin:0 0 4px">{{ sheet.secondary_skills | join(", ") }}</p>
           {% endif %}
           <div class="subhead">Notes</div>
           <div class="notes-body" data-modal="modal-notes">{{ sheet.notes }}</div>

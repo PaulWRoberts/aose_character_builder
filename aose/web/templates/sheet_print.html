@@ -106,10 +106,10 @@
         <p style="margin:2pt 0; font-size:9pt;">{{ sheet.languages | join(", ") if sheet.languages else "—" }}</p>
     </section>
 
-    {% if sheet.secondary_skill %}
+    {% if sheet.secondary_skills %}
     <section class="section">
         <h2>Secondary Skill</h2>
-        <p style="margin:2pt 0; font-size:9pt;">{{ sheet.secondary_skill }}</p>
+        <p style="margin:2pt 0; font-size:9pt;">{{ sheet.secondary_skills | join(", ") }}</p>
     </section>
     {% endif %}
 
