@@ -65,6 +65,25 @@ override. Changing a rule mid-wizard applies targeted downstream clears
 Every flag in `RuleSet` is integrated end-to-end. The settings page never
 renders a "pending" badge — a regression test guards this.
 
+## Current state (2026-06-07, situational save bonuses)
+
+Cross-cutting "vs X" save bonuses landed. A new `save:vs:<thing>` `Modifier`
+target family (e.g. `save:vs:fire`) flows through the existing
+`GrantedModifier`/`active_modifiers` → `all_modifiers` pipeline. `saves.py`
+gains `situational_save_bonuses(spec, data) -> list[SituationalSaveBonus]`
+(groups by source+value, collects `things`, display-name registry `_VS_DISPLAY`
+with underscore fallback). Never folded into a headline and never shown in a
+per-category modal. Sheet shows them as smaller-font footnotes under the saving
+throws (`SheetSituationalSave`, `CharacterSheet.situational_saves`, `.save-note`
+CSS); also on the print sheet. Magic items can emit `save:vs:*` modifiers and
+are collected automatically (no catalog encoding done yet). Data encoded from
+full sweep: druid Energy Resistance (`save:vs:fire`/`save:vs:lightning` +2),
+svirfneblin Illusion Resistance (`save:vs:illusion` +2), kineticist Mental
+Defence (`save:vs:mental_powers` +2), knight Strength of Will
+(`save:vs:charm`/`save:vs:hold` +4, `save:vs:illusion` +2, gained at level 3).
+1289 tests pass; 2 pre-existing breadcrumb failures unchanged. Spec/plan:
+`docs/superpowers/{specs,plans}/2026-06-07-situational-save-bonuses*`.
+
 ## Current state (2026-06-07, languages/literacy/WIS-saves)
 
 Languages, literacy, and WIS magic-save improvements just landed (11-task plan, on `feature/languages-literacy-wisdom-saves`). All new tests pass; 2 pre-existing breadcrumb-label failures unchanged.
