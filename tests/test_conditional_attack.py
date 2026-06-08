@@ -113,3 +113,30 @@ def test_no_attack_mods_empty_breakdown(monkeypatch):
     assert bd.lines == []
     assert bd.has_conditional is False
     assert bd.thac0 == 19
+
+
+# ── view-model tests ──────────────────────────────────────────────────────────
+
+from aose.sheet.view import build_sheet, SheetAttackLine
+
+
+def test_build_sheet_flags_conditional_attack_for_drow():
+    sheet = build_sheet(_spec(race_id="drow"), DATA)
+    assert sheet.attack_has_conditional is True
+    cond = [ln for ln in sheet.attack_lines if ln.conditional]
+    assert any(ln.source == "Light Sensitivity" and ln.bonus == -2
+               and ln.note == "in bright light" for ln in cond)
+    assert all(isinstance(ln, SheetAttackLine) for ln in sheet.attack_lines)
+
+
+def test_build_sheet_flags_conditional_attack_for_knight():
+    sheet = build_sheet(_spec(class_id="knight"), DATA)
+    cond = [ln for ln in sheet.attack_lines if ln.conditional]
+    assert any(ln.source == "Mounted Combat" and ln.bonus == 1
+               and ln.note == "while mounted" for ln in cond)
+
+
+def test_build_sheet_no_conditional_attack_for_human_fighter():
+    sheet = build_sheet(_spec(race_id="human", class_id="fighter"), DATA)
+    assert sheet.attack_has_conditional is False
+    assert all(not ln.conditional for ln in sheet.attack_lines)

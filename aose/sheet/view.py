@@ -5,7 +5,7 @@ from aose.engine import ability_mods, armor_class, attack_bonus, hp, saves, spel
 from aose.engine import currency as currency_engine
 from aose.engine import spell_sources as spell_source_engine
 from aose.engine import valuables as valuables_engine
-from aose.engine.attacks import AttackProfile, attack_profiles
+from aose.engine.attacks import AttackProfile, attack_modifiers_detail, attack_profiles
 from aose.engine.encumbrance import (
     MAX_LOAD,
     EncumbranceTable,
@@ -117,6 +117,13 @@ class SheetSituationalSave(BaseModel):
 class SheetACLine(BaseModel):
     source: str
     effect: str
+    conditional: bool
+    note: str
+
+
+class SheetAttackLine(BaseModel):
+    source: str
+    bonus: int
     conditional: bool
     note: str
 
@@ -360,6 +367,8 @@ class CharacterSheet(BaseModel):
     ac_has_conditional: bool
     thac0: int
     attack_bonus: int
+    attack_lines: list[SheetAttackLine]
+    attack_has_conditional: bool
 
     saves: list[SheetSave]
     situational_saves: list[SheetSituationalSave]
@@ -1170,6 +1179,12 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
         ))
 
     attacks = attack_profiles(spec, data)
+    attack_breakdown = attack_modifiers_detail(spec, data)
+    attack_line_rows = [
+        SheetAttackLine(source=ln.source, bonus=ln.bonus,
+                        conditional=ln.conditional, note=ln.note)
+        for ln in attack_breakdown.lines
+    ]
     ammo_rows, ammo_options = ammo_view(spec, data)
 
     return CharacterSheet(
@@ -1196,6 +1211,8 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
         ac_has_conditional=ac_breakdown.has_conditional,
         thac0=attack_bonus.thac0(spec, data),
         attack_bonus=attack_bonus.attack_bonus(spec, data),
+        attack_lines=attack_line_rows,
+        attack_has_conditional=attack_breakdown.has_conditional,
         saves=save_rows,
         situational_saves=situational_save_rows,
         languages=[
