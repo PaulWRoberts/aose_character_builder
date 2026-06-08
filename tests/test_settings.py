@@ -204,7 +204,9 @@ def test_ascending_ac_renders_on_sheet(client, tmp_path):
     assert r.status_code == 200
     # Ascending AC sheets show "Attack Bonus", descending sheets show "THAC0"
     assert "Attack Bonus" in r.text
-    assert "THAC0" not in r.text
+    # Check the combat tab label, not the whole page — item descriptions in the
+    # shop expander may legitimately mention "THAC0".
+    assert 'class="tab">THAC0' not in r.text
 
 
 def _start_draft_with(client, drafts_dir):
