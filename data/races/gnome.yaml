@@ -46,6 +46,8 @@ features:
   mechanical:
     armour_class_bonus: 2
     condition: attacked_by_large_opponents
+  granted_modifiers:
+  - {target: "ac", op: add, value: 2, condition: large_attacker}
 - id: detect_construction_tricks
   name: Detect Construction Tricks
   text: When searching, has a 2-in-6 chance to detect new construction, sliding walls, or sloping passages.

@@ -44,6 +44,8 @@ features:
   mechanical:
     armour_class_bonus: 2
     condition: attacked_by_large_opponents
+  granted_modifiers:
+  - {target: "ac", op: add, value: 2, condition: large_attacker}
 - id: initiative_bonus_optional_rule
   name: Initiative Bonus (Optional Rule)
   text: If using the optional rule for individual initiative, gains a +1 bonus to initiative rolls.

@@ -75,6 +75,8 @@ features:
     - continual_light
     attack_roll_modifier: -2
     armour_class_modifier: -1
+  granted_modifiers:
+  - {target: "ac", op: add, value: -1, condition: bright_light}
 - id: listening_at_doors
   name: Listening at Doors
   text: Has a 2-in-6 chance of hearing noises at doors.
