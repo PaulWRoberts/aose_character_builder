@@ -71,6 +71,13 @@
             <span class="stat-big">{{ sheet.thac0 }}</span>
         {% endif %}
         </div>
+        {% if sheet.attack_has_conditional %}
+        <div class="save-notes-print">
+            {% for ln in sheet.attack_lines if ln.conditional %}
+            <div class="muted small">{% if ln.bonus >= 0 %}+{{ ln.bonus }}{% else %}{{ ln.bonus }}{% endif %} to-hit {{ ln.note }} ({{ ln.source }})</div>
+            {% endfor %}
+        </div>
+        {% endif %}
     </section>
 
     <section class="section">

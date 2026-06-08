@@ -83,8 +83,8 @@
               <div class="ac">{% if sheet.use_ascending %}{{ sheet.ac_ascending }}{% else %}{{ sheet.ac_descending }}{% endif %}</div>
               <div class="unarm">unarmoured <b>{% if sheet.use_ascending %}{{ sheet.unarmored_ac_ascending }}{% else %}{{ sheet.unarmored_ac_descending }}{% endif %}</b></div>
             </div>
-            <div class="field col-field editable" data-modal="modal-matrix" title="Show to-hit matrix">
-              <span class="tab">{{ 'ATTACK' if sheet.use_ascending else 'THAC0' }}</span>
+            <div class="field col-field editable" data-modal="modal-matrix" title="Show attack breakdown">
+              <span class="tab">{{ 'ATTACK' if sheet.use_ascending else 'THAC0' }}{% if sheet.attack_has_conditional %}<span class="cond-mark" title="Has a conditional modifier — tap for details">★</span>{% endif %}</span>
               <span class="box" style="font-weight:600">{% if sheet.use_ascending %}{{ "%+d"|format(sheet.attack_bonus) }}{% else %}{{ sheet.thac0 }}{% endif %}</span>
             </div>
           </div>
@@ -861,10 +861,25 @@
 </div>
 {% endfor %}
 
-{# MODAL: to-hit matrix #}
-<div class="overlay modal" id="modal-matrix" role="dialog" aria-label="To-hit matrix">
-  <div class="ov-head"><h3>To-Hit Matrix — {% if sheet.use_ascending %}Attack Bonus {{ "%+d"|format(sheet.attack_bonus) }}{% else %}THAC0 {{ sheet.thac0 }}{% endif %}</h3><button class="x" data-close>×</button></div>
-  <div class="ov-body matrix">
+{# MODAL: attack breakdown + to-hit matrix #}
+<div class="overlay modal" id="modal-matrix" role="dialog" aria-label="Attack">
+  <div class="ov-head"><h3>Attack — {% if sheet.use_ascending %}Attack Bonus {{ "%+d"|format(sheet.attack_bonus) }}{% else %}THAC0 {{ sheet.thac0 }}{% endif %}</h3><button class="x" data-close>×</button></div>
+  <div class="ov-body matrix" style="font-size:14px">
+    <p style="margin:0 0 6px">
+      {% if sheet.use_ascending %}Attack Bonus <strong>{{ "%+d"|format(sheet.attack_bonus) }}</strong>{% else %}THAC0 <strong>{{ sheet.thac0 }}</strong>{% endif %}
+    </p>
+    {% if sheet.attack_lines %}
+    <ul style="list-style:none;margin:0 0 10px;padding:0">
+      {% for ln in sheet.attack_lines %}
+      <li style="margin:2px 0">
+        <strong>{{ ln.source }}:</strong>
+        {% if ln.bonus >= 0 %}+{{ ln.bonus }} bonus{% else %}{{ ln.bonus }} penalty{% endif %}
+        {% if ln.conditional %}<span class="muted"> — {{ ln.note }}</span>{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    {% if not sheet.use_ascending %}
     <p class="hint">Roll needed to hit each descending Armour Class (before per-weapon bonuses).</p>
     <div class="cells">
       {% for ac in range(9, -1, -1) %}
@@ -874,6 +889,7 @@
       </div>
       {% endfor %}
     </div>
+    {% endif %}
   </div>
 </div>
 
