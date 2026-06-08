@@ -337,6 +337,21 @@ def test_use_charge_on_uncharged_raises():
         use_charge(items, items[0].instance_id)
 
 
+def test_use_charge_to_zero_keeps_item_in_list():
+    from aose.engine.magic import add_free_magic_item, use_charge
+    fake = _charged_fake()
+    items = add_free_magic_item([], "staff", fake)   # 10 fixed charges
+    iid = items[0].instance_id
+    items = use_charge(items, iid)   # 10 -> 9
+    items = use_charge(items, iid)   # 9 -> 8
+    for _ in range(8):
+        items = use_charge(items, iid)   # 8 -> 0
+    # The instance is still present at 0 charges (not removed).
+    assert len(items) == 1
+    assert items[0].instance_id == iid
+    assert items[0].charges_remaining == 0
+
+
 def test_remove_magic_drop_removes_instance():
     from aose.engine.magic import add_free_magic_item, remove_magic
     fake = _fake_magic_data()
