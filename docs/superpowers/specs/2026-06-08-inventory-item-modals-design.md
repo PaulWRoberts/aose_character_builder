@@ -38,8 +38,9 @@ the drawer's inventory rows already have.
   description/properties — left as-is).
 - No new persistence shapes, engine modules, or routes. This is a
   view/template change that reuses existing derivations and POST endpoints.
-- Charges, magic-item notes, and the destructive `remove`/`refund`/`sell`
-  actions stay in the management drawer.
+- Magic-item notes, charge **reset**, and the destructive
+  `remove`/`refund`/`sell` actions stay in the management drawer. (Expending a
+  charge and adjusting ammo count *are* exposed on the sheet — see §3.)
 
 ## Invariants
 
@@ -87,9 +88,10 @@ Each gets a server-rendered modal following the same overlay pattern.
 
 **Containers / bags** (carried + stashed columns, `sheet.html` lines 361–368 &
 394–399): make the bag `<li>` clickable (`data-modal="modal-container-{{ c.instance_id }}"`).
-Add one modal per container rendering `detail_card` built from the container's
-**catalog item** (`item_card`), i.e. Type / Capacity / Cost / Weight + the
-catalog description, plus the existing Stash/Unstash form (state-dependent).
+The modal shows the **live capacity badge** (`used_cn / capacity_cn`, reusing the
+drawer's `capacity-badge` styling) above a `detail_card` built from the
+container's **catalog item** (`item_card`) — Type / Capacity / Cost / Weight +
+catalog description — plus the existing Stash/Unstash form (state-dependent).
 Take-out of contents and container removal remain drawer-only.
 
 - *View support:* `ContainerView` already carries `catalog_id`. The sheet view
@@ -101,8 +103,10 @@ Take-out of contents and container removal remain drawer-only.
 **Ammunition** (carried column, `sheet.html` lines 381–383): make the ammo
 `<li>` clickable (`data-modal="modal-ammo-{{ a.instance_id }}"`). Modal renders
 `detail_card` from the ammo's base catalog item (Type / Groups / Bundle / Cost /
-Weight + description). Read-only re: equipping — loading happens from the
-launcher (§4). Count adjust / remove stay in the drawer.
+Weight + description), plus **+/- count adjust** forms posting to the existing
+`{{ ammo_url_prefix }}/ammo/adjust` (`delta=+1`/`-1`). Loading into a weapon
+happens from the launcher (§4); the destructive `ammo/remove` stays in the
+drawer.
 
 - *View support:* `AmmoRow` gains a `detail: DetailCard | None` field, populated
   in `ammo_view` from `data.items[s.base_id]` via `item_card`.
@@ -110,14 +114,20 @@ launcher (§4). Count adjust / remove stay in the drawer.
 **Worn magic items** (equipped column, `sheet.html` lines 342–349): replace the
 generic `modal-feature` link with a dedicated `modal-magic-{{ mi.instance_id }}`
 modal showing the modifier chips (`mi.modifier_summary`), the description
-rendered with `| markdown | safe`, and Equip/Unequip
-(`/equip-magic` / `/unequip-magic`, keyed by `instance_id`). Charges, note, and
-remove stay in the drawer.
+rendered with `| markdown | safe`, Equip/Unequip (`/equip-magic` /
+`/unequip-magic`, keyed by `instance_id`), and — when the item has charges — a
+charge count (`charges_remaining / charges_max`) with a **Use one** button
+posting to the existing `/use-charge`. The button disables at 0 charges.
+**Reset**, note, and remove stay in the drawer.
 
+- *Charge behaviour (existing, no change):* `magic.use_charge` decrements to 0
+  and never removes the instance at 0 — using the last charge leaves the item in
+  inventory, satisfying "using all charges shouldn't remove the item".
 - *View support:* the sheet already passes `magic_items` with `name`,
   `modifier_summary`, `description`, `equipped`, and the instance id. Confirm the
-  instance id and an `equippable` flag are available on the sheet-side view model;
-  add to the view model if missing.
+  instance id, an `equippable` flag, and `charges_remaining`/`charges_max` are
+  available on the sheet-side magic-item view model; add to the view model if
+  missing (the drawer's `magic_items_view` already exposes these — mirror it).
 
 ### 4. Ranged weapons load ammo from their modal
 
@@ -178,6 +188,11 @@ Web/template tests (FastAPI test client rendering the sheet & drawer):
    contains a Load control / ammo `<select>`.
 6. **New clickable entries** — container, ammo, and worn-magic-item modals exist
    and render their descriptions as markdown.
+7. **Sheet-side charge + count actions** — the worn-magic-item modal of a
+   charged item has a Use-one control (disabled at 0); the ammo modal has +/-
+   count-adjust controls.
+8. **Engine: last charge keeps the item** — `use_charge` taking an instance to 0
+   leaves it in the list (regression guard for the "don't remove" requirement).
 
 Run: `.venv\Scripts\python.exe -m pytest tests/ -q`.
 
