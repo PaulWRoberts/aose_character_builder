@@ -211,3 +211,37 @@ def test_feature_modal_renders_table_markdown(tmp_path):
     # The pipe table is rendered to HTML and escaped into the data-text attribute,
     # so the escaped opening tag appears in the markup.
     assert "&lt;table&gt;" in body
+
+
+def test_sheet_renders_conditional_ac_modal(tmp_path):
+    from pathlib import Path
+    from fastapi.testclient import TestClient
+    from aose.characters import save_character
+    from aose.models import CharacterSpec, ClassEntry
+    from aose.web.app import create_app
+
+    characters_dir = tmp_path / "characters"
+    examples_dir = tmp_path / "examples"
+    examples_dir.mkdir()
+    app = create_app(
+        data_dir=Path(__file__).parent.parent / "data",
+        characters_dir=characters_dir, drafts_dir=tmp_path / "drafts",
+        examples_dir=examples_dir, settings_path=tmp_path / "settings.json",
+    )
+    spec = CharacterSpec(
+        name="Driz", race_id="drow", alignment="neutral",
+        classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
+        abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
+    )
+    save_character("driz", spec, characters_dir)
+
+    html = TestClient(app, follow_redirects=False).get("/character/driz").text
+    assert 'id="modal-ac"' in html               # breakdown modal present
+    assert "Light Sensitivity" in html           # conditional source listed
+    assert "in bright light" in html             # condition note rendered
+
+
+def test_sheet_no_ac_modal_marker_for_plain_human(client):
+    # Thorin is a dwarf; dwarf has no conditional AC -> no AC modal marker.
+    html = client.get("/character/thorin").text
+    assert 'data-modal="modal-ac"' not in html or "Light Sensitivity" not in html

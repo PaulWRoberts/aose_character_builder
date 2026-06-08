@@ -114,6 +114,7 @@ body{ margin:0; font-family:var(--body); font-size:15px; line-height:1.32; color
 .shield .ac{ font-size:42px; font-weight:700; line-height:.9; font-variant-numeric:lining-nums tabular-nums; }
 .shield .unarm{ font-family:var(--display); font-size:10px; color:var(--gray); letter-spacing:.04em; }
 .shield .unarm b{ color:var(--ink); font-weight:600; }
+.shield .lab .cond-mark{ color:var(--stamp); font-size:9px; vertical-align:super; margin-left:2px; }
 .field.col-field{ flex-direction:column; }
 .field.col-field .tab{ justify-content:center; padding:2px 0; }
 .field.col-field .box{ border-left:1.5px solid var(--ink); border-top:none; justify-content:center; }

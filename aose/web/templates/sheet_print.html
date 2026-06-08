@@ -49,6 +49,13 @@
             {% if sheet.use_ascending %}{{ sheet.ac_ascending }}{% else %}{{ sheet.ac_descending }}{% endif %}
             </span>
         </div>
+        {% if sheet.ac_has_conditional %}
+        <div class="save-notes-print">
+            {% for ln in sheet.ac_lines if ln.conditional %}
+            <div class="muted small">{{ ln.effect }} AC {{ ln.note }} ({{ ln.source }})</div>
+            {% endfor %}
+        </div>
+        {% endif %}
         <div class="stat-row muted small">
             <span>(other notation)</span>
             <span>
