@@ -42,8 +42,8 @@ the shape this feature handles.
 - Sheet `★` indicator + merged Attack modal (breakdown + matrix).
 - Matrix gated to descending AC only (no THAC0 under ascending).
 - Print-sheet conditional-attack footnotes.
-- Data: light-sensitivity attack penalty (3 races **and** 3 race-as-class files,
-  the latter also gaining the missing `ac -1` for parity) + knight mounted bonus.
+- Data: light-sensitivity attack penalty (3 race files only — race-as-class is
+  covered via `race_locked`) + knight mounted bonus.
 
 ### Out of scope (documented, with rationale)
 
@@ -152,7 +152,7 @@ mirroring the existing conditional-AC footnotes (`.save-note`-style small text).
 
 ## Data changes
 
-### Light Sensitivity attack penalty — races (3 files)
+### Light Sensitivity attack penalty — race files only (3 files)
 
 Each of `data/races/{drow,duergar,svirfneblin}.yaml` `light_sensitivity` feature
 already has `granted_modifiers: - {target: ac, op: add, value: -1, condition:
@@ -164,26 +164,22 @@ bright_light}`. Add a second grant:
   - {target: "attack", op: add, value: -2, condition: bright_light}
 ```
 
-### Light Sensitivity — race-as-class versions (3 files)
+**Race files only — do NOT touch the class files.** The race-as-class options
+`data/classes/{drow,duergar,svirfneblin}.yaml` have `race_locked` set to their own
+id, so the wizard assigns `race_id = cls.race_locked` ([wizard.py:794](../../../aose/web/wizard.py))
+in race-as-class mode. A race-as-class drow therefore has `race_id='drow'`, and
+`feature_modifiers` walks **both** the race and class feature lists. The grant on
+the race file already reaches race-as-class characters (verified: `drow/drow`
+already exposes the existing `ac -1` line once). Adding the same grant to the
+class `light_sensitivity` feature would **double-apply** it (−2 AC / −4 attack).
 
-The race-as-class options `data/classes/{drow,duergar,svirfneblin}.yaml` each have
-their own `light_sensitivity` feature (`gained_at_level: 1`), but these currently
-carry **no `granted_modifiers` at all** — the prior conditional-AC feature added
-the modifier only to the race files and missed these. So a drow/duergar/
-svirfneblin played as a class currently gets *neither* the AC penalty nor the
-attack penalty.
-
-Bring them to parity with the race files by adding **both** grants:
-
-```yaml
-  granted_modifiers:
-  - {target: "ac", op: add, value: -1, condition: bright_light}
-  - {target: "attack", op: add, value: -2, condition: bright_light}
-```
-
-(The `ac -1` here is a small fix to the prior feature, folded in because leaving
-it out would make the AC/attack indicators inconsistent between the race and
-race-as-class forms of the same creature.)
+This matches the established, documented pattern (CLAUDE.md: dwarf/halfling
+resilience and the halfling missile bonus are "race-only ... to avoid
+double-application"). The class `light_sensitivity` feature's text stays as-is; it
+is functionally wired via the race file. Putting grants on the class files only
+(and removing them from the race files) is rejected because it would break
+separate-mode drow (`race_id='drow'`, `class_id='fighter'` — the class walk would
+not fire).
 
 ### Knight Mounted Combat (+1 mounted)
 
@@ -206,11 +202,11 @@ race-as-class forms of the same creature.)
   Headline `thac0`/`attack_bonus` and every weapon's to-hit are unchanged by the
   presence of a conditional attack modifier (regression-pins the no-behaviour-
   change claim).
-- **Data:** a drow/duergar/svirfneblin character — **as a race and as a
-  race-as-class** — exposes both a `bright_light` −2 attack conditional line and
-  the `bright_light` −1 AC conditional line (the class versions pin the parity
-  fix); a level-1 knight exposes a `mounted` +1 line; the unconditional headline
-  is untouched.
+- **Data:** a drow/duergar/svirfneblin character — **as a separate race and as a
+  race-as-class** — exposes a `bright_light` −2 attack conditional line **exactly
+  once** (regression-pins the no-double-application invariant via `race_locked`);
+  a level-1 knight exposes a `mounted` +1 line; the unconditional headline is
+  untouched.
 - **View:** `CharacterSheet.attack_has_conditional` true for the above, false
   for a vanilla fighter; `attack_lines` populated correctly.
 - **Template/print:** smoke-render coverage consistent with existing AC-modal and
@@ -227,8 +223,5 @@ race-as-class forms of the same creature.)
 | `data/races/drow.yaml` | `attack -2 condition:bright_light` grant |
 | `data/races/duergar.yaml` | `attack -2 condition:bright_light` grant |
 | `data/races/svirfneblin.yaml` | `attack -2 condition:bright_light` grant |
-| `data/classes/drow.yaml` | `ac -1` + `attack -2 condition:bright_light` grants (parity fix) |
-| `data/classes/duergar.yaml` | `ac -1` + `attack -2 condition:bright_light` grants (parity fix) |
-| `data/classes/svirfneblin.yaml` | `ac -1` + `attack -2 condition:bright_light` grants (parity fix) |
 | `data/classes/knight.yaml` | `attack +1 condition:mounted` grant |
 | `tests/` | engine + data + view coverage |
