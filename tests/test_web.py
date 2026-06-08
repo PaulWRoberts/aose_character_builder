@@ -320,3 +320,40 @@ def test_container_modal_shows_capacity_and_stash(tmp_path):
     modal = body[start:nxt if nxt != -1 else len(body)]
     assert "Capacity" in modal                                  # from item_card stats
     assert "/character/bagger/equipment/stash-container" in modal
+
+
+def test_ammo_modal_shows_properties_and_count_adjust(tmp_path):
+    from pathlib import Path
+    from fastapi.testclient import TestClient
+    from aose.characters import save_character
+    from aose.models import CharacterSpec, ClassEntry, AmmoStack
+    from aose.web.app import create_app
+
+    characters_dir = tmp_path / "characters"
+    examples_dir = tmp_path / "examples"
+    examples_dir.mkdir()
+    app = create_app(
+        data_dir=Path(__file__).parent.parent / "data",
+        characters_dir=characters_dir, drafts_dir=tmp_path / "drafts",
+        examples_dir=examples_dir, settings_path=tmp_path / "settings.json",
+    )
+    spec = CharacterSpec(
+        name="Fletch",
+        abilities={"STR": 11, "INT": 10, "WIS": 10, "DEX": 11, "CON": 12, "CHA": 9},
+        race_id="human", classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
+        alignment="neutral",
+        ammo=[AmmoStack(instance_id="a1", base_id="arrow", count=20)],
+    )
+    save_character("fletch", spec, characters_dir)
+    body = TestClient(app, follow_redirects=False).get("/character/fletch").text
+
+    assert 'data-modal="modal-ammo-a1"' in body
+    assert 'id="modal-ammo-a1"' in body
+    start = body.index('id="modal-ammo-a1"')
+    nxt = body.find('class="overlay', start + 10)
+    modal = body[start:nxt if nxt != -1 else len(body)]
+    assert "Ammunition" in modal                     # item_card Type stat
+    assert "/character/fletch/ammo/adjust" in modal   # +/- count adjust
+    assert 'name="delta" value="1"' in modal
+    assert 'name="delta" value="-1"' in modal
+    assert "/ammo/remove" not in modal               # destructive remove stays in drawer

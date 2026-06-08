@@ -402,7 +402,7 @@
             {% endfor %}
             {# Ammo #}
             {% for a in sheet.ammo %}
-            <li><span>{{ a.name }}{% if a.magic %}<span class="tag stamp">magic</span>{% endif %}</span><span class="q">× {{ a.count }}</span></li>
+            <li class="clickable" data-modal="modal-ammo-{{ a.instance_id }}"><span>{{ a.name }}{% if a.magic %}<span class="tag stamp">magic</span>{% endif %}</span><span class="q">× {{ a.count }}</span></li>
             {% endfor %}
           </ul>
         </div>
@@ -820,6 +820,29 @@
         <button type="submit">Unstash</button>
       </form>
       {% endif %}
+    </div>
+  </div>
+</div>
+{% endfor %}
+
+{# MODALS: per-ammo (properties + count adjust) #}
+{% for a in sheet.ammo %}
+<div class="overlay modal" id="modal-ammo-{{ a.instance_id }}" role="dialog" aria-label="{{ a.name }}">
+  <div class="ov-head"><h3>{{ a.name }}</h3><button class="x" data-close>×</button></div>
+  <div class="ov-body">
+    {% if a.detail %}{{ detail_card(a.detail) }}{% endif %}
+    <div class="row-actions">
+      <span class="muted small">Count {{ a.count }}</span>
+      <form method="post" action="{{ ammo_url_prefix }}/ammo/adjust" class="inline-form">
+        <input type="hidden" name="instance_id" value="{{ a.instance_id }}">
+        <input type="hidden" name="delta" value="1">
+        <button class="btn tool dark" type="submit">+</button>
+      </form>
+      <form method="post" action="{{ ammo_url_prefix }}/ammo/adjust" class="inline-form">
+        <input type="hidden" name="instance_id" value="{{ a.instance_id }}">
+        <input type="hidden" name="delta" value="-1">
+        <button class="btn tool dark" type="submit">−</button>
+      </form>
     </div>
   </div>
 </div>

@@ -22,7 +22,7 @@ from aose.engine.languages import (
     broken_speech, display_name, granted_languages, known_languages, literacy,
 )
 from aose.engine.leveling import ClassAdvancement, all_advancement
-from aose.engine.detail import DetailCard, spell_card
+from aose.engine.detail import DetailCard, item_card, spell_card
 from aose.engine.magic import active_modifiers, apply_modifiers, effective_abilities
 from aose.models import Ability, CharacterSpec, MagicItem, MagicItemInstance, RuleSet
 
@@ -179,6 +179,7 @@ class AmmoRow(BaseModel):
     name: str
     count: int
     magic: bool
+    detail: DetailCard | None = None
 
 
 class AmmoOption(BaseModel):
@@ -1010,8 +1011,11 @@ def ammo_view(spec, data: GameData) -> tuple[list[AmmoRow], dict[str, list[AmmoO
     ammo_rows = []
     for s in spec.ammo:
         view = resolve_ammo(s, data)
-        ammo_rows.append(AmmoRow(instance_id=s.instance_id, name=view["name"],
-                                 count=s.count, magic=s.enchantment_id is not None))
+        base = data.items.get(s.base_id)
+        ammo_rows.append(AmmoRow(
+            instance_id=s.instance_id, name=view["name"],
+            count=s.count, magic=s.enchantment_id is not None,
+            detail=item_card(base) if base is not None else None))
 
     # Build per-launcher load options from attack profiles
     attacks = attack_profiles(spec, data)
