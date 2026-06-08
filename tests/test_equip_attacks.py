@@ -533,3 +533,26 @@ def test_sheet_item_modal_shows_properties_and_no_destructive_actions(tmp_path, 
     assert 'value="refund"' not in modal
     # The management drawer (whole page) still offers them.
     assert 'value="sell"' in body
+
+
+def test_equipped_launcher_modal_has_load_control(tmp_path, data):
+    from aose.characters import save_character
+    from aose.models import AmmoStack
+    client = _make_client(tmp_path)
+    spec = CharacterSpec(
+        name="Archer",
+        abilities={"STR": 11, "INT": 10, "WIS": 10, "DEX": 13, "CON": 12, "CHA": 9},
+        race_id="human", alignment="neutral",
+        classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
+        inventory=["short_bow"], equipped_weapons=["short_bow"],
+        ammo=[AmmoStack(instance_id="q1", base_id="arrow", count=20)],
+    )
+    save_character("archer", spec, client._characters_dir)
+    body = client.get("/character/archer").text
+
+    modal = _modal_html(body, "modal-item-equipped-short_bow")
+    # Load control: posts to the ammo/load route with the weapon key + a stack option.
+    assert "/character/archer/ammo/load" in modal
+    assert 'name="weapon_key" value="short_bow"' in modal
+    assert 'value="q1"' in modal          # the loadable stack instance
+    assert "/character/archer/ammo/unload" in modal

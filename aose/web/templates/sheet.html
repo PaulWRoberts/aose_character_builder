@@ -3,11 +3,34 @@
 {% block content %}
 {% from "_inv_row_actions.html" import inv_row_actions with context %}
 {% from "_detail_card.html" import detail_card with context %}
-{% macro item_modal(row, state, id_prefix, url_prefix) %}
+{% macro item_modal(row, state, id_prefix, url_prefix, load_options=none, attack=none) %}
 <div class="overlay modal" id="modal-item-{{ id_prefix }}-{{ row.id }}" role="dialog" aria-label="{{ row.name }}">
   <div class="ov-head"><h3>{{ row.name }}</h3><button class="x" data-close>×</button></div>
   <div class="ov-body">
     {% if row.detail %}{{ detail_card(row.detail) }}{% elif row.description %}<div class="prose">{{ row.description | markdown | safe }}</div>{% endif %}
+    {% if load_options %}
+    <div class="ov-section">
+      <h4>Ammunition</h4>
+      <p class="muted small" style="margin:0 0 6px">
+        {% if attack and attack.unloaded %}<span class="tag stamp">Unloaded</span>
+        {% elif attack and attack.loaded_ammo_name %}Loaded: <strong>{{ attack.loaded_ammo_name }}</strong>
+        {% else %}<span class="tag stamp">Unloaded</span>{% endif %}
+      </p>
+      <form method="post" action="{{ ammo_url_prefix }}/ammo/load" class="inline-form">
+        <input type="hidden" name="weapon_key" value="{{ row.id }}">
+        <select name="instance_id">
+          {% for opt in load_options %}
+          <option value="{{ opt.instance_id }}">{{ opt.name }} ({{ opt.count }})</option>
+          {% endfor %}
+        </select>
+        <button class="btn" type="submit">Load</button>
+      </form>
+      <form method="post" action="{{ ammo_url_prefix }}/ammo/unload" class="inline-form">
+        <input type="hidden" name="weapon_key" value="{{ row.id }}">
+        <button class="btn link" type="submit">Unload</button>
+      </form>
+    </div>
+    {% endif %}
     <div class="row-actions">{{ inv_row_actions(row, url_prefix, state, show_remove=False) }}</div>
   </div>
 </div>
@@ -742,7 +765,11 @@
 {# MODALS: per-item inventory management #}
 {% for row in inventory_view.carried %}{{ item_modal(row, "carried", "carried", target_url_prefix) }}{% endfor %}
 {% for row in inventory_view.stashed %}{{ item_modal(row, "stashed", "stashed", target_url_prefix) }}{% endfor %}
-{% for row in inventory_view.equipped %}{{ item_modal(row, "equipped", "equipped", target_url_prefix) }}{% endfor %}
+{% for row in inventory_view.equipped %}
+{%- set lo = ammo_load_options.get(row.id) -%}
+{%- set atk = sheet.attacks | selectattr('manageable_item_id', 'equalto', row.id) | first -%}
+{{ item_modal(row, "equipped", "equipped", target_url_prefix, load_options=lo, attack=atk) }}
+{% endfor %}
 
 {# MODALS: spell book / scroll contents (read-only; manage from the Documents tab) #}
 {% for src in sheet.spell_sources %}
