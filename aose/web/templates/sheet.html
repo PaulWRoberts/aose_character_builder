@@ -164,37 +164,6 @@
             </li>
             {% endfor %}
           </ul>
-          {% if sheet.weapon_proficiency_active %}
-          <div class="subhead">Weapon Proficiencies
-            {% if sheet.proficiencies %}
-            <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--gray);font-size:11px">
-              {{ sheet.proficiencies.slots_spent }}/{{ sheet.proficiencies.slots_total }} slots · non-prof −{{ -sheet.proficiencies.penalty }}
-            </span>
-            {% endif %}
-          </div>
-          {% if sheet.proficiencies and sheet.proficiencies.weapons %}
-          <div class="chips">
-            {% for w in sheet.proficiencies.weapons %}
-            <button class="chip{% if w.specialised %} gilt{% endif %}"
-                    data-modal="modal-feature"
-                    data-title="{{ w.name }}{% if w.specialised %} (Specialised){% endif %}"
-                    data-text="{{ (('Weapon specialisation: +1 to hit and +1 damage with the ' ~ w.name ~ '.') if w.specialised else 'Proficient — no non-proficiency penalty.') | markdown }}">
-              {{ w.name }}{% if w.specialised %} <span class="src">specialised</span>{% endif %}
-            </button>
-            {% endfor %}
-          </div>
-          {% endif %}
-          {% if sheet.weapon_qualities_reference %}
-          <details style="margin-top:8px;font-size:12px;">
-            <summary style="cursor:pointer;color:var(--gray);">Weapon Qualities</summary>
-            <ul style="margin:4px 0;padding-left:16px;">
-              {% for q in sheet.weapon_qualities_reference %}
-              <li><strong>{{ q.name }}</strong> — {{ q.description }}</li>
-              {% endfor %}
-            </ul>
-          </details>
-          {% endif %}
-          {% endif %}
         </div>
       </section>
 
@@ -208,6 +177,11 @@
           {% if sheet.secondary_skills %}
           <div class="subhead">Secondary Skill</div>
           <p style="margin:0 0 4px">{{ sheet.secondary_skills | join(", ") }}</p>
+          {% endif %}
+          {% if sheet.weapon_proficiency_active and sheet.proficiencies and sheet.proficiencies.weapons %}
+          <div class="subhead">Weapon Proficiencies</div>
+          <p style="margin:0 0 4px">{% for w in sheet.proficiencies.weapons %}{{ w.name }}{% if w.specialised %} (specialised){% endif %}{% if not loop.last %}, {% endif %}{% endfor %}</p>
+          <p style="margin:0 0 4px;font-size:11px;">Non-proficiency penalty: <strong>−{{ -sheet.proficiencies.penalty }}</strong></p>
           {% endif %}
           <div class="subhead">Notes</div>
           <div class="notes-body" data-modal="modal-notes">{{ sheet.notes }}</div>
