@@ -99,3 +99,23 @@ def test_breakdown_reconciles_with_armor_class():
     spec = _spec(equipped={"armor": "chain_mail"})
     bd = armor_class_detail(spec, DATA)
     assert (bd.descending, bd.ascending) == armor_class(spec, DATA)
+
+
+# ── view-model tests ──────────────────────────────────────────────────────────
+
+from aose.sheet.view import build_sheet, SheetACLine
+
+
+def test_build_sheet_flags_conditional_ac_for_drow():
+    spec = _spec(race_id="drow")
+    sheet = build_sheet(spec, DATA)
+    assert sheet.ac_has_conditional is True
+    cond = [ln for ln in sheet.ac_lines if ln.conditional]
+    assert any(ln.source == "Light Sensitivity" for ln in cond)
+    assert all(isinstance(ln, SheetACLine) for ln in sheet.ac_lines)
+
+
+def test_build_sheet_no_conditional_ac_for_human():
+    sheet = build_sheet(_spec(race_id="human"), DATA)
+    assert sheet.ac_has_conditional is False
+    assert all(not ln.conditional for ln in sheet.ac_lines)

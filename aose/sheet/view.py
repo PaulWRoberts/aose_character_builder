@@ -2,7 +2,6 @@ from pydantic import BaseModel, Field
 
 from aose.data.loader import GameData
 from aose.engine import ability_mods, armor_class, attack_bonus, hp, saves, spells as spell_engine
-from aose.engine.armor_class import unarmored_ac as _unarmored_ac
 from aose.engine import currency as currency_engine
 from aose.engine import spell_sources as spell_source_engine
 from aose.engine import valuables as valuables_engine
@@ -113,6 +112,13 @@ class SheetSituationalSave(BaseModel):
         else:
             vs = ", ".join(things[:-1]) + f" & {things[-1]}"
         return cls(bonus=bonus, vs=vs, source=source)
+
+
+class SheetACLine(BaseModel):
+    source: str
+    effect: str
+    conditional: bool
+    note: str
 
 
 class SheetFeature(BaseModel):
@@ -350,6 +356,8 @@ class CharacterSheet(BaseModel):
     unarmored_ac_descending: int
     unarmored_ac_ascending: int
     use_ascending: bool
+    ac_lines: list[SheetACLine]
+    ac_has_conditional: bool
     thac0: int
     attack_bonus: int
 
@@ -1109,8 +1117,14 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
             ],
         ))
 
-    desc_ac, asc_ac = armor_class.armor_class(spec, data)
-    un_desc, un_asc = _unarmored_ac(spec, data)
+    ac_breakdown = armor_class.armor_class_detail(spec, data)
+    desc_ac, asc_ac = ac_breakdown.descending, ac_breakdown.ascending
+    un_desc, un_asc = ac_breakdown.unarmored_descending, ac_breakdown.unarmored_ascending
+    ac_line_rows = [
+        SheetACLine(source=ln.source, effect=ln.effect,
+                    conditional=ln.conditional, note=ln.note)
+        for ln in ac_breakdown.lines
+    ]
     save_detail = saves.saving_throws_detail(spec, data)
     save_rows = [
         SheetSave(
@@ -1178,6 +1192,8 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
         unarmored_ac_descending=un_desc,
         unarmored_ac_ascending=un_asc,
         use_ascending=spec.ruleset.ascending_ac,
+        ac_lines=ac_line_rows,
+        ac_has_conditional=ac_breakdown.has_conditional,
         thac0=attack_bonus.thac0(spec, data),
         attack_bonus=attack_bonus.attack_bonus(spec, data),
         saves=save_rows,
