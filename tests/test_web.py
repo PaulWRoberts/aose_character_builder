@@ -245,3 +245,44 @@ def test_sheet_no_ac_modal_marker_for_plain_human(client):
     # Thorin is a dwarf; dwarf has no conditional AC -> no AC modal marker.
     html = client.get("/character/thorin").text
     assert 'data-modal="modal-ac"' not in html or "Light Sensitivity" not in html
+
+
+def test_worn_magic_item_modal_has_charges_and_unequip(tmp_path):
+    from pathlib import Path
+    from fastapi.testclient import TestClient
+    from aose.characters import save_character
+    from aose.models import CharacterSpec, ClassEntry, MagicItemInstance
+    from aose.web.app import create_app
+
+    characters_dir = tmp_path / "characters"
+    examples_dir = tmp_path / "examples"
+    examples_dir.mkdir()
+    app = create_app(
+        data_dir=Path(__file__).parent.parent / "data",
+        characters_dir=characters_dir, drafts_dir=tmp_path / "drafts",
+        examples_dir=examples_dir, settings_path=tmp_path / "settings.json",
+    )
+    spec = CharacterSpec(
+        name="Mage",
+        abilities={"STR": 10, "INT": 12, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
+        race_id="human", classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
+        alignment="neutral",
+        magic_items=[MagicItemInstance(
+            instance_id="mi1",
+            catalog_id="amulet_of_protection_against_possession",
+            equipped=True, charges_max=3, charges_remaining=3)],
+    )
+    save_character("mage", spec, characters_dir)
+    body = TestClient(app, follow_redirects=False).get("/character/mage").text
+
+    # Worn item is a clickable trigger into its own modal.
+    assert 'data-modal="modal-magic-mi1"' in body
+    assert 'id="modal-magic-mi1"' in body
+    start = body.index('id="modal-magic-mi1"')
+    nxt = body.find('class="overlay', start + 10)
+    modal = body[start:nxt if nxt != -1 else len(body)]
+    # Use-one charge control + count, and Unequip; no destructive remove.
+    assert "/character/mage/equipment/use-charge" in modal
+    assert "3 / 3" in modal
+    assert "/character/mage/equipment/unequip-magic" in modal
+    assert "/remove-magic" not in modal

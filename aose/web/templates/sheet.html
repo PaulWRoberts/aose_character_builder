@@ -364,7 +364,7 @@
             {# Worn magic items #}
             {% for mi in sheet.magic_items %}
             {% if mi.equipped %}
-            <li class="info" data-modal="modal-feature" data-title="{{ mi.name }}" data-text="{{ (mi.description or '') | markdown }}">
+            <li class="info clickable" data-modal="modal-magic-{{ mi.instance_id }}">
               <span>{{ mi.name }} <span class="tag stamp">magic</span></span>
               <span class="st">{% for chip in mi.modifier_summary %}{{ chip }}{% if not loop.last %}, {% endif %}{% endfor %}</span>
             </li>
@@ -770,6 +770,32 @@
 {%- set atk = sheet.attacks | selectattr('manageable_item_id', 'equalto', row.id) | first -%}
 {{ item_modal(row, "equipped", "equipped", target_url_prefix, load_options=lo, attack=atk) }}
 {% endfor %}
+
+{# MODALS: per-worn-magic-item (properties + unequip + use-charge) #}
+{% set ench_ids = enchanted_rows | map(attribute='instance_id') | list %}
+{% for mi in sheet.magic_items %}{% if mi.equipped %}
+{% set is_ench = mi.instance_id in ench_ids %}
+<div class="overlay modal" id="modal-magic-{{ mi.instance_id }}" role="dialog" aria-label="{{ mi.name }}">
+  <div class="ov-head"><h3>{{ mi.name }}</h3><button class="x" data-close>×</button></div>
+  <div class="ov-body">
+    {% if mi.modifier_summary %}<p style="margin:0 0 8px">{% for chip in mi.modifier_summary %}<span class="tag stamp">{{ chip }}</span> {% endfor %}</p>{% endif %}
+    {% if mi.description %}<div class="prose">{{ mi.description | markdown | safe }}</div>{% endif %}
+    <div class="row-actions">
+      <form method="post" action="{{ target_url_prefix }}/{{ 'unequip-enchanted' if is_ench else 'unequip-magic' }}" class="inline-form">
+        <input type="hidden" name="instance_id" value="{{ mi.instance_id }}">
+        <button type="submit">Unequip</button>
+      </form>
+      {% if mi.charges_remaining is not none %}
+      <span class="muted small">Charges {{ mi.charges_remaining }} / {{ mi.charges_max }}</span>
+      <form method="post" action="{{ target_url_prefix }}/{{ 'enchanted/use-charge' if is_ench else 'use-charge' }}" class="inline-form">
+        <input type="hidden" name="instance_id" value="{{ mi.instance_id }}">
+        <button type="submit" {% if mi.charges_remaining == 0 %}disabled{% endif %}>Use one</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endif %}{% endfor %}
 
 {# MODALS: spell book / scroll contents (read-only; manage from the Documents tab) #}
 {% for src in sheet.spell_sources %}
