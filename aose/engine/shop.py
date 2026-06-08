@@ -66,6 +66,7 @@ class ContainerView(BaseModel):
     own_weight_cn: int
     effective_weight_cn: int     # own + int(multiplier * used_cn) when carried, else 0
     contents: list[InventoryRow]
+    detail: DetailCard | None = None   # catalog item card for the per-container modal
 
 
 class InventoryView(BaseModel):
@@ -229,6 +230,7 @@ def inventory_view(inventory: list[str], stashed: list[str],
             own_weight_cn=catalog.weight_cn,
             effective_weight_cn=effective,
             contents=content_rows,
+            detail=item_card(catalog),
         ))
 
     eq_rows.sort(key=lambda r: r.name)

@@ -383,7 +383,7 @@
             {# Carried containers #}
             {% for c in inventory_view.containers %}
             {% if c.state == "carried" %}
-            <li class="bag"><span>{{ c.name }}</span><span class="q">{{ c.total_weight_cn }} cn</span></li>
+            <li class="bag clickable" data-modal="modal-container-{{ c.instance_id }}"><span>{{ c.name }}</span><span class="q">{{ c.total_weight_cn }} cn</span></li>
             {% if c.contents %}
             <li class="sub"><span>{% for row in c.contents %}{{ row.name }}{% if row.count > 1 %} ×{{ row.count }}{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}</span><span class="q">↳ {{ c.used_cn }}</span></li>
             {% endif %}
@@ -417,7 +417,7 @@
             {# Stashed containers #}
             {% for c in inventory_view.containers %}
             {% if c.state == "stashed" %}
-            <li class="bag"><span>{{ c.name }}</span><span class="q">—</span></li>
+            <li class="bag clickable" data-modal="modal-container-{{ c.instance_id }}"><span>{{ c.name }}</span><span class="q">—</span></li>
             {% endif %}
             {% endfor %}
           </ul>
@@ -796,6 +796,34 @@
   </div>
 </div>
 {% endif %}{% endfor %}
+
+{# MODALS: per-container (live capacity badge + catalog card + stash/unstash) #}
+{% for c in inventory_view.containers %}
+<div class="overlay modal" id="modal-container-{{ c.instance_id }}" role="dialog" aria-label="{{ c.name }}">
+  <div class="ov-head"><h3>{{ c.name }}</h3><button class="x" data-close>×</button></div>
+  <div class="ov-body">
+    <p style="margin:0 0 8px">
+      <span class="capacity-badge{% if c.capacity_cn and c.used_cn >= c.capacity_cn %} capacity-full{% endif %}">
+        {{ c.used_cn }} / {{ c.capacity_cn if c.capacity_cn else "∞" }} cn
+      </span>
+    </p>
+    {% if c.detail %}{{ detail_card(c.detail) }}{% endif %}
+    <div class="row-actions">
+      {% if c.state == "carried" %}
+      <form method="post" action="{{ target_url_prefix }}/stash-container" class="inline-form">
+        <input type="hidden" name="instance_id" value="{{ c.instance_id }}">
+        <button type="submit" title="Move container off-person">Stash</button>
+      </form>
+      {% else %}
+      <form method="post" action="{{ target_url_prefix }}/unstash-container" class="inline-form">
+        <input type="hidden" name="instance_id" value="{{ c.instance_id }}">
+        <button type="submit">Unstash</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endfor %}
 
 {# MODALS: spell book / scroll contents (read-only; manage from the Documents tab) #}
 {% for src in sheet.spell_sources %}

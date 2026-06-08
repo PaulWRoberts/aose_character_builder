@@ -286,3 +286,37 @@ def test_worn_magic_item_modal_has_charges_and_unequip(tmp_path):
     assert "3 / 3" in modal
     assert "/character/mage/equipment/unequip-magic" in modal
     assert "/remove-magic" not in modal
+
+
+def test_container_modal_shows_capacity_and_stash(tmp_path):
+    from pathlib import Path
+    from fastapi.testclient import TestClient
+    from aose.characters import save_character
+    from aose.models import CharacterSpec, ClassEntry, ContainerInstance
+    from aose.web.app import create_app
+
+    characters_dir = tmp_path / "characters"
+    examples_dir = tmp_path / "examples"
+    examples_dir.mkdir()
+    app = create_app(
+        data_dir=Path(__file__).parent.parent / "data",
+        characters_dir=characters_dir, drafts_dir=tmp_path / "drafts",
+        examples_dir=examples_dir, settings_path=tmp_path / "settings.json",
+    )
+    spec = CharacterSpec(
+        name="Bagger",
+        abilities={"STR": 11, "INT": 10, "WIS": 10, "DEX": 11, "CON": 12, "CHA": 9},
+        race_id="human", classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
+        alignment="neutral",
+        containers=[ContainerInstance(instance_id="b1", catalog_id="backpack", state="carried")],
+    )
+    save_character("bagger", spec, characters_dir)
+    body = TestClient(app, follow_redirects=False).get("/character/bagger").text
+
+    assert 'data-modal="modal-container-b1"' in body
+    assert 'id="modal-container-b1"' in body
+    start = body.index('id="modal-container-b1"')
+    nxt = body.find('class="overlay', start + 10)
+    modal = body[start:nxt if nxt != -1 else len(body)]
+    assert "Capacity" in modal                                  # from item_card stats
+    assert "/character/bagger/equipment/stash-container" in modal
