@@ -627,8 +627,10 @@
     </thead>
     <tbody>
     {% for item in category.items %}
+        {% set uid = "shop-" ~ category.id ~ "-" ~ item.id %}
         <tr class="shop-row {% if not item.magic and item.cost_gp > gold %}out{% endif %}"
-            data-shop-name="{{ item.name | lower }}">
+            data-shop-name="{{ item.name | lower }}"
+            data-detail-toggle="{{ uid }}" aria-expanded="false">
             <td>{{ item.name }}{% if item.bundle_count > 1 %} <span class="tag faint">buys {{ item.bundle_count }}</span>{% endif %}</td>
             <td class="n">{% if item.magic %}—{% else %}{{ item.cost_gp | int }} gp{% endif %}</td>
             <td class="n">{{ item.weight_cn }}</td>
@@ -647,6 +649,11 @@
                 </form>
             </td>
         </tr>
+        {% if item.detail %}
+        <tr class="row-detail collapsed" data-detail-for="{{ uid }}">
+            <td colspan="4">{{ detail_card(item.detail) }}</td>
+        </tr>
+        {% endif %}
     {% endfor %}
     </tbody>
 </table>

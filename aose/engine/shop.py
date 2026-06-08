@@ -30,6 +30,7 @@ class ShopItem(BaseModel):
     weight_cn: int = 0
     magic: bool = False
     bundle_count: int = 1
+    detail: DetailCard | None = None
 
 
 class ShopCategory(BaseModel):
@@ -110,6 +111,7 @@ def shop_categories(data: GameData, ruleset: RuleSet | None = None) -> list[Shop
                     id=i.id, name=i.name, category=i.category,
                     cost_gp=i.cost_gp, weight_cn=i.weight_cn,
                     magic=i.magic, bundle_count=_bundle_count(i),
+                    detail=item_card(i),
                 )
                 for i in items
             ],

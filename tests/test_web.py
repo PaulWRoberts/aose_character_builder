@@ -357,3 +357,13 @@ def test_ammo_modal_shows_properties_and_count_adjust(tmp_path):
     assert 'name="delta" value="1"' in modal
     assert 'name="delta" value="-1"' in modal
     assert "/ammo/remove" not in modal               # destructive remove stays in drawer
+
+
+def test_shop_rows_have_property_expander(client):
+    body = client.get("/character/thorin").text
+    # Every shop row is a detail-toggle trigger with a sibling detail row.
+    assert 'data-detail-toggle="shop-weapons-sword"' in body
+    assert 'data-detail-for="shop-weapons-sword"' in body
+    # The expander renders the item's properties via detail_card.
+    start = body.index('data-detail-for="shop-weapons-sword"')
+    assert "Damage" in body[start:start + 400]
