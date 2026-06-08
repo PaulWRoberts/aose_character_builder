@@ -227,15 +227,9 @@ features:
     ▶ **Rainfall:** –25% per hour.
 
     ▶ **Efforts made to hide tracks:** –25%.
-  gained_at_level: 1
-- id: after_reaching_10th_level
-  name: After Reaching 10th Level
-  text: |-
-    2d12 beings will join the ranger as followers. The nature of these followers is up to the referee—they may include human or demihuman adventurers, animals, fantastic mounts, sylvan creatures, or special monsters. If any of the followers die, they are not replaced.
-  gained_at_level: 10
-- id: ranger_tracking_chance_of_success
-  name: Ranger Tracking Chance of Success
-  text: |-
+
+    ### Ranger Tracking Chance of Success
+  
     | Level | Tracking |
     |---|---|
     | 1 | 20% |
@@ -249,3 +243,8 @@ features:
     | 9 | 100% |
     | 10+ | 110% |
   gained_at_level: 1
+- id: after_reaching_10th_level
+  name: After Reaching 10th Level
+  text: |-
+    2d12 beings will join the ranger as followers. The nature of these followers is up to the referee—they may include human or demihuman adventurers, animals, fantastic mounts, sylvan creatures, or special monsters. If any of the followers die, they are not replaced.
+  gained_at_level: 10

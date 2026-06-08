@@ -179,6 +179,24 @@ features:
     ▶ **Hide in undergrowth (HD):** Requires the barbarian to be motionless—attacking or moving while hiding is not possible.
 
     ▶ **Move silently (MS):** A barbarian may attempt to sneak past enemies.
+
+    ### Barbarian Skills Chance of Success
+    | Level | CS | HD | MS |
+    |---|---|---|---|
+    | 1 | 87 | 10 | 20 |
+    | 2 | 88 | 15 | 25 |
+    | 3 | 89 | 20 | 30 |
+    | 4 | 90 | 25 | 35 |
+    | 5 | 91 | 30 | 37 |
+    | 6 | 92 | 33 | 40 |
+    | 7 | 93 | 36 | 42 |
+    | 8 | 94 | 40 | 44 |
+    | 9 | 95 | 43 | 46 |
+    | 10 | 96 | 46 | 48 |
+    | 11 | 97 | 50 | 50 |
+    | 12 | 98 | 53 | 50 |
+    | 13 | 99 | 56 | 50 |
+    | 14 | 99 | 60 | 50 |
   gained_at_level: 1
 - id: combat
   name: Combat
@@ -210,33 +228,10 @@ features:
   text: |-
     A barbarian can call upon their native people to form a great horde of warriors, numbering 250 per level above 7th. The warriors are 1st level fighters with basic combat gear and may be mounted if customary in their culture. A horde can only be mustered for a specific purpose (e.g. attacking an enemy city, rescuing hostages, etc.). Once the purpose is achieved or abandoned, the horde disbands. Mustering a horde takes one week, and it remains for one week per level of the barbarian.
   gained_at_level: 8
-- id: barbarian_skills_chance_of_success
-  name: Barbarian Skills Chance of Success
-  text: |-
-    | Level | CS | HD | MS |
-    |---|---|---|---|
-    | 1 | 87 | 10 | 20 |
-    | 2 | 88 | 15 | 25 |
-    | 3 | 89 | 20 | 30 |
-    | 4 | 90 | 25 | 35 |
-    | 5 | 91 | 30 | 37 |
-    | 6 | 92 | 33 | 40 |
-    | 7 | 93 | 36 | 42 |
-    | 8 | 94 | 40 | 44 |
-    | 9 | 95 | 43 | 46 |
-    | 10 | 96 | 46 | 48 |
-    | 11 | 97 | 50 | 50 |
-    | 12 | 98 | 53 | 50 |
-    | 13 | 99 | 56 | 50 |
-    | 14 | 99 | 60 | 50 |
-  gained_at_level: 1
 - id: rolling_skill_checks
   name: Rolling Skill Checks
   text: |-
     All skills are rolled on d%, with a result of less than or equal to the listed percentage indicating success.
-  gained_at_level: 1
-- id: player_knowledge
-  name: Player Knowledge
-  text: |-
+    ### Player Knowledge
     The referee should roll for hiding and moving silently on the player’s behalf, as the barbarian always believes the attempt to be successful. If the roll fails, the referee knows that the barbarian has been noticed and should determine enemies’ actions appropriately.
   gained_at_level: 1

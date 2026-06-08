@@ -122,15 +122,9 @@ features:
     ▶ **Move silently (MS):** A half-orc may attempt to sneak past enemies unnoticed.
 
     ▶ **Pick pockets (PP):** If the victim is above 5th level, the half-orc’s roll is penalised by 5% for every level above 5th. A roll of more than twice the percentage required for success means that the attempted theft is noticed. The referee should determine the reaction of the victim (possibly using the reaction table under Encounters, p216).
-  gained_at_level: 1
-- id: after_reaching_8th_level
-  name: After Reaching 8th Level
-  text: |-
-    A half-orc can establish a bandit stronghold, attracting 2d6 apprentices—1st level fighters, thieves, or half-orcs. These apprentices will serve the character with some reliability; however, should any be arrested or killed, the PC will not be able to attract apprentices to replace them. A successful half-orc might use these followers to start a Thieves’ Guild.
-  gained_at_level: 8
-- id: half_orc_skills_chance_of_success
-  name: Half-Orc Skills Chance of Success
-  text: |-
+    
+    ### Half-Orc Skills Chance of Success
+
     | Level | HS | MS | PP |
     |---|---|---|---|
     | 1 | 10 | 20 | 20 |
@@ -142,13 +136,17 @@ features:
     | 7 | 45 | 55 | 55 |
     | 8 | 55 | 65 | 65 |
   gained_at_level: 1
+- id: after_reaching_8th_level
+  name: After Reaching 8th Level
+  text: |-
+    A half-orc can establish a bandit stronghold, attracting 2d6 apprentices—1st level fighters, thieves, or half-orcs. These apprentices will serve the character with some reliability; however, should any be arrested or killed, the PC will not be able to attract apprentices to replace them. A successful half-orc might use these followers to start a Thieves’ Guild.
+  gained_at_level: 8
 - id: rolling_skill_checks
   name: Rolling Skill Checks
   text: |-
     All skills are rolled on d%, with a result of less than or equal to the listed percentage indicating success.
-  gained_at_level: 1
-- id: player_knowledge
-  name: Player Knowledge
-  text: |-
+    
+    ### Player Knowledge
+  
     The referee should roll for hide in shadows and move silently on the player’s behalf, as the half-orc always believes the attempt to be successful. If the roll fails, the referee knows that the half-orc has been noticed and should determine enemies’ actions appropriately.
   gained_at_level: 1

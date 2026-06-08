@@ -201,10 +201,9 @@ features:
   name: Turning the Undead
   text: |-
     Paladins of 3rd level and higher can invoke the power of their deity to repel undead monsters encountered. To turn the undead, the player rolls 2d6. The referee then consults the table opposite, comparing the roll against the Hit Dice of the undead monsters targeted.
-  gained_at_level: 1
-- id: successful_turning
-  name: Successful Turning
-  text: |-
+  
+    ### Successful Turning
+  
     If the turning attempt succeeds, the player must roll 2d6 again to determine the number of HD affected (turned or destroyed).
 
     **Turned undead:** Will leave the area, if possible, and will not harm or make contact with the paladin.
@@ -240,8 +239,27 @@ features:
     T: The turning succeeds.
 
     D: The turning succeeds; the monsters are destroyed, not simply caused to flee.
+    
+    ### Paladin Turning the Undead
+
+    Monster Hit Dice†
+    
+    | Level | 1 | 2 | 2* | 3 | 4 | 5 | 6 | 7-9 |
+    |---|---|---|---|---|---|---|---|---|
+    | 3 | 7 | 9 | 11 | – | – | – | – | – |
+    | 4 | T | 7 | 9 | 11 | – | – | – | – |
+    | 5 | T | T | 7 | 9 | 11 | – | – | – |
+    | 6 | D | T | T | 7 | 9 | 11 | – | – |
+    | 7 | D | D | T | T | 7 | 9 | 11 | – |
+    | 8 | D | D | D | T | T | 7 | 9 | 11 |
+    | 9 | D | D | D | D | T | T | 7 | 9 |
+    | 10 | D | D | D | D | D | T | T | 7 |
+    | 11 | D | D | D | D | D | D | T | T |
+    | 12 | D | D | D | D | D | D | D | T |
+    | 13+ | D | D | D | D | D | D | D | D |
+    
+    * 2 HD monsters with a special ability (i.e. with an asterisk next to their HD rating, in the monster description).
+
+    † At the referee’s option, the table may be expanded to include more powerful types of undead monsters.
   gained_at_level: 1
-- id: paladin_turning_the_undead
-  name: Paladin Turning the Undead
-  text: "Monster Hit Dice†\n\n| Level | 1 | 2 | 2* | 3 | 4 | 5 | 6 | 7-9 |\n|---|---|---|---|---|---|---|---|---|\n| 3 | 7 | 9 | 11 | – | – | – | – | – |\n| 4 | T | 7 | 9 | 11 | – | – | – | – |\n| 5 | T | T | 7 | 9 | 11 | – | – | – |\n| 6 | D | T | T | 7 | 9 | 11 | – | – |\n| 7 | D | D | T | T | 7 | 9 | 11 | – |\n| 8 | D | D | D | T | T | 7 | 9 | 11 |\n| 9 | D | D | D | D | T | T | 7 | 9 |\n| 10 | D | D | D | D | D | T | T | 7 |\n| 11 | D | D | D | D | D | D | T | T |\n| 12 | D | D | D | D | D | D | D | T |\n| 13+ | D | D | D | D | D | D | D | D |\n\n* 2 HD monsters with a special ability (i.e. with an asterisk next to their HD rating, in the monster description).  \n† At the referee’s option, the table may be expanded to include more powerful types of undead monsters."
-  gained_at_level: 1
+

@@ -170,6 +170,25 @@ features:
     ▶ **Move silently (MS):** An acrobat may attempt to sneak past enemies unnoticed.
 
     ▶ **Tightrope walking (TW):** Acrobats can walk along tightropes, narrow beams, and ledges at up to half their normal movement rate. A roll is required every 60’. Failure indicates that the acrobat falls and suffers falling damage. Windy conditions may reduce the chance of success by up to 20%. Holding a balance pole increases the chance of success by 10%.
+
+    ### Acrobat Skills Chance of Success
+
+    | Level | CS | FA | HS | MS | TW |
+    |---|---|---|---|---|---|
+    | 1 | 87 | 25 | 10 | 20 | 60 |
+    | 2 | 88 | 25 | 15 | 25 | 65 |
+    | 3 | 89 | 25 | 20 | 30 | 70 |
+    | 4 | 90 | 33 | 25 | 35 | 75 |
+    | 5 | 91 | 33 | 30 | 40 | 80 |
+    | 6 | 92 | 33 | 33 | 43 | 85 |
+    | 7 | 93 | 33 | 36 | 46 | 90 |
+    | 8 | 94 | 50 | 40 | 50 | 95 |
+    | 9 | 95 | 50 | 43 | 53 | 99 |
+    | 10 | 96 | 50 | 46 | 56 | 99 |
+    | 11 | 97 | 50 | 50 | 60 | 99 |
+    | 12 | 98 | 66 | 53 | 63 | 99 |
+    | 13 | 99 | 66 | 56 | 66 | 99 |
+    | 14 | 99 | 75 | 60 | 70 | 99 |
   gained_at_level: 1
 - id: combat
   name: Combat
@@ -200,29 +219,8 @@ features:
   name: Rolling Skill Checks
   text: |-
     All skills except falling are rolled on d%, with a result of less than or equal to the listed percentage indicating success.
-  gained_at_level: 1
-- id: player_knowledge
-  name: Player Knowledge
-  text: |-
+
+    ### Player Knowledge
+
     The referee should roll for hide in shadows and move silently on the player’s behalf, as the acrobat always believes the attempt to be successful. If the roll fails, the referee knows that the acrobat has been noticed and should determine enemies’ actions appropriately.
-  gained_at_level: 1
-- id: acrobat_skills_chance_of_success
-  name: Acrobat Skills Chance of Success
-  text: |-
-    | Level | CS | FA | HS | MS | TW |
-    |---|---|---|---|---|---|
-    | 1 | 87 | 25 | 10 | 20 | 60 |
-    | 2 | 88 | 25 | 15 | 25 | 65 |
-    | 3 | 89 | 25 | 20 | 30 | 70 |
-    | 4 | 90 | 33 | 25 | 35 | 75 |
-    | 5 | 91 | 33 | 30 | 40 | 80 |
-    | 6 | 92 | 33 | 33 | 43 | 85 |
-    | 7 | 93 | 33 | 36 | 46 | 90 |
-    | 8 | 94 | 50 | 40 | 50 | 95 |
-    | 9 | 95 | 50 | 43 | 53 | 99 |
-    | 10 | 96 | 50 | 46 | 56 | 99 |
-    | 11 | 97 | 50 | 50 | 60 | 99 |
-    | 12 | 98 | 66 | 53 | 63 | 99 |
-    | 13 | 99 | 66 | 56 | 66 | 99 |
-    | 14 | 99 | 75 | 60 | 70 | 99 |
   gained_at_level: 1

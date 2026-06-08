@@ -182,15 +182,9 @@ features:
     ▶ **Open locks (OL):** Requires thieves’ tools (see Equipment, p94). A thief can only try this skill once per lock. If the roll fails, the thief may not try the same lock again before gaining an experience level.
 
     ▶ **Pick pockets (PP):** If the victim is above 5th level, the thief’s roll is penalised by 5% for every level above 5th. There is always at least a 1% chance of failure. A roll of more than twice the percentage required for success means that the attempted theft is noticed. The referee should determine the reaction of the victim (possibly using the reaction table under Encounters, p216).
-  gained_at_level: 1
-- id: after_reaching_9th_level
-  name: After Reaching 9th Level
-  text: |-
-    A thief can establish a thief den, attracting 2d6 apprentices of 1st level. These thieves will serve the character with some reliability; however, should any be arrested or killed, the PC will not be able to attract apprentices to replace them. A successful thief might use these followers to start a Thieves’ Guild.
-  gained_at_level: 9
-- id: thief_skills_chance_of_success
-  name: Thief Skills Chance of Success
-  text: |-
+
+    ### Thief Skills Chance of Success
+  
     | Level | CS | TR | HN | HS | MS | OL | PP |
     |---|---|---|---|---|---|---|---|
     | 1 | 87 | 10 | 1–2 | 10 | 20 | 15 | 20 |
@@ -208,15 +202,19 @@ features:
     | 13 | 99 | 97 | 1–5 | 95 | 98 | 97 | 115 |
     | 14 | 99 | 99 | 1–5 | 99 | 99 | 99 | 125 |
   gained_at_level: 1
+- id: after_reaching_9th_level
+  name: After Reaching 9th Level
+  text: |-
+    A thief can establish a thief den, attracting 2d6 apprentices of 1st level. These thieves will serve the character with some reliability; however, should any be arrested or killed, the PC will not be able to attract apprentices to replace them. A successful thief might use these followers to start a Thieves’ Guild.
+  gained_at_level: 9
 - id: rolling_skill_checks
   name: Rolling Skill Checks
   text: |-
     All skills except hear noise are rolled on d%, with a result of less than or equal to the listed percentage indicating success.
 
     Hear noise is rolled on 1d6. If the roll is within the listed range of numbers, the skill succeeds.
-  gained_at_level: 1
-- id: player_knowledge
-  name: Player Knowledge
-  text: |-
+    
+    ### Player Knowledge
+    
     The referee should roll for hear noise, hide in shadows, and move silently on the player’s behalf, as the thief does not immediately know if the attempt was successful. If a hide in shadows or move silently roll fails, the referee knows that the thief has been noticed and should determine enemies’ actions appropriately.
   gained_at_level: 1
