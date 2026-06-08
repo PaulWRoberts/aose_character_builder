@@ -190,6 +190,8 @@ features:
   text: |-
     Knights gain a +1 bonus to attack rolls when mounted.
   gained_at_level: 1
+  granted_modifiers:
+  - {target: "attack", op: add, value: 1, condition: mounted}
 - id: strength_of_will
   name: Strength of Will
   text: |-
