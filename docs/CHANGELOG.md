@@ -8,6 +8,7 @@ For the living architecture (how the subsystems fit together *now*), see
 
 | Date | Feature | Branch | Spec/Plan slug |
 |---|---|---|---|
+| 2026-06-08 | Inventory item modals (properties + safe actions) & shop property expander | `feat/inventory-item-modals` | `2026-06-08-inventory-item-modals` |
 | 2026-06-08 | Conditional attack-roll modifiers (mirrors conditional AC) | `main` | `2026-06-08-conditional-attack-modifiers` |
 | 2026-06-07 | Situational "vs X" save bonuses (`save:vs:*`) | `main` | `2026-06-07-situational-save-bonuses` |
 | 2026-06-07 | Conditional Armour Class modifiers | `main` | `2026-06-07-conditional-ac-modifiers` |

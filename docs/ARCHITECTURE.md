@@ -351,3 +351,18 @@ Kineticist is the only mental class (`data/classes/kineticist.yaml`, source
   every derivation. Block models (`SpellbookBlock`, `MentalPowersBlock`,
   `ACBreakdown`, `AttackBreakdown`, `SaveBreakdown`, `EncumbranceTable`, etc.) live
   alongside it / in their engine modules.
+- **Per-item modals** — every clickable entry in the inventory section (carried/
+  stashed/equipped gear, containers, ammo, worn magic items) opens a dedicated
+  server-rendered `overlay modal` showing properties via `detail_card(row.detail)`
+  (i.e. `item_card()` stats + markdown description) and safe management actions
+  (equip/unequip, stow, stash/unstash, load/unload ammo, use-charge). Destructive
+  actions (drop/sell/refund) are **drawer-only** — never in a sheet modal.
+- **`show_remove` boundary** — `_inv_row_actions.html` accepts `show_remove=True`
+  (default). Sheet modals pass `False`; the management drawer uses the default.
+- **Launcher modals** — equipped weapons that accept ammo expose a Load
+  `<select>` + Unload form in their modal, keyed by `manageable_item_id` /
+  `ammo_load_options` (both use the plain catalog weapon id).
+- **Shop expander** — `ShopItem.detail` (populated by `item_card(i)` in
+  `shop_categories`) is rendered via `detail_card` in a `row-detail` expander row
+  toggled by `inventory.js` (same pattern as drawer inventory rows). Buy/add
+  controls are unaffected — the toggle ignores clicks inside forms/buttons.
