@@ -8,6 +8,22 @@ Pydantic v2 models, YAML data, no JS framework. Local-only single-user app
 design system (tokens, components, overlay model) plus hard-won invariants
 (closed-overlay `pointer-events`, variable-font self-hosting, `no-cache` static).
 
+**Working on a subsystem?** Read [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) —
+the living design of every subsystem (the modifier pipeline, magic items, spells,
+encumbrance, etc.), where each lives, and its invariants. This file is just the
+quick orientation. [`docs/CHANGELOG.md`](docs/CHANGELOG.md) is the dated landing
+ledger; full per-feature designs are in `docs/superpowers/{specs,plans}/`.
+
+**Landing a feature?** Keep the docs current, and keep them lean:
+- Add a one-line row to the top of `docs/CHANGELOG.md` (date, feature, branch,
+  spec/plan slug). Full prose belongs in the spec/plan, not here.
+- Update the relevant subsystem section in `docs/ARCHITECTURE.md` in place (edit
+  the existing topic — don't append a dated entry). Add a section only for a
+  genuinely new subsystem.
+- Touch `CLAUDE.md` only if orientation changed (a new top-level dir, a wizard
+  step, a storage shape). Do **not** add per-feature "Current state" notes here —
+  that is what bloated this file before.
+
 ## Running
 
 ```powershell
@@ -31,20 +47,25 @@ quirk in pytest 9; ignore it.
 |---|---|
 | `aose/models/` | Pydantic v2 models (CharacterSpec, RuleSet, Race, CharClass, Item discriminated union, ProficiencyConfig) |
 | `aose/data/loader.py` | `GameData.load(data_dir)` — single side-effecting entry; `items` is a flat dict keyed by id |
-| `aose/engine/` | Pure derivations: `ability_mods`, `armor_class`, `attack_bonus`, `saves`, `hp`, `dice`, `proficiency`, `leveling`, `attacks`, `equip`, `shop`, `encumbrance` |
+| `aose/engine/` | Pure, cycle-free derivations: `ability_mods`, `armor_class`, `attack_bonus`, `saves`, `hp`, `dice`, `proficiency`, `leveling`, `attacks`, `equip`, `shop`, `encumbrance`, `magic`, `features`, `currency`, `valuables`, `ammo`, `enchant`, `spells`, `spell_sources`, `secondary_skills`, `sources` |
 | `aose/sheet/view.py` | `build_sheet(spec, data) -> CharacterSheet` — assembles every derivation for the live sheet |
 | `aose/characters/` | Persistence: `storage.py` (saved characters), `drafts.py` (in-progress), `settings.py` (global default RuleSet) |
 | `aose/web/` | FastAPI routes (`routes.py`, `wizard.py`, `settings_routes.py`) + Jinja templates |
-| `data/` | YAML game data: `races/`, `classes/`, `equipment/` (weapons, armor, adventuring_gear), `secondary_skills.yaml` |
+| `data/` | YAML game data: `races/`, `classes/`, `equipment/` (weapons, armor, adventuring_gear, ...), `spells/`, `spell_lists.yaml`, `enchantments.yaml`, `sources.yaml`, `languages.yaml`, `secondary_skills.yaml` |
+
+The engine import DAG is roughly `models → loader → magic → features →
+{armor_class, saves, attacks}`. Keep it acyclic. See `docs/ARCHITECTURE.md` for
+the full picture.
 
 ## Wizard flow
 
 Per-character ruleset gates which steps run:
-`rules → abilities → [race] → class → alignment → [skill] → [proficiencies] → hp → equipment → review`
+`rules → abilities → [race] → class → alignment → [skill] → [proficiencies] → hp → [spells] → equipment → review`
 
-Steps in `[brackets]` are gated by an optional rule. `_wizard_steps(draft)`
-builds the list per-draft from the snapshot ruleset. The breadcrumb shows
-completed steps as back-navigation links.
+Steps in `[brackets]` are gated by an optional rule (or, for `spells`, a cached
+`draft["spellcasting"]` flag). `_wizard_steps(draft)` builds the list per-draft
+from the snapshot ruleset. The breadcrumb shows completed steps as
+back-navigation links (or a 🔒 when a roll has locked an earlier step).
 
 ## Storage shapes
 
@@ -52,397 +73,28 @@ completed steps as back-navigation links.
 - `CharacterSpec.equipped_weapons`: `list[str]` — duplicates allowed
 - `inventory`: `list[str]` — duplicates count toward inventory size
 - A weapon is equippable when `equipped_weapons.count(id) < inventory.count(id)`
+- Equipped items live *inside* `inventory` — weight is counted once
+- `stashed`, `containers`, `magic_items`, `ammo`, `spell_sources`, gems/jewellery
+  each have their own shapes — see `docs/ARCHITECTURE.md`
 
 ## Settings vs per-character ruleset
 
 `/settings` (global, in `settings.json` at project root, gitignored) is the
 *default* for new drafts. The wizard's first step `/rules` is a per-character
 override. Changing a rule mid-wizard applies targeted downstream clears
-(`_apply_rule_changes` in `wizard.py`).
+(`_apply_rule_changes` in `wizard.py`). Every flag in `RuleSet` is integrated
+end-to-end; the settings page never renders a "pending" badge (a regression
+test guards this).
 
-## Optional rules currently wired
+## Conventions
 
-Every flag in `RuleSet` is integrated end-to-end. The settings page never
-renders a "pending" badge — a regression test guards this.
+- **No migrations** — the app isn't deployed; data-shape changes don't need
+  backward-compat (model validators that coerce legacy saves are a courtesy, not
+  a requirement).
+- **Verify rules against the Rules** before encoding AOSE mechanics (ensure you
+  have the PDF or exerpts from the PDF in Markdown - if rules are being added
+  without either prompt the user for this).
+- **Data, not code** — class/race bonuses are `GrantedModifier` data; no engine
+  module references any class or race id.
 
-## Current state (2026-06-07, situational save bonuses)
-
-Cross-cutting "vs X" save bonuses landed. A new `save:vs:<thing>` `Modifier`
-target family (e.g. `save:vs:fire`) flows through the existing
-`GrantedModifier`/`active_modifiers` → `all_modifiers` pipeline. `saves.py`
-gains `situational_save_bonuses(spec, data) -> list[SituationalSaveBonus]`
-(groups by source+value, collects `things`, display-name registry `_VS_DISPLAY`
-with underscore fallback). Never folded into a headline and never shown in a
-per-category modal. Sheet shows them as smaller-font footnotes under the saving
-throws (`SheetSituationalSave`, `CharacterSheet.situational_saves`, `.save-note`
-CSS); also on the print sheet. Magic items can emit `save:vs:*` modifiers and
-are collected automatically (no catalog encoding done yet). Data encoded from
-full sweep: druid Energy Resistance (`save:vs:fire`/`save:vs:lightning` +2),
-svirfneblin Illusion Resistance (`save:vs:illusion` +2), kineticist Mental
-Defence (`save:vs:mental_powers` +2), knight Strength of Will
-(`save:vs:charm`/`save:vs:hold` +4, `save:vs:illusion` +2, gained at level 3).
-1291 tests pass. Spec/plan:
-`docs/superpowers/{specs,plans}/2026-06-07-situational-save-bonuses*`.
-
-## Current state (2026-06-08, conditional attack modifiers)
-
-Character-wide conditional attack-roll modifiers landed, mirroring conditional AC.
-An `attack add` `Modifier` carrying a condition the per-weapon math can't evaluate
-(anything other than `ranged`/`melee`) is excluded from every weapon's to-hit (it
-already was — `_atk_dmg` carries-but-excludes unknown conditions) and surfaced as
-a breakdown line. `attacks.py` gains `attack_modifiers_detail(spec, data) ->
-AttackBreakdown` (base `thac0`/`attack_bonus` + `AttackModLine`s: unconditional
-global mods first, then situational; `ranged`/`melee` excluded), an
-`_ATTACK_CONDITION_NOTES` registry (`bright_light`/`mounted`, underscore fallback),
-and the `AttackModLine`/`AttackBreakdown` models. The sheet exposes `attack_lines`
-+ `attack_has_conditional`; the Attack box shows a `★` and opens the retitled
-`modal-matrix` ("Attack") — breakdown lines on top, the to-hit matrix below, gated
-to descending AC (no THAC0 under ascending). Print sheet shows conditional attack
-lines as footnotes. Per-weapon conditional bonuses (Sword +1, Giant Slayer) are
-unchanged (`Weapon.conditional_bonus` → `ConditionalAttack`, per-weapon row). Data
-encoded: Light Sensitivity (drow/duergar/svirfneblin, `attack -2
-condition:bright_light`, race files only — race-as-class is covered via
-`race_locked`, so the class files stay grant-free to avoid double-application) and
-Knight Mounted Combat (`attack +1 condition:mounted`). Action-gated bonuses
-(acrobat tumbling, assassin assassination) are intentionally not modelled. Spec/
-plan: `docs/superpowers/{specs,plans}/2026-06-08-conditional-attack-modifiers*`.
-
-## Current state (2026-06-07, conditional AC modifiers)
-
-Conditional Armour Class modifiers landed, mirroring situational save bonuses.
-An `ac add` `Modifier` carrying a `condition` the headline can't evaluate (i.e.
-anything other than `unarmored`) is excluded from the headline AC and surfaced as
-a conditional breakdown line. `armor_class.py` gains a shared `_compute_ac`
-helper (single source of truth for `armor_class` + the new
-`armor_class_detail(spec, data) -> ACBreakdown`), an `_AC_CONDITION_NOTES`
-registry (`bright_light`/`large_attacker`, underscore fallback), and the
-`ACModLine`/`ACBreakdown` models. The sheet exposes `ac_lines` +
-`ac_has_conditional`; the AC block shows a `★` and opens a full AC breakdown
-modal (`modal-ac`: armour/DEX/shield/feature lines + conditional lines). Print
-sheet shows the conditional lines as footnotes. Magic items emit conditional `ac`
-modifiers and are collected automatically via `all_modifiers`. Data encoded:
-Light Sensitivity (drow/duergar/svirfneblin, `ac -1 condition:bright_light`) and
-Defensive Bonus (gnome/svirfneblin/halfling, `ac +2 condition:large_attacker`).
-The −2 attack-in-bright-light penalty is out of scope (future conditional-attack
-feature). Spec/plan:
-`docs/superpowers/{specs,plans}/2026-06-07-conditional-ac-modifiers*`.
-
-## Current state (2026-06-07, languages/literacy/WIS-saves)
-
-Languages, literacy, and WIS magic-save improvements just landed (11-task plan, on `feature/languages-literacy-wisdom-saves`). All new tests pass.
-
-- **Language registry** — `LanguageData.names: dict[str, str]` maps every language id to its book-authoritative display name (diacritics/casing exact). `display_name(id, lang_data)` does registry lookup with a title-case fallback for any unregistered id. `data/languages.yaml` `additional:` is now a list of ids; the registry maps them to display names.
-- **Granted languages** — `granted_languages(spec, data)` (engine, pure) walks race features (all) and class features (level-gated) collecting `feature.mechanical["languages"]` ids. Gnome burrowing-mammals tongue and druid's `druidic` are granted this way. Granted tongues appear in the known list but never in the INT-pick learnable list. The wizard identity page shows them under "Granted:" and excludes them from the checkbox options.
-- **Literacy** — `literacy(spec, data)` returns `"illiterate"` (INT ≤ 5), `"basic"` (INT 6–8), or `"literate"` (INT ≥ 9). A class feature's `mechanical.illiterate_below_level` forces `"illiterate"` until the character's level reaches that value. Barbarian: `illiterate_below_level: 2` (illiterate at level 1 only, per the book). Sheet displays a Literacy line in the Languages group.
-- **Conditional racial resilience (data fix)** — dwarf/halfling `save:death` resilience granted modifiers gain `condition: poison`; duergar `save:paralysis` gains `condition: paralysis`. These bonuses cover only *part* of their umbrella save category (poison ≠ death-ray; paralysis ≠ petrification) so they are now excluded from the headline number and appear only as conditional lines in the breakdown modal.
-- **WIS magic-save modifiers** — `wisdom_save_modifiers(spec, data)` builds synthetic `Modifier` objects from effective WIS. Unconditional on `save:spells` and `save:wands` (always magical); conditional (`magical`) on `save:death` and `save:paralysis`; never on `save:breath`.
-- **`saving_throws_detail()`** — new engine function returning `dict[str, SaveBreakdown]`. Each `SaveBreakdown` carries `base` (class progression), `modified` (headline — unconditional mods only, floored at 2), and `lines: list[SaveModLine]` (each `add` modifier with `source`, `bonus`, `conditional`, `note`). `saving_throws()` delegates to it. Condition notes: `magical` → "magical effects only", `poison` → "poison only (not death magic)", `paralysis` → "paralysis only (not petrification)".
-- **Sheet saves UI** — `SheetSave` now carries `base`, `modified`, and `lines` (replacing the old `target`). Each save row is clickable; a per-save breakdown modal shows Base → Modified, every modifier line as `+N bonus` / `−N penalty`, conditional lines flagged with their note.
-
-## Current state (2026-06-07, weighted secondary skills)
-
-Book-faithful weighted secondary-skill distribution + "roll for two skills" outcome just landed (9-task plan, on `main`). 1225 tests pass.
-
-- **`SecondarySkillEntry`** — new model (`aose/models/secondary_skill.py`): `{name, weight: int≥1, roll_twice: bool=False}`. Replaces the old flat `list[str]` in `GameData.secondary_skills`.
-- **`data/secondary_skills.yaml`** — replaced with the exact AOSE Advanced Fantasy d100 table (31 trades + 1 `roll_twice` entry, weights summing to 100). Loader validates the sum and exactly-one roll-twice on startup.
-- **`aose/engine/secondary_skills.py`** (new, cycle-free) — `selectable_names(entries)` (excludes roll-twice), `roll(entries, rng=None)` (weighted pick; roll-twice expands to two distinct trades, never nests; raises `SecondarySkillError` on empty table or impossible expansion).
-- **`CharacterSpec.secondary_skill: str|None`** → **`secondary_skills: list[str]`** (default `[]`). A `model_validator` coerces legacy saves (`None`→`[]`, `str`→`[str]`).
-- **Strict Mode** — roll happens once on first `GET /identity` and is locked. Re-roll POST returns 400; submitted skill on `POST /identity` is ignored. No back-nav lock (skill is cosmetic).
-- **Non-strict Mode** — re-roll button calls `roll(...)` fresh (may yield 1 or 2 skills). Single manual dropdown collapses to one skill on submit. Both controls always available.
-- **Templates** — `identity.html` shows locked read-only text under strict, or rolled display + re-roll button + manual dropdown under non-strict. `sheet.html`, `sheet_print.html`, `wizard/review.html` render `", ".join(secondary_skills)`; section hidden when empty.
-- Spec/plan: `docs/superpowers/{specs,plans}/2026-06-06-weighted-secondary-skills*`.
-
-## Current state (2026-06-06, feature-granted modifiers)
-
-Data-driven class/race bonuses via `GrantedModifier` just landed (7-task plan, on `main`). All new tests pass.
-
-- **`GrantedModifier` + `Scaling`** — `aose/models/modifier.py` gains two new models. `GrantedModifier` declares a modifier a class/race feature grants (same `target`/`op` grammar as `Modifier`; plus `condition: str | None` (open-ended, e.g. `"unarmored"`, `"ranged"`) and exactly one of `value` (flat) or `scale` (a `Scaling` with `by: level|ability:X` + banded `table: dict[int, int]`)). `Modifier` gains `condition: str | None = None` and `source: str = ""` (feature name, for future hover). `ClassFeature` and `RaceFeature` each gain `granted_modifiers: list[GrantedModifier]`.
-- **`engine/features.py`** — new cycle-free module. `_band_lookup` (greatest key ≤ input; 0 below lowest band); `resolve_value` (flat or banded, level or effective ability); `feature_modifiers(spec, data) -> list[Modifier]` (walks class features gated by `gained_at_level`, and all race features; level-scaling is class-only); `all_modifiers = active_modifiers (magic) + feature_modifiers`. Import DAG: `models/loader → magic → features → {armor_class, saves, attacks}`.
-- **Consumer wiring + conditions** — `armor_class`, `saves`, `attacks` all consume `all_modifiers`. Unrecognised conditions are inert-but-carried (never inflate a headline). `ac set` evaluation moved **outside** the `use_armor` gate so feature-granted and bracers-style items appear in the unarmoured display. `unarmored`-conditioned `ac add` bonuses drop when armour is worn. `ranged`/`melee`-conditioned `attack`/`damage` mods filter per weapon. Saves ignore conditions in V1 (no V1 save condition vocabulary).
-- **Kineticist AC column retired** — `ClassLevelData.armor_class` field removed; corresponding engine block removed; kineticist level-AC re-expressed as a level-scaled `ac set` `GrantedModifier` on its Armour Class feature. A 14-case parametrised regression test pins exact per-level parity with the old column.
-- **Encoded data**: barbarian Agile Fighting (`ac add, condition unarmored, level-scaled {4:1, 6:2, 8:3, 10:4}`); halfling race Missile Attack Bonus (`attack add 1, condition ranged`; race-only, class feature unchanged to avoid double-application); dwarf/halfling resilience (`save:death/spells/wands add, CON-scaled {7:2, 11:3, 15:4, 18:5}`); duergar resilience (same plus `save:paralysis`); gnome magic resistance (`save:spells/wands` only, same CON table). No engine code references any class or race id.
-
-## Current state (2026-06-06, mental powers + Kineticist)
-
-Mental powers caster type and Kineticist class just landed (12-task plan, on `main`). All new tests pass.
-
-- **`mental` caster type** — `SpellList.caster_type` and `engine/spells.py::CasterType` now include `"mental"`. Known powers reuse `ClassEntry.spellbook` (arcane and mental are both "chosen subset"; divine still knows-all). `ClassEntry.powers_used: int = 0` tracks the daily-use pool counter (pool = `2 × level`, computed; no slot levels). Engine helpers in `spells.py`: `powers_known_cap`, `learnable_spells` (mental: all on-list not yet known), `learn` / `forget` (cap-enforced), `beginning_spell_count` (mental: reads `powers_known` column), `power_pool` / `spend_power` / `restore_power` / `reset_powers`. Rest (`/rest/night`, `/rest/full-day`) calls `reset_powers` on all entries — a no-op for non-mental. `spells_view` and `spellbook_view` skip mental; new `mental_powers_view` → `MentalPowersBlock` in `CharacterSheet`. Routes: `/powers/{learn,forget,spend,restore,reset}`. Wizard `_casts_at_level_1` recognises mental (via `powers_known`); spells step handles selection + validation; source gating (`carcass_crawler_1`) already generic.
-- **Level-based AC** — originally `ClassLevelData.armor_class`; that column has since been retired onto the generic `GrantedModifier` path (see "feature-granted modifiers" section above). Kineticist AC is now a level-scaled `ac set` granted modifier.
-- **`carcass_crawler_1` source** — `data/sources.yaml` (Necrotic Gnome, `core: false`). Disabling it hides the Kineticist from the wizard class list and clears its powers from the spells-step candidates.
-- **Kineticist data** — `data/classes/kineticist.yaml` (DEX/WIS prime reqs, d6, all weapons, no armour/shields, `spell_lists: [kineticist]`, L1-14 progression with `armor_class` and `powers_known` columns). `data/spells/carcass_crawler_kineticist_powers.yaml` (9 powers). `data/spell_lists.yaml` kineticist entry (`caster_type: mental`). Spec/plan: `docs/superpowers/{specs,plans}/2026-06-06-mental-powers-and-kineticist*`.
-- **Sheet UI** — Column 3 opens for `sheet.spellbook or sheet.mental_powers`. Mental Powers section: daily-use pool pips, Use/Restore/Reset buttons, known-power list. Management drawer: known powers with full detail cards (Forget), Learn-a-power select (gated by cap).
-
-## Current state (2026-06-06, content sources)
-
-Content-source tagging and filtering just landed (13-task plan, on `main`). All new tests pass.
-
-- **`Source` model** — `aose/models/source.py`; `data/sources.yaml` (OSE Classic Fantasy + OSE Advanced Fantasy, both Necrotic Gnome, both core). Loaded into `GameData.sources`.
-- **`source` field** — added to `ItemBase`, `Race`, `CharClass`, `SpellList`, `Enchantment`, and `Spell`. Default `"ose_classic_fantasy"`; only Advanced-tagged entries carry `source: ose_advanced_fantasy` in YAML. Existing Classic content needs no edits.
-- **`RuleSet.disabled_sources: list[str]`** — empty default (no migration). Classic Fantasy is always enabled; never added to this list.
-- **`aose/engine/sources.py`** — `CLASSIC_SOURCE_ID` + `source_enabled(source_id, ruleset) -> bool` helper. Cycle-free (imports only models).
-- **Gating** — `source_enabled` applied in: wizard race step, wizard class step, `_caster_entries` spell candidates, `shop_categories(data, ruleset=None)`, `_enchant_choices(game_data, ruleset=None)`.
-- **Mid-wizard cascade** — `_apply_rule_changes` now accepts `data`; disabling a source clears an orphaned race pick (`_clear_after_abilities`) or class pick (`_clear_after_race`).
-- **Filter UI** — `_ruleset_fields.html` Sources fieldset (shared by `/settings` and wizard `/rules`). Classic renders checked+disabled. `parse_ruleset_from_form(form, source_ids=None)` computes `disabled_sources`. Spec/plan: `docs/superpowers/{specs,plans}/2026-06-06-content-sources*`.
-
-## Current state (2026-06-04, sheet redesign)
-
-OSR-zine sheet redesign (prototype-3 port) just landed (on `feature/sheet-redesign`). All tests pass.
-
-- **Zine sheet** — `aose/web/templates/sheet.html` fully replaced with bounded-group zine layout: identity band, 3-column grid (combat+abilities, features+notes, spells), full-width inventory/currency/treasure group, footer. Groups have inked bars + internal scroll.
-- **CSS** — `aose/web/static/sheet.css` replaced with zine design-system (Oswald + Bitter fonts, self-hosted woff2 under `aose/web/static/fonts/`). Legacy wizard/settings CSS preserved at the bottom.
-- **JS overlay controller** — `aose/web/static/sheet_overlays.js` (single-open drawer/modal/popover; Esc/scrim/close dismiss).
-- **Tabbed equipment drawer** — `_equipment_ui.html` refactored into 5 tab panes: Carried (always), Magic (gated on `magic_acquisition`), Documents (gated on `spell_sources is defined`), Treasure (gated on `valuables is defined`), Shop (always). Wizard still shows only Carried + Shop.
-- **Engine additions** — `unarmored_ac()` in `armor_class.py`; `unarmored_ac_descending/ascending`, `movement_overland` on `CharacterSheet`; `spellbook_view()` + `SpellbookBlock/Level/Row` models in `view.py`.
-- **Spec**: `docs/superpowers/specs/2026-06-04-character-sheet-redesign-design.md`; **Plan**: `docs/superpowers/plans/2026-06-04-character-sheet-redesign.md`; **Prototype**: `docs/redesign/character-sheet-prototype-3.html`.
-
-## Current state (2026-06-04)
-
-Adventuring gear data cleanup + stackable purchases + container consolidation just landed (10-task plan, on `main`). All tests pass.
-
-- **Book-faithful gear data** — `data/equipment/adventuring_gear.yaml` fully rewritten from the AOSE PDF table. No fabricated `weight_cn` (encumbrance engine uses a flat 80 cn for any gear; per-item weights were dead data). All book descriptions included. `bedroll`/`candle` dropped (not in table). Renamed: `iron_spikes→iron_spike`, `wine_skin→wine_pint`.
-- **Stackable purchases** — `AdventuringGear.bundle_count: int = 1` (new field). `buy()` grants `bundle_count` units for one price. `add_free()` always grants exactly one (free grants are single items). Stack items: Torch ×6 (1 gp), Iron Spike ×12 (1 gp), Rations Iron ×7 (15 gp), Rations Standard ×7 (5 gp), Wine ×2 (1 gp).
-- **Per-unit sell / whole-stack refund** — Sell removes 1 unit and returns `int((cost_gp / bundle_count) / 2)` (may be 0 = worthless). Refund removes a full shop stack (`bundle_count` units) and returns `cost_gp`; requires at least `bundle_count` present. `bundle_count == 1` items behave as before. Template: "buys N" hint in shop; Refund button gated on `can_refund` with "stack of N" label.
-- **Container consolidation** — `data/equipment/containers.yaml` deleted. Backpack / Sack (small) / Sack (large) moved to `adventuring_gear.yaml` (keep `item_type: container` so stow/capacity works; `category: adventuring_gear` so they appear in the gear shop group). Bag of Holding moved to `magic_items.yaml`. `saddle_bags` dropped (Transport table, not in scope yet). Dispatch is by `isinstance(item, Container)` so the file move is transparent to routes. Spec/plan: `docs/superpowers/{specs,plans}/2026-06-04-adventuring-gear-cleanup*`.
-
-## Current state (2026-06-03)
-
-Faithful encumbrance, treasure weight & multi-coin currency just landed (13-task plan, on `main`). All 1020 tests pass.
-
-- **Multi-coin purse** — `CharacterSpec` gains `platinum/electrum/silver/copper: int` alongside the existing `gold` (gp, stays the shop-spendable balance). New `aose/engine/currency.py` (cycle-free): `DENOMINATIONS`/`RATES`/`_ATTR`, `total_value_gp`, `coin_count` (weight), `convert` (make-change, whole-coin enforced, raises `CurrencyError`). Routes: `/coins/add` (denom + signed amount, clamped ≥ 0) and `/coins/convert` (from→to, count → 400).
-- **Treasure weight** — gems 1 cn each, jewellery 10 cn each (`valuables_weight_cn`). Coins 1 cn each (via `coin_count`). Carried treasure magic items: potions 10, wands 10, rods 20, staves 40, scrolls 1 — derived in `treasure_item_weight` by category + id-prefix (no YAML edits needed). Spell-source scrolls also 1 cn each.
-- **Encumbrance rewrite** — old `(armour × band)` table + dead demihuman scaling removed. Two AOSE-faithful modes: **basic** = `_BASIC_TABLE{(armour_cls, carrying_treasure)} → move`; over-1600 treasure → immobile; new `CharacterSpec.carrying_treasure: bool = False` toggle + `/carrying-treasure` route. **Detailed** = single-axis by total weight (bands 400/600/800/1600 → 120/90/60/30/0'); total = `treasure_weight_cn` + `equipment_weight_cn` (weapons + armour by weight; `AdventuringGear` items trigger flat **80 cn** misc-gear abstraction; carried containers contribute own weight + `int(multiplier × raw_contents)` — preserves Bag of Holding mechanic; non-treasure magic items by own weight).
-- **EncumbranceTable** reshaped: basic = 3 armour rows × 2 treasure columns; detailed = 4 mobile bands × 1 movement column. Sheet exposes `coins`, `treasure_value_gp`, `treasure_weight_cn`, `carrying_treasure`, `max_load`.
-- **Sheet UI**: coin purse in `_equipment_ui.html` (add/convert per denomination); encumbrance table in `sheet.html` uses new shape with current-cell highlighting; carrying-treasure toggle (basic mode only); treasure/cap line; gem+jewellery weight display. Spec/plan: `docs/superpowers/{specs,plans}/2026-06-03-encumbrance-treasure-currency*`.
-
-Gems & jewellery just landed (7-task plan, on `feature/gems-and-jewellery`). All 959 tests pass.
-
-- **Gems & jewellery** — free-acquired, weightless, sheet-only treasure. Two
-  per-instance models on `CharacterSpec`: `GemStack` (value + count + label,
-  stacks by value+label) and `JewelleryPiece` (full value + `damaged` toggle +
-  label; damaged halves value with floor at display/sell). Cycle-free
-  `aose/engine/valuables.py` owns add/adjust/remove/sell/sell-all (gems),
-  add/toggle-damaged/remove/sell (jewellery), `roll_jewellery_value` (3d6×100),
-  and the value helpers (`gem_stack_value`/`jewellery_value`/`total_value`).
-  `GEM_INCREMENTS` is a dropdown affordance, not a constraint (custom values
-  allowed). Selling adds value to `gold`; dropping refunds nothing (free
-  acquisition). Sheet gains a "Gems & Jewellery" section (`valuables_view`) +
-  `/gems/{add,adjust,sell,sell-all,remove}` and `/jewellery/{add,toggle-damaged,
-  sell,remove}` (sheet-only). Never touches `encumbrance.py`. Spec/plan:
-  `docs/superpowers/{specs,plans}/2026-06-03-gems-and-jewellery*`.
-
-Spell books & scrolls just landed (11-task plan, on `feature/spell-books-scrolls`). All 924 tests pass.
-
-- **Spell books & scrolls** — owned documents with custom contents, modelled as a
-  per-instance `SpellSource` (`kind` spellbook|scroll, `caster_type`, `entries`
-  each with a `copy_failed` flag) on `CharacterSpec.spell_sources`. Cycle-free
-  `aose/engine/spell_sources.py` owns create/add/remove, `cast_from_scroll`
-  (expends one spell; empties → document dropped; gated by caster-type match via
-  `can_cast_scroll`), and `copy_spell` (Advanced-rule only; rolls 1d100 vs
-  `spells.copy_chance_for_int(effective INT)`; **failure is recorded on the source
-  entry, never on the character**, so the same spell stays copyable from another
-  source). `spells.learn()` now refuses free adds under `advanced_spell_books`
-  (copy-only); standard rule keeps free learn-on-level-up. Sheet gains a
-  "Spell Books & Scrolls" section + `/spell-sources/{add,remove,cast,copy}`
-  (sheet-only, Add-only). Protection scrolls (4) added as `MagicItem` catalog data
-  in `data/equipment/scrolls.yaml` (`category: scrolls`, no Use action — matches
-  potions). Cursed scrolls / treasure maps out of scope. Spec/plan:
-  `docs/superpowers/{specs,plans}/2026-06-03-spell-books-and-scrolls*`.
-
-Magic-item compendium bulk import (Phase 2) just landed (10-task plan, on `main`). All 882 tests pass.
-
-- **Phase 2 bulk import** — every item from the AOSE Advanced magic-item markdown
-  sources translated into book-faithful YAML game data with full descriptions.
-  One code addition: `RolledModifier` value type (`aose/models/modifier.py`) + a
-  `MagicItem.rolled_modifiers` field; `new_magic_instance` rolls the dice at
-  acquisition time and populates `extra_modifiers` — used by **Bracers of Armour**
-  (AC `8 − 1d4`, rolled when the GM grants the item). Files added/extended:
-  `data/enchantments.yaml` (all sword/weapon/armour/shield enchantments +
-  already-merged ammo enchantments); `data/equipment/magic_items.yaml` (26
-  potions, 19 rings, 35 rods/staves/wands, ~130 miscellaneous items);
-  `data/equipment/adventuring_gear.yaml` (re-imported with descriptions);
-  `data/equipment/containers.yaml` (descriptions + Bag of Holding `magic: true`).
-  Gloves of Dexterity and Periapt of Proof Against Poison carry `# TODO:` data
-  comments (effects not yet modelled). Sword +3, Defender encoded with
-  `magic_bonus: 3` only; AC-transfer option is description-only per user
-  confirmation. Spec/plan: `docs/superpowers/{specs,plans}/2026-06-02-magic-item-import*`.
-
-Ammunition just landed (9-task plan, on `feature/ammunition`).
-
-- **Ammunition** — ammo is **not** a weapon. A new `Ammunition` item variant
-  (`item_type: ammunition`, `groups`, `bundle_count`, `weight_cn: 0` always —
-  the listed missile-weapon weight already includes its ammo + container, so
-  ammo never touches `encumbrance.py`) holds the buyable mundane table
-  (`data/equipment/ammunition.yaml`: arrows quiver-of-20, bolts case-of-30,
-  silver-tipped arrow, free sling stones). Launchers gained `Weapon.accepts_ammo`
-  (non-empty ⇔ "needs ammo"; bows `[arrow]`, crossbow `[crossbow_bolt]`, sling
-  `[sling_stone]`; thrown weapons incl. javelin stay empty). Per-character
-  `CharacterSpec.ammo: list[AmmoStack]` ({instance_id, base_id, enchantment_id,
-  count}; stacks combine on `(base_id, enchantment_id)`; counts adjusted manually
-  — no auto "shooting") + `loaded_ammo: dict[weapon_key, instance_id]` (weapon_key
-  = the resolved weapon `.id`, i.e. catalog id or `ench:<instance_id>`). **Magic
-  ammo is enchantment composition**: `Enchantment.kind` now includes
-  `ammunition` (+ `any_ammunition` wildcard), so `arrows_plus_1/2`,
-  `arrow_slaying`, `crossbow_bolts_plus_1/2`, `sling_bullet_impact` compose onto
-  any matching base (e.g. `silver_arrow` takes `arrow_slaying`). Cycle-free
-  `aose/engine/ammo.py` owns stacks/loading/bonus (`buy_ammo`/`add_free_ammo`/
-  `adjust_count`/`remove_ammo`/`load`/`unload`/`loaded_stack`/`loaded_bonus`/
-  `is_unloaded`/`resolve_ammo`). `aose/engine/attacks.py` adds the loaded ammo's
-  `magic_bonus` to a launcher's to-hit/damage **additively** with the weapon's
-  own bonus (a +1 arrow in a +1 bow = +2) and flags an empty launcher
-  `unloaded`. Sheet + wizard share routes (`/ammo/{add,adjust,remove,load,
-  unload}`; mundane buy via the existing `/equipment/buy`, special-cased; magic
-  ammo is sheet-only Add). Spec/plan:
-  `docs/superpowers/{specs,plans}/2026-06-02-ammunition*`.
-
-Magic item enchantment composition previously landed (19-task plan, on `main`). All 834 tests pass.
-
-- **Enchantment composition model** — magic weapons/armour are no longer stored as
-  hand-authored catalog entries. A `Enchantment` registry (`data/enchantments.yaml` →
-  `GameData.enchantments`) is independent of any base item; per-character
-  `EnchantedInstance` pairs a `base_id` + `enchantment_id`. The cycle-free engine module
-  `aose/engine/enchant.py` resolves the pair to a synthetic `Weapon`/`Armor` on the fly.
-  Tag-based matching (`Weapon.groups`, `Armor.groups`, `Armor.ac_bonus` + kind wildcards
-  `any_weapon`/`any_armour`/`any_shield`) means a new base is adopted by every compatible
-  enchantment with no YAML changes. Acquisition is **sheet-only, Add-only** (GM grant, no
-  gold); the wizard equipment step is mundane-only. The placeholder `magic_items.yaml` is
-  deleted — misc magic items (gauntlets, rings, etc.) remain plain `MagicItem` catalog
-  entries; only native magic weapons/armour moved to the composition model. Shield `ac_bonus`
-  was refactored from a hardcoded constant to a data field. Phase 2 = bulk YAML import.
-  Spec/plan: `docs/superpowers/{specs,plans}/2026-06-02-magic-item-enchantments*`.
-
-Manual rolls + Strict Mode just landed (8-task plan, on `main`). All 788 tests pass.
-
-- **Manual rolls + Strict Mode** — abilities, HP, and starting gold all require
-  a deliberate Roll button press (like HP already did). A new `RuleSet.strict_mode`
-  flag (default `True`) locks each roll after one press; off = free re-rolls.
-  A hopeless ability set (`subpar` OR any score is 3) re-enables the Roll button
-  under Strict Mode. Two back-navigation gates: rolling abilities locks the rules
-  step; rolling HP locks every step before the HP page (`class_setup`) — prevents
-  laundering rolls by navigating back. Gates show a `locked` breadcrumb state (🔒).
-  Strict off → today's free back-navigation. `draft["hp_blessed_sets"]` (draft-only,
-  never persisted to `CharacterSpec`) stores both Blessed HP sets so the Class Setup
-  page can bold the higher. Spec/plan:
-  `docs/superpowers/{specs,plans}/2026-06-02-manual-rolls-strict-mode*`.
-
-On-sheet play state previously landed (9-task plan). All 788 tests pass.
-
-- **On-sheet play state** — current HP via `CharacterSpec.damage_taken`
-  (current = `max(0, max_hp − damage_taken)`, dead derived from current 0;
-  `aose/engine/hp.py` gains `current_hp`/`is_dead`/`apply_damage`/`apply_healing`/
-  `set_current_hp`). Prepared spells are now `ClassEntry.slots: list[SpellSlot]`
-  (spell + reversed + spent), replacing the flat `prepared`; slot ops live in
-  `aose/engine/spells.py` (`assign_slot`/`cast_slot`/`restore_slot`/`clear_slot`/
-  `restore_all_slots`/`clear_all_slots`). Sheet routes: `/hp/{damage,heal,set}`,
-  `/spells/{assign,cast,restore,clear}`, `/rest/{night,full-day}` (full-day adds
-  1d3 healing; rest blocked when dead). Arcane reversed is fixed at memorize
-  time; divine reversed is a cast-time button only (not stored). Spec/plan:
-  `docs/superpowers/{specs,plans}/2026-06-02-on-sheet-character-state*`.
-
-Previous: Spell selection (11-task plan) on `feature/spell-selection`.
-Magic items (18-task plan) on `main`.
-
-Key concepts now live:
-
-- **Stashed inventory** — `CharacterSpec.stashed: list[str]` for items left
-  off-person (no weight contribution). Sheet renders three inventory
-  subsections: Equipped / Carried / Stashed.
-- **Table-lookup encumbrance** — movement is *set* by `(armor_class, weight_band)`
-  per the OSE Advanced table; armour no longer subtracts from a base.
-  Demihuman rates scale from the 120'-base human row by `base / 120`,
-  rounded down to 5'. See `aose/engine/encumbrance.py` for the table.
-- Equipped items live inside `inventory` already — weight is counted once
-  via the inventory list, not twice via `equipped` / `equipped_weapons`.
-- **Container items** — `Container` catalog variant (`item_type: container`,
-  `capacity_cn`, `weight_multiplier`) + per-instance `ContainerInstance`
-  (`instance_id`, `catalog_id`, `state`, `contents`) on
-  `CharacterSpec.containers`. Items inside a container aren't in `inventory`
-  /`stashed`; they follow the container's carried/stashed state for weight.
-  Carried containers contribute `own_weight + int(multiplier * raw_contents)`;
-  a Bag of Holding (×0.06) at 10 000 cn weighs 600 cn. Capacity uses raw
-  weight. No nesting. Engine helpers in `shop.py`: `stow` / `take_out` /
-  `stash_container` / `unstash_container` / `remove_container` /
-  `buy_container` / `inventory_view` (returns a `containers` list).
-  Sheet + wizard share routes (`/stow`, `/take-out`, `/stash-container`,
-  `/unstash-container`, `/remove-container`). UI: inline collapsible container
-  rows; moves are button/dropdown-only (`inventory.js` handles collapse only —
-  drag-and-drop was removed 2026-06-02).
-  Spec/plan: `docs/superpowers/{specs,plans}/2026-05-27-container-items*`.
-- **Magic items** — data-driven. A `Modifier` value type
-  (`aose/models/modifier.py`: `target` / `op` add|set|set_min|set_max / `value`)
-  is shared by catalog `MagicItem.modifiers` and per-instance
-  `MagicItemInstance.extra_modifiers`. `MagicItem` is an `Item` union variant
-  (`item_type: magic`, `equippable`, `modifiers`, `max_charges` / `charge_dice`);
-  `ItemBase` gained `description` + a cross-cutting `magic` flag. Magic
-  weapons/armour stay native `Weapon`/`Armor` with a `magic_bonus` field
-  (Armor also gained `weight_multiplier` for half-weight enchanted armour;
-  Weapon gained `conditional_bonus` → a `{vs, bonus}` second attack line).
-  Per-instance state lives on `CharacterSpec.magic_items` (mirrors
-  `ContainerInstance`); modifiers apply only when `equipped`.
-  `aose/engine/magic.py` is the **cycle-free core** (imports only models +
-  loader + dice): `apply_modifiers` (literal set→add→set_min→set_max),
-  `active_modifiers`, `effective_abilities`, `carry_capacity_bonus`,
-  `needs_instance`, plus the instance/charge helpers (`new_magic_instance`,
-  `add_free_magic_item`, `equip_magic`/`unequip_magic`, `use_charge`/
-  `reset_charges`, `remove_magic`, `set_magic_note`). The derivation modules
-  import *from* it: AC adds `magic_bonus` + `ac` mods over effective DEX;
-  saves apply `save:*` mods with a floor of 2; THAC0 applies `thac0` mods
-  (Girdle `set_max`); attacks use effective abilities, `magic_bonus`, global
-  `attack`/`damage` mods, the conditional variant, and a synthetic always-first
-  **Unarmed** profile (1d2, STR); encumbrance halves enchanted-armour weight,
-  counts instance weight, and bands on `banding_weight_cn` (raw −
-  `carry_capacity_bonus`) while displaying raw carried weight. Acquisition is
-  **Add-only** (GM grant, no Buy/gold): `/add` routes a `needs_instance` item to
-  `add_free_magic_item`. Sheet + wizard share routes (`/equip-magic`,
-  `/unequip-magic`, `/use-charge`, `/reset-charges`, `/remove-magic`,
-  `/magic-note`). Sheet shows a Magic Items section (collapsible descriptions +
-  `modifier_summary` chips), a `*` marker on modified abilities, and the Unarmed
-  + conditional attack rows. Seed data: `data/equipment/magic_items.yaml`
-  (auto-loaded by the equipment glob — there is no `ITEM_FILES` list).
-  No magic-item drag-and-drop in V1 (buttons/forms only; magic weapons/armour
-  still DnD as plain inventory ids). Escape hatch: free-text `note` +
-  homebrew `extra_modifiers`. Spec/plan:
-  `docs/superpowers/{specs,plans}/2026-05-28-magic-items*`.
-- **Spells** — data-driven, faithful known-vs-prepared. A `SpellList` registry
-  (`aose/models/spell_list.py`, seed `data/spell_lists.yaml`: id → `caster_type`
-  arcane|divine) is the single home for the known-vs-prepared distinction; a
-  class derives its behaviour from the list(s) in `CharClass.spell_lists` (no
-  per-class flag). `ClassEntry` carries `spellbook` (known; arcane) + `prepared`
-  (daily, slot-capped; replaces the old unused `chosen_spells`).
-  `aose/engine/spells.py` is the cycle-free core (imports only models + loader):
-  `caster_type_of` (raises on mixed/unknown lists), `accessible_levels`,
-  `memorizable_slots`, `known_spells` (arcane=spellbook, divine=full accessible
-  list), `learnable_spells`, `beginning_spell_count` (standard=memorizable total,
-  advanced=INT table), and the `learn`/`forget`/`prepare`/`unprepare` mutators
-  (return a new `ClassEntry`, raise `SpellError`). The standard-vs-advanced
-  spell-book rules are the `advanced_spell_books` optional rule (off=standard:
-  book capped at memorizable; on=INT beginning spells + uncapped book). **There is
-  no special Read Magic rule** — it's an ordinary magic-user spell. Wizard
-  `spells` step (after HP, before Equipment; gated by a cached
-  `draft["spellcasting"]` flag set in `post_class`, cleared by the `_clear_after_*`
-  helpers) selects the arcane starting book (exact-count, field `spell_<class_id>`)
-  / shows the divine list read-only. Sheet `spells_view` + Spells section + routes
-  (`/spells/learn|forget|prepare|unprepare`, keyed by `class_id`) manage both
-  layers. Seed spells in `data/spells/*.yaml` (verified against the PDF). No
-  spell DnD in V1. Spec/plan:
-  `docs/superpowers/{specs,plans}/2026-05-29-spell-selection*`.
-- **Multi-classing** — the Multiple Classes optional rule, free-form (no combo
-  allowlist; `Race.allowed_multiclass_combos` was removed). The wizard class
-  step offers up to 3 classes when `multiclassing` + `separate_race_class` are
-  on; each pick is gated individually by ability requirements + the
-  `demihuman_class_restrictions` rule. **XP is per class** — `ClassEntry.xp`
-  replaces the old global `CharacterSpec.xp` (a `model_validator` migrates old
-  saves). `aose/engine/leveling.py`: `grant_xp(spec, data, amount)` splits an
-  award evenly, scales each share by that class's prime-requisite multiplier
-  (lowest score among multi-prime classes), floors, and clamps ≥ 0; clawbacks
-  (negative) split evenly without the multiplier. This wires the prime-req XP
-  adjustment in for single-class characters too. **HP** (`aose/engine/hp.py`)
-  recomputes from raw rolls + *effective* CON at display: per gain-event
-  `max(1, event_roll_sum / N + CON_mod)` summed as exact `Fraction`s, floored
-  once (order-independent; N=1 reduces to the old single-class formula).
-  Creation = one event summing all N first rolls; each later level-up = its own
-  event. `hp_remainder` exposes the leftover fraction. Saves/THAC0 already take
-  the best across classes. Spec/plan:
-  `docs/superpowers/{specs,plans}/2026-05-29-spell-selection*` (this work shares
-  the multi-class plan file `quiet-soaring-hedgehog`).
-
-See `project_aose_builder.md` for the longer architectural narrative.
+See `docs/ARCHITECTURE.md` for the longer architectural narrative.
