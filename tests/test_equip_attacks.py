@@ -45,6 +45,17 @@ def client(tmp_path):
     return _make_client(tmp_path)
 
 
+def _modal_html(body: str, modal_id: str) -> str:
+    """Return just the HTML of the overlay whose id is `modal_id`.
+
+    The sheet renders per-item modals AND the management drawer (which keeps
+    Drop/Sell/Refund), so destructive-action assertions must be scoped to a
+    single modal, not the whole page."""
+    start = body.index(f'id="{modal_id}"')
+    nxt = body.find('class="overlay', start + 10)
+    return body[start:nxt if nxt != -1 else len(body)]
+
+
 def _spec(abilities=None, inventory=None, equipped=None, equipped_weapons=None,
           ruleset=None, weapon_proficiencies=None, weapon_specialisations=None):
     return CharacterSpec(
@@ -466,7 +477,8 @@ def test_sheet_carried_and_stashed_items_are_clickable(tmp_path, data):
     assert 'id="modal-item-carried-rope_50ft"' in body
     assert 'data-modal="modal-item-stashed-torch"' in body
     assert 'id="modal-item-stashed-torch"' in body
-    # Carried item modal offers Stash + Drop; stashed offers Unstash.
+    # Carried item modal offers Stash; stashed offers Unstash. (Drop/Sell/Refund
+    # are drawer-only — see test_sheet_item_modal_shows_properties_and_no_destructive_actions.)
     assert "/character/packrat/equipment/stash" in body
     assert "/character/packrat/equipment/unstash" in body
 
@@ -494,3 +506,30 @@ def test_sheet_equipped_items_are_clickable(tmp_path, data):
     assert "/character/sir-click/equipment/unequip" in body
     # Unarmed is never a trigger.
     assert 'data-modal="modal-item-equipped-unarmed"' not in body
+
+
+def test_sheet_item_modal_shows_properties_and_no_destructive_actions(tmp_path, data):
+    from aose.characters import save_character
+    client = _make_client(tmp_path)
+    spec = CharacterSpec(
+        name="Modal",
+        abilities={"STR": 11, "INT": 10, "WIS": 10, "DEX": 11, "CON": 12, "CHA": 9},
+        race_id="human", alignment="neutral",
+        classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
+        inventory=["sword"], equipped_weapons=["sword"],
+    )
+    save_character("modal", spec, client._characters_dir)
+    body = client.get("/character/modal").text
+
+    modal = _modal_html(body, "modal-item-equipped-sword")
+    # Properties from item_card() (detail_card stats) are present.
+    assert "Damage" in modal
+    assert "Weight" in modal
+    # Safe management action present...
+    assert "/character/modal/equipment/unequip" in modal
+    # ...but destructive shop actions are NOT in the modal.
+    assert 'value="drop"' not in modal
+    assert 'value="sell"' not in modal
+    assert 'value="refund"' not in modal
+    # The management drawer (whole page) still offers them.
+    assert 'value="sell"' in body

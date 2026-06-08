@@ -2,7 +2,7 @@
    macro can read `inventory_view` (for the stow dropdown).  Used by both the
    equipment drawer (`_equipment_ui.html`) and the sheet's per-item modals
    (`sheet.html`).  `state` is "equipped" | "carried" | "stashed". #}
-{% macro inv_row_actions(row, target_url_prefix, state) %}
+{% macro inv_row_actions(row, target_url_prefix, state, show_remove=True) %}
     {% if state == "equipped" %}
     <form method="post" action="{{ target_url_prefix }}/unequip" class="inline-form">
         <input type="hidden" name="item_id" value="{{ row.id }}">
@@ -39,6 +39,7 @@
         <button type="submit" title="Move off-person; stops contributing to encumbrance">Stash</button>
     </form>
     {% endif %}
+    {% if show_remove %}
     <form method="post" action="{{ target_url_prefix }}/remove" class="remove-form">
         <input type="hidden" name="item_id" value="{{ row.id }}">
         <input type="hidden" name="from_state" value="{{ state }}">
@@ -51,4 +52,5 @@
                 title="Refund a full purchased stack">Refund{% if row.bundle_count > 1 %}&nbsp;stack&nbsp;of&nbsp;{{ row.bundle_count }}{% endif %}&nbsp;(+{{ row.cost_gp | int }}&nbsp;gp)</button>
         {% endif %}
     </form>
+    {% endif %}
 {% endmacro %}
