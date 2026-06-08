@@ -43,6 +43,36 @@ from aose.models import Ability, CharacterSpec, Weapon
 
 UNARMED_DAMAGE = "1d2"
 
+_ATTACK_CONDITION_NOTES = {
+    "bright_light": "in bright light",
+    "mounted": "while mounted",
+}
+"""Display note for a conditional ``attack`` modifier. Unregistered conditions
+fall back to ``condition.replace("_", " ")`` — mirrors ``_AC_CONDITION_NOTES``
+and ``_VS_DISPLAY``."""
+
+# Conditions the per-weapon to-hit math (`_atk_dmg`) evaluates itself: they are
+# weapon-type-automatic and excluded from the character-level breakdown.
+_HEADLINE_ATTACK_CONDITIONS = frozenset({"ranged", "melee"})
+
+
+def _attack_condition_note(condition: str) -> str:
+    return _ATTACK_CONDITION_NOTES.get(condition, condition.replace("_", " "))
+
+
+class AttackModLine(BaseModel):
+    source: str          # feature/item name, "—" fallback
+    bonus: int           # +N bonus (better) / −N penalty (worse), signed
+    conditional: bool    # True for situational modifiers
+    note: str            # condition note ("" when unconditional)
+
+
+class AttackBreakdown(BaseModel):
+    thac0: int           # base class headline (unchanged by attack mods)
+    attack_bonus: int    # 19 − thac0
+    lines: list[AttackModLine]   # unconditional first, then conditional
+    has_conditional: bool
+
 
 class ConditionalAttack(BaseModel):
     """Bonus attack profile for a weapon with a conditional_bonus (e.g. vs undead)."""
@@ -247,3 +277,35 @@ def attack_profiles(spec: CharacterSpec, data: GameData) -> list[AttackProfile]:
     weapon_profiles.sort(key=lambda p: p.name)
     u_atk, u_dmg = _atk_dmg(mods, melee=True, ranged=False)
     return [_unarmed_profile(spec, eff, base_thac0, u_atk, u_dmg), *weapon_profiles]
+
+
+def attack_modifiers_detail(spec: CharacterSpec, data: GameData) -> AttackBreakdown:
+    """Character-wide ``attack`` add-modifier breakdown for the Attack modal.
+
+    The headline ``thac0``/``attack_bonus`` are the base class numbers (they
+    apply only ``thac0``-target mods, never ``attack`` mods), so a global
+    ``attack +1`` shows here as a line that explains a weapon's higher to-hit.
+    Unconditional mods are listed first; situational mods (condition outside
+    ``ranged``/``melee``) follow, flagged. ``ranged``/``melee`` mods are excluded
+    — they are applied per-weapon by ``_atk_dmg`` and already shown on each row.
+    """
+    base_thac0 = thac0(spec, data)
+    atk_adds = [m for m in all_modifiers(spec, data)
+                if m.target == "attack" and m.op == "add"]
+    lines: list[AttackModLine] = [
+        AttackModLine(source=m.source or "—", bonus=m.value,
+                      conditional=False, note="")
+        for m in atk_adds if m.condition is None
+    ]
+    lines += [
+        AttackModLine(source=m.source or "—", bonus=m.value, conditional=True,
+                      note=_attack_condition_note(m.condition))
+        for m in atk_adds
+        if m.condition is not None and m.condition not in _HEADLINE_ATTACK_CONDITIONS
+    ]
+    return AttackBreakdown(
+        thac0=base_thac0,
+        attack_bonus=19 - base_thac0,
+        lines=lines,
+        has_conditional=any(ln.conditional for ln in lines),
+    )
