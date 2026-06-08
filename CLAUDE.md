@@ -84,6 +84,29 @@ Defence (`save:vs:mental_powers` +2), knight Strength of Will
 1291 tests pass. Spec/plan:
 `docs/superpowers/{specs,plans}/2026-06-07-situational-save-bonuses*`.
 
+## Current state (2026-06-08, conditional attack modifiers)
+
+Character-wide conditional attack-roll modifiers landed, mirroring conditional AC.
+An `attack add` `Modifier` carrying a condition the per-weapon math can't evaluate
+(anything other than `ranged`/`melee`) is excluded from every weapon's to-hit (it
+already was — `_atk_dmg` carries-but-excludes unknown conditions) and surfaced as
+a breakdown line. `attacks.py` gains `attack_modifiers_detail(spec, data) ->
+AttackBreakdown` (base `thac0`/`attack_bonus` + `AttackModLine`s: unconditional
+global mods first, then situational; `ranged`/`melee` excluded), an
+`_ATTACK_CONDITION_NOTES` registry (`bright_light`/`mounted`, underscore fallback),
+and the `AttackModLine`/`AttackBreakdown` models. The sheet exposes `attack_lines`
++ `attack_has_conditional`; the Attack box shows a `★` and opens the retitled
+`modal-matrix` ("Attack") — breakdown lines on top, the to-hit matrix below, gated
+to descending AC (no THAC0 under ascending). Print sheet shows conditional attack
+lines as footnotes. Per-weapon conditional bonuses (Sword +1, Giant Slayer) are
+unchanged (`Weapon.conditional_bonus` → `ConditionalAttack`, per-weapon row). Data
+encoded: Light Sensitivity (drow/duergar/svirfneblin, `attack -2
+condition:bright_light`, race files only — race-as-class is covered via
+`race_locked`, so the class files stay grant-free to avoid double-application) and
+Knight Mounted Combat (`attack +1 condition:mounted`). Action-gated bonuses
+(acrobat tumbling, assassin assassination) are intentionally not modelled. Spec/
+plan: `docs/superpowers/{specs,plans}/2026-06-08-conditional-attack-modifiers*`.
+
 ## Current state (2026-06-07, conditional AC modifiers)
 
 Conditional Armour Class modifiers landed, mirroring situational save bonuses.
