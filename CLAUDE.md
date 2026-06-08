@@ -84,6 +84,26 @@ Defence (`save:vs:mental_powers` +2), knight Strength of Will
 1291 tests pass. Spec/plan:
 `docs/superpowers/{specs,plans}/2026-06-07-situational-save-bonuses*`.
 
+## Current state (2026-06-07, conditional AC modifiers)
+
+Conditional Armour Class modifiers landed, mirroring situational save bonuses.
+An `ac add` `Modifier` carrying a `condition` the headline can't evaluate (i.e.
+anything other than `unarmored`) is excluded from the headline AC and surfaced as
+a conditional breakdown line. `armor_class.py` gains a shared `_compute_ac`
+helper (single source of truth for `armor_class` + the new
+`armor_class_detail(spec, data) -> ACBreakdown`), an `_AC_CONDITION_NOTES`
+registry (`bright_light`/`large_attacker`, underscore fallback), and the
+`ACModLine`/`ACBreakdown` models. The sheet exposes `ac_lines` +
+`ac_has_conditional`; the AC block shows a `★` and opens a full AC breakdown
+modal (`modal-ac`: armour/DEX/shield/feature lines + conditional lines). Print
+sheet shows the conditional lines as footnotes. Magic items emit conditional `ac`
+modifiers and are collected automatically via `all_modifiers`. Data encoded:
+Light Sensitivity (drow/duergar/svirfneblin, `ac -1 condition:bright_light`) and
+Defensive Bonus (gnome/svirfneblin/halfling, `ac +2 condition:large_attacker`).
+The −2 attack-in-bright-light penalty is out of scope (future conditional-attack
+feature). Spec/plan:
+`docs/superpowers/{specs,plans}/2026-06-07-conditional-ac-modifiers*`.
+
 ## Current state (2026-06-07, languages/literacy/WIS-saves)
 
 Languages, literacy, and WIS magic-save improvements just landed (11-task plan, on `feature/languages-literacy-wisdom-saves`). All new tests pass.
