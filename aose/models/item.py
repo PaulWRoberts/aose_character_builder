@@ -62,6 +62,8 @@ class Weapon(ItemBase):
         for entry in v:
             if isinstance(entry, str):
                 out.append({"id": entry})
+            elif isinstance(entry, QualityRef):
+                out.append({"id": entry.id, "param": entry.param})  # already validated
             elif isinstance(entry, dict) and set(entry) <= {"id", "param"}:
                 out.append(entry)              # already structured (e.g. enchant copy)
             elif isinstance(entry, dict) and len(entry) == 1:

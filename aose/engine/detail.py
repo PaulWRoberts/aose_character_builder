@@ -49,16 +49,13 @@ def item_card(item) -> DetailCard:
     if isinstance(item, Weapon):
         stats.append(StatLine(label="Type", value="Weapon"))
         stats.append(StatLine(label="Damage", value=item.damage.default))
-        if item.damage.variable_two_handed:
-            stats.append(StatLine(
-                label="Damage (2H)", value=item.damage.variable_two_handed))
         if item.ranged and item.range_short:
             stats.append(StatLine(
                 label="Range",
                 value=f"{item.range_short}/{item.range_medium}/{item.range_long} ft"))
         stats.append(StatLine(label="Hands", value=str(item.hands)))
         if item.qualities:
-            stats.append(StatLine(label="Qualities", value=", ".join(item.qualities)))
+            stats.append(StatLine(label="Qualities", value=", ".join(item.quality_ids)))
         if item.magic_bonus:
             stats.append(StatLine(label="Magic", value=f"+{item.magic_bonus}"))
         if item.conditional_bonus:

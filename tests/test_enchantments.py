@@ -271,7 +271,7 @@ def test_resolve_weapon_carries_base_stats_and_ench_bonus():
     assert w.damage.variable == "1d8"
     assert w.base_weapon == "long_sword"     # proficiency counts as base type
     assert w.id == "ench:abc123"
-    assert w.qualities == ["melee"]
+    assert w.quality_ids == {"melee"}
 
 
 def test_resolve_armor_half_weight_and_base_armor():
@@ -780,3 +780,15 @@ def test_enchant_choices_filter_by_source():
     assert "sword_frost_brand" in all_ids       # Advanced
     assert "sword_frost_brand" not in filtered_ids
     assert "sword_plus_1" in filtered_ids       # generic, Classic
+
+
+def test_enchanted_weapon_derives_props_from_base(data):
+    from aose.engine.enchant import resolve_weapon
+    sword = data.items["sword"]
+    ench = next(iter(data.enchantments.values()))
+    resolved = resolve_weapon(sword, ench, "inst1")
+    assert resolved.melee is True
+    assert resolved.ranged is False
+    assert resolved.hands == 1
+    assert resolved.damage.variable == "1d8"
+    assert resolved.base_weapon == "sword"
