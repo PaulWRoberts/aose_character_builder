@@ -21,6 +21,7 @@ from .item import (
     ConditionalBonus,
     MagicItem,
     Poison,
+    QualityRef,
     WeaponDamage,
 )
 from .modifier import GrantedModifier, Modifier, RolledModifier, Scaling
@@ -55,6 +56,7 @@ __all__ = [
     "ConditionalBonus",
     "MagicItem",
     "Poison",
+    "QualityRef",
     "WeaponDamage",
     "GrantedModifier",
     "Modifier",

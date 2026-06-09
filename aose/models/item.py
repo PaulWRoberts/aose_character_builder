@@ -1,6 +1,6 @@
-from typing import Annotated, Literal, Union
+from typing import Annotated, Any, Literal, Union
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .modifier import Modifier, RolledModifier
 
@@ -21,9 +21,11 @@ class ItemBase(BaseModel):
 class WeaponDamage(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    # "1d6" is the standard-rule damage for every weapon and the SOLE place 1d6
+    # lives — weapon YAML omits both fields unless overriding (a differentiated
+    # variable die, or "" for a no-damage weapon like the net/blowgun).
     default: str = "1d6"
     variable: str = "1d6"
-    variable_two_handed: str | None = None
 
 
 class ConditionalBonus(BaseModel):
@@ -32,23 +34,94 @@ class ConditionalBonus(BaseModel):
     bonus: int       # ADDITIONAL bonus on top of magic_bonus when it applies
 
 
+class QualityRef(BaseModel):
+    """A weapon's reference to a quality, optionally carrying a parameter.
+    Authored in YAML as a bare id (``melee``) or a one-key mapping
+    (``{missile: [10, 20, 30]}``, ``{versatile: "1d8+1"}``)."""
+    model_config = ConfigDict(extra="forbid")
+    id: str
+    param: Any = None
+
+
 class Weapon(ItemBase):
     item_type: Literal["weapon"]
-    damage: WeaponDamage
-    hands: int = 1
-    versatile: bool = False
-    melee: bool = True
-    ranged: bool = False
-    range_short: int | None = None
-    range_medium: int | None = None
-    range_long: int | None = None
-    qualities: list[str] = Field(default_factory=list)
-    groups: list[str] = Field(default_factory=list)  # enchantment matching tags
+    damage: WeaponDamage = Field(default_factory=WeaponDamage)
+    qualities: list[QualityRef] = Field(default_factory=list)
     accepts_ammo: list[str] = Field(default_factory=list)  # ammo groups this launcher fires
+    groups: list[str] = Field(default_factory=list)        # enchantment matching tags
     magic_bonus: int = 0
     conditional_bonus: ConditionalBonus | None = None
-    base_weapon: str | None = None   # for magic/variant weapons: the mundane
-                                     # weapon id they count as for proficiency
+    base_weapon: str | None = None   # magic/variant: mundane type for proficiency
+
+    @field_validator("qualities", mode="before")
+    @classmethod
+    def _parse_qualities(cls, v):
+        if not v:
+            return []
+        out: list[dict] = []
+        for entry in v:
+            if isinstance(entry, str):
+                out.append({"id": entry})
+            elif isinstance(entry, dict) and set(entry) <= {"id", "param"}:
+                out.append(entry)              # already structured (e.g. enchant copy)
+            elif isinstance(entry, dict) and len(entry) == 1:
+                (key, val), = entry.items()
+                out.append({"id": key, "param": val})
+            else:
+                raise ValueError(f"bad weapon quality entry: {entry!r}")
+        return out
+
+    def _q(self, qid: str) -> "QualityRef | None":
+        return next((q for q in self.qualities if q.id == qid), None)
+
+    @property
+    def quality_ids(self) -> set[str]:
+        return {q.id for q in self.qualities}
+
+    @property
+    def melee(self) -> bool:
+        return "melee" in self.quality_ids
+
+    @property
+    def ranged(self) -> bool:
+        return "missile" in self.quality_ids
+
+    @property
+    def hands(self) -> int:
+        return 2 if "two_handed" in self.quality_ids else 1
+
+    @property
+    def versatile(self) -> bool:
+        return "versatile" in self.quality_ids
+
+    @property
+    def _ranges(self) -> "tuple[int, int, int] | None":
+        q = self._q("missile")
+        return tuple(q.param) if q and q.param else None
+
+    @property
+    def range_short(self) -> int | None:
+        r = self._ranges
+        return r[0] if r else None
+
+    @property
+    def range_medium(self) -> int | None:
+        r = self._ranges
+        return r[1] if r else None
+
+    @property
+    def range_long(self) -> int | None:
+        r = self._ranges
+        return r[2] if r else None
+
+    @property
+    def two_handed_damage(self) -> str | None:
+        q = self._q("versatile")
+        return q.param if q else None
+
+    @property
+    def deals_damage(self) -> bool:
+        return bool(self.damage.default)
 
 
 class Armor(ItemBase):
