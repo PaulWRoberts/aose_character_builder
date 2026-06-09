@@ -34,6 +34,12 @@ before any new content is added.
   change minimally.
 - **Bastard sword damage under the standard 1d6 rule is plain `1d6`** (RAW — the
   +1 only applies under variable weapon damage: `1d6+1` 1H / `1d8+1` 2H).
+- **`1d6` is the engine default, never restated in data.** Standard-rule weapon
+  damage is universally `1d6`, so `WeaponDamage.default` (and `variable`) default
+  to `"1d6"` in the model and are **omitted from weapon YAML** unless overriding
+  — the whole `damage:` block is omitted for a plain 1d6/1d6 weapon, only the
+  differentiated `variable` die is specified, and no-damage weapons explicitly
+  override with `""`.
 - **Versatile renders two attack profiles only under the variable-damage rule**
   (under the standard rule both hands deal `1d6`, so one profile).
 - **Full plate "tailored":** default tailored (AC 2 [17]); a checkbox in the
@@ -78,14 +84,13 @@ Each entry in a weapon's `qualities` list is either a **bare id** or a
   category: weapons
   cost_gp: 3
   weight_cn: 10
-  damage: { default: "1d6", variable: "1d4" }
+  damage: { variable: "1d4" }   # default omitted → 1d6
   qualities:
     - melee
     - missile: [10, 20, 30]
-  groups: []
 
 - id: crossbow
-  damage: { default: "1d6", variable: "1d6" }
+  # no damage: block at all → 1d6 / 1d6
   qualities: [reload, slow, two_handed, {missile: [80, 160, 240]}]
   accepts_ammo: [crossbow_bolt]
 ```
@@ -106,9 +111,9 @@ class QualityRef(BaseModel):
     damage: str | None = None                    # versatile param (2H damage)
 
 class WeaponDamage(BaseModel):
-    default: str = "1d6"
-    variable: str = "1d6"
-    # variable_two_handed removed
+    default: str = "1d6"    # standard-rule damage; "1d6" is the sole place 1d6
+    variable: str = "1d6"   # lives — YAML omits both unless overriding
+    # variable_two_handed removed (2H damage now the `versatile` quality param)
 
 class Weapon(ItemBase):
     item_type: Literal["weapon"]
@@ -171,8 +176,10 @@ At load, for each weapon quality ref:
 ### Phase-1 acceptance
 
 A **parity test** rewrites every existing weapon into the parametric form and
-asserts the derived properties equal the pre-refactor stored values
-(`melee/ranged/hands/range_*/versatile/variable_two_handed`). The spear's
+asserts the derived properties **and** effective damage equal the pre-refactor
+stored values (`melee/ranged/hands/range_*/versatile/two_handed_damage` plus
+`damage.default`/`damage.variable`, confirming omitted `1d6`s resolve correctly).
+The spear's
 `versatile` becomes `False` (correcting the bug). All existing tests stay green.
 
 ---
@@ -237,18 +244,19 @@ save-vs-paralysis / auto-damage prose is **not** mechanised.
 
 ### Weapons (`weapons.yaml`, parametric form)
 
-`damage.default` is plain `1d6` for every damage-dealing weapon (standard rule is
-uniform); the differentiated die goes in `damage.variable`.
+Standard-rule damage is the engine default `1d6` (never written); only the
+`variable` die and any 2H die (the `versatile` param) appear in data. The
+`damage` column below shows the *effective* default / variable / 2H values.
 
-| id | cost / wt | damage (default / variable / 2H) | qualities |
-|---|---|---|---|
-| bastard_sword | 15 / 80 | 1d6 / 1d6+1 / **1d8+1** | `[melee, {versatile: "1d8+1"}]`, `groups: [sword]` |
-| blackjack | 1 / 10 | 1d6 / 1d2 | `[blunt, knock_out, melee, stealth]` |
-| blowgun | 3 / 5 | **"" / "" (no damage)** | `[{missile: [10, 20, 30]}]`, `accepts_ammo: [blowgun_dart]` |
-| bolas | 5 / 40 | 1d6 / 1d2 | `[blunt, entangle, {missile: [20, 40, 60]}]` |
-| garotte | 1 / 5 | 1d6 / 1d4 | `[melee, stealth, strangle, two_handed]` |
-| net | 5 / 100 | **"" / "" (no damage)** | `[blunt, entangle, {missile: [10, 20, 30]}]` |
-| whip | 10 / 50 | 1d6 / 1d2 | `[entangle, melee]` |
+| id | cost / wt | damage (default / variable / 2H) | `damage:` block in YAML | qualities |
+|---|---|---|---|---|
+| bastard_sword | 15 / 80 | 1d6 / 1d6+1 / **1d8+1** | `{ variable: "1d6+1" }` | `[melee, {versatile: "1d8+1"}]`, `groups: [sword]` |
+| blackjack | 1 / 10 | 1d6 / 1d2 | `{ variable: "1d2" }` | `[blunt, knock_out, melee, stealth]` |
+| blowgun | 3 / 5 | **none** | `{ default: "", variable: "" }` | `[{missile: [10, 20, 30]}]`, `accepts_ammo: [blowgun_dart]` |
+| bolas | 5 / 40 | 1d6 / 1d2 | `{ variable: "1d2" }` | `[blunt, entangle, {missile: [20, 40, 60]}]` |
+| garotte | 1 / 5 | 1d6 / 1d4 | `{ variable: "1d4" }` | `[melee, stealth, strangle, two_handed]` |
+| net | 5 / 100 | **none** | `{ default: "", variable: "" }` | `[blunt, entangle, {missile: [10, 20, 30]}]` |
+| whip | 10 / 50 | 1d6 / 1d2 | `{ variable: "1d2" }` | `[entangle, melee]` |
 
 - **No-damage weapons** (blowgun, net): `damage: { default: "", variable: "" }`.
   In `attacks.py`, when `not weapon.deals_damage` the profile still computes
