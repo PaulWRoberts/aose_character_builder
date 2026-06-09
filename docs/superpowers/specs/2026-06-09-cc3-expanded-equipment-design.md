@@ -258,10 +258,14 @@ Standard-rule damage is the engine default `1d6` (never written); only the
 | net | 5 / 100 | **none** | `{ default: "", variable: "" }` | `[blunt, entangle, {missile: [10, 20, 30]}]` |
 | whip | 10 / 50 | 1d6 / 1d2 | `{ variable: "1d2" }` | `[entangle, melee]` |
 
-- **No-damage weapons** (blowgun, net): `damage: { default: "", variable: "" }`.
-  In `attacks.py`, when `not weapon.deals_damage` the profile still computes
-  to-hit but its `damage` is `"—"` and no STR/DEX damage modifier is added.
-  `detail.py` shows `—`.
+- **No-damage weapons** (blowgun, net): `damage: { default: "", variable: "" }`
+  — empty under **both** rules, so they never roll damage in any mode. In
+  `attacks.py`, the no-damage test keys off the **rule-selected** string
+  (`base_damage = damage.variable if variable_rule else damage.default`): when
+  that is empty, the profile still computes to-hit but its `damage` is `"—"` and
+  no STR/DEX damage modifier is added. `detail.py` shows `—`. (`deals_damage`
+  remains as a coarse "is a damage weapon" helper = `bool(damage.default)`; for
+  these weapons both fields are empty so it agrees.)
 - **Versatile split** (`attacks.py`): when `weapon.versatile`,
   `weapon.two_handed_damage` is set, **and** `ruleset.variable_weapon_damage` is
   on, emit two profiles — a 1H row (uses `damage.variable`) and a
