@@ -1,0 +1,52 @@
+id: hephaestan
+name: Hephaestan
+source: carcass_crawler_1
+ability_requirements:
+  INT: 9
+ability_modifiers:
+  STR: -1
+  CHA: 1
+languages:
+- common
+- hephaestan
+allowed_classes:
+- acrobat
+- assassin
+- cleric
+- fighter
+- illusionist
+- magic_user
+- thief
+class_level_caps:
+  acrobat: 10
+  assassin: 10
+  cleric: 7
+  fighter: 7
+  illusionist: 11
+  magic_user: 11
+  thief: 10
+features:
+- id: ability_modifiers
+  name: Ability Modifiers
+  text: –1 STR, +1 CHA.
+- id: npc_only_classes_referee_option
+  name: NPC-Only Classes (Referee Option)
+  text: At the referee's option, hephaestan clerics may only exist as NPCs.
+  mechanical:
+    referee_option: true
+    npc_only_classes:
+    - cleric
+- id: listening_at_doors
+  name: Listening at Doors
+  text: Hephaestans have keen hearing, giving them a 2-in-6 chance of hearing noises.
+  mechanical:
+    chance_in_6: 2
+- id: neuropressure
+  name: Neuropressure
+  text: Hephaestans have developed a non-lethal combat technique that applies pressure to the nerves at the back of a creature's neck to induce temporary unconsciousness for 4d4 rounds. Neuropressure only affects targets of 4+1 or lower Hit Dice and is ineffective against creatures larger than the hephaestan or lacking a discernible neck. Furthermore, neuropressure requires a successful attack roll against an unaware opponent to take effect. This ability is usable a number of times per day equal to the hephaestan's level.
+  mechanical:
+    max_target_hd: "4+1"
+    uses_per_day: per_level
+    requires: unaware_opponent
+    effect: unconscious
+    duration: 4d4_rounds

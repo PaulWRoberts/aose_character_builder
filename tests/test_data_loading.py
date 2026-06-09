@@ -286,3 +286,119 @@ def test_enchantment_sources(data):
             assert ench.source == "ose_advanced_fantasy", eid
         else:
             assert ench.source == "ose_classic_fantasy", eid
+
+
+# ── Carcass Crawler 1: classes ────────────────────────────────────────────────
+
+def test_acolyte_loaded(data):
+    cls = data.classes["acolyte"]
+    assert cls.name == "Acolyte"
+    assert cls.source == "carcass_crawler_1"
+    assert "WIS" in [a.value for a in cls.prime_requisites]
+    assert cls.spell_lists == ["cleric"]
+    assert cls.max_level == 14
+    assert cls.hit_die == "1d6"
+    assert cls.progression[1].spell_slots is None
+
+
+def test_mage_cc1_loaded(data):
+    cls = data.classes["mage"]
+    assert cls.name == "Mage"
+    assert cls.source == "carcass_crawler_1"
+    assert {a.value for a in cls.prime_requisites} == {"INT", "WIS"}
+    assert cls.spell_lists == ["magic_user"]
+    assert cls.max_level == 14
+    assert cls.hit_die == "1d6"
+    assert cls.progression[1].spell_slots is None
+
+
+def test_gargantua_class_loaded(data):
+    cls = data.classes["gargantua"]
+    assert cls.source == "carcass_crawler_1"
+    assert cls.race_locked == "gargantua"
+    assert {a.value for a in cls.prime_requisites} == {"CON", "STR"}
+    assert cls.hit_die == "1d10"
+    assert cls.max_level == 10
+    assert cls.name_level == 9
+    assert cls.hp_after_name_level == 3
+    assert cls.progression[1].thac0 == 19
+    assert cls.progression[10].thac0 == 12
+
+
+def test_goblin_class_loaded(data):
+    cls = data.classes["goblin"]
+    assert cls.source == "carcass_crawler_1"
+    assert cls.race_locked == "goblin"
+    assert cls.hit_die == "1d6"
+    assert cls.max_level == 8
+    assert cls.name_level == 8
+    assert cls.progression[1].thac0 == 19
+    assert cls.progression[8].thac0 == 14
+
+
+def test_hephaestan_class_loaded(data):
+    cls = data.classes["hephaestan"]
+    assert cls.source == "carcass_crawler_1"
+    assert cls.race_locked == "hephaestan"
+    assert {a.value for a in cls.prime_requisites} == {"INT", "WIS"}
+    assert cls.hit_die == "1d6"
+    assert cls.max_level == 10
+    assert cls.name_level == 9
+    assert cls.hp_after_name_level == 2
+    assert cls.progression[1].thac0 == 19
+    assert cls.progression[10].thac0 == 12
+
+
+# ── Carcass Crawler 1: races ──────────────────────────────────────────────────
+
+def test_gargantua_race_loaded(data):
+    r = data.races["gargantua"]
+    assert r.source == "carcass_crawler_1"
+    assert r.ability_requirements[Ability.CON] == 9
+    assert r.ability_requirements[Ability.STR] == 9
+    assert r.ability_modifiers[Ability.INT] == -1
+    assert r.ability_modifiers[Ability.STR] == 1
+    assert "fighter" in r.allowed_classes
+    assert r.class_level_caps["fighter"] == 10
+    assert r.class_level_caps["assassin"] == 6
+
+
+def test_goblin_race_loaded(data):
+    r = data.races["goblin"]
+    assert r.source == "carcass_crawler_1"
+    assert r.ability_requirements[Ability.DEX] == 9
+    assert r.ability_modifiers[Ability.DEX] == 1
+    assert r.ability_modifiers[Ability.STR] == -1
+    assert r.infravision == 60
+    assert "thief" in r.allowed_classes
+    assert "magic_user" in r.allowed_classes
+    assert r.class_level_caps["thief"] == 8
+
+
+def test_hephaestan_race_loaded(data):
+    r = data.races["hephaestan"]
+    assert r.source == "carcass_crawler_1"
+    assert r.ability_requirements[Ability.INT] == 9
+    assert r.ability_modifiers[Ability.STR] == -1
+    assert r.ability_modifiers[Ability.CHA] == 1
+    assert "illusionist" in r.allowed_classes
+    assert r.class_level_caps["illusionist"] == 11
+    assert r.class_level_caps["magic_user"] == 11
+
+
+def test_cc1_scroll_only_casters_have_caster_type_but_no_slots(data):
+    from aose.engine.spells import caster_type_of, memorizable_slots
+    from aose.models import ClassEntry
+
+    acolyte = data.classes["acolyte"]
+    assert caster_type_of(acolyte, data) == "divine"
+    assert memorizable_slots(ClassEntry(class_id="acolyte", level=5), acolyte) == {}
+
+    mage = data.classes["mage"]
+    assert caster_type_of(mage, data) == "arcane"
+    assert memorizable_slots(ClassEntry(class_id="mage", level=5), mage) == {}
+
+
+def test_cc1_languages_loaded(data):
+    assert "hephaestan" in data.languages.names
+    assert "language_of_wolves" in data.languages.names

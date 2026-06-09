@@ -96,3 +96,5 @@ def test_situational_bonus_never_changes_a_headline():
     for name, val in prog.items():
         assert detail[name].modified == val, f"{name} headline changed"
         assert all("vs " not in ln.note for ln in detail[name].lines)
+
+

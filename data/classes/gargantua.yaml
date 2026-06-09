@@ -1,0 +1,86 @@
+id: gargantua
+name: Gargantua
+source: carcass_crawler_1
+prime_requisites:
+- CON
+- STR
+ability_requirements:
+  CON: 9
+  STR: 9
+max_level: 10
+hit_die: 1d10
+name_level: 9
+hp_after_name_level: 3
+weapons_allowed: all
+armor_allowed: all
+shields_allowed: true
+race_locked: gargantua
+progression:
+  1:
+    xp_required: 0
+    thac0: 19
+    saves: {death: 8, wands: 9, paralysis: 10, breath: 13, spells: 12}
+  2:
+    xp_required: 2500
+    thac0: 19
+    saves: {death: 8, wands: 9, paralysis: 10, breath: 13, spells: 12}
+  3:
+    xp_required: 5000
+    thac0: 19
+    saves: {death: 8, wands: 9, paralysis: 10, breath: 13, spells: 12}
+  4:
+    xp_required: 10000
+    thac0: 17
+    saves: {death: 6, wands: 7, paralysis: 8, breath: 10, spells: 10}
+  5:
+    xp_required: 20000
+    thac0: 17
+    saves: {death: 6, wands: 7, paralysis: 8, breath: 10, spells: 10}
+  6:
+    xp_required: 40000
+    thac0: 17
+    saves: {death: 6, wands: 7, paralysis: 8, breath: 10, spells: 10}
+  7:
+    xp_required: 80000
+    thac0: 14
+    saves: {death: 4, wands: 5, paralysis: 6, breath: 7, spells: 8}
+  8:
+    xp_required: 160000
+    thac0: 14
+    saves: {death: 4, wands: 5, paralysis: 6, breath: 7, spells: 8}
+  9:
+    xp_required: 300000
+    thac0: 14
+    saves: {death: 4, wands: 5, paralysis: 6, breath: 7, spells: 8}
+  10:
+    xp_required: 500000
+    thac0: 12
+    saves: {death: 2, wands: 3, paralysis: 4, breath: 4, spells: 6}
+features:
+- id: combat
+  name: Combat
+  text: |-
+    Gargantuas can use all types of weapons and armour, but it must be tailored to their large size.
+
+    **Two-handed melee weapons:** A gargantua can wield any two-handed melee weapon, such as a battle axe, with only one hand.
+  gained_at_level: 1
+- id: open_doors
+  name: Open Doors
+  text: |-
+    Gargantuas open even barred doors with ease. They are treated as the next highest STR category when it comes to determining their chance of opening doors. For example, a gargantua with STR 12 is treated as if their STR were in the 13–15 category instead.
+  gained_at_level: 1
+  mechanical:
+    str_category_bonus: 1
+- id: rock_throwing
+  name: Rock Throwing
+  text: |-
+    Gargantuas are adept at using rocks as projectiles. Rocks thrown by a gargantua deal 1d6 damage on a successful hit and have a range of 5'–50' / 51'–100' / 101'–150'.
+  gained_at_level: 1
+  mechanical:
+    damage: 1d6
+    range: [50, 100, 150]
+- id: after_reaching_9th_level
+  name: After Reaching 9th Level
+  text: |-
+    A gargantua has the option of creating a stronghold that will form the basis of a new community of gargantuas. Gargantua communities can be located either near those of humans or in the wilderness (typically a forested or hilly area).
+  gained_at_level: 9

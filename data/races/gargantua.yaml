@@ -1,0 +1,95 @@
+id: gargantua
+name: Gargantua
+source: carcass_crawler_1
+ability_requirements:
+  CON: 9
+  STR: 9
+ability_modifiers:
+  INT: -1
+  STR: 1
+languages:
+- common
+allowed_classes:
+- assassin
+- barbarian
+- cleric
+- fighter
+- thief
+class_level_caps:
+  assassin: 6
+  barbarian: 8
+  cleric: 8
+  fighter: 10
+  thief: 6
+features:
+- id: ability_modifiers
+  name: Ability Modifiers
+  text: –1 INT, +1 STR.
+- id: npc_only_classes_referee_option
+  name: NPC-Only Classes (Referee Option)
+  text: At the referee's option, gargantua clerics may only exist as NPCs.
+  mechanical:
+    referee_option: true
+    npc_only_classes:
+    - cleric
+- id: combat
+  name: Combat
+  text: Armour must be tailored to gargantuas' large size.
+
+    **Two-handed melee weapons:** A gargantua can wield any two-handed melee weapon, such as a battle axe, with only one hand.
+  mechanical:
+    armour_requires_tailoring: true
+- id: open_doors
+  name: Open Doors
+  text: Gargantuas open even barred doors with ease. They are treated as the next highest STR category when it comes to determining their chance of opening doors. For example, a gargantua with STR 12 is treated as if their STR were in the 13–15 category instead.
+  mechanical:
+    str_category_bonus: 1
+- id: resilience
+  name: Resilience
+  text: 'Natural constitution and resistance to magic grants a bonus to saving throws versus poison, spells, and magic wands, rods, and staves based on CON score: 6 or lower +0; 7–10 +2; 11–14 +3; 15–17 +4; 18 +5.'
+  mechanical:
+    save_categories:
+    - poison
+    - spells
+    - magic_wands_rods_staves
+    bonus_by_CON:
+      6_or_lower: 0
+      '7_10': 2
+      '11_14': 3
+      '15_17': 4
+      '18': 5
+  granted_modifiers:
+  - target: save:death
+    op: add
+    condition: poison
+    scale:
+      by: ability:CON
+      table:
+        7: 2
+        11: 3
+        15: 4
+        18: 5
+  - target: save:spells
+    op: add
+    scale:
+      by: ability:CON
+      table:
+        7: 2
+        11: 3
+        15: 4
+        18: 5
+  - target: save:wands
+    op: add
+    scale:
+      by: ability:CON
+      table:
+        7: 2
+        11: 3
+        15: 4
+        18: 5
+- id: rock_throwing
+  name: Rock Throwing
+  text: Gargantuas are adept at using rocks as projectiles. Rocks thrown by a gargantua deal 1d6 damage on a successful hit and have a range of 5'–50' / 51'–100' / 101'–150'.
+  mechanical:
+    damage: 1d6
+    range: [50, 100, 150]

@@ -23,6 +23,8 @@ names:
   human_dialect: Human dialect
   secret_language_of_burrowing_mammals: Secret language of burrowing mammals
   druidic: Druidic
+  hephaestan: Hephaestan
+  language_of_wolves: Language of wolves
 alignment:
   law: Lawful
   neutral: Neutral
@@ -48,3 +50,5 @@ additional:
   - orcish
   - pixie
   - human_dialect
+  - hephaestan
+  - language_of_wolves

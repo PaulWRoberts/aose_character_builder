@@ -1,0 +1,143 @@
+id: acolyte
+name: Acolyte
+source: carcass_crawler_1
+prime_requisites:
+- WIS
+max_level: 14
+hit_die: 1d6
+name_level: 9
+hp_after_name_level: 1
+weapons_allowed:
+- club
+- mace
+- sling
+- staff
+- war_hammer
+armor_allowed: all
+shields_allowed: true
+spell_lists:
+- cleric
+progression:
+  1:
+    xp_required: 0
+    thac0: 19
+    saves: {death: 11, wands: 12, paralysis: 14, breath: 16, spells: 15}
+  2:
+    xp_required: 1500
+    thac0: 19
+    saves: {death: 11, wands: 12, paralysis: 14, breath: 16, spells: 15}
+  3:
+    xp_required: 3000
+    thac0: 19
+    saves: {death: 11, wands: 12, paralysis: 14, breath: 16, spells: 15}
+  4:
+    xp_required: 6000
+    thac0: 19
+    saves: {death: 11, wands: 12, paralysis: 14, breath: 16, spells: 15}
+  5:
+    xp_required: 12000
+    thac0: 17
+    saves: {death: 9, wands: 10, paralysis: 12, breath: 14, spells: 12}
+  6:
+    xp_required: 25000
+    thac0: 17
+    saves: {death: 9, wands: 10, paralysis: 12, breath: 14, spells: 12}
+  7:
+    xp_required: 50000
+    thac0: 17
+    saves: {death: 9, wands: 10, paralysis: 12, breath: 14, spells: 12}
+  8:
+    xp_required: 100000
+    thac0: 17
+    saves: {death: 9, wands: 10, paralysis: 12, breath: 14, spells: 12}
+  9:
+    xp_required: 200000
+    thac0: 14
+    saves: {death: 6, wands: 7, paralysis: 9, breath: 11, spells: 9}
+  10:
+    xp_required: 300000
+    thac0: 14
+    saves: {death: 6, wands: 7, paralysis: 9, breath: 11, spells: 9}
+  11:
+    xp_required: 400000
+    thac0: 14
+    saves: {death: 6, wands: 7, paralysis: 9, breath: 11, spells: 9}
+  12:
+    xp_required: 500000
+    thac0: 14
+    saves: {death: 6, wands: 7, paralysis: 9, breath: 11, spells: 9}
+  13:
+    xp_required: 600000
+    thac0: 12
+    saves: {death: 3, wands: 5, paralysis: 7, breath: 8, spells: 7}
+  14:
+    xp_required: 700000
+    thac0: 12
+    saves: {death: 3, wands: 5, paralysis: 7, breath: 8, spells: 7}
+features:
+- id: combat
+  name: Combat
+  text: |-
+    Acolytes can use any armour. Strict holy doctrine prevents acolytes' use of weapons that have a sharp, cutting edge or stabbing point. They may use the following weapons: club, mace, sling, staff, war hammer.
+  gained_at_level: 1
+- id: divine_magic
+  name: Divine Magic
+  text: |-
+    Acolytes cannot memorise spells, but can cast clerical spells from scrolls.
+
+    **Holy symbol:** An acolyte must carry a holy symbol.
+
+    **Deity disfavour:** Acolytes must be faithful to the tenets of their alignment, clergy, and religion. Those who fall from favour with their deity may incur penalties.
+
+    **Magical research:** An acolyte of any level may spend time and money on magical research. This allows them to research miscellaneous magical effects. From 9th level, an acolyte may also create magic items.
+
+    **Using magic items:** Acolytes can use magic scrolls of spells on the cleric spell list. They can also use items that may only be used by divine spell casters (e.g. some magic staves).
+  gained_at_level: 1
+- id: acolyte_skills
+  name: Acolyte Skills
+  text: |-
+    Acolytes can use the following skills with a range of 30', rolled on d%, with a result of less than or equal to the listed percentage indicating success:
+
+    ▶ **Bless (BL):** Allies gain +1 to attack and damage rolls for one round per level of the acolyte. May be used once per turn.
+
+    ▶ **Detect magic (DM):** Requires 1 turn of concentration on an object. Failed checks may be re-attempted, if the acolyte is willing to spend the additional time. The referee should roll for detect magic on the player's behalf, as the acolyte does not always know whether the object being scanned is magical or not.
+
+    ▶ **Know alignment (KA):** Grants immediate knowledge of the alignment of one character, monster, object, or location. May only be attempted once per subject.
+
+    ▶ **Purify (PU):** Makes rotten, poisonous, or spoiled food and water pure and safe to consume. Affects either 6 quarts of drink, one ration (iron or standard), or unpreserved food sufficient for 12 humans. May only be attempted once per item.
+
+    ▶ **Rally (RA):** Counters magical fear effects. May be used once per turn.
+
+    ▶ **Turn undead (TU):** Affects undead of up to one HD greater than the acolyte's level. Penalised based on the type of undead targeted (–5% per HD). If the roll succeeds, 2d6 HD of undead are forced to leave the area, if possible. They will not harm or make contact with the acolyte. May be used once per turn.
+
+    ### Acolyte Skills Chance of Success
+
+    | Level | BL | DM | KA | PU | RA | TU |
+    |---|---:|---:|---:|---:|---:|---:|
+    | 1 | 10 | 30 | 20 | 20 | 25 | 50 |
+    | 2 | 35 | 50 | 35 | 23 | 55 | 55 |
+    | 3 | 40 | 55 | 40 | 25 | 60 | 60 |
+    | 4 | 45 | 60 | 45 | 26 | 65 | 65 |
+    | 5 | 50 | 65 | 50 | 35 | 70 | 70 |
+    | 6 | 55 | 70 | 55 | 45 | 75 | 75 |
+    | 7 | 60 | 75 | 60 | 55 | 80 | 80 |
+    | 8 | 65 | 80 | 65 | 65 | 83 | 85 |
+    | 9 | 70 | 85 | 70 | 70 | 86 | 90 |
+    | 10 | 71 | 90 | 75 | 75 | 90 | 95 |
+    | 11 | 72 | 95 | 80 | 80 | 92 | 100 |
+    | 12 | 73 | 97 | 85 | 85 | 95 | 105 |
+    | 13 | 74 | 98 | 90 | 90 | 98 | 110 |
+    | 14 | 75 | 99 | 95 | 95 | 99 | 115 |
+  gained_at_level: 1
+- id: healing
+  name: Healing
+  text: |-
+    From 2nd level, an acolyte has the power to heal by touch. This may be used once per day per level of the acolyte and either cures 1d3hp or allows another save versus a negative effect (e.g. a curse or poison).
+  gained_at_level: 2
+- id: after_reaching_9th_level
+  name: After Reaching 9th Level
+  text: |-
+    An acolyte may establish or build a stronghold. So long as the acolyte is currently in favour with their god, a stronghold may be bought or built at half the normal price, due to divine intervention.
+
+    Once a stronghold is established, the acolyte will attract followers (5d6 × 10 fighters of level 1–2). These troops are completely devoted to the acolyte, never checking morale. The referee decides which proportions of followers are 1st and 2nd level and which are bowmen, infantry, etc.
+  gained_at_level: 9

@@ -202,6 +202,18 @@ Reset, known-power list). Routes `/powers/{learn,forget,spend,restore,reset}`.
 Kineticist is the only mental class (`data/classes/kineticist.yaml`, source
 `carcass_crawler_1`, all on `data/spells/carcass_crawler_kineticist_powers.yaml`).
 
+### Carcass Crawler 1 content (`source: carcass_crawler_1`)
+
+**Classes:** Acolyte (scroll-only divine, `spell_lists: [cleric]`, no slots),
+Mage (scroll-only arcane, `spell_lists: [magic_user]`, no slots, +2 AC
+`granted_modifier`), Gargantua / Goblin / Hephaestan (race-as-class via
+`race_locked`). **Races (Advanced):** Gargantua (–1 INT +1 STR, Resilience,
+classes Assassin/Barbarian/Cleric*/Fighter/Thief), Goblin (+1 DEX –1 STR,
+infravision 60', Resilience, Defensive Bonus, classes Acrobat/Assassin/
+Cleric*/Fighter/Magic-user/Thief), Hephaestan (–1 STR +1 CHA, Listening /
+Neuropressure only per races.md, classes Acrobat/Assassin/Cleric*/Fighter/
+Illusionist/Magic-user/Thief). New languages: `hephaestan`, `language_of_wolves`.
+
 ---
 
 ## Inventory, containers & encumbrance

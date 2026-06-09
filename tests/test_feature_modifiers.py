@@ -291,6 +291,24 @@ def test_classic_dwarf_resilience_single_poison_line():
     assert poison_lines[0].bonus == 3
 
 
+# ── Carcass Crawler 1 resilience ─────────────────────────────────────────────
+
+def test_gargantua_resilience_plus3_at_con13():
+    base = _saves("human", "fighter", 13)
+    garg = _saves("gargantua", "fighter", 13)
+    assert garg["spells"] == base["spells"] - 3
+    assert garg["wands"] == base["wands"] - 3
+    assert garg["death"] == base["death"]      # poison-only; not in headline
+
+
+def test_goblin_resilience_plus2_at_con9():
+    base = _saves("human", "fighter", 9)
+    gob = _saves("goblin", "fighter", 9)
+    assert gob["spells"] == base["spells"] - 2
+    assert gob["wands"] == base["wands"] - 2
+    assert gob["death"] == base["death"]       # poison-only; not in headline
+
+
 # ── Task 7: kineticist AC migrated off the column ───────────────────────────
 
 KINETICIST_AC = {1: 9, 2: 8, 3: 7, 4: 6, 5: 5, 6: 4, 7: 3, 8: 2,

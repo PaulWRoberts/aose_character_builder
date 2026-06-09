@@ -1,0 +1,108 @@
+id: goblin
+name: Goblin
+source: carcass_crawler_1
+prime_requisites:
+- DEX
+- STR
+ability_requirements:
+  DEX: 9
+max_level: 8
+hit_die: 1d6
+name_level: 8
+hp_after_name_level: 0
+weapons_allowed: all
+armor_allowed: all
+shields_allowed: true
+race_locked: goblin
+progression:
+  1:
+    xp_required: 0
+    thac0: 19
+    saves: {death: 8, wands: 9, paralysis: 10, breath: 13, spells: 12}
+  2:
+    xp_required: 2000
+    thac0: 19
+    saves: {death: 8, wands: 9, paralysis: 10, breath: 13, spells: 12}
+  3:
+    xp_required: 4000
+    thac0: 19
+    saves: {death: 8, wands: 9, paralysis: 10, breath: 13, spells: 12}
+  4:
+    xp_required: 8000
+    thac0: 17
+    saves: {death: 6, wands: 7, paralysis: 8, breath: 10, spells: 10}
+  5:
+    xp_required: 16000
+    thac0: 17
+    saves: {death: 6, wands: 7, paralysis: 8, breath: 10, spells: 10}
+  6:
+    xp_required: 32000
+    thac0: 17
+    saves: {death: 6, wands: 7, paralysis: 8, breath: 10, spells: 10}
+  7:
+    xp_required: 64000
+    thac0: 14
+    saves: {death: 4, wands: 5, paralysis: 6, breath: 7, spells: 8}
+  8:
+    xp_required: 120000
+    thac0: 14
+    saves: {death: 4, wands: 5, paralysis: 6, breath: 7, spells: 8}
+features:
+- id: combat
+  name: Combat
+  text: |-
+    Goblins can use all types of armour, but it must be tailored to their small size. Similarly, they can use any weapon appropriate to their stature (as determined by the referee). They cannot use longbows or two-handed swords.
+  gained_at_level: 1
+  mechanical:
+    armour_requires_tailoring: true
+    prohibited_weapons:
+    - longbow
+    - two_handed_sword
+- id: defensive_bonus
+  name: Defensive Bonus
+  text: |-
+    Due to their small size, goblins gain a +2 bonus to Armour Class when attacked by large opponents (greater than human-sized).
+  gained_at_level: 1
+  mechanical:
+    armour_class_bonus: 2
+    condition: attacked_by_large_opponents
+  granted_modifiers:
+  - {target: ac, op: add, value: 2, condition: large_attacker}
+- id: detect_construction_tricks
+  name: Detect Construction Tricks
+  text: |-
+    Goblins are fair miners and have a 2-in-6 chance of being able to detect new construction, sliding walls, or sloping passages when searching.
+  gained_at_level: 1
+  mechanical:
+    chance_in_6: 2
+    condition: searching
+- id: infravision
+  name: Infravision
+  text: |-
+    Goblins have infravision to 60'.
+  gained_at_level: 1
+  mechanical:
+    infravision_feet: 60
+- id: stealth
+  name: Stealth
+  text: |-
+    Underground, goblins have a 3-in-6 chance of moving silently.
+  gained_at_level: 1
+  mechanical:
+    chance_in_6: 3
+    condition: underground
+- id: wolf_affinity
+  name: Wolf Affinity
+  text: |-
+    Goblins live alongside wolves, including dire wolves. They can speak to these animals and gain a +1 bonus to reaction rolls when encountering wolves. If the result is 9 or greater, a wolf will consent to being ridden as a mount by the goblin.
+  gained_at_level: 1
+  mechanical:
+    reaction_bonus: 1
+    applies_to: wolves
+- id: after_reaching_8th_level
+  name: After Reaching 8th Level
+  text: |-
+    A goblin can establish a stronghold, whether above ground or beneath it, attracting 2d6 goblins from far and wide. Goblins typically live in clans, so goblins of the character's clan will be attracted to this stronghold. Goblins from other clans will generally be friendly and clans may collaborate in times of war or disaster.
+
+    A goblin ruler may only hire goblin mercenaries. Specialists and retainers of any race may be hired, but this is uncommon.
+  gained_at_level: 8

@@ -1,0 +1,112 @@
+id: hephaestan
+name: Hephaestan
+source: carcass_crawler_1
+prime_requisites:
+- INT
+- WIS
+ability_requirements:
+  CHA: 9
+  CON: 9
+max_level: 10
+hit_die: 1d6
+name_level: 9
+# Source (CC1 classes) prints "9d8+2" at L10 — almost certainly a typo for 9d6+2.
+hp_after_name_level: 2
+weapons_allowed: all
+armor_allowed:
+- leather
+- chain_mail
+shields_allowed: true
+race_locked: hephaestan
+progression:
+  1:
+    xp_required: 0
+    thac0: 19
+    saves: {death: 12, wands: 13, paralysis: 13, breath: 15, spells: 15}
+  2:
+    xp_required: 3000
+    thac0: 19
+    saves: {death: 12, wands: 13, paralysis: 13, breath: 15, spells: 15}
+  3:
+    xp_required: 6000
+    thac0: 19
+    saves: {death: 12, wands: 13, paralysis: 13, breath: 15, spells: 15}
+  4:
+    xp_required: 12000
+    thac0: 17
+    saves: {death: 10, wands: 11, paralysis: 11, breath: 12, spells: 12}
+  5:
+    xp_required: 25000
+    thac0: 17
+    saves: {death: 10, wands: 11, paralysis: 11, breath: 12, spells: 12}
+  6:
+    xp_required: 50000
+    thac0: 17
+    saves: {death: 10, wands: 11, paralysis: 11, breath: 12, spells: 12}
+  7:
+    xp_required: 100000
+    thac0: 14
+    saves: {death: 8, wands: 9, paralysis: 9, breath: 10, spells: 10}
+  8:
+    xp_required: 200000
+    thac0: 14
+    saves: {death: 8, wands: 9, paralysis: 9, breath: 10, spells: 10}
+  9:
+    xp_required: 300000
+    thac0: 14
+    saves: {death: 8, wands: 9, paralysis: 9, breath: 10, spells: 10}
+  10:
+    xp_required: 400000
+    thac0: 12
+    saves: {death: 6, wands: 7, paralysis: 8, breath: 8, spells: 8}
+features:
+- id: combat
+  name: Combat
+  text: |-
+    Hephaestans can use leather armour or chainmail, as well as shields. They can use all types of weapons.
+  gained_at_level: 1
+- id: listening_at_doors
+  name: Listening at Doors
+  text: |-
+    Hephaestans have keen hearing, giving them a 2-in-6 chance of hearing noises.
+  gained_at_level: 1
+  mechanical:
+    chance_in_6: 2
+- id: mental_powers
+  name: Mental Powers
+  text: |-
+    Twice per day per level, a hephaestan may activate one of the following mental powers:
+
+    ▶ **ESP:** By concentrating for 1 round, the hephaestan can read the thoughts of an intelligent, living creature within 90'. An unwilling target may save versus spells to resist. While reading thoughts, the hephaestan may move but cannot attack.
+
+    ▶ **Gestalt:** A hephaestan can read a living creature's memories and share their own memories with the creature. To do this, the hephaestan and the creature must be in physical contact. An unwilling target may save versus spells to resist.
+
+    ▶ **Healing trance:** A hephaestan can enter a meditative state that lasts for 1 turn, during which time they are completely unaware of their surroundings and can neither attack nor defend themselves. The trance heals 1d6+1 hit points per use (2d6+2 hit points per use at 6th level or higher).
+
+    ▶ **Mind control:** A hephaestan can alter a creature's perceptions to take control of their actions. A target within 30' must save versus paralysis or come under the hephaestan's mental control for 1d6 rounds. Acts that are self-destructive or against the victim's alignment allow another save to break the mind control.
+
+    ▶ **Mind shield:** A hephaestan can shield their mind for up to 2 turns, granting them a +4 bonus to any saving throws to resist the effects of mental powers and mind-affecting spells and magic items.
+
+    ▶ **Telepathy:** A hephaestan can establish bidirectional mental communication with one other living intelligent creature within sight for 1 turn. The creature need not share a language with the hephaestan.
+
+    **Activating:** A hephaestan must spend a round concentrating in order to activate a mental power. This precludes moving, attacking, or taking any other actions. The use of mental powers must be declared before initiative is rolled. If the hephaestan loses initiative and is successfully attacked or fails a saving throw before their turn, the power is disrupted and fails. One "usage per day" is still consumed.
+  gained_at_level: 1
+  mechanical:
+    uses_per_day: 2
+    uses_per_day_scale: per_level
+- id: neuropressure
+  name: Neuropressure
+  text: |-
+    Hephaestans have developed a non-lethal combat technique that applies pressure to the nerves at the back of a creature's neck to induce temporary unconsciousness for 4d4 rounds. Neuropressure only affects targets of 4+1 or lower Hit Dice and is ineffective against creatures larger than the hephaestan or lacking a discernible neck. Furthermore, neuropressure requires a successful attack roll against an unaware opponent to take effect. This ability is usable a number of times per day equal to the hephaestan's level.
+  gained_at_level: 1
+  mechanical:
+    max_target_hd: "4+1"
+    uses_per_day: per_level
+    requires: unaware_opponent
+    effect: unconscious
+    duration: 4d4_rounds
+- id: after_reaching_9th_level
+  name: After Reaching 9th Level
+  text: |-
+    A hephaestan has the option of establishing an academy devoted to the study of mental powers, attracting 2d6 1st-level hephaestans to study under the character. A hephaestan may only hire hephaestan mercenaries. Specialists and retainers of any race may be hired.
+  gained_at_level: 9

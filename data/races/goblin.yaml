@@ -1,0 +1,109 @@
+id: goblin
+name: Goblin
+source: carcass_crawler_1
+ability_requirements:
+  DEX: 9
+ability_modifiers:
+  DEX: 1
+  STR: -1
+infravision: 60
+languages:
+- common
+- goblin
+- language_of_wolves
+allowed_classes:
+- acrobat
+- assassin
+- cleric
+- fighter
+- magic_user
+- thief
+class_level_caps:
+  acrobat: 7
+  assassin: 8
+  cleric: 6
+  fighter: 8
+  magic_user: 6
+  thief: 8
+features:
+- id: ability_modifiers
+  name: Ability Modifiers
+  text: +1 DEX, –1 STR.
+- id: npc_only_classes_referee_option
+  name: NPC-Only Classes (Referee Option)
+  text: At the referee's option, goblin clerics may only exist as NPCs.
+  mechanical:
+    referee_option: true
+    npc_only_classes:
+    - cleric
+- id: combat
+  name: Combat
+  text: Armour must be tailored to goblins' small size. Likewise, goblins can only use weapons appropriate to their stature (as determined by the referee). They cannot use longbows or two-handed swords.
+  mechanical:
+    armour_requires_tailoring: true
+    prohibited_weapons:
+    - longbow
+    - two_handed_sword
+- id: defensive_bonus
+  name: Defensive Bonus
+  text: Due to their small size, goblins gain a +2 bonus to Armour Class when attacked by large opponents (greater than human-sized).
+  mechanical:
+    armour_class_bonus: 2
+    condition: attacked_by_large_opponents
+  granted_modifiers:
+  - {target: ac, op: add, value: 2, condition: large_attacker}
+- id: detect_construction_tricks
+  name: Detect Construction Tricks
+  text: Goblins are fair miners and have a 2-in-6 chance of being able to detect new construction, sliding walls, or sloping passages when searching.
+  mechanical:
+    chance_in_6: 2
+    condition: searching
+- id: resilience
+  name: Resilience
+  text: 'Natural constitution and resistance to magic grants a bonus to saving throws versus poison, spells, and magic wands, rods, and staves based on CON score: 6 or lower +0; 7–10 +2; 11–14 +3; 15–17 +4; 18 +5.'
+  mechanical:
+    save_categories:
+    - poison
+    - spells
+    - magic_wands_rods_staves
+    bonus_by_CON:
+      6_or_lower: 0
+      '7_10': 2
+      '11_14': 3
+      '15_17': 4
+      '18': 5
+  granted_modifiers:
+  - target: save:death
+    op: add
+    condition: poison
+    scale:
+      by: ability:CON
+      table:
+        7: 2
+        11: 3
+        15: 4
+        18: 5
+  - target: save:spells
+    op: add
+    scale:
+      by: ability:CON
+      table:
+        7: 2
+        11: 3
+        15: 4
+        18: 5
+  - target: save:wands
+    op: add
+    scale:
+      by: ability:CON
+      table:
+        7: 2
+        11: 3
+        15: 4
+        18: 5
+- id: wolf_affinity
+  name: Wolf Affinity
+  text: Goblins live alongside wolves, including dire wolves. They can speak to these animals and gain a +1 bonus to reaction rolls when encountering wolves. If the result is 9 or greater, a wolf will consent to being ridden as a mount by the goblin.
+  mechanical:
+    reaction_bonus: 1
+    applies_to: wolves

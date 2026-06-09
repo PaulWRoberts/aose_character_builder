@@ -1,0 +1,154 @@
+id: mage
+name: Mage
+source: carcass_crawler_1
+prime_requisites:
+- INT
+- WIS
+max_level: 14
+hit_die: 1d6
+name_level: 9
+hp_after_name_level: 1
+weapons_allowed:
+- dagger
+- short_sword
+- staff
+- sword
+armor_allowed: []
+shields_allowed: false
+spell_lists:
+- magic_user
+progression:
+  1:
+    xp_required: 0
+    thac0: 19
+    saves: {death: 12, wands: 13, paralysis: 12, breath: 15, spells: 14}
+  2:
+    xp_required: 2800
+    thac0: 19
+    saves: {death: 12, wands: 13, paralysis: 12, breath: 15, spells: 14}
+  3:
+    xp_required: 5600
+    thac0: 19
+    saves: {death: 12, wands: 13, paralysis: 12, breath: 15, spells: 14}
+  4:
+    xp_required: 12000
+    thac0: 19
+    saves: {death: 12, wands: 13, paralysis: 12, breath: 15, spells: 14}
+  5:
+    xp_required: 24000
+    thac0: 19
+    saves: {death: 12, wands: 13, paralysis: 12, breath: 15, spells: 14}
+  6:
+    xp_required: 48000
+    thac0: 17
+    saves: {death: 10, wands: 11, paralysis: 10, breath: 13, spells: 11}
+  7:
+    xp_required: 100000
+    thac0: 17
+    saves: {death: 10, wands: 11, paralysis: 10, breath: 13, spells: 11}
+  8:
+    xp_required: 200000
+    thac0: 17
+    saves: {death: 10, wands: 11, paralysis: 10, breath: 13, spells: 11}
+  9:
+    xp_required: 400000
+    thac0: 17
+    saves: {death: 10, wands: 11, paralysis: 10, breath: 13, spells: 11}
+  10:
+    xp_required: 560000
+    thac0: 17
+    saves: {death: 10, wands: 11, paralysis: 10, breath: 13, spells: 11}
+  11:
+    xp_required: 720000
+    thac0: 14
+    saves: {death: 7, wands: 8, paralysis: 7, breath: 10, spells: 7}
+  12:
+    xp_required: 980000
+    thac0: 14
+    saves: {death: 7, wands: 8, paralysis: 7, breath: 10, spells: 7}
+  13:
+    xp_required: 1140000
+    thac0: 14
+    saves: {death: 7, wands: 8, paralysis: 7, breath: 10, spells: 7}
+  14:
+    xp_required: 1300000
+    thac0: 14
+    saves: {death: 7, wands: 8, paralysis: 7, breath: 10, spells: 7}
+features:
+- id: arcane_magic
+  name: Arcane Magic
+  text: |-
+    Mages cannot memorise spells, but can cast arcane spells from scrolls.
+
+    **Magical research:** A mage of any level may spend time and money on magical research. This allows them to scribe scrolls of arcane spells or to research other magical effects. From 9th level, a mage may also create magic items of other kinds.
+
+    **Using magic items:** Mages are able to cast spells from arcane scrolls and use any items that may only be used by arcane spell casters (e.g. magic wands).
+  gained_at_level: 1
+- id: combat
+  name: Combat
+  text: |-
+    Mages can use staves and one-handed blades (dagger, short sword, sword), but cannot wear armour.
+  gained_at_level: 1
+- id: healing
+  name: Healing
+  text: |-
+    Once per day, a mage may spend 1 turn to heal an ally. This either cures 1hp per level or allows another save against a negative effect (e.g. a curse or poison).
+  gained_at_level: 1
+- id: mage_armour
+  name: Mage Armour
+  text: |-
+    A mage's connection with deep magic grants them a +2 bonus to Armour Class.
+  gained_at_level: 1
+  granted_modifiers:
+  - {target: ac, op: add, value: 2}
+- id: mage_skills
+  name: Mage Skills
+  text: |-
+    Mages can use the following skills on targets within 30', rolled on d%, with a result of less than or equal to the listed percentage indicating success:
+
+    ▶ **Detect magic (DM):** Requires 1 turn of concentration on an object. Failed checks may be re-attempted, if the mage is willing to spend the additional time. The referee should roll for detect magic on the player's behalf, as the mage does not always know whether the object being scanned is magical or not.
+
+    ▶ **Open/close (OC):** Magically opens or pushes closed an unlocked door, portal, lid, etc. and holds it open/closed for 1 round per level of the mage. May only be attempted once per portal.
+
+    ▶ **Rally/fear (RF):** Rally counters magical fear effects. Fear forces enemies to make a morale check. This skill may be used once per turn.
+
+    ▶ **Read magic (RM):** Allows the mage to decipher magical scripts and runes. Failed attempts cannot be retried until the mage gains a level.
+
+    ▶ **Suggestion (SU):** On a successful check, the mage's words take on a supernatural potency. Up to one HD of persons per level of the mage must save versus spells or follow the mage's suggestion for 1 round per level of the mage. (If the suggestion would endanger a subject, that subject automatically saves.) Afterwards, subjects realise they have been tricked. This skill may be used once per turn.
+
+    ### Mage Skills Chance of Success
+
+    | Level | DM | OC | RF | RM | SU |
+    |---:|---:|---:|---:|---:|---:|
+    | 1 | 75 | 30 | 20 | 50 | 20 |
+    | 2 | 80 | 35 | 23 | 55 | 23 |
+    | 3 | 83 | 40 | 25 | 60 | 25 |
+    | 4 | 85 | 45 | 26 | 65 | 26 |
+    | 5 | 87 | 50 | 35 | 70 | 35 |
+    | 6 | 90 | 55 | 45 | 75 | 45 |
+    | 7 | 92 | 60 | 55 | 80 | 55 |
+    | 8 | 93 | 65 | 65 | 83 | 65 |
+    | 9 | 94 | 70 | 70 | 86 | 70 |
+    | 10 | 95 | 75 | 75 | 90 | 75 |
+    | 11 | 96 | 80 | 80 | 92 | 80 |
+    | 12 | 97 | 85 | 85 | 95 | 85 |
+    | 13 | 98 | 90 | 90 | 98 | 90 |
+    | 14 | 99 | 95 | 95 | 99 | 95 |
+  gained_at_level: 1
+- id: mage_staff
+  name: Mage's Staff
+  text: |-
+    **Invulnerable monsters:** In the hands of a mage, a normal staff can harm creatures that are immune to mundane attacks.
+
+    **Light:** Once per day, the mage may cause their staff to radiate light in a 30' radius for 1 turn per level.
+  gained_at_level: 1
+- id: scribing_scrolls
+  name: Scribing Scrolls
+  text: |-
+    Mages of any level can create scrolls of arcane spells.
+  gained_at_level: 1
+- id: after_reaching_11th_level
+  name: After Reaching 11th Level
+  text: |-
+    A mage may build a stronghold, often a great tower. 1d6 apprentices of levels 1–3 will arrive to study under the mage.
+  gained_at_level: 11
