@@ -709,7 +709,7 @@
     <div class="subhead" style="margin:0 0 4px">At {{ ab.ability }} {{ ab.score }}</div>
     <table class="kv" style="width:100%">
       {% for c in ab.table %}
-      <tr><td>{{ c.label }}</td><td class="num">{{ c.value }}</td></tr>
+      <tr><td>{{ c.label }}{% if c.note %} <span class="muted">{{ c.note }}</span>{% endif %}</td><td class="num">{{ c.value }}</td></tr>
       {% endfor %}
     </table>
     {% endif %}

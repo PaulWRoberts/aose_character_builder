@@ -23,7 +23,7 @@ from aose.engine.languages import (
 )
 from aose.engine.leveling import ClassAdvancement, all_advancement
 from aose.engine.detail import DetailCard, item_card, spell_card
-from aose.engine.features import is_race_as_class
+from aose.engine.features import is_race_as_class, open_doors_category_bonus
 from aose.engine.magic import active_modifiers, apply_modifiers, effective_abilities
 from aose.models import Ability, CharacterSpec, MagicItem, MagicItemInstance, RuleSet
 
@@ -69,6 +69,7 @@ class AbilityModLine(BaseModel):
 class AbilityTableCell(BaseModel):
     label: str            # column name (e.g. "Open Doors")
     value: str            # banded value for the computed score
+    note: str = ""        # explanatory note (e.g. gargantua category bump)
 
 
 class AbilityRow(BaseModel):
@@ -1088,6 +1089,7 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
         for entry in spec.classes
         for a in data.classes[entry.class_id].prime_requisites
     }
+    od_bonus, od_source = open_doors_category_bonus(spec, data)
     abilities = []
     for ab in ABILITY_ORDER:
         base = spec.abilities[ab]
@@ -1127,9 +1129,15 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
             lines=lines,
             has_conditional=any(ln.conditional for ln in lines),
             table=[
-                AbilityTableCell(label=lbl, value=val)
+                AbilityTableCell(
+                    label=lbl, value=val,
+                    note=(f"+{od_bonus} category ({od_source})"
+                          if ab == Ability.STR and od_bonus and lbl == "Open Doors"
+                          else ""),
+                )
                 for lbl, val in ability_mods.ability_table_row(
-                    ab.value, final, is_prime=ab.value in prime_abilities)
+                    ab.value, final, is_prime=ab.value in prime_abilities,
+                    open_doors_category_bonus=(od_bonus if ab == Ability.STR else 0))
             ],
         ))
 
