@@ -67,13 +67,34 @@ _ABILITY_COLUMNS: dict[str, list[tuple[str, dict[int, str]]]] = {
 }
 
 
+def _band_bumped(table: dict[int, str], score: int, bump: int) -> str:
+    """Like ``_band`` but advances ``bump`` whole categories up the table,
+    clamped to the top band. Used for the gargantua Open Doors bonus ("treated
+    as the next highest STR category")."""
+    thresholds = sorted(table)
+    idx = 0
+    for i, threshold in enumerate(thresholds):
+        if score >= threshold:
+            idx = i
+    idx = min(idx + bump, len(thresholds) - 1)
+    return table[thresholds[idx]]
+
+
 def ability_table_row(ability: str, score: int, *,
-                      is_prime: bool = False) -> list[tuple[str, str]]:
+                      is_prime: bool = False,
+                      open_doors_category_bonus: int = 0) -> list[tuple[str, str]]:
     """Return the relevant reference-table row for ``ability`` at the COMPUTED
     ``score`` as ordered ``(label, value)`` cells. When ``is_prime`` is set the
-    prime-requisite XP-modifier cell is appended."""
-    cells = [(label, _band(table, score))
-             for label, table in _ABILITY_COLUMNS[ability]]
+    prime-requisite XP-modifier cell is appended. ``open_doors_category_bonus``
+    (STR only) advances the Open Doors cell that many categories up the table —
+    the gargantua's "next highest STR category" rule."""
+    cells = [
+        (label,
+         _band_bumped(table, score, open_doors_category_bonus)
+         if label == "Open Doors" and open_doors_category_bonus
+         else _band(table, score))
+        for label, table in _ABILITY_COLUMNS[ability]
+    ]
     if is_prime:
         cells.append(("XP Modifier", _band(_PRIME_XP, score)))
     return cells

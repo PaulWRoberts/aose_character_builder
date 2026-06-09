@@ -120,3 +120,21 @@ def test_score_above_18_uses_top_band():
 
 def test_score_below_3_uses_bottom_band():
     assert _cells("CON", 1)["Hit Points"] == "−3"
+
+
+# ── STR Open Doors category bonus (gargantua) ─────────────────────────────
+def test_open_doors_bump_one_category():
+    c = _cells("STR", 12)
+    assert c["Open Doors"] == "2-in-6"                      # raw band
+    bumped = dict(ability_table_row("STR", 12, open_doors_category_bonus=1))
+    assert bumped["Open Doors"] == "3-in-6"                 # next category up
+
+
+def test_open_doors_bump_clamps_at_top():
+    bumped = dict(ability_table_row("STR", 18, open_doors_category_bonus=1))
+    assert bumped["Open Doors"] == "5-in-6"                 # already top band
+
+
+def test_open_doors_bump_leaves_melee_untouched():
+    bumped = dict(ability_table_row("STR", 12, open_doors_category_bonus=1))
+    assert bumped["Melee"] == "None"                        # only Open Doors bumps
