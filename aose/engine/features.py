@@ -50,6 +50,39 @@ def is_race_as_class(spec: CharacterSpec, data: GameData) -> bool:
     return cls is not None and cls.race_locked == spec.race_id
 
 
+def _reached_features(spec: CharacterSpec, data: GameData):
+    """Yield ``(feature, source_label)`` for every reached class feature and,
+    unless the character is race-as-class, every race feature. Mirrors the
+    iteration in ``feature_modifiers`` so all feature-derived data agrees on
+    what applies."""
+    for entry in spec.classes:
+        cls = data.classes.get(entry.class_id)
+        if cls is None:
+            continue
+        for feat in cls.features:
+            if feat.gained_at_level <= entry.level:
+                yield feat, cls.name
+    race = None if is_race_as_class(spec, data) else data.races.get(spec.race_id)
+    if race is not None:
+        for feat in race.features:
+            yield feat, race.name
+
+
+def feature_weapons(spec: CharacterSpec, data: GameData) -> list[tuple[str, dict]]:
+    """Synthetic always-available weapons declared by reached features via
+    ``mechanical['weapon']`` (e.g. the gargantua's thrown rock). Returns
+    ``(feature_id, descriptor)`` pairs. The race-as-class guard in
+    ``_reached_features`` keeps the gargantua rock from being contributed by both
+    the linked race and the class."""
+    out: list[tuple[str, dict]] = []
+    for feat, _src in _reached_features(spec, data):
+        if feat.mechanical:
+            descriptor = feat.mechanical.get("weapon")
+            if descriptor:
+                out.append((feat.id, descriptor))
+    return out
+
+
 def feature_modifiers(spec: CharacterSpec, data: GameData) -> list[Modifier]:
     """Concrete ``Modifier``s from every reached class feature (per the class's
     level) and every race feature.  Each carries the grant's ``condition`` and

@@ -339,3 +339,41 @@ def test_class_level_data_no_longer_has_armor_class_field():
     from aose.models import ClassLevelData
     with pytest.raises(Exception):
         ClassLevelData(xp_required=0, thac0=19, saves={"death": 13}, armor_class=5)
+
+
+# ── Gargantua: feature weapons (Rock Throwing) ───────────────────────────────
+
+def _spec(race_id, class_id, *, level=1, hp=8, **kw):
+    from aose.models import CharacterSpec, ClassEntry
+    base = dict(
+        name="G",
+        abilities={"STR": 12, "INT": 10, "WIS": 10, "DEX": 10, "CON": 12, "CHA": 10},
+        race_id=race_id, alignment="neutral",
+        classes=[ClassEntry(class_id=class_id, level=level, hp_rolls=[hp])],
+    )
+    base.update(kw)
+    return CharacterSpec(**base)
+
+
+def test_feature_weapons_gargantua_race():
+    from aose.engine.features import feature_weapons
+    weapons = dict(feature_weapons(_spec("gargantua", "fighter"), DATA))
+    assert "rock_throwing" in weapons
+    w = weapons["rock_throwing"]
+    assert w["damage"] == "1d6"
+    assert w["ranged"] is True and w["melee"] is False
+    assert w["range"] == [50, 100, 150]
+
+
+def test_feature_weapons_gargantua_as_class_once():
+    from aose.engine.features import feature_weapons
+    # race_id == class_id == "gargantua" → race-as-class: only the class path
+    # contributes, so the rock appears exactly once.
+    weapons = feature_weapons(_spec("gargantua", "gargantua", hp=10), DATA)
+    ids = [wid for wid, _ in weapons]
+    assert ids.count("rock_throwing") == 1
+
+
+def test_feature_weapons_none_for_human():
+    from aose.engine.features import feature_weapons
+    assert feature_weapons(_spec("human", "fighter"), DATA) == []

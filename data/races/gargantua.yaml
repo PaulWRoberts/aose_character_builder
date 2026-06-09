@@ -91,5 +91,10 @@ features:
   name: Rock Throwing
   text: Gargantuas are adept at using rocks as projectiles. Rocks thrown by a gargantua deal 1d6 damage on a successful hit and have a range of 5'–50' / 51'–100' / 101'–150'.
   mechanical:
-    damage: 1d6
-    range: [50, 100, 150]
+    weapon:
+      name: Rock
+      damage: 1d6
+      melee: false
+      ranged: true
+      range: [50, 100, 150]
+      qualities: [blunt]
