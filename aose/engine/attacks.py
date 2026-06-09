@@ -31,7 +31,7 @@ from aose.engine.ability_mods import ability_modifier
 from aose.engine.attack_bonus import thac0
 from aose.engine.ammo import is_unloaded, loaded_bonus, loaded_stack, resolve_ammo
 from aose.engine.enchant import equipped_enchanted
-from aose.engine.features import all_modifiers
+from aose.engine.features import all_modifiers, feature_weapons
 from aose.engine.magic import effective_abilities
 from aose.engine.proficiency import (
     base_weapon_id,
@@ -234,6 +234,40 @@ def _unarmed_profile(spec: CharacterSpec, eff: dict,
     )
 
 
+def _feature_weapon_profile(descriptor: dict, weapon_id: str, eff: dict,
+                            base_thac0: int, g_atk: int, g_dmg: int) -> AttackProfile:
+    """Synthetic always-available weapon from a feature's ``mechanical['weapon']``
+    descriptor (e.g. the gargantua's thrown rock). Always proficient — no
+    weapon-proficiency penalty, like Unarmed. Ranged ⇒ DEX to hit, flat damage;
+    melee ⇒ STR to hit and damage. Not a catalog item, so no manage link."""
+    melee = bool(descriptor.get("melee", False))
+    ranged = bool(descriptor.get("ranged", not melee))
+    str_mod = ability_modifier(eff[Ability.STR])
+    dex_mod = ability_modifier(eff[Ability.DEX])
+    atk_mod = str_mod if melee else dex_mod
+    dmg_mod = str_mod if melee else 0
+    base_attack = 19 - base_thac0
+    rng = None
+    r = descriptor.get("range")
+    if ranged and r:
+        rng = (r[0], r[1], r[2])
+    return AttackProfile(
+        weapon_id=weapon_id,
+        name=descriptor.get("name", "Weapon"),
+        count=1,
+        melee=melee,
+        ranged=ranged,
+        proficient=True,
+        to_hit_thac0=base_thac0 - atk_mod - g_atk,
+        to_hit_ascending=base_attack + atk_mod + g_atk,
+        damage=_format_damage(descriptor["damage"], dmg_mod + g_dmg),
+        range_ft=rng,
+        conditional=None,
+        unarmed=False,
+        manageable_item_id=None,
+    )
+
+
 def attack_profiles(spec: CharacterSpec, data: GameData) -> list[AttackProfile]:
     """One profile per *unique* equipped weapon, with the ``count`` field
     reflecting how many identical copies are ready.  Profiles are sorted by
@@ -273,6 +307,13 @@ def attack_profiles(spec: CharacterSpec, data: GameData) -> list[AttackProfile]:
         weapon_profiles.append(
             _profile_for(resolved, spec, data, 1, eff, base_thac0, g_atk, g_dmg,
                          **_ammo_args(resolved))
+        )
+    for weapon_id, descriptor in feature_weapons(spec, data):
+        melee = bool(descriptor.get("melee", False))
+        ranged = bool(descriptor.get("ranged", not melee))
+        g_atk, g_dmg = _atk_dmg(mods, melee=melee, ranged=ranged)
+        weapon_profiles.append(
+            _feature_weapon_profile(descriptor, weapon_id, eff, base_thac0, g_atk, g_dmg)
         )
     weapon_profiles.sort(key=lambda p: p.name)
     u_atk, u_dmg = _atk_dmg(mods, melee=True, ranged=False)

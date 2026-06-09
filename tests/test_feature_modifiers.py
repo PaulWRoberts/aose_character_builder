@@ -398,3 +398,41 @@ def test_open_doors_category_bonus_gargantua_as_class():
 def test_open_doors_category_bonus_zero_for_human():
     from aose.engine.features import open_doors_category_bonus
     assert open_doors_category_bonus(_spec("human", "fighter"), DATA) == (0, "")
+
+
+# ── Gargantua: rock attack profile ───────────────────────────────────────────
+
+def test_gargantua_rock_profile_stats():
+    profs = _profiles(_spec("gargantua", "fighter"))
+    rock = profs["rock_throwing"]
+    assert rock.name == "Rock"
+    assert rock.ranged is True and rock.melee is False
+    assert rock.damage == "1d6"
+    assert rock.range_ft == (50, 100, 150)
+    assert rock.proficient is True
+    assert rock.manageable_item_id is None
+
+
+def test_gargantua_rock_uses_dex_to_hit():
+    # ranged → DEX to hit, no ability damage bonus. DEX 14 = +1; STR 16 = +2.
+    spec = _spec("gargantua", "fighter",
+                 abilities={"STR": 16, "INT": 10, "WIS": 10, "DEX": 14, "CON": 12, "CHA": 10})
+    rock = _profiles(spec)["rock_throwing"]
+    assert rock.to_hit_ascending == 1     # DEX +1, not STR +2
+    assert rock.damage == "1d6"           # flat (no STR damage)
+
+
+def test_gargantua_rock_proficient_under_weapon_proficiency():
+    from aose.models import RuleSet
+    spec = _spec("gargantua", "fighter", ruleset=RuleSet(weapon_proficiency=True))
+    assert _profiles(spec)["rock_throwing"].proficient is True
+
+
+def test_non_gargantua_has_no_rock():
+    assert "rock_throwing" not in _profiles(_spec("human", "fighter"))
+
+
+def test_gargantua_as_class_rock_not_duplicated():
+    from aose.engine.attacks import attack_profiles
+    ids = [p.weapon_id for p in attack_profiles(_spec("gargantua", "gargantua", hp=10), DATA)]
+    assert ids.count("rock_throwing") == 1
