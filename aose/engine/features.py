@@ -83,6 +83,22 @@ def feature_weapons(spec: CharacterSpec, data: GameData) -> list[tuple[str, dict
     return out
 
 
+def open_doors_category_bonus(spec: CharacterSpec, data: GameData) -> tuple[int, str]:
+    """Total STR-category bump for Open Doors from reached features'
+    ``mechanical['str_category_bonus']``, paired with the granting race/class
+    name for display. Returns ``(0, "")`` when no feature grants one."""
+    total = 0
+    source = ""
+    for feat, src in _reached_features(spec, data):
+        if feat.mechanical:
+            bonus = feat.mechanical.get("str_category_bonus")
+            if bonus:
+                total += bonus
+                if not source:
+                    source = src
+    return total, source
+
+
 def feature_modifiers(spec: CharacterSpec, data: GameData) -> list[Modifier]:
     """Concrete ``Modifier``s from every reached class feature (per the class's
     level) and every race feature.  Each carries the grant's ``condition`` and

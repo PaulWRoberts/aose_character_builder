@@ -377,3 +377,24 @@ def test_feature_weapons_gargantua_as_class_once():
 def test_feature_weapons_none_for_human():
     from aose.engine.features import feature_weapons
     assert feature_weapons(_spec("human", "fighter"), DATA) == []
+
+
+# ── Gargantua: Open Doors STR-category bonus ─────────────────────────────────
+
+def test_open_doors_category_bonus_gargantua_race():
+    from aose.engine.features import open_doors_category_bonus
+    bonus, source = open_doors_category_bonus(_spec("gargantua", "fighter"), DATA)
+    assert bonus == 1
+    assert source == "Gargantua"
+
+
+def test_open_doors_category_bonus_gargantua_as_class():
+    from aose.engine.features import open_doors_category_bonus
+    bonus, source = open_doors_category_bonus(_spec("gargantua", "gargantua", hp=10), DATA)
+    assert bonus == 1            # class path only — not doubled
+    assert source == "Gargantua"
+
+
+def test_open_doors_category_bonus_zero_for_human():
+    from aose.engine.features import open_doors_category_bonus
+    assert open_doors_category_bonus(_spec("human", "fighter"), DATA) == (0, "")
