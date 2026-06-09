@@ -54,6 +54,17 @@ duergar/gnome CON-scaled save resilience, Kineticist level-AC (a level-scaled
 `ac set` granted modifier — the old `ClassLevelData.armor_class` column was
 retired onto this path).
 
+**Generic `mechanical` keys beyond `granted_modifiers`:** `features.py` also
+exposes two collectors that read arbitrary `mechanical` dict keys off reached
+features via `_reached_features` (the canonical "which features apply" generator
+— class features gated by `gained_at_level`, race features suppressed for
+race-as-class): `feature_weapons` reads `mechanical["weapon"]` descriptors to
+produce synthetic always-on `AttackProfile`s (the gargantua's thrown rock —
+declared as `name`/`damage`/`melee`/`ranged`/`range`/`qualities` in the feature
+YAML); `open_doors_category_bonus` sums `mechanical["str_category_bonus"]` for
+the STR ability table bump (gargantua Open Doors). Both follow the same
+race-as-class guard, so a character who is race *and* class never double-counts.
+
 **Race vs race-as-class are distinct stat blocks that share only a name.** A
 race-as-class character is defined wholly by its `race_locked` `CharClass`; the
 linked `Race` contributes *nothing* (no features, no feature-grants, no ability
@@ -156,7 +167,11 @@ is a data field, not a constant.
 
 - **`aose/engine/attacks.py`** uses effective abilities, `magic_bonus`, global
   `attack`/`damage` mods, the conditional variant, and the synthetic Unarmed
-  profile.
+  profile. A second synthetic profile category — **feature weapons** — is emitted
+  by `_feature_weapon_profile` for each descriptor in `feature_weapons(spec,
+  data)`: always proficient, no manage link, no catalog entry; ranged ⇒ DEX to
+  hit + flat damage, melee ⇒ STR to hit and damage. The gargantua's thrown rock
+  is the first example (range 50/100/150 ft, 1d6, ranged/blunt).
 - **Ammo is *not* a weapon.** `Ammunition` item variant (`item_type:
   ammunition`, `groups`, `bundle_count`, **`weight_cn: 0` always** — the missile
   weapon's listed weight already includes ammo, so ammo never touches

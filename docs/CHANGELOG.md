@@ -8,6 +8,7 @@ For the living architecture (how the subsystems fit together *now*), see
 
 | Date | Feature | Branch | Spec/Plan slug |
 |---|---|---|---|
+| 2026-06-08 | Gargantua feature automation: Rock Throwing synthetic weapon + Open Doors STR-category bump | `main` | `2026-06-08-gargantua-feature-automation` |
 | 2026-06-08 | Fix race/race-as-class feature bleed: race-as-class is self-contained (no race features/grants/ability-mods); migrated grants onto race-locked class files | `main` | — |
 | 2026-06-08 | CC1 classes & races: Acolyte, Mage, Gargantua, Goblin, Hephaestan (class + race duals) | `main` | — |
 | 2026-06-08 | Inventory item modals (properties + safe actions) & shop property expander | `feat/inventory-item-modals` | `2026-06-08-inventory-item-modals` |
