@@ -50,3 +50,45 @@ def test_quality_registry_has_param_field():
     assert q.param == "ranges"
     assert WeaponQuality.model_validate(
         {"id": "blunt", "name": "Blunt", "description": "x"}).param == "none"
+
+
+import pytest
+
+from aose.data.loader import _validate_weapon_qualities
+
+
+def _wq():
+    return {
+        "melee": WeaponQuality(id="melee", name="Melee", description="x"),
+        "missile": WeaponQuality(id="missile", name="Missile", description="x", param="ranges"),
+        "versatile": WeaponQuality(id="versatile", name="Versatile", description="x", param="damage"),
+    }
+
+
+def test_validate_rejects_unknown_quality():
+    items = {"w": _weapon(qualities=["bogus"])}
+    with pytest.raises(ValueError, match="unknown quality"):
+        _validate_weapon_qualities(items, _wq())
+
+
+def test_validate_rejects_missile_without_three_ranges():
+    items = {"w": _weapon(qualities=[{"missile": [10, 20]}])}
+    with pytest.raises(ValueError, match="three integer ranges"):
+        _validate_weapon_qualities(items, _wq())
+
+
+def test_validate_rejects_versatile_without_damage():
+    items = {"w": _weapon(qualities=["versatile"])}
+    with pytest.raises(ValueError, match="damage string"):
+        _validate_weapon_qualities(items, _wq())
+
+
+def test_validate_rejects_param_on_plain_quality():
+    items = {"w": _weapon(qualities=[{"melee": [1, 2, 3]}])}
+    with pytest.raises(ValueError, match="takes no parameter"):
+        _validate_weapon_qualities(items, _wq())
+
+
+def test_validate_accepts_good_weapon():
+    items = {"w": _weapon(qualities=["melee", {"missile": [10, 20, 30]}])}
+    _validate_weapon_qualities(items, _wq())  # no raise

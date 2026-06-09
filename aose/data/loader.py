@@ -195,6 +195,42 @@ def _load_weapon_qualities(data_dir: Path) -> dict[str, WeaponQuality]:
     return result
 
 
+def _validate_weapon_qualities(
+    items: dict, qualities: dict
+) -> None:
+    """Every weapon's quality refs must name a known quality and carry the
+    param shape that quality's registry entry declares (``ranges`` = three
+    ints; ``damage`` = a non-empty string; ``none`` = no param)."""
+    from aose.models import Weapon
+
+    for item in items.values():
+        if not isinstance(item, Weapon):
+            continue
+        for ref in item.qualities:
+            q = qualities.get(ref.id)
+            if q is None:
+                raise ValueError(
+                    f"weapon {item.id!r} references unknown quality {ref.id!r}")
+            if q.param == "ranges":
+                ok = (isinstance(ref.param, (list, tuple))
+                      and len(ref.param) == 3
+                      and all(isinstance(n, int) for n in ref.param))
+                if not ok:
+                    raise ValueError(
+                        f"weapon {item.id!r} quality {ref.id!r} needs three "
+                        f"integer ranges, got {ref.param!r}")
+            elif q.param == "damage":
+                if not (isinstance(ref.param, str) and ref.param):
+                    raise ValueError(
+                        f"weapon {item.id!r} quality {ref.id!r} needs a damage "
+                        f"string, got {ref.param!r}")
+            else:  # "none"
+                if ref.param is not None:
+                    raise ValueError(
+                        f"weapon {item.id!r} quality {ref.id!r} takes no "
+                        f"parameter, got {ref.param!r}")
+
+
 @dataclass
 class GameData:
     races: dict[str, Race] = field(default_factory=dict)
@@ -210,13 +246,16 @@ class GameData:
 
     @classmethod
     def load(cls, data_dir: Path) -> "GameData":
+        items = _load_items(data_dir / "equipment")
+        qualities = _load_weapon_qualities(data_dir)
+        _validate_weapon_qualities(items, qualities)
         return cls(
             races=_load_models(data_dir / "races", Race),
             classes=_load_models(data_dir / "classes", CharClass),
             spells=_load_models(data_dir / "spells", Spell),
             spell_lists=_load_spell_lists(data_dir),
-            items=_load_items(data_dir / "equipment"),
-            qualities=_load_weapon_qualities(data_dir),
+            items=items,
+            qualities=qualities,
             secondary_skills=_load_secondary_skills(data_dir),
             languages=_load_languages(data_dir),
             enchantments=_load_enchantments(data_dir),
