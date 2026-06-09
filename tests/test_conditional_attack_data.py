@@ -42,8 +42,9 @@ def test_light_sensitivity_applies_exactly_once_separate_and_race_as_class():
     sep = [ln for ln in _cond("drow", "fighter")
            if ln.source == "Light Sensitivity" and ln.bonus == -2]
     assert len(sep) == 1
-    # Race-as-class: race_id=drow, class_id=drow (class light_sensitivity carries
-    # NO grant, so the race-file grant must not be doubled).
+    # Race-as-class: race_id=drow, class_id=drow. The drow *class* carries the
+    # Light Sensitivity grant (self-contained); the race is not read for
+    # race-as-class, so it applies exactly once.
     rac = [ln for ln in _cond("drow", "drow")
            if ln.source == "Light Sensitivity" and ln.bonus == -2]
     assert len(rac) == 1

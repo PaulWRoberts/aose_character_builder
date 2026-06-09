@@ -104,6 +104,8 @@ features:
   text: |-
     Due to their small size, halflings gain a +2 bonus to AC when attacked by large opponents (greater than human-sized).
   gained_at_level: 1
+  granted_modifiers:
+  - {target: "ac", op: add, value: 2, condition: large_attacker}
 - id: hiding
   name: Hiding
   text: |-
@@ -128,6 +130,8 @@ features:
   text: |-
     Halflings’ keen coordination grants them a +1 bonus to attack rolls with all missile weapons.
   gained_at_level: 1
+  granted_modifiers:
+  - {target: "attack", op: add, value: 1, condition: ranged}
 - id: stronghold
   name: Stronghold
   text: |-

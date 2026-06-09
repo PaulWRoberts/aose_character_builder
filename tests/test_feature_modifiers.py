@@ -215,7 +215,8 @@ def test_non_halfling_has_no_missile_bonus():
 
 def test_classic_halfling_missile_bonus_not_doubled():
     # Race-as-class halfling: race_id == "halfling" AND class == halfling.
-    # The bonus must apply exactly once (race grant only).
+    # The grant lives on the halfling *class* (self-contained); the race is not
+    # read for race-as-class, so the bonus applies exactly once.
     from aose.models import CharacterSpec, ClassEntry
     spec = CharacterSpec(
         name="Hc", abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
@@ -277,7 +278,12 @@ def test_duergar_resilience_includes_paralysis():
     assert duergar["spells"] == base["spells"] - 3    # full-category bonus stays
 
 
-def test_classic_dwarf_resilience_single_poison_line():
+def test_dwarf_as_class_has_no_resilience():
+    """The Dwarf *race* has Resilience; the Dwarf *class* (race-as-class) does
+    not — they are distinct stat blocks sharing only a name. A dwarf-as-class
+    must therefore get NO Resilience save bonus: the race feature must not bleed
+    across. (In split mode, race=dwarf + a normal class, Resilience still applies
+    — see test_dwarf_resilience_plus5_at_con18.)"""
     from aose.engine.saves import saving_throws_detail
     from aose.models import CharacterSpec, ClassEntry
     spec = CharacterSpec(
@@ -287,8 +293,9 @@ def test_classic_dwarf_resilience_single_poison_line():
     )
     detail = saving_throws_detail(spec, DATA)
     poison_lines = [ln for ln in detail["death"].lines if ln.note.startswith("poison")]
-    assert len(poison_lines) == 1          # granted once (race only)
-    assert poison_lines[0].bonus == 3
+    assert poison_lines == []               # no Resilience poison line
+    base = _saves("human", "dwarf", 13)
+    assert _saves("dwarf", "dwarf", 13)["spells"] == base["spells"]  # no spells bonus either
 
 
 # ── Carcass Crawler 1 resilience ─────────────────────────────────────────────

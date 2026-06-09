@@ -104,6 +104,8 @@ features:
   text: |-
     Due to their small size, svirfneblins gain a +2 bonus to Armour Class when attacked by large opponents (greater than human-sized).
   gained_at_level: 1
+  granted_modifiers:
+  - {target: "ac", op: add, value: 2, condition: large_attacker}
 - id: detect_construction_tricks
   name: Detect Construction Tricks
   text: |-
@@ -114,6 +116,8 @@ features:
   text: |-
     Svirfneblins gain a +2 bonus to all saving throws against illusions.
   gained_at_level: 1
+  granted_modifiers:
+  - {target: "save:vs:illusion", op: add, value: 2}
 - id: infravision
   name: Infravision
   text: |-
@@ -124,6 +128,9 @@ features:
   text: |-
     When in bright light (daylight, continual light), svirfneblins suffer a –2 penalty to attack rolls and a –1 penalty to AC.
   gained_at_level: 1
+  granted_modifiers:
+  - {target: "ac", op: add, value: -1, condition: bright_light}
+  - {target: "attack", op: add, value: -2, condition: bright_light}
 - id: speak_with_earth_elementals
   name: Speak with Earth Elementals
   text: |-

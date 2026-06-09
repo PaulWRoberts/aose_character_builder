@@ -23,6 +23,7 @@ from aose.engine.languages import (
 )
 from aose.engine.leveling import ClassAdvancement, all_advancement
 from aose.engine.detail import DetailCard, item_card, spell_card
+from aose.engine.features import is_race_as_class
 from aose.engine.magic import active_modifiers, apply_modifiers, effective_abilities
 from aose.models import Ability, CharacterSpec, MagicItem, MagicItemInstance, RuleSet
 
@@ -602,6 +603,10 @@ def _xp_to_next(spec: CharacterSpec, data: GameData) -> tuple[int | None, int | 
 
 
 def _race_features(spec: CharacterSpec, data: GameData) -> list[SheetFeature]:
+    # A race-as-class character is defined wholly by its class; the linked race
+    # (same id) shares only its name and must not contribute features.
+    if _is_race_as_class(spec, data):
+        return []
     race = data.races[spec.race_id]
     return [
         SheetFeature(name=f.name, text=f.text, source=f"Race: {race.name}")
@@ -697,12 +702,10 @@ def _is_race_as_class(spec: CharacterSpec, data: GameData) -> bool:
     """True when the character's (single) class is race-locked to their race.
 
     Multi-class characters never trigger this — the subtitle would still need
-    to surface the race separately from each class.
+    to surface the race separately from each class. Thin alias over the engine
+    predicate so the sheet and the modifier pipeline agree on what counts.
     """
-    if len(spec.classes) != 1:
-        return False
-    cls = data.classes[spec.classes[0].class_id]
-    return cls.race_locked == spec.race_id
+    return is_race_as_class(spec, data)
 
 
 def _spell_entry(spell) -> SpellEntryView:

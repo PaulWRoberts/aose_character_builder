@@ -27,7 +27,9 @@ saves — flows through one shared pipeline.
   `set → add → set_min → set_max`. This is the literal evaluation core.
 - **`active_modifiers`** (magic.py) collects modifiers from equipped magic items;
   **`feature_modifiers`** (`aose/engine/features.py`) collects them from class
-  features (gated by `gained_at_level`) and race features (all). Their union is
+  features (gated by `gained_at_level`) and race features (all) — **except for a
+  race-as-class character** (`is_race_as_class`: single class whose `race_locked`
+  equals `race_id`), whose linked race is skipped entirely. Their union is
   **`all_modifiers`**, the single thing every consumer reads.
 - **Consumers** (`armor_class`, `saves`, `attacks`) read `all_modifiers`. Saves
   apply `save:*` with a floor of 2; THAC0 applies `thac0` mods.
@@ -47,10 +49,22 @@ same `target`/`op`/`condition` grammar, plus exactly one of `value` (flat) or
 (`_band_lookup` = greatest key ≤ input, 0 below the lowest band; level-scaling is
 class-only). **No engine code references any class or race id** — all of it is
 data. Examples encoded: barbarian Agile Fighting (`ac add unarmored`, level-
-scaled), halfling Missile Attack Bonus (`attack +1 ranged`, race file only),
-dwarf/halfling/duergar/gnome CON-scaled save resilience, Kineticist level-AC
-(a level-scaled `ac set` granted modifier — the old `ClassLevelData.armor_class`
-column was retired onto this path).
+scaled), halfling Missile Attack Bonus (`attack +1 ranged`), dwarf/halfling/
+duergar/gnome CON-scaled save resilience, Kineticist level-AC (a level-scaled
+`ac set` granted modifier — the old `ClassLevelData.armor_class` column was
+retired onto this path).
+
+**Race vs race-as-class are distinct stat blocks that share only a name.** A
+race-as-class character is defined wholly by its `race_locked` `CharClass`; the
+linked `Race` contributes *nothing* (no features, no feature-grants, no ability
+modifiers — see `is_race_as_class` in features.py / `_race_features` in view.py).
+The `Race` is read only in split mode. Consequently a grant a demihuman has in
+*both* modes (Light Sensitivity, Defensive Bonus, Missile Bonus, …) is authored
+on **both** the race file (split mode) *and* the race-locked class file
+(race-as-class) — duplication is intentional, and the class's own `features:`
+list is the source of truth for which grants a race-as-class receives. A feature
+the class omits (e.g. Resilience / Magic Resistance, which are race-only Advanced
+abilities) therefore does **not** apply to the race-as-class.
 
 ### Conditional / situational breakdowns
 
@@ -70,9 +84,10 @@ condition → display note, with underscore fallback):
   `ranged`/`melee` excluded as those are per-weapon). `_ATTACK_CONDITION_NOTES`
   (`bright_light`, `mounted`). Sheet: `attack_lines` + `attack_has_conditional`,
   `★` opens the retitled `modal-matrix` ("Attack"), to-hit matrix gated to
-  descending AC. Data: Light Sensitivity (`attack -2 bright_light`, **race files
-  only** — race-as-class is covered via `race_locked`, so class files stay
-  grant-free to avoid double-application), Knight Mounted Combat
+  descending AC. Data: Light Sensitivity (`attack -2 bright_light`, on **both** the
+  race file and the race-locked class file — race and race-as-class are separate
+  self-contained stat blocks; see the `GrantedModifier` section), Knight Mounted
+  Combat
   (`attack +1 mounted`). Per-weapon conditional bonuses (Sword +1, Giant Slayer)
   are separate: `Weapon.conditional_bonus` → `ConditionalAttack`, own row.
 - **Saves** — `saves.py`: `saving_throws_detail() -> dict[str, SaveBreakdown]`

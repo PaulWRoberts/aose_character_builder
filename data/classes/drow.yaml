@@ -195,6 +195,9 @@ features:
   text: |-
     When in bright light (daylight, continual light), drow suffer a –2 penalty to attack rolls and a –1 penalty to Armour Class.
   gained_at_level: 1
+  granted_modifiers:
+  - {target: "ac", op: add, value: -1, condition: bright_light}
+  - {target: "attack", op: add, value: -2, condition: bright_light}
 - id: listening_at_doors
   name: Listening at Doors
   text: |-

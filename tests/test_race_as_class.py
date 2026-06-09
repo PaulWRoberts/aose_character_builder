@@ -7,7 +7,8 @@ from fastapi.testclient import TestClient
 from aose.characters import load_character, load_draft, save_draft, save_settings
 from aose.data.loader import GameData
 from aose.models import CharacterSpec, ClassEntry, RuleSet
-from aose.sheet.view import _is_race_as_class, build_sheet
+from aose.engine.features import feature_modifiers
+from aose.sheet.view import _is_race_as_class, _race_features, build_sheet
 from aose.web.app import create_app
 
 PROJECT_ROOT = Path(__file__).parent.parent
@@ -246,6 +247,97 @@ def test_sheet_subtitle_keeps_race_in_split_mode(split_client):
     r = split_client.get(f"/character/{char_id}")
     # Subtitle should be "Dwarf · Fighter 1 · Lawful"
     assert "Dwarf" in r.text and "Fighter 1" in r.text
+
+
+# ── Race / race-as-class features MUST NOT bleed ──────────────────────────
+# A race-as-class CharClass is a self-contained stat block. The linked Race
+# (same id) shares only its *name* — its features, feature-grants, and ability
+# modifiers must NOT apply to the race-as-class character. They are separate
+# entities: e.g. the Dwarf *race* has Resilience, the Dwarf *class* does not.
+
+def _split_dwarf_fighter() -> CharacterSpec:
+    return CharacterSpec(
+        name="Thrain",
+        abilities={"STR": 15, "INT": 11, "WIS": 12, "DEX": 13, "CON": 14, "CHA": 10},
+        race_id="dwarf",
+        classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
+        alignment="law",
+        ruleset=RuleSet(separate_race_class=True),
+    )
+
+
+def test_race_as_class_excludes_race_feature_grants():
+    """The Dwarf race grants Resilience (CON-scaled save bonuses); the Dwarf
+    class does not. A dwarf-as-class must get NO save grant from the race."""
+    data = GameData.load(DATA_DIR)
+    mods = feature_modifiers(_dwarf_spec(), data)
+    assert not any(m.source == "Resilience" for m in mods)
+    assert not any(m.target.startswith("save:") for m in mods)
+
+
+def test_split_mode_race_keeps_resilience_grant():
+    """Control: in split mode the Dwarf race DOES still grant Resilience."""
+    data = GameData.load(DATA_DIR)
+    mods = feature_modifiers(_split_dwarf_fighter(), data)
+    assert any(m.source == "Resilience" for m in mods)
+    assert any(m.target.startswith("save:") for m in mods)
+
+
+def test_race_as_class_sheet_omits_race_features():
+    """The sheet lists only the CLASS features for a race-as-class character —
+    the linked Race's features (incl. its duplicate Combat/Infravision and the
+    misleading 'Ability Modifiers' note) must not appear."""
+    data = GameData.load(DATA_DIR)
+    assert _race_features(_dwarf_spec(), data) == []
+
+
+def test_split_mode_sheet_keeps_race_features():
+    """Control: split-mode characters still list their race's features."""
+    data = GameData.load(DATA_DIR)
+    feats = _race_features(_split_dwarf_fighter(), data)
+    assert any(f.name == "Resilience" for f in feats)
+
+
+def test_race_as_class_goblin_no_double_defensive_bonus():
+    """Goblin's Defensive Bonus grant is on BOTH the class and race feature.
+    A goblin-as-class must apply it exactly once (from the class)."""
+    data = GameData.load(DATA_DIR)
+    spec = CharacterSpec(
+        name="Grik",
+        abilities={"STR": 12, "INT": 10, "WIS": 9, "DEX": 13, "CON": 12, "CHA": 8},
+        race_id="goblin",
+        classes=[ClassEntry(class_id="goblin", level=1, hp_rolls=[8])],
+        alignment="chaos",
+        ruleset=RuleSet(separate_race_class=False),
+    )
+    defensive = [m for m in feature_modifiers(spec, data) if m.source == "Defensive Bonus"]
+    assert len(defensive) == 1
+
+
+def test_race_as_class_self_contained_grants_preserved():
+    """The race-locked classes now carry their own grants (migrated off the
+    race). A race-as-class character must still receive them — e.g. svirfneblin
+    keeps Defensive Bonus + Light Sensitivity + Illusion Resistance; gnome keeps
+    Defensive Bonus. (Their races still grant Resilience / Magic Resistance,
+    which the classes do NOT list — those must stay excluded.)"""
+    data = GameData.load(DATA_DIR)
+
+    def grant_pairs(rid):
+        spec = CharacterSpec(
+            name="x",
+            abilities={"STR": 12, "INT": 10, "WIS": 10, "DEX": 12, "CON": 13, "CHA": 9},
+            race_id=rid,
+            classes=[ClassEntry(class_id=rid, level=1, hp_rolls=[6])],
+            alignment="neutral",
+            ruleset=RuleSet(separate_race_class=False),
+        )
+        return {(m.source, m.target) for m in feature_modifiers(spec, data)}
+
+    svirf = grant_pairs("svirfneblin")
+    assert ("Defensive Bonus", "ac") in svirf
+    assert ("Light Sensitivity", "attack") in svirf
+    assert ("Illusion Resistance", "save:vs:illusion") in svirf
+    assert ("Defensive Bonus", "ac") in grant_pairs("gnome")
 
 
 # ── End-to-end ────────────────────────────────────────────────────────────

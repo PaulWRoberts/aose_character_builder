@@ -145,6 +145,8 @@ features:
   text: |-
     Due to their small size, gnomes gain a +2 bonus to Armour Class when attacked by large opponents (greater than human-sized).
   gained_at_level: 1
+  granted_modifiers:
+  - {target: "ac", op: add, value: 2, condition: large_attacker}
 - id: detect_construction_tricks
   name: Detect Construction Tricks
   text: |-
