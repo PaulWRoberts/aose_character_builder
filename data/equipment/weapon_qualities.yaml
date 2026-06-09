@@ -18,6 +18,7 @@
   description: May be used to attack adjacent opponents (within 5 feet).
 - id: missile
   name: Missile
+  param: ranges
   description: May be used to make ranged attacks, using the listed ranges.
 - id: reload
   name: Reload
@@ -37,3 +38,9 @@
   description: >-
     Requires both hands to use; a shield may not be employed. The wielder always
     acts last in a combat round.
+- id: versatile
+  name: Versatile
+  param: damage
+  description: >-
+    May be used with one or two hands. When wielded two-handed, the
+    parenthesised damage is used (and a shield may not be employed).

@@ -1,6 +1,8 @@
-# Weapons (AOSE, book-accurate).  `damage.default` is the 1d6 used under the
-# standard rule; `damage.variable` is used when the Variable Weapon Damage
-# optional rule is in effect.  `qualities` reference weapon_qualities.yaml.
+# Weapons (AOSE).  Mechanics live in `qualities`: `melee` => usable in melee,
+# `{missile: [s,m,l]}` => ranged with those ranges, `two_handed` => two hands,
+# `{versatile: "die"}` => optional two-handed damage.  Standard-rule damage is
+# always 1d6 (the model default), so `damage.default` is never written; only a
+# differentiated `variable` die (the Variable Weapon Damage optional rule) is.
 
 - id: battle_axe
   item_type: weapon
@@ -8,8 +10,7 @@
   category: weapons
   cost_gp: 7
   weight_cn: 50
-  damage: { default: "1d6", variable: "1d8" }
-  hands: 2
+  damage: { variable: "1d8" }
   qualities: [melee, slow, two_handed]
   groups: [axe]
 
@@ -19,8 +20,7 @@
   category: weapons
   cost_gp: 3
   weight_cn: 50
-  damage: { default: "1d6", variable: "1d4" }
-  hands: 1
+  damage: { variable: "1d4" }
   qualities: [blunt, melee]
 
 - id: crossbow
@@ -29,14 +29,7 @@
   category: weapons
   cost_gp: 30
   weight_cn: 50
-  damage: { default: "1d6", variable: "1d6" }
-  hands: 2
-  melee: false
-  ranged: true
-  range_short: 80
-  range_medium: 160
-  range_long: 240
-  qualities: [missile, reload, slow, two_handed]
+  qualities: [reload, slow, two_handed, {missile: [80, 160, 240]}]
   accepts_ammo: [crossbow_bolt]
 
 - id: dagger
@@ -45,13 +38,8 @@
   category: weapons
   cost_gp: 3
   weight_cn: 10
-  damage: { default: "1d6", variable: "1d4" }
-  hands: 1
-  ranged: true
-  range_short: 10
-  range_medium: 20
-  range_long: 30
-  qualities: [melee, missile]
+  damage: { variable: "1d4" }
+  qualities: [melee, {missile: [10, 20, 30]}]
 
 - id: hand_axe
   item_type: weapon
@@ -59,13 +47,7 @@
   category: weapons
   cost_gp: 4
   weight_cn: 30
-  damage: { default: "1d6", variable: "1d6" }
-  hands: 1
-  ranged: true
-  range_short: 10
-  range_medium: 20
-  range_long: 30
-  qualities: [melee, missile]
+  qualities: [melee, {missile: [10, 20, 30]}]
   groups: [axe]
 
 - id: javelin
@@ -74,14 +56,8 @@
   category: weapons
   cost_gp: 1
   weight_cn: 20
-  damage: { default: "1d6", variable: "1d4" }
-  hands: 1
-  melee: false
-  ranged: true
-  range_short: 30
-  range_medium: 60
-  range_long: 90
-  qualities: [missile]
+  damage: { variable: "1d4" }
+  qualities: [{missile: [30, 60, 90]}]
 
 - id: lance
   item_type: weapon
@@ -89,8 +65,6 @@
   category: weapons
   cost_gp: 5
   weight_cn: 120
-  damage: { default: "1d6", variable: "1d6" }
-  hands: 1
   qualities: [charge, melee]
 
 - id: long_bow
@@ -99,14 +73,7 @@
   category: weapons
   cost_gp: 40
   weight_cn: 30
-  damage: { default: "1d6", variable: "1d6" }
-  hands: 2
-  melee: false
-  ranged: true
-  range_short: 70
-  range_medium: 140
-  range_long: 210
-  qualities: [missile, two_handed]
+  qualities: [two_handed, {missile: [70, 140, 210]}]
   groups: [bow]
   accepts_ammo: [arrow]
 
@@ -116,8 +83,6 @@
   category: weapons
   cost_gp: 5
   weight_cn: 30
-  damage: { default: "1d6", variable: "1d6" }
-  hands: 1
   qualities: [blunt, melee]
 
 - id: polearm
@@ -126,8 +91,7 @@
   category: weapons
   cost_gp: 7
   weight_cn: 150
-  damage: { default: "1d6", variable: "1d10" }
-  hands: 2
+  damage: { variable: "1d10" }
   qualities: [brace, melee, slow, two_handed]
 
 - id: short_bow
@@ -136,14 +100,7 @@
   category: weapons
   cost_gp: 25
   weight_cn: 30
-  damage: { default: "1d6", variable: "1d6" }
-  hands: 2
-  melee: false
-  ranged: true
-  range_short: 50
-  range_medium: 100
-  range_long: 150
-  qualities: [missile, two_handed]
+  qualities: [two_handed, {missile: [50, 100, 150]}]
   groups: [bow]
   accepts_ammo: [arrow]
 
@@ -153,8 +110,6 @@
   category: weapons
   cost_gp: 7
   weight_cn: 30
-  damage: { default: "1d6", variable: "1d6" }
-  hands: 1
   qualities: [melee]
   groups: [sword]
 
@@ -164,13 +119,8 @@
   category: weapons
   cost_gp: 30
   weight_cn: 10
-  damage: { default: "1d6", variable: "1d4" }
-  hands: 1
-  ranged: true
-  range_short: 10
-  range_medium: 20
-  range_long: 30
-  qualities: [melee, missile]
+  damage: { variable: "1d4" }
+  qualities: [melee, {missile: [10, 20, 30]}]
 
 - id: sling
   item_type: weapon
@@ -178,14 +128,8 @@
   category: weapons
   cost_gp: 2
   weight_cn: 20
-  damage: { default: "1d6", variable: "1d4" }
-  hands: 1
-  melee: false
-  ranged: true
-  range_short: 40
-  range_medium: 80
-  range_long: 160
-  qualities: [blunt, missile]
+  damage: { variable: "1d4" }
+  qualities: [blunt, {missile: [40, 80, 160]}]
   accepts_ammo: [sling_stone]
 
 - id: spear
@@ -194,14 +138,7 @@
   category: weapons
   cost_gp: 4
   weight_cn: 30
-  damage: { default: "1d6", variable: "1d6" }
-  hands: 1
-  versatile: true
-  ranged: true
-  range_short: 20
-  range_medium: 40
-  range_long: 60
-  qualities: [brace, melee, missile]
+  qualities: [brace, melee, {missile: [20, 40, 60]}]
 
 - id: staff
   item_type: weapon
@@ -209,8 +146,7 @@
   category: weapons
   cost_gp: 2
   weight_cn: 40
-  damage: { default: "1d6", variable: "1d4" }
-  hands: 2
+  damage: { variable: "1d4" }
   qualities: [blunt, melee, slow, two_handed]
 
 - id: sword
@@ -219,8 +155,7 @@
   category: weapons
   cost_gp: 10
   weight_cn: 60
-  damage: { default: "1d6", variable: "1d8" }
-  hands: 1
+  damage: { variable: "1d8" }
   qualities: [melee]
   groups: [sword]
 
@@ -230,8 +165,7 @@
   category: weapons
   cost_gp: 15
   weight_cn: 150
-  damage: { default: "1d6", variable: "1d10" }
-  hands: 2
+  damage: { variable: "1d10" }
   qualities: [melee, slow, two_handed]
   groups: [sword]
 
@@ -241,10 +175,7 @@
   category: weapons
   cost_gp: 5
   weight_cn: 30
-  damage: { default: "1d6", variable: "1d6" }
-  hands: 1
   qualities: [blunt, melee]
-
 
 - id: trident
   item_type: weapon
@@ -252,7 +183,5 @@
   category: weapons
   cost_gp: 5
   weight_cn: 50
-  damage: { default: "1d6", variable: "1d6" }
-  hands: 1
   qualities: [melee]
   groups: [trident]
