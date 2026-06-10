@@ -223,6 +223,10 @@ class CharacterSpec(BaseModel):
     # also appear in weapon_proficiencies; specialisation costs a 2nd slot.
     weapon_proficiencies: list[str] = Field(default_factory=list)
     weapon_specialisations: list[str] = Field(default_factory=list)
+    # CC3 feature choices: group id -> chosen option ids (distinct).
+    feature_choices: dict[str, list[str]] = Field(default_factory=dict)
+    # Innate daily-use ability id -> uses spent today (reset on rest).
+    innate_uses: dict[str, int] = Field(default_factory=dict)
     ruleset: RuleSet = Field(default_factory=RuleSet)
 
     @model_validator(mode="before")

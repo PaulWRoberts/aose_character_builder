@@ -4,6 +4,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from .ability import Ability
 from .modifier import GrantedModifier
+from .choice import DailyUses, FeatureChoice
 
 
 class RaceFeature(BaseModel):
@@ -14,6 +15,8 @@ class RaceFeature(BaseModel):
     text: str
     mechanical: dict[str, Any] | None = None
     granted_modifiers: list[GrantedModifier] = Field(default_factory=list)
+    daily_uses: DailyUses | None = None
+    spell_id: str | None = None
 
 
 class Race(BaseModel):
@@ -38,3 +41,4 @@ class Race(BaseModel):
     # Per-class level caps. Missing entry = no cap.
     class_level_caps: dict[str, int] = Field(default_factory=dict)
     features: list[RaceFeature] = Field(default_factory=list)
+    feature_choices: list[FeatureChoice] = Field(default_factory=list)

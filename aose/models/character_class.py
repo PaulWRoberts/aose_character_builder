@@ -4,6 +4,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from .ability import Ability
 from .modifier import GrantedModifier
+from .choice import DailyUses, FeatureChoice
 
 
 class ClassLevelData(BaseModel):
@@ -28,6 +29,8 @@ class ClassFeature(BaseModel):
     gained_at_level: int = 1
     mechanical: dict[str, Any] | None = None
     granted_modifiers: list[GrantedModifier] = Field(default_factory=list)
+    daily_uses: DailyUses | None = None
+    spell_id: str | None = None
 
 
 AllowedList = Union[list[str], Literal["all"]]
@@ -62,6 +65,9 @@ class CharClass(BaseModel):
     shields_allowed: bool
     progression: dict[int, ClassLevelData] = Field(default_factory=dict)
     features: list[ClassFeature] = Field(default_factory=list)
+    # "Pick/roll N at creation" groups (CC3). Chosen options live on
+    # CharacterSpec.feature_choices and flow through aose/engine/features.py.
+    feature_choices: list[FeatureChoice] = Field(default_factory=list)
     # Spell-list IDs this class casts from (e.g. ["magic_user"]). Empty = non-caster.
     # How-many-slots lives in progression[].spell_slots; this is which-pool.
     spell_lists: list[str] = Field(default_factory=list)
