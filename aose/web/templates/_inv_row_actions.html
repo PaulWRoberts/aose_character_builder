@@ -13,6 +13,13 @@
         <input type="hidden" name="item_id" value="{{ row.id }}">
         <button type="submit">Equip</button>
     </form>
+    {% if row.can_off_hand %}
+    <form method="post" action="{{ target_url_prefix }}/equip" class="inline-form">
+        <input type="hidden" name="item_id" value="{{ row.id }}">
+        <input type="hidden" name="slot" value="off_hand">
+        <button type="submit"{% if row.off_hand_blocked %} disabled title="Off hand occupied"{% endif %}>Off-hand</button>
+    </form>
+    {% endif %}
     {% elif state == "carried" and row.equippable and not row.class_allowed %}
     <span class="muted small" title="Your class cannot use this item">Not usable</span>
     {% elif state == "stashed" %}

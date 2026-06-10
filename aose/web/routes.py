@@ -168,6 +168,9 @@ async def character_sheet(request: Request, character_id: str):
                 allowed_weapons=allowed_weapon_ids(classes, game_data, spec.ruleset),
                 allowed_armor=allowed_armor_ids(classes, game_data),
                 allow_shields=shields_allowed(classes),
+                two_weapon=spec.ruleset.two_weapon_fighting,
+                eligible=two_weapon_eligible(classes),
+                gargantua_1h_2h=_1h2h(spec, game_data),
             ),
             "magic_items_view": [v for v in sheet.magic_items
                                  if v.instance_id not in {e.instance_id for e in spec.enchanted}],

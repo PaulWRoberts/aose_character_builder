@@ -258,10 +258,15 @@ Illusionist/Magic-user/Thief). New languages: `hephaestan`, `language_of_wolves`
 ## Inventory, containers & encumbrance
 
 - **Inventory shapes** — `inventory: list[str]` (duplicates count toward size);
-  `equipped: dict[str, str]` (armor/shield slots); `equipped_weapons: list[str]`
-  (duplicates allowed). A weapon is equippable when
-  `equipped_weapons.count(id) < inventory.count(id)`. Equipped items live *inside*
-  `inventory` already — weight is counted once. `armor_tailored: bool = True` on
+  `equipped: dict[str, str]` — slots `armor` (body armour), `main_hand` (weapon),
+  `off_hand` (shield or off-hand weapon). `equipped_weapons: list[str]` is retired;
+  all held items go through named slots. A weapon is equippable into `main_hand` when
+  a copy exists in inventory and the slot is empty (or into `off_hand` with the
+  `two_weapon_fighting` rule on, the character is `two_weapon_eligible`, and the
+  weapon passes `off_hand_eligible`). Hand budget: each item costs 1 or 2 hands
+  (`hand_cost`); total cannot exceed 2. Gargantua's `one_handed_two_handed_melee`
+  feature flag reduces two-handed melee weapons to 1 hand. Equipped items live
+  *inside* `inventory` — weight is counted once. `armor_tailored: bool = True` on
   `CharacterSpec` tracks whether the equipped tailorable armour (full plate) is
   fitted to the wearer — if False, `armor_class.py` uses
   `Armor.untailored_ac_descending` instead. `stashed: list[str]` is off-person

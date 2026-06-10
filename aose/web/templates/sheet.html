@@ -344,6 +344,7 @@
                 {% if atk.specialised %}<span class="tag">spec</span>{% endif %}
                 {% if not atk.proficient %}<span class="tag faint">non-prof</span>{% endif %}
                 {% if atk.unloaded %}<span class="tag stamp">Unloaded</span>{% elif atk.loaded_ammo_name %}<span class="tag faint">{{ atk.loaded_ammo_name }}</span>{% endif %}
+                {% if atk.hand == "main" %}<span class="tag faint">primary −2</span>{% elif atk.hand == "off" %}<span class="tag faint">off-hand −4</span>{% endif %}
               </span>
               <span class="st">{{ "%+d"|format(atk.to_hit_ascending) }} · {{ atk.damage }} · {% if atk.range_ft %}{{ atk.range_ft[0] }}/{{ atk.range_ft[1] }}/{{ atk.range_ft[2] }}′{% else %}—{% endif %}</span>
             </li>
@@ -404,6 +405,10 @@
             {% for a in sheet.ammo %}
             <li class="clickable" data-modal="modal-ammo-{{ a.instance_id }}"><span>{{ a.name }}{% if a.magic %}<span class="tag stamp">magic</span>{% endif %}</span><span class="q">× {{ a.count }}</span></li>
             {% endfor %}
+            {# Other possessions (free-text custom items) #}
+            {% for item in sheet.other_possessions %}
+            <li><span>{{ item }}</span><form method="post" action="/character/{{ character_id }}/possessions/remove" style="margin:0"><input type="hidden" name="index" value="{{ loop.index0 }}"><button type="submit" class="btn link" style="padding:0 2px;margin:0" title="Remove">×</button></form></li>
+            {% endfor %}
           </ul>
         </div>
 
@@ -424,6 +429,12 @@
           <button class="add-row" data-drawer="drawer-equip">+ add, buy, or grant an item…</button>
         </div>
       </div>
+
+      {# Add custom item #}
+      <form method="post" action="/character/{{ character_id }}/possessions/add" class="inline-form no-print" style="padding:6px 0 0;width:100%">
+        <input type="text" name="text" placeholder="Custom item (e.g. bronze key)…" style="flex:1;min-width:0;font-size:13px">
+        <button type="submit" class="btn">Add</button>
+      </form>
 
       {# Print-only full inventory block #}
       <div class="print-only">

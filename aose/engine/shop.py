@@ -52,6 +52,8 @@ class InventoryRow(BaseModel):
     equipped_count: int = 0     # how many copies currently equipped (legacy flat view)
     bundle_count: int = 1        # units the shop sells per purchase
     can_refund: bool = True      # True when count >= bundle_count
+    can_off_hand: bool = False   # two_weapon rule on + eligible + weapon passes test
+    off_hand_blocked: bool = False  # can_off_hand but off hand already occupied
     detail: DetailCard | None = None   # structured card for the inline expander
 
 
@@ -136,14 +138,17 @@ def _class_allows(item, allowed_weapons, allowed_armor, allow_shields) -> bool:
 def _build_row(item_id: str, count: int, data: GameData,
                allowed_weapons: "set[str] | str" = "all",
                allowed_armor: "set[str] | str" = "all",
-               allow_shields: bool = True) -> InventoryRow:
+               allow_shields: bool = True,
+               two_weapon: bool = False, eligible: bool = False,
+               off_full: bool = False) -> InventoryRow:
+    from aose.engine.equip import off_hand_eligible
     from aose.models import Armor, Weapon  # local to avoid circular import
     item = data.items.get(item_id)
     if item is None:
-        # Stale id (item deleted from data after purchase) — surface it
-        # rather than silently dropping the entry.
         return InventoryRow(id=item_id, name=item_id, count=count)
     bundle = _bundle_count(item)
+    can_off = (two_weapon and eligible and isinstance(item, Weapon)
+               and off_hand_eligible(item))
     return InventoryRow(
         id=item_id,
         name=item.name,
@@ -156,6 +161,8 @@ def _build_row(item_id: str, count: int, data: GameData,
         class_allowed=_class_allows(item, allowed_weapons, allowed_armor, allow_shields),
         bundle_count=bundle,
         can_refund=count >= bundle,
+        can_off_hand=can_off,
+        off_hand_blocked=can_off and off_full,
         detail=item_card(item),
     )
 
@@ -166,7 +173,10 @@ def inventory_view(inventory: list[str], stashed: list[str],
                    data: GameData = None,
                    allowed_weapons: "set[str] | str" = "all",
                    allowed_armor: "set[str] | str" = "all",
-                   allow_shields: bool = True) -> InventoryView:
+                   allow_shields: bool = True,
+                   two_weapon: bool = False,
+                   eligible: bool = False,
+                   gargantua_1h_2h: bool = False) -> InventoryView:
     """Three-section split of the character's loose items, plus a parallel
     ``containers`` list with each instance's contents already grouped.
 
@@ -179,10 +189,13 @@ def inventory_view(inventory: list[str], stashed: list[str],
     item allowed (backward-compatible).
     """
     containers = containers or []
+    off_full = bool(equipped.get("off_hand"))
 
     def row(item_id: str, n: int) -> InventoryRow:
         return _build_row(item_id, n, data,
-                          allowed_weapons, allowed_armor, allow_shields)
+                          allowed_weapons, allowed_armor, allow_shields,
+                          two_weapon=two_weapon, eligible=eligible,
+                          off_full=off_full)
 
     equipped_count: Counter[str] = Counter()
     for v in equipped.values():

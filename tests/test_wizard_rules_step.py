@@ -264,6 +264,33 @@ def test_basic_method_via_wizard_forces_advanced_rules_off(client):
     assert rs["lift_demihuman_restrictions"] is False
 
 
+def test_turning_two_weapon_off_clears_off_hand_weapon(client):
+    draft_id = _start(client)
+    client.post(f"/wizard/{draft_id}/rules", data=_rules_form(two_weapon_fighting="on"))
+    draft = load_draft(draft_id, client._drafts_dir)
+    draft["inventory"] = ["sword", "dagger"]
+    draft["equipped"] = {"main_hand": "sword", "off_hand": "dagger"}
+    save_draft(draft_id, draft, client._drafts_dir)
+
+    client.post(f"/wizard/{draft_id}/rules", data=_rules_form())
+    draft = load_draft(draft_id, client._drafts_dir)
+    assert draft.get("equipped", {}).get("off_hand") is None
+    assert draft.get("equipped", {}).get("main_hand") == "sword"
+
+
+def test_turning_two_weapon_off_leaves_off_hand_shield(client):
+    draft_id = _start(client)
+    client.post(f"/wizard/{draft_id}/rules", data=_rules_form(two_weapon_fighting="on"))
+    draft = load_draft(draft_id, client._drafts_dir)
+    draft["inventory"] = ["sword", "shield"]
+    draft["equipped"] = {"main_hand": "sword", "off_hand": "shield"}
+    save_draft(draft_id, draft, client._drafts_dir)
+
+    client.post(f"/wizard/{draft_id}/rules", data=_rules_form())
+    draft = load_draft(draft_id, client._drafts_dir)
+    assert draft.get("equipped", {}).get("off_hand") == "shield"
+
+
 def test_changing_lift_demihuman_clears_class_and_downstream(client):
     draft_id = _start(client)
     client.post(f"/wizard/{draft_id}/rules", data=_rules_form())

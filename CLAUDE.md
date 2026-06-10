@@ -69,10 +69,11 @@ back-navigation links (or a 🔒 when a roll has locked an earlier step).
 
 ## Storage shapes
 
-- `CharacterSpec.equipped`: `dict[str, str]` — `armor` / `shield` slots
-- `CharacterSpec.equipped_weapons`: `list[str]` — duplicates allowed
+- `CharacterSpec.equipped`: `dict[str, str]` — slots `armor`, `main_hand`, `off_hand`
+  (`equipped_weapons: list[str]` retired; all held items go through named slots)
 - `inventory`: `list[str]` — duplicates count toward inventory size
-- A weapon is equippable when `equipped_weapons.count(id) < inventory.count(id)`
+- Off-hand weapon requires `two_weapon_fighting` rule + `two_weapon_eligible` + passes
+  `off_hand_eligible`; total hand cost (via `hand_cost`) ≤ 2
 - Equipped items live *inside* `inventory` — weight is counted once
 - `stashed`, `containers`, `magic_items`, `ammo`, `spell_sources`, gems/jewellery
   each have their own shapes — see `docs/ARCHITECTURE.md`

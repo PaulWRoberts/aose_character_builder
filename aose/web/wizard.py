@@ -413,6 +413,19 @@ def _apply_rule_changes(draft: dict[str, Any], old_rs: RuleSet, new_rs: RuleSet,
     """
     draft["ruleset"] = new_rs.model_dump()
 
+    # Equipment clears apply regardless of how far through the wizard the draft is.
+    if old_rs.two_weapon_fighting and not new_rs.two_weapon_fighting and data is not None:
+        equipped = draft.get("equipped", {})
+        off_id = equipped.get("off_hand")
+        if off_id:
+            from aose.engine.equip import resolve_slot as _resolve_slot
+            from aose.models import EnchantedInstance as _EI, Weapon as _W
+            enchanted = [_EI.model_validate(e) for e in draft.get("enchanted", [])]
+            if isinstance(_resolve_slot(off_id, data, enchanted), _W):
+                new_eq = dict(equipped)
+                del new_eq["off_hand"]
+                draft["equipped"] = new_eq
+
     if "abilities" not in draft:
         return
 
@@ -1465,6 +1478,9 @@ def _equipment_context(draft: dict[str, Any], game_data) -> dict:
             allowed_weapons=allowed_weapon_ids(classes, game_data, _ruleset_of(draft)),
             allowed_armor=allowed_armor_ids(classes, game_data),
             allow_shields=shields_allowed(classes),
+            two_weapon=_ruleset_of(draft).two_weapon_fighting,
+            eligible=two_weapon_eligible(classes),
+            gargantua_1h_2h=False,
         ),
         "magic_items_view": [],   # wizard equipment step is mundane-only
         "enchanted_rows": [],
