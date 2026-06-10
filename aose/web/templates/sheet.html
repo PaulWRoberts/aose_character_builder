@@ -175,13 +175,17 @@
         <div class="gbody scroll" style="max-height:300px">
           <ul class="feat-list">
             {% for f in sheet.race_features %}
-            <li class="info" data-modal="modal-feature" data-title="{{ f.name }}" data-text="{{ f.text | markdown }}">
+            {% set spell_html %}{% if f.spell_detail %}{{ detail_card(f.spell_detail) }}{% endif %}{% endset %}
+            <li class="info" data-modal="modal-feature" data-title="{{ f.name }}"
+                data-text="{{ f.text | markdown }}"{% if f.spell_detail %} data-spell="{{ spell_html }}"{% endif %}>
               <span>{{ f.name }}</span>
               <span class="src">{{ f.source | replace("Race: ", "") }}</span>
             </li>
             {% endfor %}
             {% for f in sheet.class_features %}
-            <li class="info" data-modal="modal-feature" data-title="{{ f.name }}" data-text="{{ f.text | markdown }}">
+            {% set spell_html %}{% if f.spell_detail %}{{ detail_card(f.spell_detail) }}{% endif %}{% endset %}
+            <li class="info" data-modal="modal-feature" data-title="{{ f.name }}"
+                data-text="{{ f.text | markdown }}"{% if f.spell_detail %} data-spell="{{ spell_html }}"{% endif %}>
               <span>{{ f.name }}</span>
               <span class="src">{{ f.source | replace("Class: ", "") }}</span>
             </li>
@@ -214,8 +218,8 @@
       </section>
     </div>
 
-    {# ═══ COLUMN 3: SPELLS / MENTAL POWERS (caster only) ═══ #}
-    {% if sheet.spellbook or sheet.mental_powers %}
+    {# ═══ COLUMN 3: SPELLS / MENTAL POWERS / INNATE ═══ #}
+    {% if sheet.spellbook or sheet.mental_powers or sheet.innate_abilities %}
     <div class="col col-spells">
       {% for block in sheet.spellbook %}
       <section class="group">
@@ -298,6 +302,33 @@
         </div>
       </section>
       {% endfor %}
+
+      {% if sheet.innate_abilities %}
+      <section class="group">
+        <div class="bar">Innate Abilities</div>
+        <div class="gbody scroll" style="max-height:240px">
+          <ul class="feat-list">
+            {% for ab in sheet.innate_abilities %}
+            {% set ab_spell_html %}{% if ab.spell_detail %}{{ detail_card(ab.spell_detail) }}{% endif %}{% endset %}
+            <li class="info" data-modal="modal-feature" data-title="{{ ab.name }}"
+                data-text="{{ ab.text | markdown }}"{% if ab.spell_detail %} data-spell="{{ ab_spell_html }}"{% endif %}>
+              <span>{{ ab.name }} <span class="muted small">({{ ab.remaining }}/{{ ab.max_uses }})</span></span>
+              <span class="row-actions">
+                <form method="post" action="/character/{{ character_id }}/innate/spend" class="inline-form">
+                  <input type="hidden" name="ability_id" value="{{ ab.id }}">
+                  <button type="submit" {% if ab.remaining == 0 %}disabled{% endif %}>Use</button>
+                </form>
+                <form method="post" action="/character/{{ character_id }}/innate/restore" class="inline-form">
+                  <input type="hidden" name="ability_id" value="{{ ab.id }}">
+                  <button type="submit" {% if ab.used == 0 %}disabled{% endif %}>+1</button>
+                </form>
+              </span>
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+      </section>
+      {% endif %}
     </div>
     {% endif %}
 
@@ -653,7 +684,13 @@
 {# MODAL: feature / item detail #}
 <div class="overlay modal" id="modal-feature" role="dialog" aria-label="Detail">
   <div class="ov-head"><h3 data-role="title">Detail</h3><button class="x" data-close>×</button></div>
-  <div class="ov-body"><p data-role="text" style="font-size:15px;margin:0"></p></div>
+  <div class="ov-body">
+    <p data-role="text" style="font-size:15px;margin:0"></p>
+    <details data-role="spell" style="margin-top:10px;display:none">
+      <summary>Spell details</summary>
+      <div data-role="spell-body" style="margin-top:6px"></div>
+    </details>
+  </div>
 </div>
 
 {# MODAL: AC breakdown (conditional modifiers) #}

@@ -10,6 +10,17 @@
     panel.querySelectorAll('[data-role="title"]').forEach(el => { if (t.title) el.textContent = t.title; });
     panel.querySelectorAll('[data-role="text"]').forEach(el => { if (t.text) el.innerHTML = t.text; });
     panel.querySelectorAll('[data-role="ability"]').forEach(el => { if (t.ability) el.textContent = t.ability; });
+    const spellEl = panel.querySelector('[data-role="spell"]');
+    if (spellEl) {
+      if (t.spell) {
+        panel.querySelector('[data-role="spell-body"]').innerHTML = t.spell;
+        spellEl.style.display = '';
+        spellEl.open = false;
+      } else {
+        spellEl.style.display = 'none';
+        panel.querySelector('[data-role="spell-body"]').innerHTML = '';
+      }
+    }
   }
   function place(panel, trigger){
     const r = trigger.getBoundingClientRect();
@@ -43,6 +54,15 @@
   });
   scrim.addEventListener('click', closeAll);
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAll(); });
+  /* Re-open a modal after a roll redirect by reading the URL hash. */
+  if (location.hash) {
+    const id = location.hash.slice(1);
+    const panel = document.getElementById(id);
+    if (panel && panel.classList.contains('overlay')) {
+      open(id, 'modal', null);
+      history.replaceState(null, '', location.pathname + location.search);
+    }
+  }
   /* Equipment tab-switching lives in inventory.js (loaded by the shared
      equipment partial) so it works on the wizard page too, which has no
      overlay scrim / .ov-body. */
