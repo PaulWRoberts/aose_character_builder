@@ -137,6 +137,10 @@ class Armor(ItemBase):
     weight_multiplier: float = 1.0   # 0.5 for enchanted armour
     base_armor: str | None = None    # for magic/variant armour: the mundane
                                      # armour id it counts as for class allowances
+    # Tailorable armour (full plate): worn by its fitted owner it grants
+    # ``ac_descending``; worn by anyone else, the worse ``untailored_ac_descending``.
+    tailorable: bool = False
+    untailored_ac_descending: int | None = None
 
 
 class AdventuringGear(ItemBase):

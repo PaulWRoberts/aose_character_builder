@@ -83,7 +83,11 @@ def _compute_ac(spec: CharacterSpec, data: GameData, *,
         if armor_id and armor_id in data.items:
             item = data.items[armor_id]
             if isinstance(item, Armor) and not item.is_shield:
-                cand = item.ac_descending - item.magic_bonus
+                ac_desc = item.ac_descending
+                if (item.tailorable and not spec.armor_tailored
+                        and item.untailored_ac_descending is not None):
+                    ac_desc = item.untailored_ac_descending
+                cand = ac_desc - item.magic_bonus
                 if cand < base:
                     base, base_source = cand, item.name
         # Enchanted armour: best-AC-wins (min descending) over mundane equipped.

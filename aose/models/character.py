@@ -191,6 +191,10 @@ class CharacterSpec(BaseModel):
     stashed: list[str] = Field(default_factory=list)
     # slot -> item_id, for single-slot gear: {"armor": "chain_mail", "shield": "shield"}
     equipped: dict[str, str] = Field(default_factory=dict)
+    # Whether the equipped tailorable body armour (full plate) is fitted to this
+    # character. Inert unless the worn armour is `tailorable`; a single toggle
+    # (one body-armour slot), remembered across re-equips.
+    armor_tailored: bool = True
     # Equipped weapons — a list so duplicates and multiple ready weapons are OK.
     equipped_weapons: list[str] = Field(default_factory=list)
     containers: list[ContainerInstance] = Field(default_factory=list)
