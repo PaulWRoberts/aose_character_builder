@@ -14,8 +14,79 @@ from __future__ import annotations
 from typing import Literal
 
 from aose.data.loader import GameData
+from aose.engine.enchant import resolve_instance
 from aose.engine.proficiency import base_armor_id, base_weapon_id
 from aose.models import Armor, Weapon
+
+OFF_HAND_FORBIDDEN = {"two_handed", "versatile", "slow", "brace", "charge"}
+
+
+class WieldError(ValueError):
+    """A weapon/shield configuration that two hands cannot hold."""
+
+
+def hand_cost(item, *, gargantua_1h_2h: bool) -> int:
+    """Hands consumed by an in-hand item. Body armour returns 0."""
+    if isinstance(item, Armor):
+        return 1 if item.is_shield else 0
+    if isinstance(item, Weapon):
+        if "two_handed" in item.quality_ids:
+            if gargantua_1h_2h and item.melee:
+                return 1
+            return 2
+        return 1
+    return 0
+
+
+def off_hand_eligible(weapon: Weapon) -> bool:
+    """House rule for a 'small' off-hand weapon: <=30cn, melee, and none of the
+    forbidden qualities."""
+    return (
+        weapon.weight_cn <= 30
+        and "melee" in weapon.quality_ids
+        and not (weapon.quality_ids & OFF_HAND_FORBIDDEN)
+    )
+
+
+def resolve_slot(value, data: GameData, enchanted):
+    """Resolve a slot value to its concrete Weapon/Armor (catalog or enchanted),
+    or None for an empty/stale slot."""
+    if not value:
+        return None
+    if value in data.items:
+        return data.items[value]
+    for inst in enchanted:
+        if inst.instance_id == value:
+            return resolve_instance(inst, data)
+    return None
+
+
+def validate_wield(equipped: dict, data: GameData, enchanted, *,
+                   two_weapon: bool, eligible: bool,
+                   gargantua_1h_2h: bool) -> None:
+    """Raise WieldError unless the hand slots form a legal configuration.
+    Class allowances are checked separately by ``equip``; this gate is purely
+    the hand budget + baseline one-weapon rule + two-weapon-fighting rules."""
+    main = resolve_slot(equipped.get("main_hand"), data, enchanted)
+    off = resolve_slot(equipped.get("off_hand"), data, enchanted)
+
+    if main is not None and not isinstance(main, Weapon):
+        raise WieldError("Only a weapon may be held in the main hand")
+
+    used = (hand_cost(main, gargantua_1h_2h=gargantua_1h_2h) if main else 0)
+    used += (hand_cost(off, gargantua_1h_2h=gargantua_1h_2h) if off else 0)
+    if used > 2:
+        raise WieldError("Both hands are full")
+
+    if isinstance(off, Weapon):
+        if not two_weapon:
+            raise WieldError("Two-weapon fighting is not enabled")
+        if not eligible:
+            raise WieldError("This character is not eligible to fight with two weapons")
+        if main is None:
+            raise WieldError("Equip a main-hand weapon before an off-hand weapon")
+        if not off_hand_eligible(off):
+            raise WieldError(f"{off.name!r} is not a valid off-hand weapon")
 
 Slot = Literal["armor", "shield"]
 

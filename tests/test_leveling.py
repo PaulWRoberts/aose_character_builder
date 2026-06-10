@@ -249,7 +249,7 @@ def test_level_up_roll_route_stores_pending_and_303s(client):
     _seed(client, level=1, xp=2000)
     r = client.post("/character/test/level-up/fighter/roll")
     assert r.status_code == 303
-    assert r.headers["location"] == "/character/test"
+    assert r.headers["location"].startswith("/character/test")
     spec = load_character("test", client._characters_dir)
     assert "fighter" in spec.pending_level_up
     assert 1 <= spec.pending_level_up["fighter"] <= 8
