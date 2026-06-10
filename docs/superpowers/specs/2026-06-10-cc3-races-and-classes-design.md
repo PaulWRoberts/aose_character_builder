@@ -24,7 +24,11 @@ option(s):
 
 ## The mapping
 
-Exactly the CC1 Gargantua/Goblin/Hephaestan shape:
+Exactly the CC1 Gargantua/Goblin/Hephaestan shape. **A race and its race-as-class
+are independent stat blocks that share only the concept and name** — each is
+authored straight from the book and may freely diverge (different daily-use counts,
+different feature sets, different ability handling). Nothing in the engine or data
+links them beyond `race_locked`; do not assume one mirrors the other.
 
 | Entry | Class file | Race file |
 |---|---|---|
@@ -34,10 +38,10 @@ Exactly the CC1 Gargantua/Goblin/Hephaestan shape:
 | Mycelian | `mycelian` (`race_locked: mycelian`) | `mycelian` |
 | Tiefling | `tiefling` (`race_locked: tiefling`) | `tiefling` |
 
-**5 class files + 4 race files.** Per the architecture invariant (race vs
-race-as-class are self-contained stat blocks sharing only a name), grants and
-choice groups are **duplicated** across the race file and its race-locked class
-file, with per-mode differences where the book specifies them (see Content).
+**5 class files + 4 race files.** Each file is authored independently from
+the book (see the independence note above); where a race and its race-as-class
+happen to share a feature they are written out on both, but they are free to differ
+and several do (see Content).
 
 ## 1. Data model — `FeatureChoice` / `ChoiceOption`
 
@@ -142,9 +146,14 @@ Other Fiendish-Gift options map to existing patterns instead of pips:
 
 ## 4. Mycelian level-scaling
 
-- **Natural AC** (6[13] → 3[16]): a level-scaled `ac set` `GrantedModifier` with
-  `condition: unarmored` and table `{1:6, 2:5, 3:4, 4:3}` (descending AC) — the
-  Kineticist level-AC precedent.
+- **Natural AC** (6[13] → 3[16]): a level-scaled `ac set` `GrantedModifier`, table
+  `{1:6, 2:5, 3:4, 4:3}` (descending AC) — **no condition**. This mirrors the
+  Kineticist level-AC precedent exactly. The engine already handles shields the way
+  we want: `_has_worn_armor` (`armor_class.py`) excludes shields, so `unarmored` only
+  ever means "no *body* armour," and an `ac set` is a base candidate evaluated
+  outside the armour gate with its condition ignored — so a Mycelian's natural AC
+  stands as the base and a carried shield's bonus simply adds on top. No new
+  "unarmored-but-allow-shield" condition is introduced; Kineticist stays as-is.
 - **Fist damage** (1d4 per level): extend the `feature_weapons` descriptor with an
   optional per-level die (`damage_per_level_die: d4`). `features.py` resolves it
   against the granting class level so the synthetic melee profile deals `Ld4` at
@@ -214,8 +223,9 @@ All numbers/text taken from the provided CC3 extract. Class progressions
   reversible `magic_user_light`); resistance options map to save modifiers per §3.
   **Fiendish Appearance** (`pick 2`, d10, `cosmetic: true`).
 
-**Races** (split-mode stat blocks, own `feature_choices` duplicated from the class
-files, plus `allowed_classes` + `class_level_caps` from the extract):
+**Races** (independent split-mode stat blocks — authored from the book, not copied
+from the class files; each carries its own `feature_choices`, `allowed_classes`, and
+`class_level_caps` from the extract, and may differ from its race-as-class):
 
 - `dragonborn` — ability mods none; reqs CON 9/INT 9; Breath Weapon `per_day:1`
   (race differs from class's 3/day); Draconic Bloodline + Resistance + Dragon-
