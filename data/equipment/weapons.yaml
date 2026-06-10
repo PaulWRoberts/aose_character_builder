@@ -185,3 +185,76 @@
   weight_cn: 50
   qualities: [melee]
   groups: [trident]
+
+# ── Carcass Crawler 3 weapons ────────────────────────────────────────────────
+- id: bastard_sword
+  item_type: weapon
+  name: Bastard Sword
+  category: weapons
+  cost_gp: 15
+  weight_cn: 80
+  damage: { variable: "1d6+1" }
+  qualities: [melee, {versatile: "1d8+1"}]
+  groups: [sword]
+  source: carcass_crawler_3
+
+- id: blackjack
+  item_type: weapon
+  name: Blackjack
+  category: weapons
+  cost_gp: 1
+  weight_cn: 10
+  damage: { variable: "1d2" }
+  qualities: [blunt, knock_out, melee, stealth]
+  source: carcass_crawler_3
+
+- id: blowgun
+  item_type: weapon
+  name: Blowgun
+  category: weapons
+  cost_gp: 3
+  weight_cn: 5
+  damage: { default: "", variable: "" }
+  qualities: [{missile: [10, 20, 30]}]
+  accepts_ammo: [blowgun_dart]
+  source: carcass_crawler_3
+
+- id: bolas
+  item_type: weapon
+  name: Bolas
+  category: weapons
+  cost_gp: 5
+  weight_cn: 40
+  damage: { variable: "1d2" }
+  qualities: [blunt, entangle, {missile: [20, 40, 60]}]
+  source: carcass_crawler_3
+
+- id: garotte
+  item_type: weapon
+  name: Garotte
+  category: weapons
+  cost_gp: 1
+  weight_cn: 5
+  damage: { variable: "1d4" }
+  qualities: [melee, stealth, strangle, two_handed]
+  source: carcass_crawler_3
+
+- id: net
+  item_type: weapon
+  name: Net
+  category: weapons
+  cost_gp: 5
+  weight_cn: 100
+  damage: { default: "", variable: "" }
+  qualities: [blunt, entangle, {missile: [10, 20, 30]}]
+  source: carcass_crawler_3
+
+- id: whip
+  item_type: weapon
+  name: Whip
+  category: weapons
+  cost_gp: 10
+  weight_cn: 50
+  damage: { variable: "1d2" }
+  qualities: [entangle, melee]
+  source: carcass_crawler_3

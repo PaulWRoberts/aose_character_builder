@@ -60,3 +60,47 @@ def test_bundle_counts(data):
 def test_cc3_qualities_loaded(data, qid):
     assert qid in data.qualities
     assert data.qualities[qid].param == "none"
+
+
+from aose.models import Ammunition, Weapon
+
+
+def test_bastard_sword_versatile(data):
+    w = data.items["bastard_sword"]
+    assert isinstance(w, Weapon)
+    assert w.versatile is True
+    assert w.two_handed_damage == "1d8+1"
+    assert w.damage.default == "1d6"
+    assert w.damage.variable == "1d6+1"
+    assert w.hands == 1
+    assert "sword" in w.groups
+
+
+@pytest.mark.parametrize("wid", ["blowgun", "net"])
+def test_no_damage_weapons(data, wid):
+    w = data.items[wid]
+    assert w.deals_damage is False
+    assert w.damage.default == "" and w.damage.variable == ""
+
+
+def test_blowgun_accepts_darts(data):
+    assert data.items["blowgun"].accepts_ammo == ["blowgun_dart"]
+    dart = data.items["blowgun_dart"]
+    assert isinstance(dart, Ammunition)
+    assert dart.bundle_count == 5
+    assert dart.groups == ["blowgun_dart"]
+
+
+@pytest.mark.parametrize("wid,quals", [
+    ("blackjack", {"blunt", "knock_out", "melee", "stealth"}),
+    ("bolas", {"blunt", "entangle", "missile"}),
+    ("garotte", {"melee", "stealth", "strangle", "two_handed"}),
+    ("whip", {"entangle", "melee"}),
+])
+def test_cc3_weapon_qualities(data, wid, quals):
+    assert data.items[wid].quality_ids == quals
+    assert data.items[wid].source == "carcass_crawler_3"
+
+
+def test_garotte_two_handed(data):
+    assert data.items["garotte"].hands == 2

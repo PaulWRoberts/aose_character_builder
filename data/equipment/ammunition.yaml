@@ -41,3 +41,14 @@
   bundle_count: 20
   groups: [sling_stone]
   description: Stones for a sling — freely gathered.
+
+- id: blowgun_dart
+  item_type: ammunition
+  name: Blowgun Darts (pouch of 5)
+  category: ammunition
+  cost_gp: 1
+  weight_cn: 0
+  bundle_count: 5
+  groups: [blowgun_dart]
+  source: carcass_crawler_3
+  description: A pouch of 5 darts for a blowgun. The darts inflict no damage but may administer a bloodstream poison.
