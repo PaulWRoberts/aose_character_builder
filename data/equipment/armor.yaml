@@ -40,3 +40,71 @@
   ac_bonus: 1        # the -1-to-AC shield bonus, formerly a code constant
   movement_impact: none
   is_shield: true
+
+# ── Carcass Crawler 3 armour ─────────────────────────────────────────────────
+- id: padded_armor
+  item_type: armor
+  name: Padded Armour
+  category: armor
+  cost_gp: 5
+  weight_cn: 100
+  ac_descending: 8
+  movement_impact: leather
+  base_armor: leather_armor
+  groups: [leather_armour]
+  source: carcass_crawler_3
+  description: Layers of cloth and quilted padding.
+
+- id: furs
+  item_type: armor
+  name: Furs
+  category: armor
+  cost_gp: 10
+  weight_cn: 250
+  ac_descending: 7
+  movement_impact: leather
+  base_armor: leather_armor
+  groups: [leather_armour]
+  source: carcass_crawler_3
+  description: Thickly layered furs and pelts of any kind.
+
+- id: studded_leather
+  item_type: armor
+  name: Studded Leather
+  category: armor
+  cost_gp: 25
+  weight_cn: 300
+  ac_descending: 6
+  movement_impact: leather
+  base_armor: chain_mail
+  groups: [leather_armour]
+  source: carcass_crawler_3
+  description: A suit of flexible leather studded with hundreds of metal rivets.
+
+- id: banded_mail
+  item_type: armor
+  name: Banded Mail
+  category: armor
+  cost_gp: 50
+  weight_cn: 450
+  ac_descending: 4
+  movement_impact: metal
+  base_armor: plate_mail
+  groups: [metal_armour]
+  source: carcass_crawler_3
+  description: Horizontal bands of metal riveted to a padded leather backing.
+
+- id: full_plate
+  item_type: armor
+  name: Full Plate
+  category: armor
+  cost_gp: 1000
+  weight_cn: 700
+  ac_descending: 2
+  untailored_ac_descending: 3
+  tailorable: true
+  movement_impact: metal
+  base_armor: plate_mail
+  groups: [metal_armour]
+  source: carcass_crawler_3
+  description: Perfectly interlocking plates over chain mail and padding. Crafted and tailored for a specific wearer; another person's full plate grants only AC 3 [16].
