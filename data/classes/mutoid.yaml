@@ -1,0 +1,83 @@
+id: mutoid
+name: Mutoid
+source: carcass_crawler_3
+prime_requisites:
+- DEX
+max_level: 8
+hit_die: 1d6
+name_level: 9
+hp_after_name_level: 0
+weapons_allowed: all
+armor_allowed:
+- leather
+shields_allowed: true
+race_locked: mutoid
+progression:
+  1: {xp_required: 0, thac0: 19, saves: {death: 10, wands: 11, paralysis: 12, breath: 13, spells: 14}}
+  2: {xp_required: 1750, thac0: 19, saves: {death: 10, wands: 11, paralysis: 12, breath: 13, spells: 14}}
+  3: {xp_required: 3500, thac0: 19, saves: {death: 10, wands: 11, paralysis: 12, breath: 13, spells: 14}}
+  4: {xp_required: 7000, thac0: 19, saves: {death: 10, wands: 11, paralysis: 12, breath: 13, spells: 14}}
+  5: {xp_required: 14000, thac0: 17, saves: {death: 8, wands: 9, paralysis: 10, breath: 11, spells: 12}}
+  6: {xp_required: 30000, thac0: 17, saves: {death: 8, wands: 9, paralysis: 10, breath: 11, spells: 12}}
+  7: {xp_required: 60000, thac0: 17, saves: {death: 8, wands: 9, paralysis: 10, breath: 11, spells: 12}}
+  8: {xp_required: 120000, thac0: 17, saves: {death: 8, wands: 9, paralysis: 10, breath: 11, spells: 12}}
+features:
+- id: combat
+  name: Combat
+  text: |-
+    Mutoids can use shields, but their need for stealth prevents armour heavier than leather. They may use any one-handed melee weapon and all missile weapons.
+  gained_at_level: 1
+- id: back_stab
+  name: Back-Stab
+  text: |-
+    Attacking an unaware opponent from behind grants +4 to hit and doubles damage dealt.
+  gained_at_level: 1
+- id: mutoid_skills
+  name: Mutoid Skills
+  text: |-
+    Mutoids use the skills Hide in Shadows, Mimicry, Move Silently, and Pick Pockets (percentage chances by level — see the Carcass Crawler 3 table). All rolled on d% (roll ≤ chance succeeds).
+  gained_at_level: 1
+- id: after_reaching_8th_level
+  name: After Reaching 8th Level
+  text: |-
+    A mutoid can establish a secret lair, attracting 2d6 apprentices (1st level mutoids) who serve with some reliability.
+  gained_at_level: 8
+feature_choices:
+- id: mutations
+  name: Mutations
+  text: Roll twice (or choose two) on the d8 Mutations table. Two attack mutations may both be used each round.
+  pick: 2
+  roll_dice: d8
+  options:
+  - id: beast_ears
+    name: Beast Ears
+    text: "3-in-6 chance to hear noises."
+  - id: beast_eyes
+    name: Beast Eyes
+    text: "Infravision to 60'."
+  - id: clawed_hand
+    name: Clawed Hand
+    text: "Unarmed attack for 1d6 damage."
+    mechanical:
+      weapon: {name: Clawed Hand, damage: 1d6, melee: true}
+  - id: gills
+    name: Gills
+    text: "Breathe underwater."
+  - id: pincer
+    name: Pincer
+    text: "Unarmed attack for 1d3 damage; the pincer locks on, dealing 1d3/round (save versus paralysis to escape)."
+    mechanical:
+      weapon: {name: Pincer, damage: 1d3, melee: true}
+  - id: scales
+    name: Scales
+    text: "+2 bonus to Armour Class."
+    granted_modifiers:
+    - {target: ac, op: add, value: 2}
+  - id: spring_legs
+    name: Spring Legs
+    text: "Jump up to 30' forward and gain +1 to attack; with an impaling weapon this counts as a charge (double damage)."
+  - id: sticky_tongue
+    name: Sticky Tongue
+    text: "Grab an object up to 15' away; usable as a melee bite attack for 1d3 damage."
+    mechanical:
+      weapon: {name: Sticky Tongue, damage: 1d3, melee: true}

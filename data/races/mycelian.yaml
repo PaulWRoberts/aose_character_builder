@@ -1,0 +1,57 @@
+id: mycelian
+name: Mycelian
+source: carcass_crawler_3
+ability_requirements:
+  CON: 9
+ability_modifiers:
+  DEX: -1
+  WIS: 1
+infravision: 60
+languages:
+- common
+- deepcommon
+allowed_classes:
+- assassin
+- cleric
+- druid
+- fighter
+- illusionist
+- thief
+class_level_caps:
+  assassin: 4
+  cleric: 5
+  druid: 5
+  fighter: 6
+  illusionist: 4
+  thief: 4
+features:
+- id: ability_modifiers
+  name: Ability Modifiers
+  text: "−1 DEX, +1 WIS."
+- id: fungal_spores
+  name: Fungal Spores
+  text: |-
+    From 3rd level, once per day, spray spores at a single living target within 20'. The target must save versus poison or become passive for 1 round per level of the mycelian.
+  daily_uses:
+    per_day: 1
+- id: infravision
+  name: Infravision
+  text: |-
+    Mycelians have infravision to 60'.
+  mechanical:
+    infravision_feet: 60
+- id: light_sensitivity
+  name: Light Sensitivity
+  text: |-
+    In bright light (daylight, continual light), mycelians suffer −2 to attack rolls and −1 to Armour Class.
+  granted_modifiers:
+  - {target: ac, op: add, value: -1, condition: bright_light}
+  - {target: attack, op: add, value: -2, condition: bright_light}
+- id: telepathic_communication
+  name: Telepathic Communication
+  text: |-
+    Mycelians communicate telepathically with any sentient creature within 120' that they can perceive, in any language they know.
+- id: rest_and_sustenance
+  name: Rest and Sustenance
+  text: |-
+    Mycelians do not eat or sleep; they require 8 hours per day in contact with moist earth or lose 1 hit point per day until they do.

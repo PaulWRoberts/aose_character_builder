@@ -39,7 +39,6 @@ def _seed_mutoid_draft(drafts_dir, strict=True):
     return "d1"
 
 
-@pytest.mark.xfail(reason="content lands in Phase 6 — remove marker after Task 15")
 def test_strict_autorolls_and_locks_choices(tmp_path):
     client, drafts_dir = _client(tmp_path)
     draft_id = _seed_mutoid_draft(drafts_dir, strict=True)
@@ -51,13 +50,12 @@ def test_strict_autorolls_and_locks_choices(tmp_path):
     assert len(set(draft["feature_choices"]["mutations"])) == 2
 
 
-@pytest.mark.xfail(reason="content lands in Phase 6 — remove marker after Task 15")
 def test_non_strict_pick_persists(tmp_path):
     client, drafts_dir = _client(tmp_path)
     draft_id = _seed_mutoid_draft(drafts_dir, strict=False)
     client.get(f"/wizard/{draft_id}/class_setup")
     r = client.post(f"/wizard/{draft_id}/feature-choices",
-                    data=[("choice_mutations", "scales"), ("choice_mutations", "clawed_hand")])
+                    data={"choice_mutations": ["scales", "clawed_hand"]})
     assert r.status_code in (200, 303)
     draft = load_draft(draft_id, drafts_dir)
     assert set(draft["feature_choices"]["mutations"]) == {"scales", "clawed_hand"}

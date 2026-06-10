@@ -1,0 +1,61 @@
+id: beast_master
+name: Beast Master
+source: carcass_crawler_3
+prime_requisites:
+- STR
+- WIS
+max_level: 14
+hit_die: 1d6
+name_level: 9
+hp_after_name_level: 2
+weapons_allowed: all
+armor_allowed:
+- leather
+- chainmail
+shields_allowed: true
+progression:
+  1: {xp_required: 0, thac0: 19, saves: {death: 11, wands: 12, paralysis: 12, breath: 15, spells: 16}}
+  2: {xp_required: 1800, thac0: 19, saves: {death: 11, wands: 12, paralysis: 12, breath: 15, spells: 16}}
+  3: {xp_required: 3600, thac0: 19, saves: {death: 11, wands: 12, paralysis: 12, breath: 15, spells: 16}}
+  4: {xp_required: 7250, thac0: 19, saves: {death: 11, wands: 12, paralysis: 12, breath: 15, spells: 16}}
+  5: {xp_required: 15000, thac0: 17, saves: {death: 9, wands: 10, paralysis: 10, breath: 13, spells: 14}}
+  6: {xp_required: 30000, thac0: 17, saves: {death: 9, wands: 10, paralysis: 10, breath: 13, spells: 14}}
+  7: {xp_required: 60000, thac0: 17, saves: {death: 9, wands: 10, paralysis: 10, breath: 13, spells: 14}}
+  8: {xp_required: 120000, thac0: 17, saves: {death: 9, wands: 10, paralysis: 10, breath: 13, spells: 14}}
+  9: {xp_required: 240000, thac0: 14, saves: {death: 7, wands: 8, paralysis: 8, breath: 11, spells: 12}}
+  10: {xp_required: 360000, thac0: 14, saves: {death: 7, wands: 8, paralysis: 8, breath: 11, spells: 12}}
+  11: {xp_required: 480000, thac0: 14, saves: {death: 7, wands: 8, paralysis: 8, breath: 11, spells: 12}}
+  12: {xp_required: 600000, thac0: 14, saves: {death: 7, wands: 8, paralysis: 8, breath: 11, spells: 12}}
+  13: {xp_required: 720000, thac0: 12, saves: {death: 5, wands: 6, paralysis: 6, breath: 9, spells: 10}}
+  14: {xp_required: 840000, thac0: 12, saves: {death: 5, wands: 6, paralysis: 6, breath: 9, spells: 10}}
+features:
+- id: animal_companions
+  name: Animal Companions
+  text: |-
+    A beast master may forge a bond with an encountered animal (approach peacefully; the referee makes a reaction roll — 8+ succeeds). Up to one companion per level; total companion Hit Dice may not exceed the beast master's level.
+  gained_at_level: 1
+- id: clairvoyance
+  name: Clairvoyance
+  text: |-
+    From 5th level, the beast master can see through the eyes of their animal companions, wherever they are, through deep concentration.
+  gained_at_level: 5
+- id: identify_tracks
+  name: Identify Tracks
+  text: |-
+    A beast master can identify the tracks and spoor of animals in the wild.
+  gained_at_level: 1
+- id: reaction_modifier
+  name: Reaction Modifier
+  text: |-
+    +1 bonus to reaction rolls when interacting with animals (in addition to CHA modifier).
+  gained_at_level: 1
+- id: speak_with_animals
+  name: Speak with Animals
+  text: |-
+    Animals understand the basic meaning of the beast master's words. From 2nd level, the beast master also understands animal speech; from 4th level, empathic communication with animals in sight, without words.
+  gained_at_level: 1
+- id: after_reaching_9th_level
+  name: After Reaching 9th Level
+  text: |-
+    A beast master may build a wilderness stronghold; animals within 5 miles become friends, warning of intruders and carrying messages.
+  gained_at_level: 9

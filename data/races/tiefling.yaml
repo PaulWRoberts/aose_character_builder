@@ -1,0 +1,133 @@
+id: tiefling
+name: Tiefling
+source: carcass_crawler_3
+ability_requirements:
+  INT: 9
+ability_modifiers:
+  DEX: 1
+  WIS: -1
+infravision: 60
+languages:
+- common
+allowed_classes:
+- acrobat
+- assassin
+- bard
+- fighter
+- illusionist
+- magic_user
+- ranger
+- thief
+class_level_caps:
+  acrobat: 10
+  assassin: 10
+  bard: 6
+  fighter: 8
+  illusionist: 10
+  magic_user: 10
+  ranger: 6
+  thief: 10
+features:
+- id: ability_modifiers
+  name: Ability Modifiers
+  text: "+1 DEX, −1 WIS."
+- id: holy_water_vulnerability
+  name: Holy Water Vulnerability
+  text: |-
+    A tiefling's fiendish heritage makes them vulnerable to damage by holy water.
+- id: infravision
+  name: Infravision
+  text: |-
+    Tieflings have infravision to 60'.
+  mechanical:
+    infravision_feet: 60
+feature_choices:
+- id: fiendish_gifts
+  name: Fiendish Gifts
+  text: Roll twice (or choose two) on the d10 Fiendish Gifts table — innate magical traits.
+  pick: 2
+  roll_dice: d10
+  options:
+  - id: darkness
+    name: Darkness
+    text: "Cast darkness once per day."
+    daily_uses: {per_day: 1}
+    spell_id: magic_user_light
+  - id: detect_invisible
+    name: Detect Invisible
+    text: "Cast detect invisible once per day."
+    daily_uses: {per_day: 1}
+    spell_id: magic_user_detect_invisible
+  - id: detect_magic
+    name: Detect Magic
+    text: "Cast detect magic once per day."
+    daily_uses: {per_day: 1}
+    spell_id: magic_user_detect_magic
+  - id: magic_missile
+    name: Magic Missile
+    text: "Cast magic missile once per day."
+    daily_uses: {per_day: 1}
+    spell_id: magic_user_magic_missile
+  - id: mirror_image
+    name: Mirror Image
+    text: "Cast mirror image once per day."
+    daily_uses: {per_day: 1}
+    spell_id: magic_user_mirror_image
+  - id: ventriloquism
+    name: Ventriloquism
+    text: "Cast ventriloquism once per day."
+    daily_uses: {per_day: 1}
+    spell_id: magic_user_ventriloquism
+  - id: cold_resistance
+    name: Cold Resistance
+    text: "Take half damage from cold."
+  - id: fire_resistance
+    name: Fire Resistance
+    text: "Take half damage from fire."
+  - id: save_paralysis
+    name: Resist Paralysis
+    text: "+2 bonus to saves versus paralysis."
+    granted_modifiers:
+    - {target: "save:paralysis", op: add, value: 2}
+  - id: save_poison
+    name: Resist Poison
+    text: "+2 bonus to saves versus poison."
+    granted_modifiers:
+    - {target: "save:death", op: add, value: 2, condition: poison}
+- id: fiendish_appearance
+  name: Fiendish Appearance
+  text: Roll twice (or choose two) on the d10 Fiendish Appearance table — cosmetic traits.
+  pick: 2
+  roll_dice: d10
+  cosmetic: true
+  options:
+  - id: digits
+    name: Unusual Digits
+    text: "3 or 6 digits on each hand."
+  - id: dark_eyes
+    name: Dark Eyes
+    text: "Black or red eyes, no whites or pupils."
+  - id: fangs
+    name: Fangs
+    text: "Fangs or needle-like teeth."
+  - id: furred
+    name: Furred or Feathered
+    text: "Furry or feathered skin."
+  - id: forked_tongue
+    name: Forked Tongue
+    text: "A forked tongue."
+  - id: hooves
+    name: Hooves
+    text: "Goat-like hooves."
+  - id: tail
+    name: Tail
+    text: "A long, thin tail."
+  - id: scaly_skin
+    name: Scaly Skin
+    text: "Scaly or ridged skin."
+  - id: tinted_skin
+    name: Tinted Skin
+    text: "Skin tinted red, green, or blue."
+  - id: horns
+    name: Horns
+    text: "Small horns on the forehead or temples."

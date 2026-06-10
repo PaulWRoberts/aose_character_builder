@@ -1,0 +1,88 @@
+id: mycelian
+name: Mycelian
+source: carcass_crawler_3
+prime_requisites:
+- STR
+ability_requirements:
+  CON: 9
+max_level: 6
+hit_die: 1d8
+name_level: 9
+hp_after_name_level: 0
+weapons_allowed: all
+armor_allowed: []
+shields_allowed: true
+race_locked: mycelian
+progression:
+  1: {xp_required: 0, thac0: 19, saves: {death: 9, wands: 11, paralysis: 9, breath: 13, spells: 12}}
+  2: {xp_required: 3000, thac0: 19, saves: {death: 9, wands: 11, paralysis: 9, breath: 13, spells: 12}}
+  3: {xp_required: 6000, thac0: 19, saves: {death: 9, wands: 11, paralysis: 9, breath: 13, spells: 12}}
+  4: {xp_required: 12000, thac0: 17, saves: {death: 7, wands: 9, paralysis: 7, breath: 11, spells: 10}}
+  5: {xp_required: 24000, thac0: 17, saves: {death: 7, wands: 9, paralysis: 7, breath: 11, spells: 10}}
+  6: {xp_required: 45000, thac0: 17, saves: {death: 7, wands: 9, paralysis: 7, breath: 11, spells: 10}}
+features:
+- id: combat
+  name: Combat
+  text: |-
+    Mycelians have naturally tough skin and do not wear armour. They may use shields and any kind of weapon.
+  gained_at_level: 1
+- id: natural_armour
+  name: Natural Armour Class
+  text: |-
+    A mycelian's tough skin grants a natural Armour Class that improves with level: 6 [13] at L1, 5 [14] at L2, 4 [15] at L3, 3 [16] from L4. A shield's bonus applies on top.
+  gained_at_level: 1
+  granted_modifiers:
+  - target: ac
+    op: set
+    scale:
+      by: level
+      table: {1: 6, 2: 5, 3: 4, 4: 3}
+- id: fists
+  name: Fists
+  text: |-
+    A mycelian may make one melee attack per round with its club-like fists, dealing 1d4 damage per level.
+  gained_at_level: 1
+  mechanical:
+    weapon: {name: Fists, melee: true, damage_per_level_die: d4}
+- id: fungal_spores
+  name: Fungal Spores
+  text: |-
+    Once per day per level, spray spores at a single living target within 20'. Pacifying spores: save versus poison or be passive for 1 round/level. From 4th level, hallucinogenic spores (save versus poison or terrifying visions for 1 turn).
+  gained_at_level: 1
+  daily_uses:
+    scales_with_level: true
+- id: infravision
+  name: Infravision
+  text: |-
+    Mycelians have infravision to 60'.
+  gained_at_level: 1
+  mechanical:
+    infravision_feet: 60
+- id: light_sensitivity
+  name: Light Sensitivity
+  text: |-
+    In bright light (daylight, continual light), mycelians suffer −2 to attack rolls and −1 to Armour Class.
+  gained_at_level: 1
+  granted_modifiers:
+  - {target: ac, op: add, value: -1, condition: bright_light}
+  - {target: attack, op: add, value: -2, condition: bright_light}
+- id: telepathic_communication
+  name: Telepathic Communication
+  text: |-
+    Mouthless mycelians communicate telepathically with any sentient creature within 120' that they can perceive, in any language they know.
+  gained_at_level: 1
+- id: growth
+  name: Growth
+  text: |-
+    A mycelian is 4' tall at 1st level, gaining 1' per level to a maximum of 9' at 6th level.
+  gained_at_level: 1
+- id: rest_and_sustenance
+  name: Rest and Sustenance
+  text: |-
+    Mycelians do not eat or sleep; they require 8 hours per day in contact with moist earth or lose 1 hit point per day until they do.
+  gained_at_level: 1
+- id: after_reaching_6th_level
+  name: After Reaching 6th Level
+  text: |-
+    A mycelian may found a subterranean stronghold, ruling over mycelians who gather there. A mycelian liege can reanimate humanoid corpses as fungal zombies under its control.
+  gained_at_level: 6

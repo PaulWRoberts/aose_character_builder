@@ -1,0 +1,61 @@
+id: mutoid
+name: Mutoid
+source: carcass_crawler_3
+languages:
+- common
+allowed_classes:
+- assassin
+- cleric
+- fighter
+- illusionist
+- thief
+class_level_caps:
+  assassin: 5
+  cleric: 6
+  fighter: 7
+  illusionist: 6
+  thief: 9
+features:
+- id: mutoid_appearance
+  name: Mutoid Appearance
+  text: |-
+    Mutoids have mismatched body parts from many creatures; each individual is unique and is often shunned by other species.
+feature_choices:
+- id: mutations
+  name: Mutations
+  text: Roll twice (or choose two) on the d8 Mutations table. Two attack mutations may both be used each round.
+  pick: 2
+  roll_dice: d8
+  options:
+  - id: beast_ears
+    name: Beast Ears
+    text: "3-in-6 chance to hear noises."
+  - id: beast_eyes
+    name: Beast Eyes
+    text: "Infravision to 60'."
+  - id: clawed_hand
+    name: Clawed Hand
+    text: "Unarmed attack for 1d6 damage."
+    mechanical:
+      weapon: {name: Clawed Hand, damage: 1d6, melee: true}
+  - id: gills
+    name: Gills
+    text: "Breathe underwater."
+  - id: pincer
+    name: Pincer
+    text: "Unarmed attack for 1d3 damage; the pincer locks on, dealing 1d3/round (save versus paralysis to escape)."
+    mechanical:
+      weapon: {name: Pincer, damage: 1d3, melee: true}
+  - id: scales
+    name: Scales
+    text: "+2 bonus to Armour Class."
+    granted_modifiers:
+    - {target: ac, op: add, value: 2}
+  - id: spring_legs
+    name: Spring Legs
+    text: "Jump up to 30' forward and gain +1 to attack; with an impaling weapon this counts as a charge (double damage)."
+  - id: sticky_tongue
+    name: Sticky Tongue
+    text: "Grab an object up to 15' away; usable as a melee bite attack for 1d3 damage."
+    mechanical:
+      weapon: {name: Sticky Tongue, damage: 1d3, melee: true}

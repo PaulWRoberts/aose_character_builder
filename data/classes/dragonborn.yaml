@@ -1,0 +1,94 @@
+id: dragonborn
+name: Dragonborn
+source: carcass_crawler_3
+prime_requisites:
+- STR
+ability_requirements:
+  CON: 9
+  INT: 9
+max_level: 10
+hit_die: 1d8
+name_level: 9
+hp_after_name_level: 2
+weapons_allowed: all
+armor_allowed: all
+shields_allowed: true
+race_locked: dragonborn
+progression:
+  1: {xp_required: 0, thac0: 19, saves: {death: 12, wands: 13, paralysis: 14, breath: 13, spells: 16}}
+  2: {xp_required: 3000, thac0: 19, saves: {death: 12, wands: 13, paralysis: 14, breath: 13, spells: 16}}
+  3: {xp_required: 6000, thac0: 19, saves: {death: 12, wands: 13, paralysis: 14, breath: 13, spells: 16}}
+  4: {xp_required: 12000, thac0: 17, saves: {death: 10, wands: 11, paralysis: 12, breath: 11, spells: 14}}
+  5: {xp_required: 24000, thac0: 17, saves: {death: 10, wands: 11, paralysis: 12, breath: 11, spells: 14}}
+  6: {xp_required: 45000, thac0: 17, saves: {death: 10, wands: 11, paralysis: 12, breath: 11, spells: 14}}
+  7: {xp_required: 95000, thac0: 14, saves: {death: 8, wands: 9, paralysis: 10, breath: 8, spells: 12}}
+  8: {xp_required: 175000, thac0: 14, saves: {death: 8, wands: 9, paralysis: 10, breath: 8, spells: 12}}
+  9: {xp_required: 350000, thac0: 14, saves: {death: 8, wands: 9, paralysis: 10, breath: 8, spells: 12}}
+  10: {xp_required: 500000, thac0: 12, saves: {death: 6, wands: 7, paralysis: 8, breath: 6, spells: 10}}
+features:
+- id: breath_weapon
+  name: Breath Weapon
+  text: |-
+    Up to 3 times per day, exhale a breath weapon. All in the area take damage equal to half the dragonborn's current hit points (round up); save versus breath for half. Shape and damage type depend on Draconic Bloodline.
+  gained_at_level: 1
+  daily_uses:
+    per_day: 3
+- id: scales
+  name: Scales
+  text: |-
+    A dragonborn's scaly skin grants a natural +1 bonus to Armour Class.
+  gained_at_level: 1
+  granted_modifiers:
+  - {target: ac, op: add, value: 1}
+- id: draconic_resistance
+  name: Draconic Resistance
+  text: |-
+    +2 bonus to saving throws against the damage type of the dragonborn's breath weapon (see Draconic Bloodline).
+  gained_at_level: 1
+- id: dragon_affecting_magic
+  name: Dragon-Affecting Magic
+  text: |-
+    Dragonborn are affected by magic that specifically targets dragons (e.g. a sword +1, +3 vs dragons).
+  gained_at_level: 1
+- id: dragon_affinity
+  name: Dragon Affinity
+  text: |-
+    +1 bonus to reaction rolls when encountering dragons.
+  gained_at_level: 1
+- id: after_reaching_9th_level
+  name: After Reaching 9th Level
+  text: |-
+    A dragonborn may create a stronghold that attracts dragonborn of the same clan. A dragonborn ruler may only hire dragonborn mercenaries; specialists and retainers of any race may be hired.
+  gained_at_level: 9
+feature_choices:
+- id: draconic_bloodline
+  name: Draconic Bloodline
+  text: Roll d10 (or choose) to determine your draconic affinity — breath shape, damage type, and scale colour.
+  pick: 1
+  roll_dice: d10
+  options:
+  - id: black
+    name: Black (Acid)
+    text: "Acid breath in a line (5' wide, 30' long). +2 vs acid."
+    granted_modifiers:
+    - {target: "save:vs:acid", op: add, value: 2}
+  - id: blue
+    name: Blue (Lightning)
+    text: "Lightning breath in a line (5' wide, 30' long). +2 vs lightning."
+    granted_modifiers:
+    - {target: "save:vs:lightning", op: add, value: 2}
+  - id: green
+    name: Green (Poison)
+    text: "Poison breath in a cloud (10' wide, 15' long). +2 vs poison."
+    granted_modifiers:
+    - {target: "save:vs:poison", op: add, value: 2}
+  - id: red
+    name: Red (Fire)
+    text: "Fire breath in a cone (15' wide at the far end, 20' long). +2 vs fire."
+    granted_modifiers:
+    - {target: "save:vs:fire", op: add, value: 2}
+  - id: white
+    name: White (Cold)
+    text: "Cold breath in a cone (15' wide at the far end, 20' long). +2 vs cold."
+    granted_modifiers:
+    - {target: "save:vs:cold", op: add, value: 2}
