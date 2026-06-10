@@ -21,6 +21,7 @@ class RuleSet(BaseModel):
     human_racial_abilities: bool = False
     strict_mode: bool = True
     optional_staves: bool = False
+    two_weapon_fighting: bool = False
 
     encumbrance: EncumbranceMode = "basic"
 

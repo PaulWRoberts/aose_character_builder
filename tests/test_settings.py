@@ -463,6 +463,15 @@ def test_disabling_source_clears_orphaned_race(client, tmp_path):
     assert "race_id" not in draft
 
 
+def test_two_weapon_fighting_flag_is_implemented():
+    from aose.models import RuleSet
+    from aose.web.settings_routes import RULE_LABELS, IMPLEMENTED_RULES
+    rs = RuleSet()
+    assert rs.two_weapon_fighting is False
+    assert "two_weapon_fighting" in RULE_LABELS
+    assert "two_weapon_fighting" in IMPLEMENTED_RULES
+
+
 def test_disabling_source_keeps_classic_race(client, tmp_path):
     from aose.characters import load_draft, save_draft
     drafts = tmp_path / "drafts"

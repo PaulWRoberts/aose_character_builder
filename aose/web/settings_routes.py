@@ -27,6 +27,7 @@ RULE_LABELS = {
     "human_racial_abilities": "Human Racial Abilities",
     "strict_mode": "Strict Mode",
     "optional_staves": "Spellcasters and Staves",
+    "two_weapon_fighting": "Attacking with Two Weapons",
 }
 
 # Rules whose engine/builder integration is fully wired up.  The settings
@@ -44,6 +45,7 @@ IMPLEMENTED_RULES = {
     "human_racial_abilities",
     "strict_mode",
     "optional_staves",
+    "two_weapon_fighting",
 }
 
 # Choice-group rules that have full integration too.
@@ -90,6 +92,10 @@ RULE_GROUPS = [
          "instead of descending (9 = unarmoured) with THAC0."),
         ("optional_staves",
          "Magic-users and illusionists may wield a staff in combat."),
+        ("two_weapon_fighting",
+         "Characters with STR or DEX as a prime requisite may wield a small "
+         "weapon in the off hand: −2 to the primary attack, an extra off-hand "
+         "attack at −4."),
     ]),
 ]
 
