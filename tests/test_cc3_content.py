@@ -104,3 +104,65 @@ def test_cc3_weapon_qualities(data, wid, quals):
 
 def test_garotte_two_handed(data):
     assert data.items["garotte"].hands == 2
+
+
+from aose.engine.proficiency import allowed_armor_ids
+from aose.models import Armor
+
+CC3_ARMOR = {
+    # id: (ac_descending, movement_impact, base_armor)
+    "padded_armor": (8, "leather", "leather_armor"),
+    "furs": (7, "leather", "leather_armor"),
+    "studded_leather": (6, "leather", "chain_mail"),
+    "banded_mail": (4, "metal", "plate_mail"),
+    "full_plate": (2, "metal", "plate_mail"),
+}
+
+
+@pytest.mark.parametrize("aid,expected", sorted(CC3_ARMOR.items()))
+def test_cc3_armor_loads(data, aid, expected):
+    a = data.items[aid]
+    assert isinstance(a, Armor)
+    ac, mv, base = expected
+    assert a.ac_descending == ac
+    assert a.movement_impact == mv
+    assert a.base_armor == base
+    assert a.source == "carcass_crawler_3"
+
+
+def test_leather_user_can_equip_padded_not_studded(data):
+    from aose.engine.equip import equip
+    thief = data.classes["thief"]
+    allowed = allowed_armor_ids([thief], data)
+    inv = ["padded_armor", "studded_leather"]
+    eq, _ = equip(inv, {}, [], "padded_armor", data, allowed_armor=allowed)
+    assert eq["armor"] == "padded_armor"
+    with pytest.raises(ValueError):
+        equip(inv, {}, [], "studded_leather", data, allowed_armor=allowed)
+
+
+def test_full_plate_is_tailorable(data):
+    fp = data.items["full_plate"]
+    assert fp.tailorable is True
+    assert fp.untailored_ac_descending == 3
+    assert fp.ac_descending == 2
+
+
+from aose.engine.proficiency import allowed_weapon_ids
+
+
+def test_cleric_can_use_all_blunt_weapons(data):
+    cleric = data.classes["cleric"]
+    allowed = allowed_weapon_ids([cleric], data)
+    assert allowed != "all"
+    # core blunt
+    assert {"club", "mace", "sling", "staff", "war_hammer"}.issubset(allowed)
+    # CC3 blunt picked up automatically
+    assert {"blackjack", "bolas", "net"}.issubset(allowed)
+    # non-blunt excluded
+    assert "sword" not in allowed and "dagger" not in allowed
+
+
+def test_acolyte_also_blunt_only(data):
+    allowed = allowed_weapon_ids([data.classes["acolyte"]], data)
+    assert "blackjack" in allowed and "sword" not in allowed

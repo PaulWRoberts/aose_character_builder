@@ -194,6 +194,10 @@ def allowed_weapon_ids(classes: list[CharClass], data, ruleset=None) -> "set[str
                 resolved = "all"
             else:
                 resolved = resolved | extra
+        if cls.weapon_qualities_allowed and resolved != "all":
+            wanted = set(cls.weapon_qualities_allowed)
+            by_quality = {w.id for w in weapons if w.quality_ids & wanted}
+            resolved = resolved | by_quality
         per_class.append(resolved)
     return _union(per_class)
 

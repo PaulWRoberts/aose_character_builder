@@ -55,6 +55,9 @@ class CharClass(BaseModel):
     # "Magic-Users/Illusionists and Staves" optional rules). Resolved through
     # the same path as weapons_allowed and unioned in by allowed_weapon_ids.
     optional_weapons_allowed: list[str] = Field(default_factory=list)
+    # Weapon qualities that grant usage of every weapon bearing them.
+    # Cleric/acolyte use [blunt] — "May be used by clerics".
+    weapon_qualities_allowed: list[str] = Field(default_factory=list)
     armor_allowed: AllowedList
     shields_allowed: bool
     progression: dict[int, ClassLevelData] = Field(default_factory=dict)
