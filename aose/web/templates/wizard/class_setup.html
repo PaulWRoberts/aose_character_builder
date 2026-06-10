@@ -186,6 +186,64 @@
 </section>
 {% endif %}
 
+{# ── Feature Choices (CC3) ──────────────────────────────────────────────── #}
+{% if has_feature_choices %}
+<section class="class-setup-section">
+    <h3>Features</h3>
+    {% if feature_choices_locked %}
+    <p class="muted small">Your features were rolled and are locked (Strict Mode).</p>
+    {% for g in feature_groups %}
+    <div class="feature-group">
+        <h4>{{ g.name }}</h4>
+        <ul>
+            {% for o in g.options if o.selected %}
+            <li><strong>{{ o.name }}</strong>{% if o.text %} — <span class="muted small">{{ o.text }}</span>{% endif %}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endfor %}
+    {% else %}
+    <form method="post" action="/wizard/{{ draft_id }}/feature-choices" class="step-form">
+        {% for g in feature_groups %}
+        <div class="feature-group" data-required="{{ g.pick }}">
+            <h4>{{ g.name }}{% if g.cosmetic %} <span class="muted small">(cosmetic)</span>{% endif %}</h4>
+            {% if g.text %}<p class="muted small">{{ g.text }}</p>{% endif %}
+            <p class="muted small">Choose <strong>{{ g.pick }}</strong>.</p>
+            <div class="card-grid" data-required="{{ g.pick }}">
+                {% for o in g.options %}
+                <label class="card {% if o.selected %}selected{% endif %}">
+                    <input type="checkbox" name="choice_{{ g.id }}" value="{{ o.id }}"
+                           class="choice-checkbox" {% if o.selected %}checked{% endif %}>
+                    <div class="card-name">{{ o.name }}</div>
+                    {% if o.text %}<div class="card-detail small">{{ o.text }}</div>{% endif %}
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+        <button type="submit">Save features</button>
+    </form>
+    <script>
+        (function () {
+            document.querySelectorAll('.feature-group .card-grid[data-required]').forEach(function (grid) {
+                const required = parseInt(grid.dataset.required, 10);
+                const boxes = Array.from(grid.querySelectorAll('.choice-checkbox'));
+                function update() {
+                    const checked = boxes.filter(b => b.checked).length;
+                    boxes.forEach(function (b) {
+                        b.disabled = !b.checked && checked >= required;
+                        b.closest('.card').classList.toggle('selected', b.checked);
+                    });
+                }
+                boxes.forEach(b => b.addEventListener('change', update));
+                update();
+            });
+        })();
+    </script>
+    {% endif %}
+</section>
+{% endif %}
+
 {# ── Continue ───────────────────────────────────────────────────────────── #}
 <form method="post" action="/wizard/{{ draft_id }}/hp" class="step-form">
     <button type="submit" class="primary" {% if not ready %}disabled{% endif %}>Next: Identity &rarr;</button>

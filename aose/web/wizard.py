@@ -46,6 +46,7 @@ from aose.engine.enchant import (
 )
 from aose.engine.equip import WieldError, equip as _equip, unequip as _unequip
 from aose.engine.features import one_handed_two_handed_weapons as _1h2h
+from aose.engine.feature_choices import ChoiceError, roll_choice, validate_choice
 from aose.engine.magic import (
     add_free_magic_item,
     equip_magic as _equip_magic,
@@ -197,14 +198,16 @@ def _casts_at_level_1(cls) -> bool:
 def _clear_after_abilities(draft: dict[str, Any]) -> None:
     for k in ("race_id", "class_id", "class_ids", "ability_adjustments",
               "hp_roll", "hp_rolls", "proficiencies",
-              "spellcasting", "spellbooks", "spells_done", "languages"):
+              "spellcasting", "spellbooks", "spells_done", "languages",
+              "feature_choices", "feature_choices_done", "_has_feature_choices"):
         draft.pop(k, None)
 
 
 def _clear_after_race(draft: dict[str, Any]) -> None:
     for k in ("class_id", "class_ids", "ability_adjustments",
               "hp_roll", "hp_rolls", "proficiencies",
-              "spellcasting", "spellbooks", "spells_done", "languages"):
+              "spellcasting", "spellbooks", "spells_done", "languages",
+              "feature_choices", "feature_choices_done", "_has_feature_choices"):
         draft.pop(k, None)
 
 
@@ -212,20 +215,24 @@ def _clear_after_class(draft: dict[str, Any]) -> None:
     # A class change can invalidate the chosen alignment (e.g. picking paladin
     # after choosing chaos). name and secondary_skill don't depend on class.
     for k in ("ability_adjustments", "hp_roll", "hp_rolls", "proficiencies",
-              "spellcasting", "spellbooks", "spells_done", "alignment", "languages"):
+              "spellcasting", "spellbooks", "spells_done", "alignment", "languages",
+              "feature_choices", "feature_choices_done", "_has_feature_choices"):
         draft.pop(k, None)
 
 
 def _class_setup_complete(draft: dict[str, Any]) -> bool:
     """The consolidated Class Setup step is complete when HP is rolled AND
     weapon proficiencies are chosen (if the rule is on) AND starting spells are
-    chosen (if any picked class casts at L1)."""
+    chosen (if any picked class casts at L1) AND feature choices are made (if
+    any picked class/race has feature_choices groups)."""
     rs = _ruleset_of(draft)
     if not _has_hp(draft):
         return False
     if rs.weapon_proficiency and "proficiencies" not in draft:
         return False
     if draft.get("spellcasting") and not draft.get("spells_done"):
+        return False
+    if draft.get("_has_feature_choices") and not draft.get("feature_choices_done"):
         return False
     return True
 
@@ -826,6 +833,7 @@ async def post_class(request: Request, draft_id: str):
         draft.pop("class_ids", None)
         draft["class_id"] = ids[0]
     _set_spellcasting_flag(draft, data)
+    draft["_has_feature_choices"] = bool(_active_choice_groups(draft, data))
     save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/{_next_incomplete_step(draft)}")
 
@@ -1125,6 +1133,61 @@ async def post_identity(request: Request, draft_id: str):
     return _redirect(f"/wizard/{draft_id}/{_next_incomplete_step(draft)}")
 
 
+# ── Feature choices (CC3 pick/roll groups) ─────────────────────────────────
+
+def _active_choice_groups(draft: dict[str, Any], data) -> list:
+    """The FeatureChoice groups that apply: each class's groups, plus the race's
+    groups in separate-race-class mode. In race-as-class mode the race groups
+    don't apply — the class carries them."""
+    rs = _ruleset_of(draft)
+    groups = []
+    for cid in _class_ids(draft):
+        cls = data.classes.get(cid)
+        if cls is not None:
+            groups.extend(cls.feature_choices)
+    if rs.separate_race_class:
+        race = data.races.get(draft.get("race_id"))
+        if race is not None:
+            groups.extend(race.feature_choices)
+    return groups
+
+
+def _feature_choices_context(draft: dict[str, Any], data) -> dict:
+    """Render rows for the Features section; auto-roll + lock under Strict Mode
+    on first visit (mirrors secondary skills)."""
+    groups = _active_choice_groups(draft, data)
+    rs = _ruleset_of(draft)
+    chosen_map = dict(draft.get("feature_choices", {}))
+
+    if rs.strict_mode and groups:
+        changed = False
+        for g in groups:
+            if g.id not in chosen_map:
+                chosen_map[g.id] = roll_choice(g)
+                changed = True
+        if changed:
+            draft["feature_choices"] = chosen_map
+        draft["feature_choices_done"] = True
+
+    rows = []
+    for g in groups:
+        chosen = set(chosen_map.get(g.id, []))
+        rows.append({
+            "id": g.id, "name": g.name, "text": g.text, "pick": g.pick,
+            "cosmetic": g.cosmetic, "roll_dice": g.roll_dice,
+            "options": [
+                {"id": o.id, "name": o.name, "text": o.text,
+                 "selected": o.id in chosen}
+                for o in g.options
+            ],
+        })
+    return {
+        "feature_groups": rows,
+        "feature_choices_locked": rs.strict_mode,
+        "has_feature_choices": bool(groups),
+    }
+
+
 # ── Weapon proficiencies (optional, gated by ruleset.weapon_proficiency) ──
 
 def _proficiency_context(draft: dict[str, Any], data) -> dict:
@@ -1202,6 +1265,28 @@ async def post_proficiencies(request: Request, draft_id: str):
         )
 
     draft["proficiencies"] = {"weapons": weapons, "specialisations": specialisations}
+    save_draft(draft_id, draft, _drafts_dir(request))
+    return _redirect(f"/wizard/{draft_id}/class_setup")
+
+
+@router.post("/{draft_id}/feature-choices")
+async def post_feature_choices(request: Request, draft_id: str):
+    draft = _load(request, draft_id)
+    data = request.app.state.game_data
+    if _ruleset_of(draft).strict_mode:
+        raise HTTPException(400, "Feature choices are locked in Strict Mode.")
+    form = await request.form()
+    groups = _active_choice_groups(draft, data)
+    chosen_map: dict[str, list[str]] = {}
+    for g in groups:
+        picked = list(dict.fromkeys(form.getlist(f"choice_{g.id}")))
+        try:
+            validate_choice(g, picked)
+        except ChoiceError as e:
+            raise HTTPException(400, str(e))
+        chosen_map[g.id] = picked
+    draft["feature_choices"] = chosen_map
+    draft["feature_choices_done"] = True
     save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/class_setup")
 
@@ -1289,6 +1374,13 @@ async def get_class_setup(request: Request, draft_id: str):
         ctx["spells_done"] = bool(draft.get("spells_done"))
     else:
         ctx["spells_done"] = True
+    # Feature choices (CC3 pick/roll groups).
+    choice_ctx = _feature_choices_context(draft, data)
+    ctx.update(choice_ctx)
+    ctx["features_done"] = (not choice_ctx["has_feature_choices"]) or bool(draft.get("feature_choices_done"))
+    # If Strict auto-roll changed the draft, persist it.
+    if choice_ctx["has_feature_choices"] and _ruleset_of(draft).strict_mode:
+        save_draft(draft_id, draft, _drafts_dir(request))
     ctx["ready"] = _class_setup_complete(draft)
     return templates.TemplateResponse(request, "wizard.html", ctx)
 
@@ -1948,6 +2040,7 @@ def _draft_to_spec(draft: dict[str, Any], data) -> CharacterSpec:
         languages=list(draft.get("languages", [])),
         weapon_proficiencies=list((draft.get("proficiencies") or {}).get("weapons", [])),
         weapon_specialisations=list((draft.get("proficiencies") or {}).get("specialisations", [])),
+        feature_choices=dict(draft.get("feature_choices", {})),
         gold=draft.get("gold", 0),
         inventory=list(draft.get("inventory", [])),
         stashed=list(draft.get("stashed", [])),
