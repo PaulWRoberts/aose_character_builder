@@ -217,3 +217,46 @@
   capacity_cn: 600
   weight_multiplier: 1.0
   description: Can hold up to 600 coins.
+
+# ── Carcass Crawler 3 expanded adventuring gear ──────────────────────────────
+- { id: barrel, item_type: gear, name: Barrel, category: adventuring_gear, cost_gp: 1, source: carcass_crawler_3, description: "Holds 40 gallons (320 pints) of liquid." }
+- { id: bedroll, item_type: gear, name: Bedroll, category: adventuring_gear, cost_gp: 2, source: carcass_crawler_3, description: "A heavy woollen blanket with a small pillow." }
+- { id: bell_miniature, item_type: gear, name: Bell (miniature), category: adventuring_gear, cost_gp: 1, source: carcass_crawler_3, description: "A 1\" brass bell." }
+- { id: block_and_tackle, item_type: gear, name: Block and Tackle, category: adventuring_gear, cost_gp: 5, source: carcass_crawler_3, description: "Reduces the effective weight of a hauled object by 75%. Requires 4 times as much rope." }
+- { id: bucket, item_type: gear, name: Bucket, category: adventuring_gear, cost_gp: 1, source: carcass_crawler_3, description: "Holds 5 gallons (40 pints)." }
+- { id: caltrops, item_type: gear, name: Caltrops (bag of 20), category: adventuring_gear, cost_gp: 1, source: carcass_crawler_3, description: "Cover a 5' x 5' area; 2-in-6 chance to tread on a spike (50% movement reduction for 24 hours)." }
+- { id: candles, item_type: gear, name: Candles (10), category: adventuring_gear, cost_gp: 1, bundle_count: 10, source: carcass_crawler_3, description: "Each casts dim light in a 5' radius and burns for 1 hour." }
+- { id: chain_10ft, item_type: gear, name: "Chain (10')", category: adventuring_gear, cost_gp: 30, source: carcass_crawler_3, description: "A 10' length of heavy iron chain." }
+- { id: chalk, item_type: gear, name: Chalk (10 sticks), category: adventuring_gear, cost_gp: 1, bundle_count: 10, source: carcass_crawler_3, description: "Useful for making markings on stone." }
+- { id: chisel, item_type: gear, name: Chisel, category: adventuring_gear, cost_gp: 2, source: carcass_crawler_3, description: "Used with a hammer for chipping away stone." }
+- { id: cooking_pots, item_type: gear, name: Cooking Pots, category: adventuring_gear, cost_gp: 3, source: carcass_crawler_3, description: "Pots and pans for campfire cooking." }
+- { id: firewood, item_type: gear, name: Firewood (bundle), category: adventuring_gear, cost_gp: 1, source: carcass_crawler_3, description: "A bundle of dry wood. Burns for 8 hours." }
+- { id: fishing_rod, item_type: gear, name: Fishing Rod and Tackle, category: adventuring_gear, cost_gp: 4, source: carcass_crawler_3, description: "A rod, line, hook, and bait box." }
+- { id: holy_symbol_gold, item_type: gear, name: Holy Symbol (gold), category: adventuring_gear, cost_gp: 100, source: carcass_crawler_3, description: "Grants a +1 bonus to the 2d6 turning roll for the affected Hit Dice of undead." }
+- { id: holy_symbol_wooden, item_type: gear, name: Holy Symbol (wooden), category: adventuring_gear, cost_gp: 5, source: carcass_crawler_3, description: "Incurs a -1 penalty to the 2d6 turning roll." }
+- { id: ink_vial, item_type: gear, name: Ink (vial), category: adventuring_gear, cost_gp: 1, source: carcass_crawler_3, description: "Black ink, enough for ~50 pages. Coloured ink costs double." }
+- { id: ladder_10ft, item_type: gear, name: "Ladder (wooden, 10')", category: adventuring_gear, cost_gp: 5, source: carcass_crawler_3, description: "Very encumbering." }
+- { id: lantern_bullseye, item_type: gear, name: Lantern (Bullseye), category: adventuring_gear, cost_gp: 20, source: carcass_crawler_3, description: "Casts a narrow beam, 60' long and 20' wide at the end. Burns one oil flask every four hours." }
+- { id: lock, item_type: gear, name: Lock, category: adventuring_gear, cost_gp: 20, source: carcass_crawler_3, description: "A basic iron lock with a key." }
+- { id: magnifying_glass, item_type: gear, name: Magnifying Glass, category: adventuring_gear, cost_gp: 3, source: carcass_crawler_3, description: "Used for studying fine details." }
+- { id: manacles, item_type: gear, name: Manacles, category: adventuring_gear, cost_gp: 15, source: carcass_crawler_3, description: "Iron manacles with a chain." }
+- { id: marbles, item_type: gear, name: Marbles (bag of 20), category: adventuring_gear, cost_gp: 1, source: carcass_crawler_3, description: "A bag of colourful glass beads." }
+- { id: mining_pick, item_type: gear, name: Mining Pick, category: adventuring_gear, cost_gp: 3, source: carcass_crawler_3, description: "For breaking rock." }
+- { id: instrument_string, item_type: gear, name: Musical Instrument (string), category: adventuring_gear, cost_gp: 20, source: carcass_crawler_3, description: "A lute, mandolin, or similar. Basic quality." }
+- { id: instrument_wind, item_type: gear, name: Musical Instrument (wind), category: adventuring_gear, cost_gp: 5, source: carcass_crawler_3, description: "A flute, pipe, or similar. Basic quality." }
+- { id: paper, item_type: gear, name: Paper/Parchment (2 sheets), category: adventuring_gear, cost_gp: 1, bundle_count: 2, source: carcass_crawler_3, description: "Approximately 1'-square sheets." }
+- { id: quill, item_type: gear, name: Quill, category: adventuring_gear, cost_gp: 1, source: carcass_crawler_3, description: "A large feather sharpened into a writing point." }
+- { id: saw, item_type: gear, name: Saw, category: adventuring_gear, cost_gp: 1, source: carcass_crawler_3, description: "A hand saw for cutting wood." }
+- { id: scroll_case, item_type: gear, name: Scroll Case, category: adventuring_gear, cost_gp: 1, source: carcass_crawler_3, description: "An oiled leather tube with a cap." }
+- { id: sledgehammer, item_type: gear, name: Sledgehammer, category: adventuring_gear, cost_gp: 5, source: carcass_crawler_3, description: "A big heavy hammer for breaking rock." }
+- { id: spade, item_type: gear, name: Spade or Shovel, category: adventuring_gear, cost_gp: 2, source: carcass_crawler_3, description: "For excavating earth." }
+- { id: tent, item_type: gear, name: Tent, category: adventuring_gear, cost_gp: 20, source: carcass_crawler_3, description: "Large enough for 2 adult humans." }
+- { id: twine, item_type: gear, name: "Twine (100' ball)", category: adventuring_gear, cost_gp: 1, source: carcass_crawler_3, description: "Thin cord; supports up to 300 coins of weight." }
+- { id: vial_glass, item_type: gear, name: Vial (glass), category: adventuring_gear, cost_gp: 1, source: carcass_crawler_3, description: "Holds up to half a pint of liquid." }
+- { id: whistle, item_type: gear, name: Whistle, category: adventuring_gear, cost_gp: 1, source: carcass_crawler_3, description: "Useful for signalling or faking bird calls." }
+
+- { id: belt_pouch, item_type: container, name: Belt Pouch, category: adventuring_gear, cost_gp: 1, capacity_cn: 50, weight_multiplier: 1.0, source: carcass_crawler_3, description: "A leather pouch that holds up to 50 coins." }
+- { id: box_iron_small, item_type: container, name: "Box (iron, small)", category: adventuring_gear, cost_gp: 10, capacity_cn: 250, weight_multiplier: 1.0, source: carcass_crawler_3, description: "A solid iron casket holding up to 250 coins." }
+- { id: box_iron_large, item_type: container, name: "Box (iron, large)", category: adventuring_gear, cost_gp: 30, capacity_cn: 800, weight_multiplier: 1.0, source: carcass_crawler_3, description: "A solid iron casket holding up to 800 coins." }
+- { id: chest_wooden_small, item_type: container, name: "Chest (wooden, small)", category: adventuring_gear, cost_gp: 1, capacity_cn: 300, weight_multiplier: 1.0, source: carcass_crawler_3, description: "A wooden chest holding up to 300 coins." }
+- { id: chest_wooden_large, item_type: container, name: "Chest (wooden, large)", category: adventuring_gear, cost_gp: 5, capacity_cn: 1000, weight_multiplier: 1.0, source: carcass_crawler_3, description: "A wooden chest holding up to 1,000 coins." }
