@@ -55,15 +55,28 @@ duergar/gnome CON-scaled save resilience, Kineticist level-AC (a level-scaled
 retired onto this path).
 
 **Generic `mechanical` keys beyond `granted_modifiers`:** `features.py` also
-exposes two collectors that read arbitrary `mechanical` dict keys off reached
-features via `_reached_features` (the canonical "which features apply" generator
-— class features gated by `gained_at_level`, race features suppressed for
-race-as-class): `feature_weapons` reads `mechanical["weapon"]` descriptors to
-produce synthetic always-on `AttackProfile`s (the gargantua's thrown rock —
-declared as `name`/`damage`/`melee`/`ranged`/`range`/`qualities` in the feature
-YAML); `open_doors_category_bonus` sums `mechanical["str_category_bonus"]` for
-the STR ability table bump (gargantua Open Doors). Both follow the same
-race-as-class guard, so a character who is race *and* class never double-counts.
+exposes collectors that read arbitrary `mechanical` dict keys off reached
+features via `iter_reached` (the canonical "which features apply" generator —
+class features gated by `gained_at_level`, chosen options, and race features /
+chosen race options suppressed for race-as-class): `feature_weapons` reads
+`mechanical["weapon"]` descriptors to produce synthetic always-on
+`AttackProfile`s (the gargantua's thrown rock, Mutoid claws, Mycelian fists —
+declared as `name`/`damage`/`melee`/`ranged`/etc. in the feature YAML; a
+`damage_per_level_die` key resolves to `"{level}{die}"` at render time);
+`open_doors_category_bonus` sums `mechanical["str_category_bonus"]` for the STR
+ability table bump (gargantua Open Doors). Both follow the same race-as-class
+guard, so a character who is race *and* class never double-counts.
+
+**Feature choices (`FeatureChoice` / `ChoiceOption`):** A Race or CharClass can
+declare `feature_choices: list[FeatureChoice]`, each being a "pick N (or roll)"
+group. Selections live on `CharacterSpec.feature_choices: dict[str, list[str]]`
+(group id → chosen option ids). Chosen `ChoiceOption`s are feature-shaped
+(`mechanical`, `granted_modifiers`, `daily_uses`, `spell_id`), so they flow
+through `iter_reached` / `feature_modifiers` / `feature_weapons` with no
+per-option engine code. The wizard's `class_setup` step shows a Features picker
+(auto-rolls and locks under Strict Mode via `aose/engine/feature_choices.py`
+`roll_choice`/`validate_choice`); selected features render on the sheet alongside
+normal class/race features.
 
 **Race vs race-as-class are distinct stat blocks that share only a name.** A
 race-as-class character is defined wholly by its `race_locked` `CharClass`; the
@@ -240,6 +253,34 @@ is a data field, not a constant.
 Reset, known-power list). Routes `/powers/{learn,forget,spend,restore,reset}`.
 Kineticist is the only mental class (`data/classes/kineticist.yaml`, source
 `carcass_crawler_1`, all on `data/spells/carcass_crawler_kineticist_powers.yaml`).
+
+### Innate daily-use abilities (`aose/engine/innate.py`)
+
+Non-caster analogue of the mental-power pool. A `ClassFeature` or `RaceFeature`
+(or chosen `ChoiceOption`) carries `daily_uses: DailyUses` (`per_day: int` and/or
+`scales_with_level: bool`). `innate_abilities(spec, data)` iterates `iter_reached`
+and collects every feature with `daily_uses`, resolving the max against the
+granting class's level. `CharacterSpec.innate_uses: dict[str, int]` tracks
+uses-spent; `spend_innate`/`restore_innate`/`reset_innate` mutate it.
+Routes `/character/{id}/innate/{spend,restore,reset}` mirror the powers routes.
+`rest_night` and `rest_full_day` call `reset_innate`. The sheet renders an
+"Innate Abilities" block (column 3, alongside Mental Powers) with Use/+1 buttons
+and a spell-expander in the feature modal when `spell_id` is set.
+
+### Carcass Crawler 3 content (`source: carcass_crawler_3`)
+
+**Classes:** Beast Master (14-level, no race-lock, animal companion / speak-with-
+animals), Dragonborn (10-level, breath weapon ×3/day, Scales +1 AC, `feature_choices:
+draconic_bloodline` — pick/roll 1 from 5 colour options, each granting a
+`save:vs:<type>` bonus), Mutoid (8-level race-as-class, `feature_choices: mutations`
+— pick/roll 2 from 8, some granting synthetic weapons, one granting +2 AC),
+Mycelian (6-level race-as-class, no armour, natural AC table via level-scaled `ac
+set`, `fists` with `damage_per_level_die: d4`, `fungal_spores` with
+`scales_with_level: true`), Tiefling (10-level race-as-class, `feature_choices:
+fiendish_gifts` — pick/roll 2 from 10 innate spell-grants with `daily_uses`,
+`feature_choices: fiendish_appearance` — 2 cosmetic-only flavour traits). **Races:**
+Dragonborn, Mutoid, Mycelian, Tiefling — mirrors of the race-as-class content for
+`separate_race_class` mode; no new languages beyond `deepcommon` (already present).
 
 ### Carcass Crawler 1 content (`source: carcass_crawler_1`)
 

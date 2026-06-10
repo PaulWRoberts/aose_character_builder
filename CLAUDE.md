@@ -77,6 +77,8 @@ back-navigation links (or a 🔒 when a roll has locked an earlier step).
 - Equipped items live *inside* `inventory` — weight is counted once
 - `stashed`, `containers`, `magic_items`, `ammo`, `spell_sources`, gems/jewellery
   each have their own shapes — see `docs/ARCHITECTURE.md`
+- `feature_choices`: `dict[str, list[str]]` — group id → chosen option ids (CC3 pick/roll)
+- `innate_uses`: `dict[str, int]` — daily-use ability id → uses spent today (reset on rest)
 
 ## Settings vs per-character ruleset
 

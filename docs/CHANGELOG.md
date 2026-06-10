@@ -8,6 +8,7 @@ For the living architecture (how the subsystems fit together *now*), see
 
 | Date | Feature | Branch | Spec/Plan slug |
 |---|---|---|---|
+| 2026-06-10 | CC3 races/classes + feature-choice mechanic & innate abilities | feat/cc3-races-classes | 2026-06-10-cc3-races-and-classes |
 | 2026-06-10 | Wield capacity: named hand slots (main_hand/off_hand), two-weapon fighting rule, dual-wield penalties (−2/−4), gargantua 1H-2H melee exception | main | 2026-06-10-wield-capacity-equip |
 | 2026-06-09 | CC3 expanded equipment + parametric weapon qualities | main | 2026-06-09-cc3-expanded-equipment |
 | 2026-06-08 | Gargantua feature automation: Rock Throwing synthetic weapon + Open Doors STR-category bump | `main` | `2026-06-08-gargantua-feature-automation` |
