@@ -1020,6 +1020,37 @@ async def sheet_power_reset(request: Request, character_id: str,
     return _power_pool_op(request, character_id, class_id, spell_engine.reset_powers)
 
 
+# ── Innate daily-use abilities ─────────────────────────────────────────────
+
+@router.post("/character/{character_id}/innate/spend")
+async def sheet_innate_spend(request: Request, character_id: str,
+                             ability_id: str = Form(...)):
+    spec = _load_spec_or_404(request, character_id)
+    try:
+        spec = spend_innate(spec, ability_id, request.app.state.game_data)
+    except InnateError as e:
+        raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/innate/restore")
+async def sheet_innate_restore(request: Request, character_id: str,
+                               ability_id: str = Form(...)):
+    spec = _load_spec_or_404(request, character_id)
+    spec = restore_innate(spec, ability_id)
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/innate/reset")
+async def sheet_innate_reset(request: Request, character_id: str):
+    spec = _load_spec_or_404(request, character_id)
+    spec = reset_innate(spec)
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
 # ── Spell books & scrolls on the live sheet ────────────────────────────────
 
 @router.post("/character/{character_id}/spell-sources/add")
