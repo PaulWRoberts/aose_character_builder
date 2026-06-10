@@ -159,6 +159,7 @@ def _profile_for(weapon: Weapon, spec: CharacterSpec, data: GameData,
 
     use_variable = spec.ruleset.variable_weapon_damage
     base_damage = weapon.damage.variable if use_variable else weapon.damage.default
+    no_damage = not base_damage
 
     rng = None
     if weapon.ranged and weapon.range_short is not None:
@@ -171,6 +172,8 @@ def _profile_for(weapon: Weapon, spec: CharacterSpec, data: GameData,
         return base_attack + atk_mod + prof_pen + spec_hit + extra + g_atk
 
     def dmg(extra: int) -> str:
+        if no_damage:
+            return "—"
         return _format_damage(base_damage, dmg_mod + g_dmg + spec_dmg + extra)
 
     flat = weapon.magic_bonus + ammo_bonus
@@ -211,6 +214,23 @@ def _profile_for(weapon: Weapon, spec: CharacterSpec, data: GameData,
         loaded_ammo_name=ammo_name,
         manageable_item_id=manageable_item_id,
     )
+
+
+def _two_handed_variant(base: AttackProfile, weapon: "Weapon",
+                        spec: CharacterSpec) -> "AttackProfile | None":
+    """For a versatile weapon under the variable-damage rule, return a second
+    profile using the two-handed die. Returns None otherwise."""
+    if not (weapon.versatile and weapon.two_handed_damage
+            and spec.ruleset.variable_weapon_damage):
+        return None
+    one_h = weapon.damage.variable
+    two_h = weapon.two_handed_damage
+    new_damage = base.damage.replace(one_h, two_h, 1) if one_h in base.damage else two_h
+    return base.model_copy(update={
+        "name": f"{weapon.name} (Two-handed)",
+        "damage": new_damage,
+        "manageable_item_id": None,
+    })
 
 
 def _unarmed_profile(spec: CharacterSpec, eff: dict,
@@ -298,10 +318,12 @@ def attack_profiles(spec: CharacterSpec, data: GameData) -> list[AttackProfile]:
         if not isinstance(item, Weapon):
             continue  # equipped_weapons should only contain weapons, defensive
         g_atk, g_dmg = _atk_dmg(mods, melee=item.melee, ranged=item.ranged)
-        weapon_profiles.append(
-            _profile_for(item, spec, data, count, eff, base_thac0, g_atk, g_dmg,
-                         manageable_item_id=item.id, **_ammo_args(item))
-        )
+        base = _profile_for(item, spec, data, count, eff, base_thac0, g_atk, g_dmg,
+                            manageable_item_id=item.id, **_ammo_args(item))
+        weapon_profiles.append(base)
+        variant = _two_handed_variant(base, item, spec)
+        if variant is not None:
+            weapon_profiles.append(variant)
     for resolved in equipped_enchanted(spec, data, "weapon"):
         g_atk, g_dmg = _atk_dmg(mods, melee=resolved.melee, ranged=resolved.ranged)
         weapon_profiles.append(
