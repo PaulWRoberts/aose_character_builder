@@ -104,10 +104,13 @@ becomes the single source of truth for worn/held gear with three slots:
 | `off_hand` | a shield **or** an off-hand weapon — catalog id **or** enchanted instance id |
 
 Enchanted weapons and shields become **slot-resident** (slot value = the
-`EnchantedInstance.instance_id`). Their per-instance `equipped` bool is retired
-for `kind in {weapon, shield}` (still used for body `armor`). This keeps a
-single place that answers "what is in each hand," avoiding the two-source
-synchronisation problem that approach B would have had. Catalog ids
+`EnchantedInstance.instance_id`) and are governed by exactly the same wield
+rules as mundane gear — an enchanted longsword occupies a hand, an enchanted
+shield fills the off hand, a magic dagger can be an off-hand weapon. Their
+per-instance `equipped` bool is retired for `kind in {weapon, shield}` (still
+used for body `armor`). This keeps a single place that answers "what is in each
+hand," avoiding the two-source synchronisation problem that approach B would
+have had. Catalog ids
 (e.g. `"dagger"`) never collide with instance ids (uuid4 hex) and never with the
 synthetic `ench:{instance_id}` weapon id, so slot values disambiguate by lookup.
 
@@ -132,12 +135,9 @@ instance id appears in at most one slot.
 ## Data-model changes (`aose/models`)
 
 - `CharacterSpec`: drop `equipped_weapons`; `equipped` now carries
-  `armor` / `main_hand` / `off_hand`. Add a `@model_validator(mode="before")`
-  **courtesy** coercion: migrate a legacy `equipped_weapons` list into the
-  slots (first eligible → `main_hand`, a second small/eligible one → `off_hand`,
-  drop the rest) and migrate a legacy `equipped["shield"]` into `off_hand`. (App
-  isn't deployed — this is a courtesy so existing saves load, per
-  "no migrations needed".)
+  `armor` / `main_hand` / `off_hand`. **No migration/coercion validator** — the
+  app is in development mode, so existing saved characters needn't load against
+  the new shape (re-equip from scratch is fine). This keeps the model lean.
 - `RuleSet`: add `two_weapon_fighting: bool = False`.
 - `EnchantedInstance.equipped` semantics narrow to body armour only; no field
   change required, but weapon/shield equip flips slot occupancy instead of the
@@ -215,10 +215,13 @@ instance id appears in at most one slot.
 
 ### UI — equip control (sheet drawer + wizard equipment step)
 
-- When `two_weapon_fighting` is on **and** the character is eligible **and** the
-  weapon passes off-hand eligibility **and** the off hand is free, the equip
-  control offers a **main hand / off hand** choice. Otherwise the weapon equips
-  to `main_hand` silently. Shields always target `off_hand`.
+- The **off-hand equip** control is shown only when a valid off-hand option
+  exists: `two_weapon_fighting` on **and** the character is eligible **and** the
+  weapon passes off-hand eligibility. When all three hold but the off hand is
+  already occupied, the control is **shown but disabled**, with a hint to drop
+  the current off-hand item first — so the player understands why they can't
+  add it. When no off-hand option exists at all, the weapon equips to
+  `main_hand` with no choice surfaced. Shields always target `off_hand`.
 - Illegal attempts show the `validate_wield` error inline (e.g. "Both hands are
   full", "This class cannot use a shield", "Not eligible to fight with two
   weapons").
@@ -254,8 +257,8 @@ wiring.
 - **Attacks:** −2/−4 applied only when both hands hold weapons; off-hand labels;
   versatile two-handed variant suppressed with an occupied off hand.
 - **AC:** shield bonus resolves from `off_hand` (mundane and enchanted shield).
-- **Migration validator:** a saved spec with legacy `equipped_weapons` and
-  `equipped["shield"]` loads into the new slots.
+- **Enchanted parity:** an enchanted weapon/shield equips, occupies a hand, and
+  obeys the same wield rules as its mundane counterpart.
 - **Rule wiring:** settings/regression test passes for `two_weapon_fighting`;
   cascading clear empties an illegal off-hand weapon when the rule is disabled.
 
