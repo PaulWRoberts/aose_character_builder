@@ -86,3 +86,21 @@ def test_item_card_unknown_type_falls_back_to_cost_and_description():
     gear = next(i for i in DATA.items.values() if i.item_type == "gear")
     card = item_card(gear)
     assert _stat(card, "Cost") == f"{int(gear.cost_gp)} gp"
+
+
+def test_weapon_card_formats_parametric_qualities(data=DATA):
+    card = item_card(data.items["crossbow"])
+    labels = {s.label: s.value for s in card.stats}
+    assert "Missile" in labels["Qualities"]
+    assert labels["Range"] == "80/160/240 ft"
+
+
+def test_weapon_card_shows_dash_for_no_damage(data=DATA):
+    from aose.models import Weapon
+    w = Weapon.model_validate(dict(
+        id="netx", name="Net", category="weapons", cost_gp=1, item_type="weapon",
+        damage={"default": "", "variable": ""},
+        qualities=["blunt", {"missile": [10, 20, 30]}]))
+    card = item_card(w)
+    labels = {s.label: s.value for s in card.stats}
+    assert labels["Damage"] == "—"

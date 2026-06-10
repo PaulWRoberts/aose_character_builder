@@ -690,7 +690,7 @@ def _weapon_qualities_reference(spec: CharacterSpec, data: GameData) -> list[Wea
     for wid in set(spec.inventory) | set(spec.equipped_weapons):
         item = data.items.get(wid)
         if isinstance(item, Weapon):
-            present.update(item.qualities)
+            present.update(item.quality_ids)
     refs = [
         WeaponQualityRef(id=q.id, name=q.name, description=q.description)
         for qid in sorted(present)

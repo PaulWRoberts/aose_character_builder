@@ -50,14 +50,14 @@ def test_weapons_match_book_table():
     assert sword.cost_gp == 10
     assert sword.weight_cn == 60
     assert sword.damage.variable == "1d8"
-    assert sword.qualities == ["melee"]
+    assert sword.quality_ids == {"melee"}
 
     crossbow = data.items["crossbow"]
     assert crossbow.cost_gp == 30
     assert crossbow.melee is False
     assert crossbow.ranged is True
     assert (crossbow.range_short, crossbow.range_medium, crossbow.range_long) == (80, 160, 240)
-    assert set(crossbow.qualities) == {"missile", "reload", "slow", "two_handed"}
+    assert crossbow.quality_ids == {"missile", "reload", "slow", "two_handed"}
 
 
 def test_every_weapon_quality_is_defined():
@@ -65,8 +65,8 @@ def test_every_weapon_quality_is_defined():
     from aose.models import Weapon
     for item in data.items.values():
         if isinstance(item, Weapon):
-            for q in item.qualities:
-                assert q in data.qualities, f"{item.id} references unknown quality {q!r}"
+            for qid in item.quality_ids:
+                assert qid in data.qualities, f"{item.id} references unknown quality {qid!r}"
 
 
 def test_proficiency_group_field_removed():

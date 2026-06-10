@@ -1134,7 +1134,7 @@ def _proficiency_context(draft: dict[str, Any], data) -> dict:
         {
             "id": w.id,
             "name": w.name,
-            "qualities": ", ".join(w.qualities),
+            "qualities": ", ".join(sorted(w.quality_ids)),
             "selected": w.id in chosen_weapons,
             "specialised": w.id in chosen_special,
         }

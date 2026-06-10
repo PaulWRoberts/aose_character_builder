@@ -34,6 +34,20 @@ def spell_card(spell: Spell, *, reversed: bool = False) -> DetailCard:
     return DetailCard(stats=stats, description=spell.description)
 
 
+def _format_qualities(weapon) -> str:
+    """Human-readable quality list: bare ids title-cased, params inlined."""
+    parts: list[str] = []
+    for q in weapon.qualities:
+        name = q.id.replace("_", " ").title()
+        if q.id == "missile" and q.param:
+            parts.append(f"{name} ({q.param[0]}/{q.param[1]}/{q.param[2]} ft)")
+        elif q.id == "versatile" and q.param:
+            parts.append(f"{name} ({q.param})")
+        else:
+            parts.append(name)
+    return ", ".join(parts)
+
+
 def _cost_weight(item) -> list[StatLine]:
     out: list[StatLine] = []
     if item.cost_gp:
@@ -48,14 +62,17 @@ def item_card(item) -> DetailCard:
 
     if isinstance(item, Weapon):
         stats.append(StatLine(label="Type", value="Weapon"))
-        stats.append(StatLine(label="Damage", value=item.damage.default))
+        stats.append(StatLine(label="Damage",
+                              value=item.damage.default if item.deals_damage else "—"))
+        if item.two_handed_damage:
+            stats.append(StatLine(label="Damage (2H)", value=item.two_handed_damage))
         if item.ranged and item.range_short:
             stats.append(StatLine(
                 label="Range",
                 value=f"{item.range_short}/{item.range_medium}/{item.range_long} ft"))
         stats.append(StatLine(label="Hands", value=str(item.hands)))
         if item.qualities:
-            stats.append(StatLine(label="Qualities", value=", ".join(item.quality_ids)))
+            stats.append(StatLine(label="Qualities", value=_format_qualities(item)))
         if item.magic_bonus:
             stats.append(StatLine(label="Magic", value=f"+{item.magic_bonus}"))
         if item.conditional_bonus:

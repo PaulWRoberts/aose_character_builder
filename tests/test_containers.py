@@ -171,7 +171,7 @@ def _weapon_for_tests(item_id: str, name: str, weight_cn: int, cost_gp: int):
         id=item_id, name=name, category="weapons", item_type="weapon",
         cost_gp=cost_gp, weight_cn=weight_cn,
         damage=WeaponDamage(default="1d6", variable="1d8"),
-        hands=1, melee=True, ranged=False,
+        qualities=["melee"],
     )
 
 

@@ -86,7 +86,8 @@ def test_ammo_enchantment_not_compatible_with_weapon():
     from aose.engine.enchant import is_compatible
     from aose.models import Weapon, WeaponDamage
     bow = Weapon(id="short_bow", name="Short Bow", category="weapons",
-                 item_type="weapon", cost_gp=25, damage=WeaponDamage(), ranged=True)
+                 item_type="weapon", cost_gp=25, damage=WeaponDamage(),
+                 qualities=[{"missile": [20, 40, 80]}])
     assert not is_compatible(bow, _ammo_ench("arrows_plus_1", ["arrow"]))
 
 
@@ -95,7 +96,7 @@ def test_resolve_weapon_preserves_accepts_ammo():
     from aose.models import Enchantment, Weapon, WeaponDamage
     bow = Weapon(id="short_bow", name="Short Bow", category="weapons",
                  item_type="weapon", cost_gp=25, damage=WeaponDamage(),
-                 ranged=True, groups=["bow"], accepts_ammo=["arrow"])
+                 qualities=[{"missile": [20, 40, 80]}], groups=["bow"], accepts_ammo=["arrow"])
     ench = Enchantment(id="bow_plus_1", name_template="{base} +1", kind="weapon",
                        applies_to={"include": ["bow"]}, magic_bonus=1)
     resolved = resolve_weapon(bow, ench, "iid")
@@ -114,7 +115,7 @@ def _data_with_ammo():
     d = GameData()
     d.items["short_bow"] = Weapon(id="short_bow", name="Short Bow",
         category="weapons", item_type="weapon", cost_gp=25, damage=WeaponDamage(),
-        ranged=True, groups=["bow"], accepts_ammo=["arrow"])
+        qualities=[{"missile": [20, 40, 80]}], groups=["bow"], accepts_ammo=["arrow"])
     d.items["arrow"] = Ammunition(id="arrow", name="Arrows (quiver of 20)",
         category="ammunition", item_type="ammunition", cost_gp=5, bundle_count=20,
         groups=["arrow"])

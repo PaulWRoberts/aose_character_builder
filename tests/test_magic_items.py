@@ -418,13 +418,13 @@ def _with_magic(data):
     d.items["sword_plus_1"] = Weapon(
         id="sword_plus_1", name="Sword +1", category="magic_swords",
         item_type="weapon", cost_gp=0, weight_cn=60,
-        damage=WeaponDamage(default="1d6", variable="1d8"), melee=True,
+        damage=WeaponDamage(default="1d6", variable="1d8"), qualities=["melee"],
         magic=True, magic_bonus=1,
     )
     d.items["sword_plus_1_vs_undead"] = Weapon(
         id="sword_plus_1_vs_undead", name="Sword +1, +3 vs Undead",
         category="magic_swords", item_type="weapon", cost_gp=0, weight_cn=60,
-        damage=WeaponDamage(default="1d6", variable="1d8"), melee=True,
+        damage=WeaponDamage(default="1d6", variable="1d8"), qualities=["melee"],
         magic=True, magic_bonus=1,
         conditional_bonus=ConditionalBonus(vs="undead", bonus=2),
     )
