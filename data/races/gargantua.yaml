@@ -39,6 +39,7 @@ features:
     **Two-handed melee weapons:** A gargantua can wield any two-handed melee weapon, such as a battle axe, with only one hand.
   mechanical:
     armour_requires_tailoring: true
+    one_handed_two_handed_melee: true
 - id: open_doors
   name: Open Doors
   text: Gargantuas open even barred doors with ease. They are treated as the next highest STR category when it comes to determining their chance of opening doors. For example, a gargantua with STR 12 is treated as if their STR were in the 13–15 category instead.

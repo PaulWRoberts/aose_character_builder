@@ -8,6 +8,11 @@ from aose.data.loader import GameData
 DATA = GameData.load(Path(__file__).parent.parent / "data")
 
 
+@pytest.fixture
+def data():
+    return DATA
+
+
 # ── Task 1: models ──────────────────────────────────────────────────────────
 
 def test_granted_modifier_flat_value_ok():
@@ -430,6 +435,32 @@ def test_gargantua_rock_proficient_under_weapon_proficiency():
 
 def test_non_gargantua_has_no_rock():
     assert "rock_throwing" not in _profiles(_spec("human", "fighter"))
+
+
+def test_gargantua_wields_two_handed_melee_one_handed(data):
+    from aose.engine.features import one_handed_two_handed_weapons
+    from aose.models import CharacterSpec, ClassEntry, Ability
+
+    spec = CharacterSpec(
+        name="Krug", abilities={a: 12 for a in Ability},
+        race_id="gargantua",
+        classes=[ClassEntry(class_id="gargantua", level=1)],
+        alignment="neutral",
+    )
+    assert one_handed_two_handed_weapons(spec, data) is True
+
+
+def test_non_gargantua_does_not(data):
+    from aose.engine.features import one_handed_two_handed_weapons
+    from aose.models import CharacterSpec, ClassEntry, Ability
+
+    spec = CharacterSpec(
+        name="Bob", abilities={a: 12 for a in Ability},
+        race_id="human",
+        classes=[ClassEntry(class_id="fighter", level=1)],
+        alignment="neutral",
+    )
+    assert one_handed_two_handed_weapons(spec, data) is False
 
 
 def test_gargantua_as_class_rock_not_duplicated():

@@ -99,6 +99,15 @@ def open_doors_category_bonus(spec: CharacterSpec, data: GameData) -> tuple[int,
     return total, source
 
 
+def one_handed_two_handed_weapons(spec: CharacterSpec, data: GameData) -> bool:
+    """True when a reached feature grants wielding two-handed *melee* weapons in
+    one hand (gargantua). Reads ``mechanical['one_handed_two_handed_melee']``."""
+    for feat, _src in _reached_features(spec, data):
+        if feat.mechanical and feat.mechanical.get("one_handed_two_handed_melee"):
+            return True
+    return False
+
+
 def feature_modifiers(spec: CharacterSpec, data: GameData) -> list[Modifier]:
     """Concrete ``Modifier``s from every reached class feature (per the class's
     level) and every race feature.  Each carries the grant's ``condition`` and

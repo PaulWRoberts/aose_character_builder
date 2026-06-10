@@ -64,6 +64,9 @@ features:
 
     **Two-handed melee weapons:** A gargantua can wield any two-handed melee weapon, such as a battle axe, with only one hand.
   gained_at_level: 1
+  mechanical:
+    armour_requires_tailoring: true
+    one_handed_two_handed_melee: true
 - id: open_doors
   name: Open Doors
   text: |-
