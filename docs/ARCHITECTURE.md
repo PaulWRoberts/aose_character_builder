@@ -165,6 +165,7 @@ is a data field, not a constant.
 
 ## Attacks & ammunition
 
+- **Weapon qualities are the source of truth for weapon mechanics.** `Weapon.qualities: list[QualityRef]` — authored in YAML as bare ids (`melee`, `two_handed`) or one-key parametric dicts (`{missile: [s,m,l]}`, `{versatile: "die"}`). Computed properties (`melee`, `ranged`, `hands`, `versatile`, `range_*`, `two_handed_damage`, `deals_damage`) are derived from qualities; nothing is stored. The loader validates every quality ref against the `WeaponQuality` registry (`_validate_weapon_qualities`). No-damage weapons (`net`, `blowgun`) have `damage.default == ""`. Under the variable-damage rule, a `{versatile: "die"}` weapon emits a second `(Two-handed)` attack profile in `attacks.py`.
 - **`aose/engine/attacks.py`** uses effective abilities, `magic_bonus`, global
   `attack`/`damage` mods, the conditional variant, and the synthetic Unarmed
   profile. A second synthetic profile category — **feature weapons** — is emitted
@@ -177,7 +178,8 @@ is a data field, not a constant.
   weapon's listed weight already includes ammo, so ammo never touches
   `encumbrance.py`). Buyable table in `data/equipment/ammunition.yaml`.
 - Launchers carry `Weapon.accepts_ammo` (non-empty ⇔ needs ammo; bows `[arrow]`,
-  crossbow `[crossbow_bolt]`, sling `[sling_stone]`; thrown weapons stay empty).
+  crossbow `[crossbow_bolt]`, sling `[sling_stone]`, blowgun `[blowgun_dart]`;
+  thrown weapons stay empty).
 - Per-character `CharacterSpec.ammo: list[AmmoStack]` (`{instance_id, base_id,
   enchantment_id, count}`, stacks combine on `(base_id, enchantment_id)`; counts
   adjusted manually — no auto-shooting) + `loaded_ammo: dict[weapon_key,
@@ -187,6 +189,13 @@ is a data field, not a constant.
   etc.). `aose/engine/ammo.py` owns stacks/loading/bonus. Loaded ammo's
   `magic_bonus` adds **additively** with the weapon's own bonus (+1 arrow in +1
   bow = +2); an empty launcher is flagged `unloaded`.
+- **Quality-based weapon allowance** — `CharClass.weapon_qualities_allowed: list[str]`
+  grants a class permission to use any weapon that carries a matching quality id.
+  `aose/engine/proficiency.py` expands `allowed_weapon_ids` to include every
+  catalog weapon whose qualities include any listed id. Cleric and Acolyte carry
+  `weapon_qualities_allowed: [blunt]`, which automatically covers all current and
+  future blunt weapons (club, mace, flail, blackjack, etc.) without enumerating
+  individual ids.
 
 ---
 
@@ -252,7 +261,10 @@ Illusionist/Magic-user/Thief). New languages: `hephaestan`, `language_of_wolves`
   `equipped: dict[str, str]` (armor/shield slots); `equipped_weapons: list[str]`
   (duplicates allowed). A weapon is equippable when
   `equipped_weapons.count(id) < inventory.count(id)`. Equipped items live *inside*
-  `inventory` already — weight is counted once. `stashed: list[str]` is off-person
+  `inventory` already — weight is counted once. `armor_tailored: bool = True` on
+  `CharacterSpec` tracks whether the equipped tailorable armour (full plate) is
+  fitted to the wearer — if False, `armor_class.py` uses
+  `Armor.untailored_ac_descending` instead. `stashed: list[str]` is off-person
   (no weight). Sheet renders Equipped / Carried / Stashed.
 - **Containers** — `Container` catalog variant (`item_type: container`,
   `capacity_cn`, `weight_multiplier`) + per-instance `ContainerInstance`
@@ -350,8 +362,7 @@ Illusionist/Magic-user/Thief). New languages: `hephaestan`, `language_of_wolves`
 
 ## Content sources & optional rules
 
-- **Sources** — `Source` model + `data/sources.yaml` (OSE Classic Fantasy + OSE
-  Advanced Fantasy, both Necrotic Gnome). A `source` field on `ItemBase`/`Race`/
+- **Sources** — `Source` model + `data/sources.yaml` (OSE Classic Fantasy + OSE Advanced Fantasy + Carcass Crawler 1 + Carcass Crawler 3, Necrotic Gnome). A `source` field on `ItemBase`/`Race`/
   `CharClass`/`SpellList`/`Enchantment`/`Spell` defaults to
   `ose_classic_fantasy`; only Advanced-tagged entries carry the Advanced id.
   `RuleSet.disabled_sources: list[str]` (Classic is always enabled, never added).
