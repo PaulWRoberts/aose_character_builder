@@ -56,7 +56,7 @@ def _modal_html(body: str, modal_id: str) -> str:
     return body[start:nxt if nxt != -1 else len(body)]
 
 
-def _spec(abilities=None, inventory=None, equipped=None, equipped_weapons=None,
+def _spec(abilities=None, inventory=None, equipped=None,
           ruleset=None, weapon_proficiencies=None, weapon_specialisations=None):
     return CharacterSpec(
         name="Thorin",
@@ -66,7 +66,6 @@ def _spec(abilities=None, inventory=None, equipped=None, equipped_weapons=None,
         alignment="law",
         inventory=list(inventory or []),
         equipped=dict(equipped or {}),
-        equipped_weapons=list(equipped_weapons or []),
         weapon_proficiencies=list(weapon_proficiencies or []),
         weapon_specialisations=list(weapon_specialisations or []),
         ruleset=ruleset or RuleSet(),
@@ -84,78 +83,82 @@ def _seed(client, **kwargs) -> str:
 # ════════════════════════════════════════════════════════════════════════════
 
 def test_equip_armor_takes_armor_slot(data):
-    eq, weapons = equip(["chain_mail"], {}, [], "chain_mail", data)
+    eq = equip("chain_mail", inventory=["chain_mail"], equipped={}, enchanted=[], data=data)
     assert eq == {"armor": "chain_mail"}
-    assert weapons == []
 
 
-def test_equip_shield_takes_shield_slot(data):
-    eq, weapons = equip(["shield"], {}, [], "shield", data)
-    assert eq == {"shield": "shield"}
+def test_equip_shield_takes_off_hand_slot(data):
+    eq = equip("shield", inventory=["shield"], equipped={}, enchanted=[], data=data)
+    assert eq == {"off_hand": "shield"}
 
 
 def test_equip_armor_replaces_existing_armor(data):
-    eq, _ = equip(["plate_mail"], {"armor": "leather_armor"}, [], "plate_mail", data)
+    eq = equip("plate_mail", inventory=["plate_mail"],
+               equipped={"armor": "leather_armor"}, enchanted=[], data=data)
     assert eq == {"armor": "plate_mail"}
 
 
-def test_equip_weapon_appends_to_list(data):
-    _, weapons = equip(["sword"], {}, [], "sword", data)
-    assert weapons == ["sword"]
+def test_equip_weapon_goes_to_main_hand(data):
+    eq = equip("sword", inventory=["sword"], equipped={}, enchanted=[], data=data)
+    assert eq == {"main_hand": "sword"}
 
 
-def test_equip_weapon_twice_when_owned_twice(data):
-    _, weapons = equip(["dagger", "dagger"], {}, ["dagger"], "dagger", data)
-    assert weapons == ["dagger", "dagger"]
+def test_equip_second_dagger_goes_to_off_hand_with_two_weapon(data):
+    eq = equip("dagger", inventory=["dagger", "dagger"],
+               equipped={"main_hand": "dagger"}, enchanted=[], data=data,
+               slot="off_hand", two_weapon=True, eligible=True)
+    assert eq == {"main_hand": "dagger", "off_hand": "dagger"}
 
 
 def test_equip_blocks_past_inventory_count(data):
     with pytest.raises(ValueError, match="already equipped"):
-        equip(["dagger"], {}, ["dagger"], "dagger", data)
+        equip("dagger", inventory=["dagger"], equipped={"main_hand": "dagger"},
+              enchanted=[], data=data, slot="off_hand",
+              two_weapon=True, eligible=True)
 
 
 def test_equip_rejects_unowned(data):
     with pytest.raises(ValueError, match="not in inventory"):
-        equip([], {}, [], "sword", data)
+        equip("sword", inventory=[], equipped={}, enchanted=[], data=data)
 
 
 def test_equip_rejects_unequippable(data):
     with pytest.raises(ValueError, match="not equippable"):
-        equip(["torch"], {}, [], "torch", data)
+        equip("torch", inventory=["torch"], equipped={}, enchanted=[], data=data)
 
 
 def test_unequip_armor(data):
-    eq, _ = unequip({"armor": "chain_mail"}, [], "chain_mail", data)
+    eq = unequip("chain_mail", equipped={"armor": "chain_mail"})
     assert eq == {}
 
 
-def test_unequip_one_weapon_instance(data):
-    _, weapons = unequip({}, ["dagger", "dagger"], "dagger", data)
-    assert weapons == ["dagger"]
+def test_unequip_weapon_from_main_hand(data):
+    eq = unequip("dagger", equipped={"main_hand": "dagger"})
+    assert eq == {}
 
 
 def test_unequip_unowned_raises(data):
     with pytest.raises(ValueError, match="not equipped"):
-        unequip({}, [], "sword", data)
+        unequip("sword", equipped={})
 
 
 def test_equipped_count_aggregates_across_slots():
-    assert equipped_count({"armor": "leather_armor"}, ["dagger", "dagger"], "dagger") == 2
-    assert equipped_count({"armor": "leather_armor"}, [], "leather_armor") == 1
-    assert equipped_count({}, [], "sword") == 0
+    assert equipped_count({"main_hand": "dagger", "off_hand": "dagger"}, "dagger") == 2
+    assert equipped_count({"armor": "leather_armor"}, "leather_armor") == 1
+    assert equipped_count({}, "sword") == 0
 
 
 # ── Inventory rows carry equippable + equipped_count ──────────────────────
 
 def test_inventory_rows_marks_weapons_as_equippable(data):
-    rows = inventory_rows(["sword", "torch"], data, {}, [])
+    rows = inventory_rows(["sword", "torch"], data, {})
     by_id = {r.id: r for r in rows}
     assert by_id["sword"].equippable is True
     assert by_id["torch"].equippable is False
 
 
 def test_inventory_rows_counts_equipped_copies(data):
-    rows = inventory_rows(["dagger", "dagger"], data, {}, ["dagger"])
+    rows = inventory_rows(["dagger", "dagger"], data, {"main_hand": "dagger"})
     assert rows[0].equipped_count == 1
     assert rows[0].count == 2
 
@@ -176,7 +179,7 @@ def test_no_weapons_yields_empty_profile_list(data):
 def test_melee_weapon_adds_str_mod_to_to_hit_and_damage(data):
     # STR 16 → +2 mod, Fighter L1 THAC0 = 19
     all_profiles = attack_profiles(
-        _spec(inventory=["sword"], equipped_weapons=["sword"]),
+        _spec(inventory=["sword"], equipped={"main_hand": "sword"}),
         data,
     )
     weapons = [p for p in all_profiles if not p.unarmed]
@@ -193,7 +196,7 @@ def test_melee_weapon_adds_str_mod_to_to_hit_and_damage(data):
 def test_ranged_weapon_uses_dex_mod_for_to_hit_only(data):
     # DEX 12 → +0 mod, so no change vs base THAC0 19
     all_profiles = attack_profiles(
-        _spec(inventory=["short_bow"], equipped_weapons=["short_bow"]),
+        _spec(inventory=["short_bow"], equipped={"main_hand": "short_bow"}),
         data,
     )
     weapons = [p for p in all_profiles if not p.unarmed]
@@ -208,7 +211,7 @@ def test_ranged_weapon_uses_dex_mod_for_to_hit_only(data):
 def test_ranged_weapon_with_high_dex(data):
     abilities = {"STR": 10, "INT": 10, "WIS": 10, "DEX": 18, "CON": 10, "CHA": 10}
     all_profiles = attack_profiles(
-        _spec(abilities=abilities, inventory=["short_bow"], equipped_weapons=["short_bow"]),
+        _spec(abilities=abilities, inventory=["short_bow"], equipped={"main_hand": "short_bow"}),
         data,
     )
     # DEX 18 → +3 mod; get the ranged weapon, not Unarmed
@@ -219,7 +222,7 @@ def test_ranged_weapon_with_high_dex(data):
 
 def test_variable_damage_rule_swaps_damage_die(data):
     all_profiles = attack_profiles(
-        _spec(inventory=["sword"], equipped_weapons=["sword"],
+        _spec(inventory=["sword"], equipped={"main_hand": "sword"},
               ruleset=RuleSet(variable_weapon_damage=True)),
         data,
     )
@@ -230,7 +233,7 @@ def test_variable_damage_rule_swaps_damage_die(data):
 
 def test_non_proficiency_applies_martial_penalty(data):
     all_profiles = attack_profiles(
-        _spec(inventory=["sword"], equipped_weapons=["sword"],
+        _spec(inventory=["sword"], equipped={"main_hand": "sword"},
               ruleset=RuleSet(weapon_proficiency=True),
               weapon_proficiencies=["hand_axe"]),  # not "sword"
         data,
@@ -243,7 +246,7 @@ def test_non_proficiency_applies_martial_penalty(data):
 
 def test_proficient_user_takes_no_penalty(data):
     all_profiles = attack_profiles(
-        _spec(inventory=["sword"], equipped_weapons=["sword"],
+        _spec(inventory=["sword"], equipped={"main_hand": "sword"},
               ruleset=RuleSet(weapon_proficiency=True),
               weapon_proficiencies=["sword"]),
         data,
@@ -255,7 +258,7 @@ def test_proficient_user_takes_no_penalty(data):
 
 def test_specialisation_adds_plus_one_to_hit_and_damage(data):
     all_profiles = attack_profiles(
-        _spec(inventory=["sword"], equipped_weapons=["sword"],
+        _spec(inventory=["sword"], equipped={"main_hand": "sword"},
               ruleset=RuleSet(weapon_proficiency=True, variable_weapon_damage=True),
               weapon_proficiencies=["sword"],
               weapon_specialisations=["sword"]),
@@ -269,15 +272,16 @@ def test_specialisation_adds_plus_one_to_hit_and_damage(data):
     assert sword.damage == "1d8+3"
 
 
-def test_multiple_identical_weapons_collapse_to_count(data):
+def test_two_hand_slots_produce_two_profiles(data):
+    # With new slot model each equipped slot generates its own profile.
     all_profiles = attack_profiles(
-        _spec(inventory=["dagger", "dagger", "dagger"],
-              equipped_weapons=["dagger", "dagger"]),
+        _spec(inventory=["dagger", "dagger"],
+              equipped={"main_hand": "dagger", "off_hand": "dagger"}),
         data,
     )
     weapons = [p for p in all_profiles if not p.unarmed]
-    assert len(weapons) == 1
-    assert weapons[0].count == 2
+    assert len(weapons) == 2
+    assert all(w.name == "Dagger" for w in weapons)
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -313,11 +317,11 @@ def test_sheet_equip_weapon_appends(client):
     r = client.post("/character/test/equipment/equip", data={"item_id": "sword"})
     assert r.status_code == 303
     spec = load_character("test", client._characters_dir)
-    assert spec.equipped_weapons == ["sword"]
+    assert spec.equipped.get("main_hand") == "sword"
 
 
 def test_sheet_attack_profiles_appear_when_weapon_equipped(client):
-    _seed(client, inventory=["sword"], equipped_weapons=["sword"])
+    _seed(client, inventory=["sword"], equipped={"main_hand": "sword"})
     r = client.get("/character/test")
     assert "Attacks" in r.text
     assert "Sword" in r.text
@@ -338,7 +342,7 @@ def test_sheet_inventory_shows_equipped_section(client):
     of the inventory table — the new three-state split (equipped / carried /
     stashed) replaces the old per-row badge.  The unequip form is the
     actionable signal."""
-    _seed(client, inventory=["sword"], equipped_weapons=["sword"])
+    _seed(client, inventory=["sword"], equipped={"main_hand": "sword"})
     r = client.get("/character/test")
     # New zine sheet uses <h4> headers, not inv-section-head class.
     assert "<h4>Equipped</h4>" in r.text
@@ -371,7 +375,7 @@ def test_ac_drops_with_armor_and_shield(client):
     """Sheet AC reflects both armor and shield equips."""
     # Unarmored AC = 9 (DEX 12 = +0).  Chain mail base = 5, shield = -1 = 4 desc.
     _seed(client, inventory=["chain_mail", "shield"],
-          equipped={"armor": "chain_mail", "shield": "shield"})
+          equipped={"armor": "chain_mail", "off_hand": "shield"})
     r = client.get("/character/test")
     # New zine sheet uses "Armour Class" (UK spelling) label in the combat group.
     assert "Armour Class" in r.text
@@ -418,12 +422,12 @@ def test_wizard_equip_and_unequip(tmp_path):
     r = client.post(f"/wizard/{draft_id}/equipment/equip", data={"item_id": "sword"})
     assert r.status_code == 303
     draft = load_draft(draft_id, tmp_path / "drafts")
-    assert draft["equipped_weapons"] == ["sword"]
+    assert draft["equipped"].get("main_hand") == "sword"
 
     # Unequip it
     r = client.post(f"/wizard/{draft_id}/equipment/unequip", data={"item_id": "sword"})
     draft = load_draft(draft_id, tmp_path / "drafts")
-    assert draft.get("equipped_weapons", []) == []
+    assert "main_hand" not in draft.get("equipped", {})
 
     # Finalize — equipped state should make it into the spec
     client.post(f"/wizard/{draft_id}/equipment/equip", data={"item_id": "sword"})
@@ -431,7 +435,7 @@ def test_wizard_equip_and_unequip(tmp_path):
     r = client.post(f"/wizard/{draft_id}/finalize")
     char_id = r.headers["location"].split("/")[-1]
     spec = load_character(char_id, tmp_path / "characters")
-    assert spec.equipped_weapons == ["sword"]
+    assert spec.equipped.get("main_hand") == "sword"
 
 
 def test_plain_equipped_weapon_has_manageable_item_id(data):
@@ -439,7 +443,7 @@ def test_plain_equipped_weapon_has_manageable_item_id(data):
         name="W", abilities={"STR": 13, "INT": 10, "WIS": 10, "DEX": 11, "CON": 12, "CHA": 9},
         race_id="human", alignment="neutral",
         classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
-        inventory=["sword"], equipped_weapons=["sword"],
+        inventory=["sword"], equipped={"main_hand": "sword"},
     )
     profiles = attack_profiles(spec, data)
     sword = next(p for p in profiles if p.weapon_id == "sword")
@@ -492,7 +496,7 @@ def test_sheet_equipped_items_are_clickable(tmp_path, data):
         race_id="human", alignment="neutral",
         classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
         inventory=["sword", "plate_mail"],
-        equipped_weapons=["sword"], equipped={"armor": "plate_mail"},
+        equipped={"main_hand": "sword", "armor": "plate_mail"},
     )
     save_character("sir-click", spec, client._characters_dir)
     body = client.get("/character/sir-click").text
@@ -516,7 +520,7 @@ def test_sheet_item_modal_shows_properties_and_no_destructive_actions(tmp_path, 
         abilities={"STR": 11, "INT": 10, "WIS": 10, "DEX": 11, "CON": 12, "CHA": 9},
         race_id="human", alignment="neutral",
         classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
-        inventory=["sword"], equipped_weapons=["sword"],
+        inventory=["sword"], equipped={"main_hand": "sword"},
     )
     save_character("modal", spec, client._characters_dir)
     body = client.get("/character/modal").text
@@ -544,7 +548,7 @@ def test_equipped_launcher_modal_has_load_control(tmp_path, data):
         abilities={"STR": 11, "INT": 10, "WIS": 10, "DEX": 13, "CON": 12, "CHA": 9},
         race_id="human", alignment="neutral",
         classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
-        inventory=["short_bow"], equipped_weapons=["short_bow"],
+        inventory=["short_bow"], equipped={"main_hand": "short_bow"},
         ammo=[AmmoStack(instance_id="q1", base_id="arrow", count=20)],
     )
     save_character("archer", spec, client._characters_dir)

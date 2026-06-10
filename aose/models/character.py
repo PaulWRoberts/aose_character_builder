@@ -32,8 +32,8 @@ class EnchantedInstance(BaseModel):
     composition of a base catalog item + a reusable ``Enchantment``.  Resolved
     to a synthetic ``Weapon``/``Armor`` at display time by
     ``aose/engine/enchant.py``; nothing composed is persisted.  Not stored in
-    ``inventory``/``equipped``/``equipped_weapons`` — carries its own
-    ``equipped`` bool.  Passive enchantment modifiers apply only while equipped.
+    its own ``equipped`` bool (body armour only; weapons/shields are
+    slot-resident in ``CharacterSpec.equipped``).  Passive enchantment modifiers apply only while equipped.
     """
     model_config = ConfigDict(extra="forbid")
 
@@ -189,14 +189,15 @@ class CharacterSpec(BaseModel):
     inventory: list[str] = Field(default_factory=list)
     # Items left behind / on a horse / at camp.  Don't contribute to weight.
     stashed: list[str] = Field(default_factory=list)
-    # slot -> item_id, for single-slot gear: {"armor": "chain_mail", "shield": "shield"}
+    # slot -> id, for worn/held gear. Slots: "armor" (body), "main_hand",
+    # "off_hand" (a shield OR an off-hand weapon). Hand-slot values may be a
+    # catalog item id or an enchanted instance id. equip() enforces the wield
+    # budget; see aose/engine/equip.py.
     equipped: dict[str, str] = Field(default_factory=dict)
     # Whether the equipped tailorable body armour (full plate) is fitted to this
     # character. Inert unless the worn armour is `tailorable`; a single toggle
     # (one body-armour slot), remembered across re-equips.
     armor_tailored: bool = True
-    # Equipped weapons — a list so duplicates and multiple ready weapons are OK.
-    equipped_weapons: list[str] = Field(default_factory=list)
     containers: list[ContainerInstance] = Field(default_factory=list)
     magic_items: list[MagicItemInstance] = Field(default_factory=list)
     enchanted: list[EnchantedInstance] = Field(default_factory=list)

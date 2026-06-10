@@ -22,15 +22,13 @@ also included. A weapon with ``conditional_bonus`` carries an optional
 """
 from __future__ import annotations
 
-from collections import Counter
-
 from pydantic import BaseModel
 
 from aose.data.loader import GameData
 from aose.engine.ability_mods import ability_modifier
 from aose.engine.attack_bonus import thac0
 from aose.engine.ammo import is_unloaded, loaded_bonus, loaded_stack, resolve_ammo
-from aose.engine.enchant import equipped_enchanted
+from aose.engine.equip import resolve_slot
 from aose.engine.features import all_modifiers, feature_weapons
 from aose.engine.magic import effective_abilities
 from aose.engine.proficiency import (
@@ -311,25 +309,20 @@ def attack_profiles(spec: CharacterSpec, data: GameData) -> list[AttackProfile]:
                 "ammo_name": name,
                 "unloaded": is_unloaded(weapon.id, weapon, spec, data)}
 
-    counts = Counter(spec.equipped_weapons)
     weapon_profiles: list[AttackProfile] = []
-    for weapon_id, count in counts.items():
-        item = data.items.get(weapon_id)
+    for slot in ("main_hand", "off_hand"):
+        slot_id = spec.equipped.get(slot)
+        item = resolve_slot(slot_id, data, spec.enchanted)
         if not isinstance(item, Weapon):
-            continue  # equipped_weapons should only contain weapons, defensive
+            continue
         g_atk, g_dmg = _atk_dmg(mods, melee=item.melee, ranged=item.ranged)
-        base = _profile_for(item, spec, data, count, eff, base_thac0, g_atk, g_dmg,
-                            manageable_item_id=item.id, **_ammo_args(item))
+        base = _profile_for(item, spec, data, 1, eff, base_thac0, g_atk, g_dmg,
+                            manageable_item_id=slot_id, **_ammo_args(item))
         weapon_profiles.append(base)
-        variant = _two_handed_variant(base, item, spec)
-        if variant is not None:
-            weapon_profiles.append(variant)
-    for resolved in equipped_enchanted(spec, data, "weapon"):
-        g_atk, g_dmg = _atk_dmg(mods, melee=resolved.melee, ranged=resolved.ranged)
-        weapon_profiles.append(
-            _profile_for(resolved, spec, data, 1, eff, base_thac0, g_atk, g_dmg,
-                         **_ammo_args(resolved))
-        )
+        if slot == "main_hand":
+            variant = _two_handed_variant(base, item, spec)
+            if variant is not None:
+                weapon_profiles.append(variant)
     for weapon_id, descriptor in feature_weapons(spec, data):
         melee = bool(descriptor.get("melee", False))
         ranged = bool(descriptor.get("ranged", not melee))

@@ -218,7 +218,7 @@ def _bow_spec(loaded=True, ench=True):
                              "DEX": 12, "CON": 12, "CHA": 10},
         race_id="human", classes=[ClassEntry(class_id="fighter")], alignment="law")
     spec.inventory = ["short_bow"]
-    spec.equipped_weapons = ["short_bow"]
+    spec.equipped = {"main_hand": "short_bow"}
     eid = "arrows_plus_1" if ench else None
     spec.ammo = [AmmoStack(instance_id="a", base_id="arrow",
                            enchantment_id=eid, count=20)]
@@ -263,7 +263,7 @@ def test_profile_adds_ammo_bonus_unit():
     spec = CharacterSpec(name="U", abilities={"STR": 10, "INT": 10, "WIS": 10,
                          "DEX": 10, "CON": 10, "CHA": 10}, race_id="human",
                          classes=[ClassEntry(class_id="fighter")], alignment="law")
-    spec.equipped_weapons = ["short_bow"]
+    spec.equipped = {"main_hand": "short_bow"}
     spec.ammo = [AmmoStack(instance_id="a", base_id="arrow",
                            enchantment_id="arrows_plus_1", count=5)]
     spec.loaded_ammo = {"short_bow": "a"}

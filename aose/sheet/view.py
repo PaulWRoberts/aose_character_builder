@@ -690,7 +690,7 @@ def _weapon_qualities_reference(spec: CharacterSpec, data: GameData) -> list[Wea
     from aose.models import Weapon
 
     present: set[str] = set()
-    for wid in set(spec.inventory) | set(spec.equipped_weapons):
+    for wid in set(spec.inventory) | set(spec.equipped.values()):
         item = data.items.get(wid)
         if isinstance(item, Weapon):
             present.update(item.quality_ids)
@@ -1011,7 +1011,7 @@ def valuables_view(spec: CharacterSpec) -> ValuablesView:
 def ammo_view(spec, data: GameData) -> tuple[list[AmmoRow], dict[str, list[AmmoOption]]]:
     """Build ammo rows and per-launcher load options.  ``spec`` may be a
     ``CharacterSpec`` or a draft-like object that has ``.ammo``,
-    ``.loaded_ammo``, and ``.equipped_weapons``."""
+    ``.loaded_ammo``, and ``.equipped``."""
     from aose.engine.ammo import accepts, resolve_ammo
     from aose.models import Ammunition, Weapon
 

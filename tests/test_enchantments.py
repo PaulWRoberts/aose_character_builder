@@ -170,7 +170,7 @@ def test_mundane_shield_still_minus_one_ac(data):
     spec = _minimal_spec(abilities={"STR": 12, "INT": 12, "WIS": 11,
                                     "DEX": 10, "CON": 12, "CHA": 10})
     spec.inventory = ["shield"]
-    spec.equipped = {"shield": "shield"}
+    spec.equipped = {"off_hand": "shield"}
     desc, _ = armor_class(spec, data)
     assert desc == 8   # unarmoured 9, shield bonus 1
 
@@ -434,10 +434,18 @@ def test_active_modifiers_ignore_unequipped_enchanted(data):
 
 
 def _equip_one_enchanted(d, base_id, ench_id, **spec_kwargs):
-    from aose.engine.enchant import add_free_enchanted, equip
+    from aose.engine.enchant import add_free_enchanted, equip as _ench_equip
+    from aose.engine.equip import equip as _slot_equip
+    from aose.models import Armor
     spec = _minimal_spec(**spec_kwargs)
     spec.enchanted = add_free_enchanted([], base_id, ench_id, d)
-    spec.enchanted = equip(spec.enchanted, spec.enchanted[0].instance_id)
+    inst = spec.enchanted[0]
+    base_item = d.items.get(base_id)
+    if isinstance(base_item, Armor) and not base_item.is_shield:
+        spec.enchanted = _ench_equip(spec.enchanted, inst.instance_id)
+    else:
+        spec.equipped = _slot_equip(inst.instance_id, inventory=[],
+                                    equipped={}, enchanted=spec.enchanted, data=d)
     return spec
 
 
@@ -751,7 +759,7 @@ def test_enchanted_equip_charge_note_remove_roundtrip(tmp_path):
     iid = spec.enchanted[0].instance_id
     client.post("/character/test/equipment/equip-enchanted", data={"instance_id": iid})
     spec = load_character("test", client._characters_dir)
-    assert spec.enchanted[0].equipped is True
+    assert iid in spec.equipped.values()
     start = spec.enchanted[0].charges_remaining
     client.post("/character/test/equipment/enchanted/use-charge", data={"instance_id": iid})
     spec = load_character("test", client._characters_dir)

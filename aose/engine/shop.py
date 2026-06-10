@@ -161,7 +161,7 @@ def _build_row(item_id: str, count: int, data: GameData,
 
 
 def inventory_view(inventory: list[str], stashed: list[str],
-                   equipped: dict[str, str], equipped_weapons: list[str],
+                   equipped: dict[str, str],
                    containers: list[ContainerInstance] | None = None,
                    data: GameData = None,
                    allowed_weapons: "set[str] | str" = "all",
@@ -186,8 +186,6 @@ def inventory_view(inventory: list[str], stashed: list[str],
 
     equipped_count: Counter[str] = Counter()
     for v in equipped.values():
-        equipped_count[v] += 1
-    for v in equipped_weapons:
         equipped_count[v] += 1
 
     inv_count: Counter[str] = Counter(inventory)
@@ -246,13 +244,12 @@ def inventory_view(inventory: list[str], stashed: list[str],
 
 
 def inventory_rows(inventory: list[str], data: GameData,
-                   equipped: dict[str, str] | None = None,
-                   equipped_weapons: list[str] | None = None) -> list[InventoryRow]:
+                   equipped: dict[str, str] | None = None) -> list[InventoryRow]:
     """Legacy flat-row API — preserved for callers that don't care about
     the three-state split.  Stash list isn't surfaced through this entry
     point; use :func:`inventory_view` instead."""
     view = inventory_view(
-        inventory, [], equipped or {}, equipped_weapons or [], None, data,
+        inventory, [], equipped or {}, None, data,
     )
     # Merge equipped + carried into one row per item, with equipped_count
     # carrying the equipped half for callers using the legacy flat API.
@@ -339,14 +336,13 @@ def add_free_container(containers: list[ContainerInstance],
 
 
 def stash(inventory: list[str], stashed: list[str],
-          equipped: dict[str, str], equipped_weapons: list[str],
-          item_id: str, data: GameData) -> tuple[list[str], list[str], dict[str, str], list[str]]:
+          equipped: dict[str, str],
+          item_id: str, data: GameData) -> tuple[list[str], list[str], dict[str, str]]:
     """Move one copy of ``item_id`` from inventory to the stashed list.
 
-    If the item is currently equipped, that equipped slot/instance is freed
-    automatically — the item is going off-person.  Returns new
-    ``(inventory, stashed, equipped, equipped_weapons)``.  Raises ValueError
-    if the item isn't in inventory.
+    If the item is currently equipped, that slot is freed automatically.
+    Returns new ``(inventory, stashed, equipped)``.  Raises ValueError if the
+    item isn't in inventory.
     """
     if item_id not in inventory:
         raise ValueError(f"{item_id!r} is not in inventory")
@@ -360,11 +356,7 @@ def stash(inventory: list[str], stashed: list[str],
             del new_eq[slot]
             break  # only one copy went off-person
 
-    new_weapons = list(equipped_weapons)
-    if item_id in new_weapons:
-        new_weapons.remove(item_id)
-
-    return new_inv, new_stashed, new_eq, new_weapons
+    return new_inv, new_stashed, new_eq
 
 
 def unstash(inventory: list[str], stashed: list[str],
@@ -379,7 +371,7 @@ def unstash(inventory: list[str], stashed: list[str],
 
 def stow(inventory: list[str], stashed: list[str],
          containers: list[ContainerInstance],
-         equipped: dict[str, str], equipped_weapons: list[str],
+         equipped: dict[str, str],
          instance_id: str, item_id: str, data: GameData,
          ) -> tuple[list[str], list[str], list[ContainerInstance]]:
     """Move one copy of ``item_id`` from ``inventory`` into the container with
@@ -392,7 +384,7 @@ def stow(inventory: list[str], stashed: list[str],
       * ``ValueError("containers cannot be stowed")`` if ``item_id`` is itself
         a container catalog item (no nesting).
       * ``ValueError("item is equipped")`` if the item appears in ``equipped``
-        or ``equipped_weapons`` (unequip first).
+        (unequip first).
       * ``ContainerFull`` if adding the item's raw weight would exceed
         ``capacity_cn``.
     """
@@ -407,7 +399,7 @@ def stow(inventory: list[str], stashed: list[str],
     if isinstance(item, Container):
         raise ValueError("containers cannot be stowed inside other containers")
 
-    if item_id in equipped.values() or item_id in equipped_weapons:
+    if item_id in equipped.values():
         raise ValueError(f"{item_id!r} is equipped; unequip first")
 
     target = containers[idx]
@@ -571,8 +563,7 @@ def _removal_gold(item_id: str, mode: str, data: GameData) -> int:
 def remove(inventory: list[str], gold: int, item_id: str, mode: str,
            data: GameData,
            equipped: dict[str, str] | None = None,
-           equipped_weapons: list[str] | None = None,
-           ) -> tuple[list[str], int, dict[str, str], list[str]]:
+           ) -> tuple[list[str], int, dict[str, str]]:
     """Remove one instance of ``item_id`` from inventory.  ``mode`` controls
     the gold refund:
 
@@ -580,9 +571,8 @@ def remove(inventory: list[str], gold: int, item_id: str, mode: str,
     * ``sell``   — per-unit half price (rounded down; may be 0)
     * ``refund`` — remove a full bundle_count stack, return full cost
 
-    If the dropped instance was equipped, its slot/list entry is freed
-    automatically.  Pass ``equipped`` and ``equipped_weapons`` to enable that
-    cleanup — they're optional for backward compatibility.
+    If the dropped instance was equipped, its slot is freed automatically.
+    Pass ``equipped`` to enable that cleanup — optional for backward compat.
     """
     if item_id not in inventory:
         raise ValueError(f"{item_id!r} not in inventory")
@@ -604,24 +594,20 @@ def remove(inventory: list[str], gold: int, item_id: str, mode: str,
         new_inv.remove(item_id)
 
     new_eq = dict(equipped or {})
-    new_weapons = list(equipped_weapons or [])
 
     # If removal pushed equipped count past remaining inventory, free a slot.
     remaining = new_inv.count(item_id)
-    eq_uses = sum(1 for v in new_eq.values() if v == item_id) + new_weapons.count(item_id)
+    eq_uses = sum(1 for v in new_eq.values() if v == item_id)
     while eq_uses > remaining:
         for slot, eid in list(new_eq.items()):
             if eid == item_id:
                 del new_eq[slot]
                 break
         else:
-            if item_id in new_weapons:
-                new_weapons.remove(item_id)
-            else:
-                break
+            break
         eq_uses -= 1
 
-    return new_inv, gold + _removal_gold(item_id, mode, data), new_eq, new_weapons
+    return new_inv, gold + _removal_gold(item_id, mode, data), new_eq
 
 
 def remove_from_stash(stashed: list[str], gold: int, item_id: str, mode: str,

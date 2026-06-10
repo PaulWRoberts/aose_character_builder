@@ -183,7 +183,7 @@ def test_stow_moves_item_from_inventory_into_container():
     bp = _carried_backpack(fake)
     inv, stashed, containers = stow(
         inventory=["torch"], stashed=[], containers=[bp],
-        equipped={}, equipped_weapons=[],
+        equipped={},
         instance_id=bp.instance_id, item_id="torch", data=fake,
     )
     assert inv == []
@@ -193,14 +193,14 @@ def test_stow_moves_item_from_inventory_into_container():
 def test_stow_rejects_unknown_container():
     fake = _fake_container_data()
     with pytest.raises(UnknownContainer):
-        stow(["torch"], [], [], {}, [], "missing-id", "torch", fake)
+        stow(["torch"], [], [], {}, "missing-id", "torch", fake)
 
 
 def test_stow_rejects_item_not_in_inventory():
     fake = _fake_container_data()
     bp = _carried_backpack(fake)
     with pytest.raises(ValueError, match="not in inventory"):
-        stow([], [], [bp], {}, [], bp.instance_id, "torch", fake)
+        stow([], [], [bp], {}, bp.instance_id, "torch", fake)
 
 
 def test_stow_rejects_equipped_item():
@@ -210,7 +210,7 @@ def test_stow_rejects_equipped_item():
     with pytest.raises(ValueError, match="equipped"):
         stow(
             inventory=["sword"], stashed=[], containers=[bp],
-            equipped={}, equipped_weapons=["sword"],
+            equipped={"main_hand": "sword"},
             instance_id=bp.instance_id, item_id="sword", data=fake,
         )
 
@@ -223,7 +223,7 @@ def test_stow_rejects_container_item():
     )
     bp = _carried_backpack(fake)
     with pytest.raises(ValueError, match="containers cannot be stowed"):
-        stow(["sack"], [], [bp], {}, [], bp.instance_id, "sack", fake)
+        stow(["sack"], [], [bp], {}, bp.instance_id, "sack", fake)
 
 
 def test_stow_capacity_full_raises():
@@ -232,7 +232,7 @@ def test_stow_capacity_full_raises():
     bp = _carried_backpack(fake)
     bp = bp.model_copy(update={"contents": ["torch"] * 20})
     with pytest.raises(ContainerFull):
-        stow(["torch"], [], [bp], {}, [], bp.instance_id, "torch", fake)
+        stow(["torch"], [], [bp], {}, bp.instance_id, "torch", fake)
 
 
 from aose.engine.shop import take_out
@@ -362,7 +362,7 @@ def test_inventory_view_splits_loose_and_containers():
     bp = _carried_backpack(fake).model_copy(update={"contents": ["torch"]})
     from aose.engine.shop import inventory_view
     view = inventory_view(
-        inventory=["torch"], stashed=[], equipped={}, equipped_weapons=[],
+        inventory=["torch"], stashed=[], equipped={},
         containers=[bp], data=fake,
     )
     # The loose torch shows up in carried; the contained torch shows up
@@ -391,7 +391,7 @@ def test_inventory_view_container_weight_with_multiplier():
         update={"contents": ["torch"] * 100}  # 100 * 20 = 2000 cn raw
     )
     from aose.engine.shop import inventory_view
-    view = inventory_view([], [], {}, [], [bag], fake)
+    view = inventory_view([], [], {}, [bag], fake)
     cv = view.containers[0]
     assert cv.used_cn == 2000
     assert cv.effective_weight_cn == int(0.06 * 2000)  # 120
@@ -403,7 +403,7 @@ def test_inventory_view_stashed_container_zero_effective_weight():
         update={"contents": ["torch"]}
     )
     from aose.engine.shop import inventory_view
-    view = inventory_view([], [], {}, [], [bp], fake)
+    view = inventory_view([], [], {}, [bp], fake)
     cv = view.containers[0]
     assert cv.state == "stashed"
     # effective_weight is only meaningful when carried; stashed = 0
@@ -488,7 +488,7 @@ def test_equip_rejects_container_catalog_item():
     from aose.engine.equip import equip
     fake = _fake_container_data()
     with pytest.raises(ValueError, match="not equippable"):
-        equip(["backpack"], {}, [], "backpack", fake)
+        equip("backpack", inventory=["backpack"], equipped={}, enchanted=[], data=fake)
 
 
 def test_containers_yaml_loads(data):

@@ -201,7 +201,7 @@ def test_halfling_missile_bonus_applies_to_ranged_only():
     spec = CharacterSpec(
         name="H", abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
         race_id="halfling", classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
-        alignment="neutral", equipped_weapons=["short_bow"],
+        alignment="neutral", inventory=["short_bow"], equipped={"main_hand": "short_bow"},
     )
     profs = _profiles(spec)
     assert profs["short_bow"].to_hit_ascending == 1   # +1 missile bonus
@@ -213,7 +213,7 @@ def test_non_halfling_has_no_missile_bonus():
     spec = CharacterSpec(
         name="Hu", abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
         race_id="human", classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
-        alignment="neutral", equipped_weapons=["short_bow"],
+        alignment="neutral", inventory=["short_bow"], equipped={"main_hand": "short_bow"},
     )
     assert _profiles(spec)["short_bow"].to_hit_ascending == 0
 
@@ -226,7 +226,7 @@ def test_classic_halfling_missile_bonus_not_doubled():
     spec = CharacterSpec(
         name="Hc", abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
         race_id="halfling", classes=[ClassEntry(class_id="halfling", level=1, hp_rolls=[6])],
-        alignment="neutral", equipped_weapons=["short_bow"],
+        alignment="neutral", inventory=["short_bow"], equipped={"main_hand": "short_bow"},
     )
     assert _profiles(spec)["short_bow"].to_hit_ascending == 1   # +1, not +2
 

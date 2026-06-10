@@ -135,10 +135,10 @@ def test_leather_user_can_equip_padded_not_studded(data):
     thief = data.classes["thief"]
     allowed = allowed_armor_ids([thief], data)
     inv = ["padded_armor", "studded_leather"]
-    eq, _ = equip(inv, {}, [], "padded_armor", data, allowed_armor=allowed)
+    eq = equip("padded_armor", inventory=inv, equipped={}, enchanted=[], data=data, allowed_armor=allowed)
     assert eq["armor"] == "padded_armor"
     with pytest.raises(ValueError):
-        equip(inv, {}, [], "studded_leather", data, allowed_armor=allowed)
+        equip("studded_leather", inventory=inv, equipped={}, enchanted=[], data=data, allowed_armor=allowed)
 
 
 def test_full_plate_is_tailorable(data):

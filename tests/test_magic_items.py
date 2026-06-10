@@ -467,7 +467,7 @@ def test_ac_shield_plus_1_two_points(data):
     d = _with_magic(data)
     spec = _minimal_spec(abilities={"STR": 12, "INT": 12, "WIS": 11, "DEX": 10, "CON": 12, "CHA": 10})
     spec.inventory = ["shield_plus_1"]
-    spec.equipped = {"shield": "shield_plus_1"}
+    spec.equipped = {"off_hand": "shield_plus_1"}
     desc, _ = armor_class(spec, d)
     assert desc == 9 - 2  # unarmored 9, shield bonus 1 + magic 1
 
@@ -579,7 +579,7 @@ def test_thac0_set_max_leaves_better_untouched(data):
 def _weapon_spec(data, weapon_id, **kwargs):
     spec = _minimal_spec(**kwargs)
     spec.inventory = [weapon_id]
-    spec.equipped_weapons = [weapon_id]
+    spec.equipped = {"main_hand": weapon_id}
     return spec
 
 

@@ -15,15 +15,19 @@ def data():
     return GameData.load(DATA_DIR)
 
 
-def _fighter(data, equipped_weapons, *, variable):
+def _fighter(data, weapon_ids, *, variable):
+    equipped = {}
+    slots = ("main_hand", "off_hand")
+    for i, wid in enumerate(weapon_ids[:2]):
+        equipped[slots[i]] = wid
     return CharacterSpec(
         name="T",
         abilities={a: 10 for a in Ability},
         race_id="human",
         classes=[ClassEntry(class_id="fighter", xp=0)],
         alignment="neutral",
-        inventory=list(equipped_weapons),
-        equipped_weapons=list(equipped_weapons),
+        inventory=list(weapon_ids),
+        equipped=equipped,
         ruleset=RuleSet(variable_weapon_damage=variable),
     )
 

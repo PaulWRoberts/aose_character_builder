@@ -61,19 +61,19 @@ from aose.engine.shop import remove, remove_from_stash
 
 def test_sell_one_bundle_unit_uses_per_unit_price():
     # torch: cost 1 / bundle 6 -> per-unit 0.166, half 0.083 -> 0 (worthless)
-    inv, gold, _eq, _wp = remove(["torch"] * 6, 0, "torch", "sell", _fake_data())
+    inv, gold, _eq = remove(["torch"] * 6, 0, "torch", "sell", _fake_data())
     assert inv == ["torch"] * 5      # only one unit removed
     assert gold == 0                 # worthless
 
 
 def test_sell_single_item_half_price():
-    inv, gold, _eq, _wp = remove(["crowbar"], 0, "crowbar", "sell", _fake_data())
+    inv, gold, _eq = remove(["crowbar"], 0, "crowbar", "sell", _fake_data())
     assert inv == []
     assert gold == 5                 # 10 // 2
 
 
 def test_refund_removes_full_stack_and_returns_full_cost():
-    inv, gold, _eq, _wp = remove(["torch"] * 6, 0, "torch", "refund", _fake_data())
+    inv, gold, _eq = remove(["torch"] * 6, 0, "torch", "refund", _fake_data())
     assert inv == []                 # whole stack of 6 removed
     assert gold == 1                 # full bundle price back
 
@@ -84,7 +84,7 @@ def test_refund_requires_full_stack():
 
 
 def test_drop_one_unit_no_refund():
-    inv, gold, _eq, _wp = remove(["torch"] * 6, 0, "torch", "drop", _fake_data())
+    inv, gold, _eq = remove(["torch"] * 6, 0, "torch", "drop", _fake_data())
     assert inv == ["torch"] * 5
     assert gold == 0
 
@@ -106,7 +106,7 @@ def test_shop_item_exposes_bundle_count():
 
 
 def test_inventory_row_per_unit_sell_and_refund_flags():
-    view = inventory_view(["torch"] * 6, [], {}, [], None, _fake_data())
+    view = inventory_view(["torch"] * 6, [], {}, [], _fake_data())
     torch_row = next(r for r in view.carried if r.id == "torch")
     assert torch_row.bundle_count == 6
     assert torch_row.sell_gp == 0          # int((1/6)/2)
@@ -114,6 +114,6 @@ def test_inventory_row_per_unit_sell_and_refund_flags():
 
 
 def test_inventory_row_cannot_refund_partial_stack():
-    view = inventory_view(["torch"] * 5, [], {}, [], None, _fake_data())
+    view = inventory_view(["torch"] * 5, [], {}, [], _fake_data())
     torch_row = next(r for r in view.carried if r.id == "torch")
     assert torch_row.can_refund is False   # 5 < 6

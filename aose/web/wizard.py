@@ -39,7 +39,13 @@ from aose.engine.ammo import (
     InsufficientGold as _AmmoInsufficientGold,
     UnknownAmmo as _UnknownAmmo,
 )
-from aose.engine.equip import equip as _equip, unequip as _unequip
+from aose.engine.enchant import (
+    _kind_of_instance as _enchanted_kind,
+    equip as _equip_enchanted,
+    unequip as _unequip_enchanted,
+)
+from aose.engine.equip import WieldError, equip as _equip, unequip as _unequip
+from aose.engine.features import one_handed_two_handed_weapons as _1h2h
 from aose.engine.magic import (
     add_free_magic_item,
     equip_magic as _equip_magic,
@@ -58,6 +64,7 @@ from aose.engine.proficiency import (
     shields_allowed,
     specialisation_allowed,
     total_proficiency_slots,
+    two_weapon_eligible,
 )
 from aose.engine.shop import (
     InsufficientGold,
@@ -1416,7 +1423,6 @@ def _equipment_context(draft: dict[str, Any], game_data) -> dict:
     inventory = draft.get("inventory", [])
     stashed = draft.get("stashed", [])
     equipped = draft.get("equipped", {})
-    equipped_weapons = draft.get("equipped_weapons", [])
     containers = [
         ContainerInstance.model_validate(c) for c in draft.get("containers", [])
     ]
@@ -1433,11 +1439,11 @@ def _equipment_context(draft: dict[str, Any], game_data) -> dict:
         ammo_rows.append(AmmoRow(instance_id=s.instance_id, name=view["name"],
                                  count=s.count, magic=s.enchantment_id is not None))
 
-    # Load options keyed by weapon_id for each equipped launcher
+    # Load options keyed by weapon_id for each equipped launcher (from hand slots)
     from aose.models import Ammunition as _Ammunition, Weapon as _Weapon
     load_options = {}
-    for wid in set(equipped_weapons):
-        weapon = game_data.items.get(wid)
+    for slot_id in set(v for k, v in equipped.items() if k in ("main_hand", "off_hand")):
+        weapon = game_data.items.get(slot_id)
         if not isinstance(weapon, _Weapon) or not weapon.accepts_ammo:
             continue
         opts = []
@@ -1448,14 +1454,14 @@ def _equipment_context(draft: dict[str, Any], game_data) -> dict:
                 opts.append(AmmoOption(instance_id=s.instance_id, name=v["name"],
                                        count=s.count))
         if opts:
-            load_options[wid] = opts
+            load_options[slot_id] = opts
 
     draft_id = draft.get("_draft_id", "")
     return {
         "gold": draft.get("gold", 0),
         "gold_locked": draft.get("gold_locked", False),
         "inventory_view": inventory_view(
-            inventory, stashed, equipped, equipped_weapons, containers, game_data,
+            inventory, stashed, equipped, containers, game_data,
             allowed_weapons=allowed_weapon_ids(classes, game_data, _ruleset_of(draft)),
             allowed_armor=allowed_armor_ids(classes, game_data),
             allow_shields=shields_allowed(classes),
@@ -1558,24 +1564,32 @@ async def post_equipment_add(request: Request, draft_id: str, item_id: str = For
 
 
 @router.post("/{draft_id}/equipment/equip")
-async def post_equipment_equip(request: Request, draft_id: str, item_id: str = Form(...)):
+async def post_equipment_equip(request: Request, draft_id: str,
+                               item_id: str = Form(...),
+                               slot: str | None = Form(None)):
     draft = _load(request, draft_id)
     data = request.app.state.game_data
     classes = [data.classes[cid] for cid in _class_ids(draft) if cid in data.classes]
+    ruleset = _ruleset_of(draft)
+    enchanted_raw = draft.get("enchanted", [])
+    from aose.models import EnchantedInstance as _EI
+    enchanted = [_EI.model_validate(e) for e in enchanted_raw]
     try:
-        new_eq, new_weapons = _equip(
-            draft.get("inventory", []),
-            draft.get("equipped", {}),
-            draft.get("equipped_weapons", []),
-            item_id, data,
-            allowed_weapons=allowed_weapon_ids(classes, data, _ruleset_of(draft)),
+        draft["equipped"] = _equip(
+            item_id,
+            inventory=draft.get("inventory", []),
+            equipped=draft.get("equipped", {}),
+            enchanted=enchanted,
+            data=data,
+            slot=slot,
+            two_weapon=ruleset.two_weapon_fighting,
+            eligible=two_weapon_eligible(classes),
+            allowed_weapons=allowed_weapon_ids(classes, data, ruleset),
             allowed_armor=allowed_armor_ids(classes, data),
             allow_shields=shields_allowed(classes),
         )
-    except ValueError as e:
+    except (ValueError, WieldError) as e:
         raise HTTPException(400, str(e))
-    draft["equipped"] = new_eq
-    draft["equipped_weapons"] = new_weapons
     save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/equipment")
 
@@ -1583,17 +1597,10 @@ async def post_equipment_equip(request: Request, draft_id: str, item_id: str = F
 @router.post("/{draft_id}/equipment/unequip")
 async def post_equipment_unequip(request: Request, draft_id: str, item_id: str = Form(...)):
     draft = _load(request, draft_id)
-    data = request.app.state.game_data
     try:
-        new_eq, new_weapons = _unequip(
-            draft.get("equipped", {}),
-            draft.get("equipped_weapons", []),
-            item_id, data,
-        )
+        draft["equipped"] = _unequip(item_id, equipped=draft.get("equipped", {}))
     except ValueError as e:
         raise HTTPException(400, str(e))
-    draft["equipped"] = new_eq
-    draft["equipped_weapons"] = new_weapons
     save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/equipment")
 
@@ -1603,11 +1610,10 @@ async def post_equipment_stash(request: Request, draft_id: str, item_id: str = F
     draft = _load(request, draft_id)
     data = request.app.state.game_data
     try:
-        new_inv, new_stashed, new_eq, new_weapons = shop_stash(
+        new_inv, new_stashed, new_eq = shop_stash(
             draft.get("inventory", []),
             draft.get("stashed", []),
             draft.get("equipped", {}),
-            draft.get("equipped_weapons", []),
             item_id, data,
         )
     except ValueError as e:
@@ -1615,7 +1621,6 @@ async def post_equipment_stash(request: Request, draft_id: str, item_id: str = F
     draft["inventory"] = new_inv
     draft["stashed"] = new_stashed
     draft["equipped"] = new_eq
-    draft["equipped_weapons"] = new_weapons
     save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/equipment")
 
@@ -1649,7 +1654,6 @@ async def equipment_stow(request: Request, draft_id: str,
             draft.get("stashed", []),
             containers,
             draft.get("equipped", {}),
-            draft.get("equipped_weapons", []),
             instance_id, item_id, request.app.state.game_data,
         )
     except ValueError as e:
@@ -1874,16 +1878,14 @@ async def post_equipment_remove(request: Request, draft_id: str,
             draft["stashed"] = new_stashed
             draft["gold"] = new_gold
         else:
-            new_inv, new_gold, new_eq, new_weapons = shop_remove(
+            new_inv, new_gold, new_eq = shop_remove(
                 draft.get("inventory", []), draft.get("gold", 0),
                 item_id, mode, data,
                 draft.get("equipped", {}),
-                draft.get("equipped_weapons", []),
             )
             draft["inventory"] = new_inv
             draft["gold"] = new_gold
             draft["equipped"] = new_eq
-            draft["equipped_weapons"] = new_weapons
     except ValueError as e:
         raise HTTPException(400, str(e))
     save_draft(draft_id, draft, _drafts_dir(request))
@@ -1934,7 +1936,6 @@ def _draft_to_spec(draft: dict[str, Any], data) -> CharacterSpec:
         inventory=list(draft.get("inventory", [])),
         stashed=list(draft.get("stashed", [])),
         equipped=dict(draft.get("equipped", {})),
-        equipped_weapons=list(draft.get("equipped_weapons", [])),
         containers=[
             ContainerInstance.model_validate(c) for c in draft.get("containers", [])
         ],

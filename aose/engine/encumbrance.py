@@ -26,7 +26,7 @@ The three encumbrance modes pick which row/column of the table applies:
 
 Carried weight is the sum of inventory ``weight_cn``.  Equipped items live in
 ``inventory`` already; we do **not** add their weight again from
-``equipped`` / ``equipped_weapons``, which was a double-counting bug.
+``equipped`` (hand/body slots), which was a double-counting bug.
 """
 from __future__ import annotations
 

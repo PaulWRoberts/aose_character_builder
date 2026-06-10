@@ -7,6 +7,7 @@ from aose.models import Ability, Armor, CharacterSpec, Modifier
 
 from .ability_mods import ability_modifier
 from .enchant import equipped_enchanted
+from .equip import resolve_slot
 from .features import all_modifiers
 from .magic import effective_abilities
 
@@ -108,16 +109,10 @@ def _compute_ac(spec: CharacterSpec, data: GameData, *,
     shield_bonus = 0
     has_shield = False
     if use_shield:
-        shield_id = spec.equipped.get("shield")
-        if shield_id and shield_id in data.items:
-            item = data.items[shield_id]
-            if isinstance(item, Armor) and item.is_shield:
-                shield_bonus = item.ac_bonus + item.magic_bonus
-                has_shield = True
-        for resolved in equipped_enchanted(spec, data, "shield"):
-            cand = resolved.ac_bonus + resolved.magic_bonus
-            if cand > shield_bonus:
-                shield_bonus, has_shield = cand, True
+        off_item = resolve_slot(spec.equipped.get("off_hand"), data, spec.enchanted)
+        if isinstance(off_item, Armor) and off_item.is_shield:
+            shield_bonus = off_item.ac_bonus + off_item.magic_bonus
+            has_shield = True
 
     armor_worn = use_armor and _has_worn_armor(spec, data)
 

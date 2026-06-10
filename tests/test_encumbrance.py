@@ -29,8 +29,7 @@ def data():
     return GameData.load(DATA_DIR)
 
 
-def _spec(race_id="human", inventory=None, equipped=None, equipped_weapons=None,
-          encumbrance="basic"):
+def _spec(race_id="human", inventory=None, equipped=None, encumbrance="basic"):
     return CharacterSpec(
         name="Tester",
         abilities={"STR": 12, "INT": 12, "WIS": 11, "DEX": 12, "CON": 12, "CHA": 10},
@@ -39,7 +38,6 @@ def _spec(race_id="human", inventory=None, equipped=None, equipped_weapons=None,
         alignment="law",
         inventory=list(inventory or []),
         equipped=dict(equipped or {}),
-        equipped_weapons=list(equipped_weapons or []),
         ruleset=RuleSet(encumbrance=encumbrance),
     )
 
@@ -67,7 +65,7 @@ def test_weight_does_not_double_count_equipped_armor(data):
 def test_weight_does_not_double_count_equipped_weapons(data):
     """Same rule as for armour: an equipped weapon is just a flag on an
     inventory item, not a separate copy."""
-    spec = _spec(inventory=["sword"], equipped_weapons=["sword"])
+    spec = _spec(inventory=["sword"], equipped={"main_hand": "sword"})
     assert carried_weight_cn(spec, data) == 60
 
 
@@ -93,7 +91,7 @@ def test_metal_armor_class(data):
 
 
 def test_shield_alone_does_not_count_as_armor(data):
-    spec = _spec(inventory=["shield"], equipped={"shield": "shield"})
+    spec = _spec(inventory=["shield"], equipped={"off_hand": "shield"})
     assert armor_movement_class(spec, data) == "none"
 
 
