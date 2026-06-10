@@ -272,9 +272,12 @@ ADVANCED_ENCHANTMENT_IDS = {
 
 def test_magic_item_sources(data):
     assert len(ADVANCED_MAGIC_ITEM_IDS) == 114
+    non_core_sources = {"carcass_crawler_1", "carcass_crawler_3"}
     for iid, item in data.items.items():
         if iid in ADVANCED_MAGIC_ITEM_IDS:
             assert item.source == "ose_advanced_fantasy", iid
+        elif item.source in non_core_sources:
+            pass  # third-party items are allowed any registered non-core source
         else:
             assert item.source == "ose_classic_fantasy", iid
 

@@ -952,7 +952,8 @@ def test_bag_of_holding_still_a_container(data):
 
 
 def test_dropped_and_renamed_ids_absent(data):
-    for gone in ("bedroll", "candle", "saddle_bags", "iron_spikes", "wine_skin"):
+    # "bedroll" is now a valid CC3 item; only the other legacy stubs remain absent
+    for gone in ("candle", "saddle_bags", "iron_spikes", "wine_skin"):
         assert gone not in data.items
 
 
