@@ -237,3 +237,20 @@ def test_temp_ability_modifier_route_zero_clears(client):
                 data={"ability": "STR", "value": 0})
     reloaded = load_character("bran", client._characters_dir)
     assert reloaded.temp_ability_modifiers == {}
+
+
+def test_rest_night_resets_innate_uses(client):
+    from aose.models import Ability
+    spec = CharacterSpec(
+        name="Bran",
+        abilities={a: 10 for a in Ability},
+        race_id="human",
+        classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[12])],
+        alignment="neutral",
+        innate_uses={"breath": 2},
+    )
+    save_character("bran", spec, client._characters_dir)
+    r = client.post("/character/bran/rest/night", data={"mode": "keep"})
+    assert r.status_code in (200, 303)
+    reloaded = load_character("bran", client._characters_dir)
+    assert reloaded.innate_uses == {}

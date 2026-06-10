@@ -89,6 +89,9 @@ from aose.engine.valuables import ValuableError
 from aose.engine import possessions as possessions_engine
 from aose.engine.possessions import PossessionError
 from aose.engine.sources import source_enabled
+from aose.engine.innate import (
+    InnateError, reset_innate, restore_innate, spend_innate,
+)
 from aose.models import Ability, Ammunition
 from aose.sheet.view import build_sheet, spell_source_add_options
 
@@ -1120,6 +1123,7 @@ async def rest_night(request: Request, character_id: str, mode: str = Form("rest
     if hp.is_dead(spec, data):
         raise HTTPException(400, "A dead character cannot rest")
     spec.classes = [_apply_rest_mode(e, mode) for e in spec.classes]
+    spec = reset_innate(spec)
     save_character(character_id, spec, request.app.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
@@ -1146,6 +1150,7 @@ async def rest_full_day(request: Request, character_id: str,
     if spec.pending_rest_heal is None:
         raise HTTPException(400, "Roll the healing die first")
     spec.classes = [_apply_rest_mode(e, mode) for e in spec.classes]
+    spec = reset_innate(spec)
     try:
         spec.damage_taken = hp.apply_healing(spec, data, spec.pending_rest_heal)
     except ValueError as e:
