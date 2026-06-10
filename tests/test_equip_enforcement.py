@@ -141,6 +141,21 @@ def test_inventory_view_flags_disallowed_armor_for_magic_user(data):
     assert _carried_row(view, "dagger").class_allowed is True
 
 
+def test_two_weapon_eligible_by_prime_requisite(data):
+    from aose.engine.proficiency import two_weapon_eligible
+    # Fighter: STR prime requisite -> eligible.
+    assert two_weapon_eligible([data.classes["fighter"]]) is True
+    # Magic-user: INT prime requisite -> not eligible.
+    assert two_weapon_eligible([data.classes["magic_user"]]) is False
+
+
+def test_two_weapon_eligible_multiclass_any_qualifies(data):
+    from aose.engine.proficiency import two_weapon_eligible
+    assert two_weapon_eligible(
+        [data.classes["magic_user"], data.classes["fighter"]]
+    ) is True
+
+
 def test_inventory_view_allowed_by_default(data):
     # No allowance args → everything allowed (backward compatible).
     view = inventory_view(["chain_mail"], [], {}, [], None, data)

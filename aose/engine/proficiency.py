@@ -218,3 +218,11 @@ def allowed_armor_ids(classes: list[CharClass], data) -> "set[str] | str":
 def shields_allowed(classes: list[CharClass]) -> bool:
     return any(cls.shields_allowed for cls in classes)
 
+
+def two_weapon_eligible(classes) -> bool:
+    """A character may fight with two weapons when ANY of their classes lists
+    STR or DEX as a prime requisite (Attacking with Two Weapons, optional)."""
+    from aose.models import Ability
+    wanted = {Ability.STR, Ability.DEX}
+    return any(wanted & set(cls.prime_requisites) for cls in classes)
+
