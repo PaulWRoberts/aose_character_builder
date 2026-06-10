@@ -50,36 +50,66 @@ def is_race_as_class(spec: CharacterSpec, data: GameData) -> bool:
     return cls is not None and cls.race_locked == spec.race_id
 
 
-def _reached_features(spec: CharacterSpec, data: GameData):
-    """Yield ``(feature, source_label)`` for every reached class feature and,
-    unless the character is race-as-class, every race feature. Mirrors the
-    iteration in ``feature_modifiers`` so all feature-derived data agrees on
-    what applies."""
+def selected_options(owner, selections: dict[str, list[str]]):
+    """Yield the chosen ``ChoiceOption``s for a race/class given the character's
+    selection map (group id -> chosen option ids). Unknown ids are skipped."""
+    for group in getattr(owner, "feature_choices", []):
+        chosen = selections.get(group.id, [])
+        by_id = {o.id: o for o in group.options}
+        for oid in chosen:
+            if oid in by_id:
+                yield by_id[oid]
+
+
+def iter_reached(spec: CharacterSpec, data: GameData):
+    """Yield ``(feature_or_option, level_or_None, source_label)`` for everything
+    that applies: reached class features + chosen class options (with the class's
+    level), and — unless race-as-class — race features + chosen race options
+    (level None). The single source of truth for "what applies"; every
+    feature-derived collector iterates this so they all agree."""
+    sel = spec.feature_choices
     for entry in spec.classes:
         cls = data.classes.get(entry.class_id)
         if cls is None:
             continue
         for feat in cls.features:
             if feat.gained_at_level <= entry.level:
-                yield feat, cls.name
-    race = None if is_race_as_class(spec, data) else data.races.get(spec.race_id)
-    if race is not None:
-        for feat in race.features:
-            yield feat, race.name
+                yield feat, entry.level, cls.name
+        for opt in selected_options(cls, sel):
+            yield opt, entry.level, cls.name
+    if not is_race_as_class(spec, data):
+        race = data.races.get(spec.race_id)
+        if race is not None:
+            for feat in race.features:
+                yield feat, None, race.name
+            for opt in selected_options(race, sel):
+                yield opt, None, race.name
+
+
+def _reached_features(spec: CharacterSpec, data: GameData):
+    """Back-compat ``(feature, source_label)`` view over ``iter_reached`` for
+    collectors that don't need the level (open-doors, 1h-2h)."""
+    for feat, _level, src in iter_reached(spec, data):
+        yield feat, src
 
 
 def feature_weapons(spec: CharacterSpec, data: GameData) -> list[tuple[str, dict]]:
-    """Synthetic always-available weapons declared by reached features via
-    ``mechanical['weapon']`` (e.g. the gargantua's thrown rock). Returns
-    ``(feature_id, descriptor)`` pairs. The race-as-class guard in
-    ``_reached_features`` keeps the gargantua rock from being contributed by both
-    the linked race and the class."""
+    """Synthetic always-available weapons declared by reached features/options via
+    ``mechanical['weapon']`` (gargantua rock, mutoid claws, mycelian fist).
+    A descriptor with ``damage_per_level_die`` (mycelian fist) resolves to
+    ``"{level}{die}"`` against the granting class's level."""
     out: list[tuple[str, dict]] = []
-    for feat, _src in _reached_features(spec, data):
-        if feat.mechanical:
-            descriptor = feat.mechanical.get("weapon")
-            if descriptor:
-                out.append((feat.id, descriptor))
+    for feat, level, _src in iter_reached(spec, data):
+        if not feat.mechanical:
+            continue
+        descriptor = feat.mechanical.get("weapon")
+        if not descriptor:
+            continue
+        descriptor = dict(descriptor)
+        die = descriptor.pop("damage_per_level_die", None)
+        if die is not None and level is not None:
+            descriptor["damage"] = f"{level}{die}"
+        out.append((feat.id, descriptor))
     return out
 
 
@@ -109,36 +139,19 @@ def one_handed_two_handed_weapons(spec: CharacterSpec, data: GameData) -> bool:
 
 
 def feature_modifiers(spec: CharacterSpec, data: GameData) -> list[Modifier]:
-    """Concrete ``Modifier``s from every reached class feature (per the class's
-    level) and every race feature.  Each carries the grant's ``condition`` and
-    the feature's name as ``source``.
-
-    For a race-as-class character the linked race contributes nothing — the
-    class is self-contained (see ``is_race_as_class``)."""
+    """Concrete ``Modifier``s from every reached class/race feature and chosen
+    option. Level-scaling resolves against the granting class's level (None on a
+    race feature/option). For a race-as-class character the linked race
+    contributes nothing — handled inside ``iter_reached``."""
     eff = effective_abilities(spec, data)
     out: list[Modifier] = []
-    for entry in spec.classes:
-        cls = data.classes.get(entry.class_id)
-        if cls is None:
-            continue
-        for feat in cls.features:
-            if feat.gained_at_level > entry.level:
-                continue
-            for g in feat.granted_modifiers:
-                out.append(Modifier(
-                    target=g.target, op=g.op,
-                    value=resolve_value(g, level=entry.level, eff=eff),
-                    condition=g.condition, source=feat.name,
-                ))
-    race = None if is_race_as_class(spec, data) else data.races.get(spec.race_id)
-    if race is not None:
-        for feat in race.features:
-            for g in feat.granted_modifiers:
-                out.append(Modifier(
-                    target=g.target, op=g.op,
-                    value=resolve_value(g, level=None, eff=eff),
-                    condition=g.condition, source=feat.name,
-                ))
+    for feat, level, _src in iter_reached(spec, data):
+        for g in feat.granted_modifiers:
+            out.append(Modifier(
+                target=g.target, op=g.op,
+                value=resolve_value(g, level=level, eff=eff),
+                condition=g.condition, source=feat.name,
+            ))
     return out
 
 
