@@ -41,3 +41,21 @@ def test_full_plate_untailored_is_ac3(data):
 def test_default_armor_tailored_is_true(data):
     spec = _knight_in_plate(True)
     assert spec.armor_tailored is True
+
+
+def test_tailored_route_flips_flag(tmp_path):
+    from fastapi.testclient import TestClient
+    from aose.web.app import app
+    from aose.characters.storage import save_character, load_character
+
+    data = GameData.load(DATA_DIR)
+    app.state.game_data = data
+    app.state.characters_dir = tmp_path
+    spec = _knight_in_plate(True)
+    save_character("c1", spec, tmp_path)
+
+    client = TestClient(app)
+    r = client.post("/character/c1/equipment/tailored",
+                    data={"value": "false"}, follow_redirects=False)
+    assert r.status_code == 303
+    assert load_character("c1", tmp_path).armor_tailored is False

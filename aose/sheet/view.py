@@ -418,6 +418,9 @@ class CharacterSheet(BaseModel):
     carrying_treasure: bool = False
     max_load: int = MAX_LOAD
 
+    armor_tailorable: bool = False   # equipped body armour can be tailored (full plate)
+    armor_tailored: bool = True      # and is currently fitted to this wearer
+
     pending_rest_heal: int | None = None
     strict_mode: bool = False
 
@@ -1202,6 +1205,10 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
     ]
     ammo_rows, ammo_options = ammo_view(spec, data)
 
+    _armor_id = spec.equipped.get("armor")
+    _armor_item = data.items.get(_armor_id) if _armor_id else None
+    _armor_tailorable = bool(getattr(_armor_item, "tailorable", False))
+
     return CharacterSheet(
         name=spec.name,
         race_name=race.name,
@@ -1285,6 +1292,8 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
         encumbrance_description=ENCUMBRANCE_DESCRIPTIONS.get(
             spec.ruleset.encumbrance, ""
         ),
+        armor_tailorable=_armor_tailorable,
+        armor_tailored=spec.armor_tailored,
         pending_rest_heal=spec.pending_rest_heal,
         strict_mode=spec.ruleset.strict_mode,
     )

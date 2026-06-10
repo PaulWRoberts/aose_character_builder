@@ -321,6 +321,16 @@ async def set_carrying_treasure(request: Request, character_id: str,
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
+@router.post("/character/{character_id}/equipment/tailored")
+async def set_armor_tailored(request: Request, character_id: str,
+                             value: str = Form(...)):
+    """Flip whether the equipped tailorable body armour is fitted to the wearer."""
+    spec = _load_spec_or_404(request, character_id)
+    spec.armor_tailored = value.lower() in ("true", "1", "on", "yes")
+    save_character(character_id, spec, request.app.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
 @router.post("/character/{character_id}/hp/damage")
 async def hp_damage(request: Request, character_id: str, amount: int = Form(...)):
     spec = _load_spec_or_404(request, character_id)

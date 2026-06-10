@@ -158,6 +158,20 @@
 {% endif %}
 
 {{ inv_table(inventory_view.equipped, target_url_prefix, "equipped", "Equipped", "contributes to weight") }}
+{% if sheet is defined and sheet.armor_tailorable %}
+<form method="post"
+      action="{{ target_url_prefix }}/tailored"
+      class="tailored-toggle">
+  <input type="hidden" name="value" value="{{ 'false' if sheet.armor_tailored else 'true' }}">
+  <label>
+    <input type="checkbox" disabled {{ 'checked' if sheet.armor_tailored else '' }}>
+    Tailored to wearer
+  </label>
+  <button type="submit" class="link-button">
+    {{ "Mark as another's plate (AC 3)" if sheet.armor_tailored else "Mark as tailored (AC 2)" }}
+  </button>
+</form>
+{% endif %}
 {{ inv_table(inventory_view.carried,  target_url_prefix, "carried",  "Carried",  "contributes to weight") }}
 {{ container_table("carried", "Carried") }}
 {{ inv_table(inventory_view.stashed,  target_url_prefix, "stashed",  "Stashed",  "not on person — no weight") }}
