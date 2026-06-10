@@ -54,3 +54,9 @@ def test_bundle_counts(data):
     assert data.items["candles"].bundle_count == 10
     assert data.items["chalk"].bundle_count == 10
     assert data.items["paper"].bundle_count == 2
+
+
+@pytest.mark.parametrize("qid", ["knock_out", "entangle", "stealth", "strangle"])
+def test_cc3_qualities_loaded(data, qid):
+    assert qid in data.qualities
+    assert data.qualities[qid].param == "none"

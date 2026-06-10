@@ -44,3 +44,24 @@
   description: >-
     May be used with one or two hands. When wielded two-handed, the
     parenthesised damage is used (and a shield may not be employed).
+- id: knock_out
+  name: Knock-out
+  description: >-
+    On a successful hit, the target must save versus paralysis or be knocked
+    out for 1d6 turns.
+- id: entangle
+  name: Entangle
+  description: >-
+    On a successful hit, the target must save versus paralysis or be unable to
+    move or act. A new save is allowed each round to escape.
+- id: stealth
+  name: Stealth
+  description: >-
+    May only be used to attack an unaware person (human/demihuman of any level
+    or humanoid monster up to 4+1 HD) from behind. Non-living creatures are immune.
+- id: strangle
+  name: Strangle
+  description: >-
+    Following a successful hit, inflicts automatic damage each round; the victim
+    cannot move and suffers -2 to attack rolls. A successful hit on the attacker
+    lets the victim break free.
