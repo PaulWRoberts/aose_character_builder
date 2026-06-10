@@ -93,6 +93,7 @@ class AttackProfile(BaseModel):
     damage: str               # e.g. "1d8+1" or "1d6"
     range_ft: tuple[int, int, int] | None  # short / medium / long
     conditional: ConditionalAttack | None = None
+    hand: str | None = None           # "main" / "off" when dual-wielding, else None
     unarmed: bool = False
     unloaded: bool = False           # launcher with no ammo loaded
     loaded_ammo_name: str | None = None
@@ -128,7 +129,8 @@ def _profile_for(weapon: Weapon, spec: CharacterSpec, data: GameData,
                  g_atk: int, g_dmg: int,
                  ammo_bonus: int = 0, ammo_conditional=None,
                  ammo_name: str | None = None, unloaded: bool = False,
-                 manageable_item_id: str | None = None) -> AttackProfile:
+                 manageable_item_id: str | None = None,
+                 dual_penalty: int = 0) -> AttackProfile:
     str_mod = ability_modifier(eff[Ability.STR])
     dex_mod = ability_modifier(eff[Ability.DEX])
     base_attack = 19 - base_thac0
@@ -164,10 +166,10 @@ def _profile_for(weapon: Weapon, spec: CharacterSpec, data: GameData,
         rng = (weapon.range_short, weapon.range_medium or 0, weapon.range_long or 0)
 
     def hit_thac0(extra: int) -> int:
-        return base_thac0 - atk_mod - prof_pen - spec_hit - extra - g_atk
+        return base_thac0 - atk_mod - prof_pen - spec_hit - extra - g_atk - dual_penalty
 
     def hit_asc(extra: int) -> int:
-        return base_attack + atk_mod + prof_pen + spec_hit + extra + g_atk
+        return base_attack + atk_mod + prof_pen + spec_hit + extra + g_atk + dual_penalty
 
     def dmg(extra: int) -> str:
         if no_damage:
@@ -309,6 +311,11 @@ def attack_profiles(spec: CharacterSpec, data: GameData) -> list[AttackProfile]:
                 "ammo_name": name,
                 "unloaded": is_unloaded(weapon.id, weapon, spec, data)}
 
+    main_w = resolve_slot(spec.equipped.get("main_hand"), data, spec.enchanted)
+    off_w = resolve_slot(spec.equipped.get("off_hand"), data, spec.enchanted)
+    dual = isinstance(main_w, Weapon) and isinstance(off_w, Weapon)
+    off_hand_free = off_w is None
+
     weapon_profiles: list[AttackProfile] = []
     for slot in ("main_hand", "off_hand"):
         slot_id = spec.equipped.get(slot)
@@ -316,10 +323,19 @@ def attack_profiles(spec: CharacterSpec, data: GameData) -> list[AttackProfile]:
         if not isinstance(item, Weapon):
             continue
         g_atk, g_dmg = _atk_dmg(mods, melee=item.melee, ranged=item.ranged)
+        dual_penalty = 0
+        hand = None
+        if dual:
+            if slot == "main_hand":
+                dual_penalty, hand = -2, "main"
+            else:
+                dual_penalty, hand = -4, "off"
         base = _profile_for(item, spec, data, 1, eff, base_thac0, g_atk, g_dmg,
-                            manageable_item_id=slot_id, **_ammo_args(item))
+                            manageable_item_id=slot_id, dual_penalty=dual_penalty,
+                            **_ammo_args(item))
+        base = base.model_copy(update={"hand": hand})
         weapon_profiles.append(base)
-        if slot == "main_hand":
+        if off_hand_free:
             variant = _two_handed_variant(base, item, spec)
             if variant is not None:
                 weapon_profiles.append(variant)

@@ -560,3 +560,53 @@ def test_equipped_launcher_modal_has_load_control(tmp_path, data):
     assert 'name="weapon_key" value="short_bow"' in modal
     assert 'value="q1"' in modal          # the loadable stack instance
     assert "/character/archer/ammo/unload" in modal
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Task 6: Two-weapon penalties + versatile-variant suppression
+# ════════════════════════════════════════════════════════════════════════════
+
+def test_dual_wield_applies_minus_2_and_minus_4(data):
+    # Fighter (STR prime): sword main, dagger off. Rule on.
+    spec = _spec(inventory=["sword", "dagger"],
+                 equipped={"main_hand": "sword", "off_hand": "dagger"},
+                 ruleset=RuleSet(two_weapon_fighting=True))
+    profs = {p.name: p for p in attack_profiles(spec, data)}
+    sword = profs["Sword"]
+    dagger = profs["Dagger"]
+    # Compare against the same weapon used solo (no dual penalty).
+    solo = _spec(inventory=["sword"], equipped={"main_hand": "sword"})
+    sword_solo = {p.name: p for p in attack_profiles(solo, data)}["Sword"]
+    # Main hand takes -2, off hand takes -4.
+    assert sword.to_hit_ascending == sword_solo.to_hit_ascending - 2
+    assert sword.hand == "main"
+    assert dagger.hand == "off"
+    assert dagger.to_hit_ascending == sword.to_hit_ascending - 2
+
+
+def test_no_penalty_without_dual_wield(data):
+    # Sword + shield: off hand has a shield (not a weapon) — no dual penalty.
+    spec = _spec(inventory=["sword", "shield"],
+                 equipped={"main_hand": "sword", "off_hand": "shield"})
+    sword = {p.name: p for p in attack_profiles(spec, data)}["Sword"]
+    solo = _spec(inventory=["sword"], equipped={"main_hand": "sword"})
+    sword_solo = {p.name: p for p in attack_profiles(solo, data)}["Sword"]
+    assert sword.to_hit_ascending == sword_solo.to_hit_ascending
+    assert sword.hand is None
+
+
+def test_versatile_two_handed_variant_suppressed_with_off_hand_occupied(data):
+    # Bastard sword (versatile) + shield: off hand occupied → no 2H variant.
+    spec = _spec(inventory=["bastard_sword", "shield"],
+                 equipped={"main_hand": "bastard_sword", "off_hand": "shield"},
+                 ruleset=RuleSet(variable_weapon_damage=True))
+    names = [p.name for p in attack_profiles(spec, data)]
+    assert "Bastard Sword (Two-handed)" not in names
+
+
+def test_versatile_two_handed_variant_present_when_off_hand_free(data):
+    # Bastard sword alone: off hand free → 2H variant appears.
+    spec = _spec(inventory=["bastard_sword"], equipped={"main_hand": "bastard_sword"},
+                 ruleset=RuleSet(variable_weapon_damage=True))
+    names = [p.name for p in attack_profiles(spec, data)]
+    assert "Bastard Sword (Two-handed)" in names
