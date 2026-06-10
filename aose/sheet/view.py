@@ -23,7 +23,8 @@ from aose.engine.languages import (
 )
 from aose.engine.leveling import ClassAdvancement, all_advancement
 from aose.engine.detail import DetailCard, item_card, spell_card
-from aose.engine.features import is_race_as_class, open_doors_category_bonus
+from aose.engine.features import is_race_as_class, open_doors_category_bonus, selected_options
+from aose.engine.innate import innate_abilities as _innate_abilities
 from aose.engine.magic import active_modifiers, apply_modifiers, effective_abilities
 from aose.models import Ability, CharacterSpec, MagicItem, MagicItemInstance, RuleSet
 
@@ -134,6 +135,18 @@ class SheetFeature(BaseModel):
     name: str
     text: str
     source: str
+    spell_detail: DetailCard | None = None
+
+
+class InnateAbilityRow(BaseModel):
+    id: str
+    name: str
+    text: str
+    source: str
+    max_uses: int
+    used: int
+    remaining: int
+    spell_detail: DetailCard | None = None
 
 
 class EquippedRow(BaseModel):
@@ -404,6 +417,7 @@ class CharacterSheet(BaseModel):
     spells: list[SpellClassView]
     spellbook: list[SpellbookBlock] = Field(default_factory=list)
     mental_powers: list[MentalPowersBlock] = Field(default_factory=list)
+    innate_abilities: list[InnateAbilityRow] = Field(default_factory=list)
     spell_sources: list[SpellSourceView] = Field(default_factory=list)
     valuables: ValuablesView = Field(default_factory=lambda: ValuablesView(
         gems=[], jewellery=[], total_value=0))
@@ -606,16 +620,20 @@ def _xp_to_next(spec: CharacterSpec, data: GameData) -> tuple[int | None, int | 
     return adv.next_level, adv.next_threshold
 
 
+def _feature_row(feat, source: str, data: GameData) -> SheetFeature:
+    spell_id = getattr(feat, "spell_id", None)
+    detail = spell_card(data.spells[spell_id]) if spell_id in (data.spells or {}) else None
+    return SheetFeature(name=feat.name, text=feat.text, source=source, spell_detail=detail)
+
+
 def _race_features(spec: CharacterSpec, data: GameData) -> list[SheetFeature]:
-    # A race-as-class character is defined wholly by its class; the linked race
-    # (same id) shares only its name and must not contribute features.
     if _is_race_as_class(spec, data):
         return []
     race = data.races[spec.race_id]
-    return [
-        SheetFeature(name=f.name, text=f.text, source=f"Race: {race.name}")
-        for f in race.features
-    ]
+    rows = [_feature_row(f, f"Race: {race.name}", data) for f in race.features]
+    rows += [_feature_row(o, f"Race: {race.name}", data)
+             for o in selected_options(race, spec.feature_choices)]
+    return rows
 
 
 def _class_features(spec: CharacterSpec, data: GameData) -> list[SheetFeature]:
@@ -624,9 +642,9 @@ def _class_features(spec: CharacterSpec, data: GameData) -> list[SheetFeature]:
         cls = data.classes[entry.class_id]
         for f in cls.features:
             if f.gained_at_level <= entry.level:
-                out.append(
-                    SheetFeature(name=f.name, text=f.text, source=f"Class: {cls.name}")
-                )
+                out.append(_feature_row(f, f"Class: {cls.name}", data))
+        for o in selected_options(cls, spec.feature_choices):
+            out.append(_feature_row(o, f"Class: {cls.name}", data))
     return out
 
 
@@ -890,6 +908,18 @@ def mental_powers_view(spec: CharacterSpec, data: GameData) -> list[MentalPowers
             uses_remaining=max(0, total - entry.powers_used),
         ))
     return out
+
+
+def innate_view(spec: CharacterSpec, data: GameData) -> list[InnateAbilityRow]:
+    rows: list[InnateAbilityRow] = []
+    for ab in _innate_abilities(spec, data):
+        detail = spell_card(data.spells[ab.spell_id]) if ab.spell_id in data.spells else None
+        rows.append(InnateAbilityRow(
+            id=ab.id, name=ab.name, text=ab.text, source=ab.source,
+            max_uses=ab.max_uses, used=ab.used, remaining=ab.remaining,
+            spell_detail=detail,
+        ))
+    return rows
 
 
 def _first_arcane_class_id(spec: CharacterSpec, data: GameData) -> str | None:
@@ -1273,6 +1303,7 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
         spells=spells_view(spec, data),
         spellbook=spellbook_view(spec, data),
         mental_powers=mental_powers_view(spec, data),
+        innate_abilities=innate_view(spec, data),
         spell_sources=spell_sources_view(spec, data),
         valuables=valuables_view(spec),
         ammo=ammo_rows,
