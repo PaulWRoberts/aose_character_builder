@@ -108,6 +108,125 @@ RULE_GROUPS = [
 # Name of the rule group whose inputs are disabled when Basic is selected.
 ADVANCED_OPTIONS_GROUP = "Advanced Options"
 
+# Flat field -> description map (UI copy). Keyed by RuleSet field name so the
+# SOURCE_RULES tree carries structure only, not prose.
+RULE_DESCRIPTIONS = {
+    "separate_race_class":
+        "Choose race and class separately. Off = Basic: pick a class that "
+        "determines race (race-as-class), with no separate race step; "
+        "multi-classing and lifting demihuman restrictions are unavailable.",
+    "lift_demihuman_restrictions":
+        "Demihuman races ignore their normal class options and per-class "
+        "maximum-level caps.",
+    "human_racial_abilities":
+        "Humans gain optional racial abilities: +1 CHA, +1 CON, and Blessed "
+        "(roll HP twice, keep the better). Requires lifting demihuman "
+        "restrictions.",
+    "multiclassing":
+        "Demihumans may pursue two or three classes simultaneously, sharing XP.",
+    "weapon_proficiency":
+        "Characters are only proficient with specific weapons; non-proficient "
+        "attacks suffer −2 to hit.",
+    "secondary_skills":
+        "Each character has a secondary skill (a non-adventuring trade).",
+    "optional_staves":
+        "Magic-users and illusionists may wield a staff in combat.",
+    "two_weapon_fighting":
+        "Characters with STR or DEX as a prime requisite may wield a small "
+        "weapon in the off hand: −2 to the primary attack, an extra off-hand "
+        "attack at −4.",
+    "advanced_spell_books":
+        "Arcane spell books have no size limit and the number of beginning "
+        "spells is set by Intelligence. Off = standard rules: the book holds "
+        "exactly the spells the caster can memorise.",
+    "ascending_ac":
+        "Show armour class as ascending (10 = unarmoured) and use Attack Bonus, "
+        "instead of descending (9 = unarmoured) with THAC0.",
+    "variable_weapon_damage":
+        "Each weapon rolls its specific damage die instead of the default 1d6.",
+    "reroll_1s_2s_hp_l1":
+        "When rolling 1st-level HP, re-roll any result of 1 or 2.",
+    "individual_initiative":
+        "Roll initiative for each combatant individually, modified by DEX, "
+        "instead of one roll per side. Shows your initiative modifier on the "
+        "sheet.",
+}
+
+
+def _rule(field, *children):
+    return {"kind": "rule", "field": field, "children": list(children)}
+
+
+def _choice(field):
+    return {"kind": "choice", "field": field}
+
+
+# Optional rules attributed to the source they come from, in display order.
+# Nesting expresses dependencies: a child rule is unavailable when any ancestor
+# is unchecked. Sources absent from this map (Carcass Crawler 1 & 3) contribute
+# no optional rules.
+SOURCE_RULES = {
+    "ose_classic_fantasy": [
+        _rule("ascending_ac"),
+        _rule("variable_weapon_damage"),
+        _rule("reroll_1s_2s_hp_l1"),
+        _rule("individual_initiative"),
+        _choice("encumbrance"),
+    ],
+    "ose_advanced_fantasy": [
+        _rule("separate_race_class",
+              _rule("lift_demihuman_restrictions",
+                    _rule("human_racial_abilities")),
+              _rule("multiclassing")),
+        _rule("secondary_skills"),
+        _rule("weapon_proficiency"),
+        _rule("optional_staves"),
+        _rule("two_weapon_fighting"),
+        _rule("advanced_spell_books"),
+    ],
+}
+
+
+def flatten_rule_fields(tree):
+    """Depth-first list of every rule node's field in a SOURCE_RULES subtree
+    (choice nodes contribute None)."""
+    out = []
+    for node in tree:
+        out.append(None if node.get("kind") == "choice" else node.get("field"))
+        out.extend(flatten_rule_fields(node.get("children", [])))
+    return out
+
+
+def content_rows_for_source(data, source_id, ruleset):
+    """Build the Content subsection rows for a source: one row per derived
+    category, with display label, locked flag (Classic), and current state."""
+    from aose.engine.sources import (
+        CLASSIC_SOURCE_ID,
+        source_content_categories,
+    )
+    sources_with_races = {r.source for r in data.races.values()} - {CLASSIC_SOURCE_ID}
+    cats = source_content_categories(data).get(source_id, [])
+    locked = source_id == CLASSIC_SOURCE_ID
+    rows = []
+    for cat in cats:
+        if cat == "equipment":
+            label = "Equipment"
+        elif cat == "magic_items":
+            label = "Magic Items"
+        else:  # classes
+            label = "Classes & Races" if source_id in sources_with_races else "Classes"
+        key = f"{source_id}:{cat}"
+        rows.append({
+            "category": cat,
+            "label": label,
+            "locked": locked,
+            "enabled": locked or key not in ruleset.disabled_content,
+            "key": key,
+            "field": f"content_{key}",
+        })
+    return rows
+
+
 CHOICE_GROUPS = [
     ("encumbrance", "Encumbrance", [
         ("none", "None — ignore encumbrance entirely"),

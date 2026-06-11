@@ -464,6 +464,71 @@ def test_disabling_source_clears_orphaned_race(client, tmp_path):
     assert "race_id" not in draft
 
 
+def test_source_rules_attributes_rules_to_sources():
+    from aose.web.settings_routes import SOURCE_RULES, flatten_rule_fields
+    classic = flatten_rule_fields(SOURCE_RULES["ose_classic_fantasy"])
+    advanced = flatten_rule_fields(SOURCE_RULES["ose_advanced_fantasy"])
+    assert "individual_initiative" in classic
+    assert "ascending_ac" in classic
+    assert "separate_race_class" in advanced
+    assert "multiclassing" in advanced
+    # strict_mode is standalone, never inside a source tree.
+    assert "strict_mode" not in classic and "strict_mode" not in advanced
+    # Carcass Crawler issues contribute no optional rules.
+    assert SOURCE_RULES.get("carcass_crawler_1", []) == []
+    assert SOURCE_RULES.get("carcass_crawler_3", []) == []
+
+
+def test_source_rules_nesting_expresses_dependencies():
+    from aose.web.settings_routes import SOURCE_RULES
+    # separate_race_class -> {lift -> human, multiclassing}
+    srx = next(n for n in SOURCE_RULES["ose_advanced_fantasy"]
+               if n["field"] == "separate_race_class")
+    child_fields = {c["field"] for c in srx["children"]}
+    assert {"lift_demihuman_restrictions", "multiclassing"} <= child_fields
+    lift = next(c for c in srx["children"]
+                if c["field"] == "lift_demihuman_restrictions")
+    assert any(g["field"] == "human_racial_abilities" for g in lift["children"])
+
+
+def test_every_rule_field_has_a_description():
+    from aose.web.settings_routes import SOURCE_RULES, RULE_DESCRIPTIONS, flatten_rule_fields
+    fields = set()
+    for tree in SOURCE_RULES.values():
+        fields |= set(flatten_rule_fields(tree))
+    fields.discard(None)  # choice nodes have no field
+    missing = fields - set(RULE_DESCRIPTIONS)
+    assert not missing, f"missing descriptions: {missing}"
+
+
+def test_content_rows_for_source_locks_classic():
+    from pathlib import Path
+    from aose.data.loader import GameData
+    from aose.models import RuleSet
+    from aose.web.settings_routes import content_rows_for_source
+    data = GameData.load(Path(__file__).parent.parent / "data")
+    rows = content_rows_for_source(data, "ose_classic_fantasy", RuleSet())
+    assert [r["category"] for r in rows] == ["classes", "equipment", "magic_items"]
+    assert all(r["locked"] and r["enabled"] for r in rows)
+    # Classic's classes row label is just "Classes" (no "& Races").
+    assert next(r for r in rows if r["category"] == "classes")["label"] == "Classes"
+
+
+def test_content_rows_reflect_disabled_content():
+    from pathlib import Path
+    from aose.data.loader import GameData
+    from aose.models import RuleSet
+    from aose.web.settings_routes import content_rows_for_source
+    data = GameData.load(Path(__file__).parent.parent / "data")
+    rs = RuleSet(disabled_content=["carcass_crawler_3:equipment"])
+    rows = content_rows_for_source(data, "carcass_crawler_3", rs)
+    by_cat = {r["category"]: r for r in rows}
+    assert by_cat["classes"]["label"] == "Classes & Races"
+    assert by_cat["classes"]["enabled"] is True
+    assert by_cat["equipment"]["enabled"] is False
+    assert all(not r["locked"] for r in rows)
+
+
 def test_two_weapon_fighting_flag_is_implemented():
     from aose.models import RuleSet
     from aose.web.settings_routes import RULE_LABELS, IMPLEMENTED_RULES
