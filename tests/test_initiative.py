@@ -38,6 +38,55 @@ def test_dex_init_display_row_unchanged():
     assert init_cell(18) == "+2"
 
 
+from aose.engine.initiative import initiative_detail
+
+
+def _spec(race_id, class_id, dex, *, individual_init=True, level=1):
+    return CharacterSpec(
+        name="Pip",
+        abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": dex, "CON": 10, "CHA": 10},
+        race_id=race_id,
+        classes=[ClassEntry(class_id=class_id, level=level, hp_rolls=[5])],
+        alignment="law",
+        ruleset=RuleSet(individual_initiative=individual_init),
+    )
+
+
+def test_initiative_detail_dex_only():
+    data = GameData.load(DATA_DIR)
+    # Human fighter, DEX 13 → +1 from DEX, +1 from Decisiveness = +2
+    det = initiative_detail(_spec("human", "fighter", 13), data)
+    assert det.base == 1
+    assert det.total == 2
+    assert det.lines[0].source == "Dexterity" and det.lines[0].bonus == 1
+    assert any(l.source == "Decisiveness" and l.bonus == 1 for l in det.lines)
+
+
+def test_initiative_detail_halfling_split():
+    data = GameData.load(DATA_DIR)
+    # Halfling thief, DEX 9 → 0 from DEX, +1 from race feature = +1
+    det = initiative_detail(_spec("halfling", "thief", 9), data)
+    assert det.base == 0
+    assert det.total == 1
+    assert any(l.bonus == 1 for l in det.lines[1:])
+
+
+def test_initiative_detail_halfling_race_as_class():
+    data = GameData.load(DATA_DIR)
+    # Halfling-as-class, DEX 18 → +2 DEX, +1 class feature = +3
+    spec = CharacterSpec(
+        name="Pip",
+        abilities={"STR": 9, "INT": 10, "WIS": 10, "DEX": 18, "CON": 12, "CHA": 10},
+        race_id="halfling",
+        classes=[ClassEntry(class_id="halfling", level=1, hp_rolls=[6])],
+        alignment="law",
+        ruleset=RuleSet(separate_race_class=False, individual_initiative=True),
+    )
+    det = initiative_detail(spec, data)
+    assert det.base == 2
+    assert det.total == 3
+
+
 def test_initiative_grants_present_in_data():
     data = GameData.load(DATA_DIR)
 
