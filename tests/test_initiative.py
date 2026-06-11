@@ -87,6 +87,42 @@ def test_initiative_detail_halfling_race_as_class():
     assert det.total == 3
 
 
+from aose.sheet.view import _race_features, _class_features
+
+
+def test_halfling_initiative_feature_hidden_when_rule_off():
+    data = GameData.load(DATA_DIR)
+    names = lambda spec: [f.name for f in _race_features(spec, data)]
+    off = _spec("halfling", "thief", 12, individual_init=False)
+    on = _spec("halfling", "thief", 12, individual_init=True)
+    assert "Initiative Bonus (Optional Rule)" not in names(off)
+    assert "Initiative Bonus (Optional Rule)" in names(on)
+
+
+def test_halfling_race_as_class_initiative_feature_gated():
+    data = GameData.load(DATA_DIR)
+    def cls_names(individual_init):
+        spec = CharacterSpec(
+            name="Pip",
+            abilities={"STR": 9, "INT": 10, "WIS": 10, "DEX": 12, "CON": 12, "CHA": 10},
+            race_id="halfling",
+            classes=[ClassEntry(class_id="halfling", level=1, hp_rolls=[6])],
+            alignment="law",
+            ruleset=RuleSet(separate_race_class=False,
+                            individual_initiative=individual_init),
+        )
+        return [f.name for f in _class_features(spec, data)]
+    assert "Initiative Bonus (Optional Rule)" not in cls_names(False)
+    assert "Initiative Bonus (Optional Rule)" in cls_names(True)
+
+
+def test_human_decisiveness_always_shown():
+    data = GameData.load(DATA_DIR)
+    names = lambda spec: [f.name for f in _race_features(spec, data)]
+    off = _spec("human", "fighter", 12, individual_init=False)
+    assert "Decisiveness" in names(off)
+
+
 def test_initiative_grants_present_in_data():
     data = GameData.load(DATA_DIR)
 

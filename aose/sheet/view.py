@@ -626,25 +626,39 @@ def _feature_row(feat, source: str, data: GameData) -> SheetFeature:
     return SheetFeature(name=feat.name, text=feat.text, source=source, spell_detail=detail)
 
 
+def _feature_visible(feat, ruleset: RuleSet) -> bool:
+    """A feature whose ``mechanical.requires_rule`` names a RuleSet flag is
+    hidden when that flag is off; otherwise always visible."""
+    rule = (getattr(feat, "mechanical", None) or {}).get("requires_rule")
+    if rule is None:
+        return True
+    return bool(getattr(ruleset, rule, False))
+
+
 def _race_features(spec: CharacterSpec, data: GameData) -> list[SheetFeature]:
     if _is_race_as_class(spec, data):
         return []
     race = data.races[spec.race_id]
-    rows = [_feature_row(f, f"Race: {race.name}", data) for f in race.features]
+    rs = spec.ruleset
+    rows = [_feature_row(f, f"Race: {race.name}", data)
+            for f in race.features if _feature_visible(f, rs)]
     rows += [_feature_row(o, f"Race: {race.name}", data)
-             for o in selected_options(race, spec.feature_choices)]
+             for o in selected_options(race, spec.feature_choices)
+             if _feature_visible(o, rs)]
     return rows
 
 
 def _class_features(spec: CharacterSpec, data: GameData) -> list[SheetFeature]:
     out: list[SheetFeature] = []
+    rs = spec.ruleset
     for entry in spec.classes:
         cls = data.classes[entry.class_id]
         for f in cls.features:
-            if f.gained_at_level <= entry.level:
+            if f.gained_at_level <= entry.level and _feature_visible(f, rs):
                 out.append(_feature_row(f, f"Class: {cls.name}", data))
         for o in selected_options(cls, spec.feature_choices):
-            out.append(_feature_row(o, f"Class: {cls.name}", data))
+            if _feature_visible(o, rs):
+                out.append(_feature_row(o, f"Class: {cls.name}", data))
     return out
 
 
