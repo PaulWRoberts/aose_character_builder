@@ -8,6 +8,7 @@ For the living architecture (how the subsystems fit together *now*), see
 
 | Date | Feature | Branch | Spec/Plan slug |
 |---|---|---|---|
+| 2026-06-10 | Source-organized content & optional rules: per-category `disabled_content`, source-panel settings/wizard UI, `SOURCE_RULES` dependency tree | feature/source-content-rules-organization | source-content-rules-organization |
 | 2026-06-10 | Interactive wizard rolls + Class Setup consolidation: roll-first feature choices & secondary skill, consolidated save-and-advance, client-side selection caps | feat/interactive-wizard-rolls | 2026-06-10-interactive-wizard-rolls |
 | 2026-06-10 | Individual initiative optional rule: DEX-derived initiative modifier in the Combat box (clickable breakdown) + halfling/human bonuses; generic `mechanical.requires_rule` feature gating | feat/individual-initiative | 2026-06-10-individual-initiative |
 | 2026-06-10 | CC3 races/classes + feature-choice mechanic & innate abilities | feat/cc3-races-classes | 2026-06-10-cc3-races-and-classes |

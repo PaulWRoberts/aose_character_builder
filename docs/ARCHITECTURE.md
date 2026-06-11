@@ -429,14 +429,20 @@ Illusionist/Magic-user/Thief). New languages: `hephaestan`, `language_of_wolves`
 
 ## Content sources & optional rules
 
-- **Sources** — `Source` model + `data/sources.yaml` (OSE Classic Fantasy + OSE Advanced Fantasy + Carcass Crawler 1 + Carcass Crawler 3, Necrotic Gnome). A `source` field on `ItemBase`/`Race`/
-  `CharClass`/`SpellList`/`Enchantment`/`Spell` defaults to
-  `ose_classic_fantasy`; only Advanced-tagged entries carry the Advanced id.
-  `RuleSet.disabled_sources: list[str]` (Classic is always enabled, never added).
-  `aose/engine/sources.py`: `CLASSIC_SOURCE_ID` + `source_enabled(source_id,
-  ruleset)`. Gated in wizard race/class steps, spell candidates, `shop_categories`,
-  `_enchant_choices`. Mid-wizard, disabling a source clears orphaned race/class
-  picks via `_apply_rule_changes`.
+- **Sources** — `Source` model + `data/sources.yaml` (OSE Classic Fantasy + OSE
+  Advanced Fantasy + Carcass Crawler 1 + Carcass Crawler 3, Necrotic Gnome). A
+  `source` field on `ItemBase`/`Race`/`CharClass`/`SpellList`/`Enchantment`/
+  `Spell` defaults to `ose_classic_fantasy`; only non-Classic entries carry their
+  own id. `CONTENT_CATEGORIES = ("classes", "equipment", "magic_items")` in
+  `aose/models/ruleset.py`. `RuleSet.disabled_content: list[str]` stores
+  `"{source_id}:{category}"` keys for disabled content; Classic is never added;
+  legacy `disabled_sources` is coerced to `disabled_content` at load time via a
+  Pydantic `model_validator(mode="before")`. `aose/engine/sources.py`:
+  `CLASSIC_SOURCE_ID`, `content_enabled(source_id, category, ruleset)`,
+  `source_content_categories(data)` (derives categories from loaded data — no
+  per-item tagging). Gated in wizard race/class steps, spell candidates,
+  `shop_categories`, `_enchant_choices`. Mid-wizard, changing `disabled_content`
+  clears orphaned race/class picks via `_apply_rule_changes`.
 - **Optional rules** — every flag in `RuleSet` is integrated end-to-end. The
   settings page never renders a "pending" badge (a regression test guards this).
 - **Manual rolls + Strict Mode** — abilities, HP, starting gold, per-table feature

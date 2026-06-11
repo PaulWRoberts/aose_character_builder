@@ -79,6 +79,9 @@ back-navigation links (or a 🔒 when a roll has locked an earlier step).
   each have their own shapes — see `docs/ARCHITECTURE.md`
 - `feature_choices`: `dict[str, list[str]]` — group id → chosen option ids (CC3 pick/roll)
 - `innate_uses`: `dict[str, int]` — daily-use ability id → uses spent today (reset on rest)
+- `RuleSet.disabled_content`: `list[str]` — `"{source_id}:{category}"` keys for disabled
+  content categories (`classes`, `equipment`, `magic_items`); Classic source never added;
+  legacy `disabled_sources` is coerced to `disabled_content` at load time
 
 ## Settings vs per-character ruleset
 

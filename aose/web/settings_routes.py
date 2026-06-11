@@ -192,7 +192,7 @@ def _ruleset_view_context(request, ruleset):
     attribute access, so the object works directly."""
     from aose.engine.sources import CLASSIC_SOURCE_ID as _CLASSIC
     data = request.app.state.game_data
-    sources = sorted(data.sources.values(), key=lambda s: (not s.core, s.name))
+    sources = sorted(data.sources.values(), key=lambda s: (not s.core, s.id != _CLASSIC, s.name))
     panels = []
     for src in sources:
         panels.append({
