@@ -123,6 +123,25 @@ def test_human_decisiveness_always_shown():
     assert "Decisiveness" in names(off)
 
 
+from aose.sheet.view import build_sheet
+
+
+def test_build_sheet_exposes_initiative_when_rule_on():
+    data = GameData.load(DATA_DIR)
+    sheet = build_sheet(_spec("human", "fighter", 13, individual_init=True), data)
+    assert sheet.individual_initiative is True
+    assert sheet.initiative_modifier == 2          # +1 DEX, +1 Decisiveness
+    assert sheet.initiative_lines[0].source == "Dexterity"
+    assert "Individual Initiative" in sheet.enabled_optional_rules
+
+
+def test_build_sheet_initiative_off_by_default():
+    data = GameData.load(DATA_DIR)
+    sheet = build_sheet(_spec("human", "fighter", 13, individual_init=False), data)
+    assert sheet.individual_initiative is False
+    assert "Individual Initiative" not in sheet.enabled_optional_rules
+
+
 def test_initiative_grants_present_in_data():
     data = GameData.load(DATA_DIR)
 

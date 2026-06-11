@@ -24,6 +24,7 @@ from aose.engine.languages import (
 from aose.engine.leveling import ClassAdvancement, all_advancement
 from aose.engine.detail import DetailCard, item_card, spell_card
 from aose.engine.features import is_race_as_class, open_doors_category_bonus, selected_options
+from aose.engine.initiative import initiative_detail
 from aose.engine.innate import innate_abilities as _innate_abilities
 from aose.engine.magic import active_modifiers, apply_modifiers, effective_abilities
 from aose.models import Ability, CharacterSpec, MagicItem, MagicItemInstance, RuleSet
@@ -49,6 +50,7 @@ OPTIONAL_RULE_LABELS = {
     "reroll_1s_2s_hp_l1": "Reroll 1s & 2s for HP at L1",
     "lift_demihuman_restrictions": "Lift Demihuman Class & Level Restrictions",
     "variable_weapon_damage": "Variable Weapon Damage",
+    "individual_initiative": "Individual Initiative",
 }
 
 ENCUMBRANCE_DESCRIPTIONS = {
@@ -385,6 +387,10 @@ class CharacterSheet(BaseModel):
     attack_bonus: int
     attack_lines: list[SheetAttackLine]
     attack_has_conditional: bool
+    individual_initiative: bool
+    initiative_modifier: int
+    initiative_lines: list[SheetAttackLine]
+    initiative_has_conditional: bool
 
     saves: list[SheetSave]
     situational_saves: list[SheetSituationalSave]
@@ -1247,6 +1253,12 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
                         conditional=ln.conditional, note=ln.note)
         for ln in attack_breakdown.lines
     ]
+    init_detail = initiative_detail(spec, data)
+    initiative_line_rows = [
+        SheetAttackLine(source=ln.source, bonus=ln.bonus,
+                        conditional=ln.conditional, note=ln.note)
+        for ln in init_detail.lines
+    ]
     ammo_rows, ammo_options = ammo_view(spec, data)
 
     _armor_id = spec.equipped.get("armor")
@@ -1279,6 +1291,10 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
         attack_bonus=attack_bonus.attack_bonus(spec, data),
         attack_lines=attack_line_rows,
         attack_has_conditional=attack_breakdown.has_conditional,
+        individual_initiative=spec.ruleset.individual_initiative,
+        initiative_modifier=init_detail.total,
+        initiative_lines=initiative_line_rows,
+        initiative_has_conditional=init_detail.has_conditional,
         saves=save_rows,
         situational_saves=situational_save_rows,
         languages=[
