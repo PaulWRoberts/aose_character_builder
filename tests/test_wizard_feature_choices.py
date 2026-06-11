@@ -20,11 +20,11 @@ def _client(tmp_path):
         settings_path=tmp_path / "settings.json",
         seed_from_examples=False,
     )
-    return TestClient(app), tmp_path / "drafts"
+    return TestClient(app, follow_redirects=False), tmp_path / "drafts"
 
 
 def _seed_mutoid_draft(drafts_dir, strict=True):
-    """A race-as-class Mutoid draft sitting at class_setup, HP already rolled."""
+    """A race-as-class Mutoid draft at class_setup, HP already rolled."""
     draft = {
         "ruleset": RuleSet(separate_race_class=False, weapon_proficiency=False,
                            strict_mode=strict, secondary_skills=False).model_dump(),
@@ -39,24 +39,73 @@ def _seed_mutoid_draft(drafts_dir, strict=True):
     return "d1"
 
 
-def test_strict_autorolls_and_locks_choices(tmp_path):
+def test_strict_does_not_autoroll(tmp_path):
     client, drafts_dir = _client(tmp_path)
     draft_id = _seed_mutoid_draft(drafts_dir, strict=True)
     r = client.get(f"/wizard/{draft_id}/class_setup")
     assert r.status_code == 200
     draft = load_draft(draft_id, drafts_dir)
-    assert "mutations" in draft["feature_choices"]
+    assert "feature_choices" not in draft or "mutations" not in draft.get("feature_choices", {})
+    # The page offers a Roll button for the table.
+    assert "feature-choices/roll" in r.text
+
+
+def test_roll_route_populates_group(tmp_path):
+    client, drafts_dir = _client(tmp_path)
+    draft_id = _seed_mutoid_draft(drafts_dir, strict=True)
+    r = client.post(f"/wizard/{draft_id}/feature-choices/roll",
+                    data={"group_id": "mutations"})
+    assert r.status_code in (200, 303)
+    draft = load_draft(draft_id, drafts_dir)
     assert len(draft["feature_choices"]["mutations"]) == 2
     assert len(set(draft["feature_choices"]["mutations"])) == 2
 
 
-def test_non_strict_pick_persists(tmp_path):
+def test_strict_locks_after_roll(tmp_path):
+    client, drafts_dir = _client(tmp_path)
+    draft_id = _seed_mutoid_draft(drafts_dir, strict=True)
+    client.post(f"/wizard/{draft_id}/feature-choices/roll", data={"group_id": "mutations"})
+    first = load_draft(draft_id, drafts_dir)["feature_choices"]["mutations"]
+    # Re-roll refused in strict mode.
+    r = client.post(f"/wizard/{draft_id}/feature-choices/roll", data={"group_id": "mutations"})
+    assert r.status_code == 400
+    assert load_draft(draft_id, drafts_dir)["feature_choices"]["mutations"] == first
+
+
+def test_non_strict_reroll_allowed(tmp_path):
     client, drafts_dir = _client(tmp_path)
     draft_id = _seed_mutoid_draft(drafts_dir, strict=False)
-    client.get(f"/wizard/{draft_id}/class_setup")
+    client.post(f"/wizard/{draft_id}/feature-choices/roll", data={"group_id": "mutations"})
+    before = load_draft(draft_id, drafts_dir)["feature_choices"]["mutations"]
+    for _ in range(20):
+        client.post(f"/wizard/{draft_id}/feature-choices/roll", data={"group_id": "mutations"})
+        after = load_draft(draft_id, drafts_dir)["feature_choices"]["mutations"]
+        if after != before:
+            return
+    pytest.fail("Re-roll never changed the mutation set after 20 tries")
+
+
+def test_non_strict_manual_override_persists(tmp_path):
+    client, drafts_dir = _client(tmp_path)
+    draft_id = _seed_mutoid_draft(drafts_dir, strict=False)
+    client.post(f"/wizard/{draft_id}/feature-choices/roll", data={"group_id": "mutations"})
     r = client.post(f"/wizard/{draft_id}/feature-choices",
                     data={"choice_mutations": ["scales", "clawed_hand"]})
     assert r.status_code in (200, 303)
     draft = load_draft(draft_id, drafts_dir)
     assert set(draft["feature_choices"]["mutations"]) == {"scales", "clawed_hand"}
-    assert draft["feature_choices_done"] is True
+
+
+def test_roll_route_rejects_unknown_group(tmp_path):
+    client, drafts_dir = _client(tmp_path)
+    draft_id = _seed_mutoid_draft(drafts_dir, strict=True)
+    r = client.post(f"/wizard/{draft_id}/feature-choices/roll", data={"group_id": "bogus"})
+    assert r.status_code == 400
+
+
+def test_strict_manual_save_still_rejected(tmp_path):
+    client, drafts_dir = _client(tmp_path)
+    draft_id = _seed_mutoid_draft(drafts_dir, strict=True)
+    r = client.post(f"/wizard/{draft_id}/feature-choices",
+                    data={"choice_mutations": ["scales", "clawed_hand"]})
+    assert r.status_code == 400

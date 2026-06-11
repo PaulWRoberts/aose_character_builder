@@ -60,6 +60,8 @@
     {% endif %}
 </section>
 
+<form method="post" action="/wizard/{{ draft_id }}/hp" id="class-setup-form" class="step-form">
+
 {# ── Weapon Proficiencies ───────────────────────────────────────────────── #}
 {% if show_proficiencies %}
 <section class="class-setup-section">
@@ -68,31 +70,29 @@
        proficiency slot{{ "s" if required != 1 else "" }}.{% if allow_specialise %}
        A martial character may <strong>specialise</strong> in a weapon
        (costs 2 slots) for +1 to hit and +1 damage.{% endif %}</p>
-    <form method="post" action="/wizard/{{ draft_id }}/proficiencies" class="step-form">
-        <table class="prof-table" data-required="{{ required }}"
-               data-specialise="{{ 1 if allow_specialise else 0 }}">
-            <thead>
-                <tr><th>Proficient</th><th>Weapon</th><th>Qualities</th>
-                {% if allow_specialise %}<th>Specialise (2)</th>{% endif %}</tr>
-            </thead>
-            <tbody>
-                {% for w in weapons %}
-                <tr>
-                    <td><input type="checkbox" name="weapon" value="{{ w.id }}"
-                               class="prof-weapon" {% if w.selected %}checked{% endif %}></td>
-                    <td>{{ w.name }}</td>
-                    <td class="muted small">{{ w.qualities }}</td>
-                    {% if allow_specialise %}
-                    <td><input type="checkbox" name="specialise" value="{{ w.id }}"
-                               class="prof-special" {% if w.specialised %}checked{% endif %}></td>
-                    {% endif %}
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        <p class="muted" id="prof-counter">Spend exactly {{ required }} slot{{ "s" if required != 1 else "" }}.</p>
-        <button type="submit">{% if proficiencies_done %}Update proficiencies{% else %}Save proficiencies{% endif %}</button>
-    </form>
+    <input type="hidden" name="section" value="proficiencies">
+    <table class="prof-table" data-required="{{ required }}"
+           data-specialise="{{ 1 if allow_specialise else 0 }}">
+        <thead>
+            <tr><th>Proficient</th><th>Weapon</th><th>Qualities</th>
+            {% if allow_specialise %}<th>Specialise (2)</th>{% endif %}</tr>
+        </thead>
+        <tbody>
+            {% for w in weapons %}
+            <tr>
+                <td><input type="checkbox" name="weapon" value="{{ w.id }}"
+                           class="prof-weapon" {% if w.selected %}checked{% endif %}></td>
+                <td>{{ w.name }}</td>
+                <td class="muted small">{{ w.qualities }}</td>
+                {% if allow_specialise %}
+                <td><input type="checkbox" name="specialise" value="{{ w.id }}"
+                           class="prof-special" {% if w.specialised %}checked{% endif %}></td>
+                {% endif %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <p class="muted" id="prof-counter">Spend exactly {{ required }} slot{{ "s" if required != 1 else "" }}.</p>
     <script>
         (function () {
             const required = {{ required }};
@@ -111,8 +111,18 @@
                     if (w && !w.checked) { w.checked = true; }
                 });
                 const n = spent();
+                table.querySelectorAll('.prof-weapon').forEach(w => {
+                    if (!w.checked) w.disabled = n >= required;
+                });
+                table.querySelectorAll('.prof-special').forEach(sp => {
+                    if (sp.checked) return;
+                    const w = rowOf(sp).querySelector('.prof-weapon');
+                    const cost = (w && w.checked) ? 1 : 2;
+                    sp.disabled = n + cost > required;
+                });
                 counter.textContent = `Spent ${n} of ${required}.`;
                 counter.className = (n === required) ? '' : 'muted';
+                if (window.csValidate) window.csValidate();
             }
             table.addEventListener('change', refresh);
             refresh();
@@ -125,6 +135,7 @@
 {% if show_spells %}
 <section class="class-setup-section">
     <h3>Spells</h3>
+    <input type="hidden" name="section" value="spells">
     {% for c in caster_classes %}
     <div class="spell-class">
         <h4>{{ c.class_name }}</h4>
@@ -136,39 +147,30 @@
             <li><strong>{{ s.name }}</strong> <span class="small muted">(L{{ s.level }})</span></li>
             {% endfor %}
         </ul>
-        <form method="post" action="/wizard/{{ draft_id }}/spells" class="step-form">
-            <input type="hidden" name="class_id" value="{{ c.class_id }}">
-            <button type="submit">Confirm {{ c.class_name }} spells</button>
-        </form>
         {% else %}
         <p>Choose <strong>{{ c.required }}</strong> starting spell(s) for your spell
            book{% if c.advanced %} (Advanced Spell Book rules: determined by Intelligence){% else %} (the spells you can memorise at this level){% endif %}.</p>
-        <form method="post" action="/wizard/{{ draft_id }}/spells" class="step-form">
-            <input type="hidden" name="class_id" value="{{ c.class_id }}">
-            <div class="card-grid" data-required="{{ c.required }}">
-                {% for s in c.candidates %}
-                <label class="card {% if s.selected %}selected{% endif %}">
-                    <input type="checkbox" name="spell_{{ c.class_id }}" value="{{ s.id }}"
-                           class="spell-checkbox" {% if s.selected %}checked{% endif %}>
-                    <div class="card-name">{{ s.name }}</div>
-                    <div class="card-detail small">{{ s.description }}</div>
-                </label>
-                {% endfor %}
-            </div>
-            <p class="muted spell-counter">Pick exactly {{ c.required }}.</p>
-            <button type="submit">Save {{ c.class_name }} spells</button>
-        </form>
+        <div class="card-grid" data-required="{{ c.required }}">
+            {% for s in c.candidates %}
+            <label class="card {% if s.selected %}selected{% endif %}">
+                <input type="checkbox" name="spell_{{ c.class_id }}" value="{{ s.id }}"
+                       class="spell-checkbox" {% if s.selected %}checked{% endif %}>
+                <div class="card-name">{{ s.name }}</div>
+                <div class="card-detail small">{{ s.description }}</div>
+            </label>
+            {% endfor %}
+        </div>
+        <p class="muted spell-counter">Pick exactly {{ c.required }}.</p>
         {% endif %}
     </div>
     {% endfor %}
     <script>
         (function () {
-            document.querySelectorAll('.card-grid[data-required]').forEach(function (grid) {
+            document.querySelectorAll('.spell-class .card-grid[data-required]').forEach(function (grid) {
                 const required = parseInt(grid.dataset.required, 10);
                 const boxes = Array.from(grid.querySelectorAll('.spell-checkbox'));
-                const form = grid.closest('form');
-                const counter = form ? form.querySelector('.spell-counter') : null;
-                const submit = form ? form.querySelector('button[type="submit"]') : null;
+                const spellDiv = grid.closest('.spell-class');
+                const counter = spellDiv ? spellDiv.querySelector('.spell-counter') : null;
                 function update() {
                     const checked = boxes.filter(b => b.checked).length;
                     boxes.forEach(function (b) {
@@ -176,7 +178,7 @@
                         b.closest('.card').classList.toggle('selected', b.checked);
                     });
                     if (counter) { counter.textContent = 'Picked ' + checked + ' of ' + required + '.'; }
-                    if (submit) { submit.disabled = checked !== required; }
+                    if (window.csValidate) { window.csValidate(); }
                 }
                 boxes.forEach(b => b.addEventListener('change', update));
                 update();
@@ -187,42 +189,47 @@
 {% endif %}
 
 {# ── Feature Choices (CC3) ──────────────────────────────────────────────── #}
+{% if has_feature_choices and not feature_choices_locked %}
+<input type="hidden" name="section" value="features">
+{% endif %}
 {% if has_feature_choices %}
 <section class="class-setup-section">
     <h3>Features</h3>
-    {% if feature_choices_locked %}
-    <p class="muted small">Your features were rolled and are locked (Strict Mode).</p>
     {% for g in feature_groups %}
-    <div class="feature-group">
-        <h4>{{ g.name }}</h4>
+    <div class="feature-group" data-required="{{ g.pick }}">
+        <h4>{{ g.name }}{% if g.cosmetic %} <span class="muted small">(cosmetic)</span>{% endif %}</h4>
+        {% if g.text %}<p class="muted small">{{ g.text }}</p>{% endif %}
+
+        {% if not g.rolled %}
+        <p class="muted small">Roll <strong>{{ g.pick }}</strong> on the {{ g.roll_dice }} table.</p>
+        <button type="submit" formnovalidate
+                formaction="/wizard/{{ draft_id }}/feature-choices/roll"
+                name="group_id" value="{{ g.id }}">Roll {{ g.roll_dice or "" }}</button>
+        {% elif feature_choices_locked %}
         <ul>
             {% for o in g.options if o.selected %}
             <li><strong>{{ o.name }}</strong>{% if o.text %} — <span class="muted small">{{ o.text }}</span>{% endif %}</li>
             {% endfor %}
         </ul>
+        {% else %}
+        {# Non-strict: rolled, with re-roll + manual override. #}
+        <div class="card-grid" data-required="{{ g.pick }}">
+            {% for o in g.options %}
+            <label class="card {% if o.selected %}selected{% endif %}">
+                <input type="checkbox" name="choice_{{ g.id }}"
+                       value="{{ o.id }}" class="choice-checkbox"
+                       {% if o.selected %}checked{% endif %}>
+                <div class="card-name">{{ o.name }}</div>
+                {% if o.text %}<div class="card-detail small">{{ o.text }}</div>{% endif %}
+            </label>
+            {% endfor %}
+        </div>
+        <button type="submit" formnovalidate
+                formaction="/wizard/{{ draft_id }}/feature-choices/roll"
+                name="group_id" value="{{ g.id }}">Re-roll {{ g.roll_dice or "" }}</button>
+        {% endif %}
     </div>
     {% endfor %}
-    {% else %}
-    <form method="post" action="/wizard/{{ draft_id }}/feature-choices" class="step-form">
-        {% for g in feature_groups %}
-        <div class="feature-group" data-required="{{ g.pick }}">
-            <h4>{{ g.name }}{% if g.cosmetic %} <span class="muted small">(cosmetic)</span>{% endif %}</h4>
-            {% if g.text %}<p class="muted small">{{ g.text }}</p>{% endif %}
-            <p class="muted small">Choose <strong>{{ g.pick }}</strong>.</p>
-            <div class="card-grid" data-required="{{ g.pick }}">
-                {% for o in g.options %}
-                <label class="card {% if o.selected %}selected{% endif %}">
-                    <input type="checkbox" name="choice_{{ g.id }}" value="{{ o.id }}"
-                           class="choice-checkbox" {% if o.selected %}checked{% endif %}>
-                    <div class="card-name">{{ o.name }}</div>
-                    {% if o.text %}<div class="card-detail small">{{ o.text }}</div>{% endif %}
-                </label>
-                {% endfor %}
-            </div>
-        </div>
-        {% endfor %}
-        <button type="submit">Save features</button>
-    </form>
     <script>
         (function () {
             document.querySelectorAll('.feature-group .card-grid[data-required]').forEach(function (grid) {
@@ -234,17 +241,48 @@
                         b.disabled = !b.checked && checked >= required;
                         b.closest('.card').classList.toggle('selected', b.checked);
                     });
+                    if (window.csValidate) { window.csValidate(); }
                 }
                 boxes.forEach(b => b.addEventListener('change', update));
                 update();
             });
         })();
     </script>
-    {% endif %}
 </section>
 {% endif %}
 
-{# ── Continue ───────────────────────────────────────────────────────────── #}
-<form method="post" action="/wizard/{{ draft_id }}/hp" class="step-form">
-    <button type="submit" class="primary" {% if not ready %}disabled{% endif %}>Next: Identity &rarr;</button>
+    <button type="submit" class="primary" id="cs-next"
+            data-rolls-ready="{{ 1 if rolls_ready else 0 }}"
+            {% if not rolls_ready %}disabled{% endif %}>Next: Identity &rarr;</button>
 </form>
+
+<script>
+    (function () {
+        const next = document.getElementById('cs-next');
+        if (!next) return;
+        const rollsReady = next.dataset.rollsReady === '1';
+        window.csValidate = function () {
+            let ok = true;
+            const prof = document.querySelector('.prof-table');
+            if (prof) {
+                const req = parseInt(prof.dataset.required, 10);
+                let spent = 0;
+                prof.querySelectorAll('.prof-weapon:checked').forEach(() => spent += 1);
+                prof.querySelectorAll('.prof-special:checked').forEach(() => spent += 1);
+                if (spent !== req) ok = false;
+            }
+            document.querySelectorAll('.spell-class .card-grid[data-required]').forEach(function (grid) {
+                const req = parseInt(grid.dataset.required, 10);
+                const n = grid.querySelectorAll('.spell-checkbox:checked').length;
+                if (n !== req) ok = false;
+            });
+            document.querySelectorAll('.feature-group .card-grid[data-required]').forEach(function (grid) {
+                const req = parseInt(grid.dataset.required, 10);
+                const n = grid.querySelectorAll('.choice-checkbox:checked').length;
+                if (n !== req) ok = false;
+            });
+            next.disabled = !(rollsReady && ok);
+        };
+        window.csValidate();
+    })();
+</script>

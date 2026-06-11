@@ -164,28 +164,53 @@ def test_identity_hides_skill_section_when_rule_off(tmp_path):
     assert "Secondary Skill" not in r.text
 
 
-def test_identity_shows_and_autorolls_skill_when_rule_on(tmp_path):
-    from aose.data.loader import GameData
-    from aose.engine.secondary_skills import selectable_names
+def test_identity_shows_roll_button_and_does_not_autoroll(tmp_path):
     client = _make_client(tmp_path, RuleSet(secondary_skills=True))
     draft_id = _drive_to_identity(client)
     r = client.get(f"/wizard/{draft_id}/identity")
     assert "Secondary Skill" in r.text
+    assert "identity/skill-roll" in r.text
     draft = load_draft(draft_id, client._drafts_dir)
-    rolled = draft["secondary_skill"]
-    assert isinstance(rolled, list) and len(rolled) >= 1
+    assert "secondary_skill" not in draft  # nothing rolled until pressed
+
+
+def test_identity_skill_roll_populates(tmp_path):
+    from aose.data.loader import GameData
+    from aose.engine.secondary_skills import selectable_names
+    client = _make_client(tmp_path, RuleSet(secondary_skills=True))
+    draft_id = _drive_to_identity(client)
+    r = client.post(f"/wizard/{draft_id}/identity/skill-roll")
+    assert r.status_code in (200, 303)
+    rolled = load_draft(draft_id, client._drafts_dir)["secondary_skill"]
     valid = selectable_names(GameData.load(DATA_DIR).secondary_skills)
-    assert all(s in valid for s in rolled)
+    assert isinstance(rolled, list) and all(s in valid for s in rolled)
+
+
+def test_identity_skill_strict_locks_after_roll(tmp_path):
+    client = _make_client(tmp_path, RuleSet(secondary_skills=True, strict_mode=True))
+    draft_id = _drive_to_identity(client)
+    client.post(f"/wizard/{draft_id}/identity/skill-roll")
+    locked = load_draft(draft_id, client._drafts_dir)["secondary_skill"]
+    r = client.post(f"/wizard/{draft_id}/identity/skill-roll")
+    assert r.status_code == 400
+    assert load_draft(draft_id, client._drafts_dir)["secondary_skill"] == locked
+
+
+def test_identity_advance_requires_rolled_skill(tmp_path):
+    client = _make_client(tmp_path, RuleSet(secondary_skills=True))
+    draft_id = _drive_to_identity(client)
+    r = client.post(f"/wizard/{draft_id}/identity",
+                    data={"name": "X", "alignment": "law"})
+    assert r.status_code == 400  # skill not rolled yet
 
 
 def test_identity_skill_reroll_changes_value(tmp_path):
-    # Reroll requires strict_mode=False.
     client = _make_client(tmp_path, RuleSet(secondary_skills=True, strict_mode=False))
     draft_id = _drive_to_identity(client)
-    client.get(f"/wizard/{draft_id}/identity")
+    client.post(f"/wizard/{draft_id}/identity/skill-roll")  # first roll
     before = load_draft(draft_id, client._drafts_dir)["secondary_skill"]
     for _ in range(20):
-        client.post(f"/wizard/{draft_id}/identity/skill-reroll")
+        client.post(f"/wizard/{draft_id}/identity/skill-roll")
         after = load_draft(draft_id, client._drafts_dir)["secondary_skill"]
         if after != before:
             return
@@ -196,7 +221,7 @@ def test_identity_requires_skill_when_rule_on(tmp_path):
     # Non-strict: an invalid submitted skill is rejected.
     client = _make_client(tmp_path, RuleSet(secondary_skills=True, strict_mode=False))
     draft_id = _drive_to_identity(client)
-    client.get(f"/wizard/{draft_id}/identity")
+    client.post(f"/wizard/{draft_id}/identity/skill-roll")
     r = client.post(
         f"/wizard/{draft_id}/identity",
         data={"name": "X", "alignment": "law", "secondary_skill": "Astronaut"},
@@ -209,7 +234,7 @@ def test_identity_requires_skill_when_rule_on(tmp_path):
 def test_class_change_clears_alignment_keeps_name_and_skill(tmp_path):
     client = _make_client(tmp_path, RuleSet(secondary_skills=True, strict_mode=False))
     draft_id = _drive_to_identity(client)
-    client.get(f"/wizard/{draft_id}/identity")  # auto-rolls skill
+    client.post(f"/wizard/{draft_id}/identity/skill-roll")  # explicit roll
     client.post(
         f"/wizard/{draft_id}/identity",
         data={"name": "Keeper", "alignment": "law"},

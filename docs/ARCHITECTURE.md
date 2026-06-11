@@ -90,9 +90,11 @@ group. Selections live on `CharacterSpec.feature_choices: dict[str, list[str]]`
 (group id → chosen option ids). Chosen `ChoiceOption`s are feature-shaped
 (`mechanical`, `granted_modifiers`, `daily_uses`, `spell_id`), so they flow
 through `iter_reached` / `feature_modifiers` / `feature_weapons` with no
-per-option engine code. The wizard's `class_setup` step shows a Features picker
-(auto-rolls and locks under Strict Mode via `aose/engine/feature_choices.py`
-`roll_choice`/`validate_choice`); selected features render on the sheet alongside
+per-option engine code. The wizard's `class_setup` step shows a Features picker (roll-first:
+`POST /{id}/feature-choices/roll?group_id=X` rolls one table; Strict Mode locks
+after the first roll; non-strict allows re-roll and manual checkbox override via
+`POST /{id}/feature-choices`). Engine: `aose/engine/feature_choices.py`
+`roll_choice`/`validate_choice`. Selected features render on the sheet alongside
 normal class/race features.
 
 **Race vs race-as-class are distinct stat blocks that share only a name.** A
@@ -398,8 +400,10 @@ Illusionist/Magic-user/Thief). New languages: `hephaestan`, `language_of_wolves`
   100 and exactly one roll-twice). `aose/engine/secondary_skills.py`:
   `selectable_names` (excludes roll-twice), `roll(entries, rng)` (weighted; roll-
   twice expands to two distinct trades, never nests). `CharacterSpec.secondary_skills:
-  list[str]`. Strict mode rolls once on first `GET /identity` and locks; non-strict
-  re-rolls freely.
+  list[str]`. Roll-first: `GET /identity` never auto-rolls; `POST
+  /identity/skill-roll` performs the roll (strict locks after one press; non-strict
+  allows re-roll). `POST /identity` requires the skill to be present before
+  advancing; non-strict accepts a manual dropdown override.
 
 ---
 
@@ -435,14 +439,26 @@ Illusionist/Magic-user/Thief). New languages: `hephaestan`, `language_of_wolves`
   picks via `_apply_rule_changes`.
 - **Optional rules** — every flag in `RuleSet` is integrated end-to-end. The
   settings page never renders a "pending" badge (a regression test guards this).
-- **Manual rolls + Strict Mode** — abilities, HP, and starting gold each require a
-  deliberate Roll press. `RuleSet.strict_mode` (default `True`) locks each roll
-  after one press; off = free re-rolls. A hopeless ability set (`subpar` or any
-  score 3) re-enables the Roll button under strict. Back-nav gates: rolling
-  abilities locks the rules step; rolling HP locks every step before HP
-  (`class_setup`) — gates show a 🔒 breadcrumb state. `draft["hp_blessed_sets"]`
-  (draft-only, never persisted) stores both Blessed HP sets so Class Setup can bold
-  the higher.
+- **Manual rolls + Strict Mode** — abilities, HP, starting gold, per-table feature
+  choices, and the secondary skill each require a deliberate Roll press. Strict Mode
+  (default `True`) locks each roll after one press; off = free re-rolls. A hopeless
+  ability set (`subpar` or any score 3) re-enables the Roll button under strict.
+  Back-nav gates: rolling abilities locks the rules step; rolling HP locks every
+  step before HP (`class_setup`) — gates show a 🔒 breadcrumb state.
+  `draft["hp_blessed_sets"]` (draft-only, never persisted) stores both Blessed HP
+  sets so Class Setup can bold the higher.
+- **Class Setup — consolidated advance** — `POST /{id}/hp` is the single "Next"
+  handler. Sections present in the consolidated form declare themselves via hidden
+  `<input name="section" value="...">` markers (values: `proficiencies`, `spells`,
+  `features`); the handler runs `_apply_proficiencies` / `_apply_spells` /
+  `_apply_feature_overrides` for each declared section, then saves and advances via
+  `_next_incomplete_step`. The per-section routes (`/proficiencies`, `/spells`,
+  `/feature-choices`) remain for backward-compat. Client-side `csValidate` enables
+  the Next button only when all selection counts match their server-declared
+  requirements (`data-required` attributes on `.prof-table` and `.card-grid`).
+  `draft["_feature_choice_group_ids"]` (set at class-pick time) lets
+  `_feature_choices_complete` determine completeness without threading `data` into
+  `_next_incomplete_step`. `feature_choices_done` is retired.
 
 ---
 
