@@ -199,7 +199,7 @@ def _clear_after_abilities(draft: dict[str, Any]) -> None:
     for k in ("race_id", "class_id", "class_ids", "ability_adjustments",
               "hp_roll", "hp_rolls", "proficiencies",
               "spellcasting", "spellbooks", "spells_done", "languages",
-              "feature_choices", "feature_choices_done", "_has_feature_choices"):
+              "feature_choices", "_has_feature_choices", "_feature_choice_group_ids"):
         draft.pop(k, None)
 
 
@@ -207,7 +207,7 @@ def _clear_after_race(draft: dict[str, Any]) -> None:
     for k in ("class_id", "class_ids", "ability_adjustments",
               "hp_roll", "hp_rolls", "proficiencies",
               "spellcasting", "spellbooks", "spells_done", "languages",
-              "feature_choices", "feature_choices_done", "_has_feature_choices"):
+              "feature_choices", "_has_feature_choices", "_feature_choice_group_ids"):
         draft.pop(k, None)
 
 
@@ -216,8 +216,15 @@ def _clear_after_class(draft: dict[str, Any]) -> None:
     # after choosing chaos). name and secondary_skill don't depend on class.
     for k in ("ability_adjustments", "hp_roll", "hp_rolls", "proficiencies",
               "spellcasting", "spellbooks", "spells_done", "alignment", "languages",
-              "feature_choices", "feature_choices_done", "_has_feature_choices"):
+              "feature_choices", "_has_feature_choices", "_feature_choice_group_ids"):
         draft.pop(k, None)
+
+
+def _feature_choices_complete(draft: dict[str, Any]) -> bool:
+    """Every required feature-choice group has a rolled (or overridden) entry."""
+    group_ids = draft.get("_feature_choice_group_ids", [])
+    chosen = draft.get("feature_choices", {})
+    return all(gid in chosen for gid in group_ids)
 
 
 def _class_setup_complete(draft: dict[str, Any]) -> bool:
@@ -232,7 +239,7 @@ def _class_setup_complete(draft: dict[str, Any]) -> bool:
         return False
     if draft.get("spellcasting") and not draft.get("spells_done"):
         return False
-    if draft.get("_has_feature_choices") and not draft.get("feature_choices_done"):
+    if draft.get("_has_feature_choices") and not _feature_choices_complete(draft):
         return False
     return True
 
@@ -833,7 +840,9 @@ async def post_class(request: Request, draft_id: str):
         draft.pop("class_ids", None)
         draft["class_id"] = ids[0]
     _set_spellcasting_flag(draft, data)
-    draft["_has_feature_choices"] = bool(_active_choice_groups(draft, data))
+    groups = _active_choice_groups(draft, data)
+    draft["_has_feature_choices"] = bool(groups)
+    draft["_feature_choice_group_ids"] = [g.id for g in groups]
     save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/{_next_incomplete_step(draft)}")
 
@@ -1153,21 +1162,11 @@ def _active_choice_groups(draft: dict[str, Any], data) -> list:
 
 
 def _feature_choices_context(draft: dict[str, Any], data) -> dict:
-    """Render rows for the Features section; auto-roll + lock under Strict Mode
-    on first visit (mirrors secondary skills)."""
+    """Render rows for the Features section. Rolling is an explicit player
+    action (see post_feature_choice_roll); nothing is auto-rolled here."""
     groups = _active_choice_groups(draft, data)
     rs = _ruleset_of(draft)
     chosen_map = dict(draft.get("feature_choices", {}))
-
-    if rs.strict_mode and groups:
-        changed = False
-        for g in groups:
-            if g.id not in chosen_map:
-                chosen_map[g.id] = roll_choice(g)
-                changed = True
-        if changed:
-            draft["feature_choices"] = chosen_map
-        draft["feature_choices_done"] = True
 
     rows = []
     for g in groups:
@@ -1175,6 +1174,7 @@ def _feature_choices_context(draft: dict[str, Any], data) -> dict:
         rows.append({
             "id": g.id, "name": g.name, "text": g.text, "pick": g.pick,
             "cosmetic": g.cosmetic, "roll_dice": g.roll_dice,
+            "rolled": g.id in chosen_map,
             "options": [
                 {"id": o.id, "name": o.name, "text": o.text,
                  "selected": o.id in chosen}
@@ -1269,6 +1269,24 @@ async def post_proficiencies(request: Request, draft_id: str):
     return _redirect(f"/wizard/{draft_id}/class_setup")
 
 
+def _apply_feature_overrides(draft: dict[str, Any], form, data) -> None:
+    """Validate & merge submitted feature picks (non-strict manual override).
+    Only groups present in the form are touched; others keep their rolled value."""
+    groups = {g.id: g for g in _active_choice_groups(draft, data)}
+    chosen_map = dict(draft.get("feature_choices", {}))
+    for gid, g in groups.items():
+        field = form.getlist(f"choice_{gid}")
+        if not field:
+            continue
+        picked = list(dict.fromkeys(field))
+        try:
+            validate_choice(g, picked)
+        except ChoiceError as e:
+            raise HTTPException(400, str(e))
+        chosen_map[gid] = picked
+    draft["feature_choices"] = chosen_map
+
+
 @router.post("/{draft_id}/feature-choices")
 async def post_feature_choices(request: Request, draft_id: str):
     draft = _load(request, draft_id)
@@ -1276,17 +1294,27 @@ async def post_feature_choices(request: Request, draft_id: str):
     if _ruleset_of(draft).strict_mode:
         raise HTTPException(400, "Feature choices are locked in Strict Mode.")
     form = await request.form()
-    groups = _active_choice_groups(draft, data)
-    chosen_map: dict[str, list[str]] = {}
-    for g in groups:
-        picked = list(dict.fromkeys(form.getlist(f"choice_{g.id}")))
-        try:
-            validate_choice(g, picked)
-        except ChoiceError as e:
-            raise HTTPException(400, str(e))
-        chosen_map[g.id] = picked
-    draft["feature_choices"] = chosen_map
-    draft["feature_choices_done"] = True
+    _apply_feature_overrides(draft, form, data)
+    save_draft(draft_id, draft, _drafts_dir(request))
+    return _redirect(f"/wizard/{draft_id}/class_setup")
+
+
+@router.post("/{draft_id}/feature-choices/roll")
+async def post_feature_choice_roll(request: Request, draft_id: str):
+    """Roll a single feature-choice table. First roll allowed in every mode;
+    Strict Mode refuses a re-roll once the group is set (mirrors HP/gold)."""
+    draft = _load(request, draft_id)
+    data = request.app.state.game_data
+    form = await request.form()
+    group_id = form.get("group_id")
+    groups = {g.id: g for g in _active_choice_groups(draft, data)}
+    if group_id not in groups:
+        raise HTTPException(400, f"Unknown feature group '{group_id}'")
+    chosen = dict(draft.get("feature_choices", {}))
+    if _ruleset_of(draft).strict_mode and group_id in chosen:
+        raise HTTPException(400, "Feature is already rolled and locked (Strict Mode).")
+    chosen[group_id] = roll_choice(groups[group_id])
+    draft["feature_choices"] = chosen
     save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/class_setup")
 
@@ -1377,10 +1405,7 @@ async def get_class_setup(request: Request, draft_id: str):
     # Feature choices (CC3 pick/roll groups).
     choice_ctx = _feature_choices_context(draft, data)
     ctx.update(choice_ctx)
-    ctx["features_done"] = (not choice_ctx["has_feature_choices"]) or bool(draft.get("feature_choices_done"))
-    # If Strict auto-roll changed the draft, persist it.
-    if choice_ctx["has_feature_choices"] and _ruleset_of(draft).strict_mode:
-        save_draft(draft_id, draft, _drafts_dir(request))
+    ctx["features_done"] = _feature_choices_complete(draft)
     ctx["ready"] = _class_setup_complete(draft)
     return templates.TemplateResponse(request, "wizard.html", ctx)
 

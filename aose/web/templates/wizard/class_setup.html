@@ -190,39 +190,41 @@
 {% if has_feature_choices %}
 <section class="class-setup-section">
     <h3>Features</h3>
-    {% if feature_choices_locked %}
-    <p class="muted small">Your features were rolled and are locked (Strict Mode).</p>
     {% for g in feature_groups %}
-    <div class="feature-group">
-        <h4>{{ g.name }}</h4>
+    <div class="feature-group" data-required="{{ g.pick }}">
+        <h4>{{ g.name }}{% if g.cosmetic %} <span class="muted small">(cosmetic)</span>{% endif %}</h4>
+        {% if g.text %}<p class="muted small">{{ g.text }}</p>{% endif %}
+
+        {% if not g.rolled %}
+        <p class="muted small">Roll <strong>{{ g.pick }}</strong> on the {{ g.roll_dice }} table.</p>
+        <button type="submit" form="class-setup-form" formnovalidate
+                formaction="/wizard/{{ draft_id }}/feature-choices/roll"
+                name="group_id" value="{{ g.id }}">Roll {{ g.roll_dice or "" }}</button>
+        {% elif feature_choices_locked %}
         <ul>
             {% for o in g.options if o.selected %}
             <li><strong>{{ o.name }}</strong>{% if o.text %} — <span class="muted small">{{ o.text }}</span>{% endif %}</li>
             {% endfor %}
         </ul>
+        {% else %}
+        {# Non-strict: rolled, with re-roll + manual override. #}
+        <div class="card-grid" data-required="{{ g.pick }}">
+            {% for o in g.options %}
+            <label class="card {% if o.selected %}selected{% endif %}">
+                <input type="checkbox" form="class-setup-form" name="choice_{{ g.id }}"
+                       value="{{ o.id }}" class="choice-checkbox"
+                       {% if o.selected %}checked{% endif %}>
+                <div class="card-name">{{ o.name }}</div>
+                {% if o.text %}<div class="card-detail small">{{ o.text }}</div>{% endif %}
+            </label>
+            {% endfor %}
+        </div>
+        <button type="submit" form="class-setup-form" formnovalidate
+                formaction="/wizard/{{ draft_id }}/feature-choices/roll"
+                name="group_id" value="{{ g.id }}">Re-roll {{ g.roll_dice or "" }}</button>
+        {% endif %}
     </div>
     {% endfor %}
-    {% else %}
-    <form method="post" action="/wizard/{{ draft_id }}/feature-choices" class="step-form">
-        {% for g in feature_groups %}
-        <div class="feature-group" data-required="{{ g.pick }}">
-            <h4>{{ g.name }}{% if g.cosmetic %} <span class="muted small">(cosmetic)</span>{% endif %}</h4>
-            {% if g.text %}<p class="muted small">{{ g.text }}</p>{% endif %}
-            <p class="muted small">Choose <strong>{{ g.pick }}</strong>.</p>
-            <div class="card-grid" data-required="{{ g.pick }}">
-                {% for o in g.options %}
-                <label class="card {% if o.selected %}selected{% endif %}">
-                    <input type="checkbox" name="choice_{{ g.id }}" value="{{ o.id }}"
-                           class="choice-checkbox" {% if o.selected %}checked{% endif %}>
-                    <div class="card-name">{{ o.name }}</div>
-                    {% if o.text %}<div class="card-detail small">{{ o.text }}</div>{% endif %}
-                </label>
-                {% endfor %}
-            </div>
-        </div>
-        {% endfor %}
-        <button type="submit">Save features</button>
-    </form>
     <script>
         (function () {
             document.querySelectorAll('.feature-group .card-grid[data-required]').forEach(function (grid) {
@@ -234,13 +236,13 @@
                         b.disabled = !b.checked && checked >= required;
                         b.closest('.card').classList.toggle('selected', b.checked);
                     });
+                    if (window.csValidate) { window.csValidate(); }
                 }
                 boxes.forEach(b => b.addEventListener('change', update));
                 update();
             });
         })();
     </script>
-    {% endif %}
 </section>
 {% endif %}
 
