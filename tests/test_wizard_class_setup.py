@@ -502,3 +502,89 @@ def test_full_flow_caster_with_proficiencies_and_blessed(tmp_path):
     assert saved["abilities"]["CON"] == 14  # 13 + 1 optional CON
     assert saved["weapon_proficiencies"] == ["dagger"]
     assert saved["classes"][0]["spellbook"] == ["magic_user_magic_missile"]
+
+
+# ── Task 8: consolidated save-and-advance ──────────────────────────────────
+
+def test_consolidated_next_saves_all_sections(tmp_path):
+    client = _make_client(tmp_path)
+    draft_id = _new_draft(client)
+    client.post(f"/wizard/{draft_id}/rules", data=_rules_form(weapon_proficiency="on"))
+    _set_abilities(client, draft_id, dict(_GOOD))
+    client.post(f"/wizard/{draft_id}/abilities", data={})
+    client.post(f"/wizard/{draft_id}/race", data={"race_id": "human"})
+    client.post(f"/wizard/{draft_id}/class", data={"class_id": "magic_user"})
+    client.post(f"/wizard/{draft_id}/adjust", data={})
+    client.post(f"/wizard/{draft_id}/hp/roll")
+    r = client.post(f"/wizard/{draft_id}/hp", data={
+        "section": ["proficiencies", "spells"],
+        "weapon": ["dagger"],
+        "spell_magic_user": ["magic_user_magic_missile"],
+    })
+    assert r.status_code == 303
+    assert r.headers["location"].endswith("/identity")
+    draft = load_draft(draft_id, client._drafts_dir)
+    assert draft["proficiencies"]["weapons"] == ["dagger"]
+    assert draft["spellbooks"]["magic_user"] == ["magic_user_magic_missile"]
+
+
+def test_consolidated_next_without_markers_still_advances(tmp_path):
+    # Backward-compat: sections saved via their own routes, bare /hp advances.
+    client = _make_client(tmp_path)
+    draft_id = _new_draft(client)
+    client.post(f"/wizard/{draft_id}/rules", data=_rules_form(weapon_proficiency="on"))
+    _set_abilities(client, draft_id, dict(_GOOD))
+    client.post(f"/wizard/{draft_id}/abilities", data={})
+    client.post(f"/wizard/{draft_id}/race", data={"race_id": "human"})
+    client.post(f"/wizard/{draft_id}/class", data={"class_id": "magic_user"})
+    client.post(f"/wizard/{draft_id}/adjust", data={})
+    client.post(f"/wizard/{draft_id}/hp/roll")
+    client.post(f"/wizard/{draft_id}/proficiencies", data={"weapon": ["dagger"]})
+    client.post(f"/wizard/{draft_id}/spells",
+                data={"class_id": "magic_user", "spell_magic_user": ["magic_user_magic_missile"]})
+    r = client.post(f"/wizard/{draft_id}/hp")
+    assert r.headers["location"].endswith("/identity")
+
+
+def test_consolidated_next_rejects_wrong_proficiency_count(tmp_path):
+    client = _make_client(tmp_path)
+    draft_id = _new_draft(client)
+    client.post(f"/wizard/{draft_id}/rules", data=_rules_form(weapon_proficiency="on"))
+    _set_abilities(client, draft_id, dict(_GOOD))
+    client.post(f"/wizard/{draft_id}/abilities", data={})
+    client.post(f"/wizard/{draft_id}/race", data={"race_id": "human"})
+    client.post(f"/wizard/{draft_id}/class", data={"class_id": "fighter"})
+    client.post(f"/wizard/{draft_id}/adjust", data={})
+    client.post(f"/wizard/{draft_id}/hp/roll")
+    r = client.post(f"/wizard/{draft_id}/hp", data={"section": "proficiencies"})
+    assert r.status_code == 400
+
+
+def test_class_setup_page_has_no_per_section_save_buttons(tmp_path):
+    client = _make_client(tmp_path)
+    draft_id = _new_draft(client)
+    client.post(f"/wizard/{draft_id}/rules", data=_rules_form(weapon_proficiency="on"))
+    _set_abilities(client, draft_id, dict(_GOOD))
+    client.post(f"/wizard/{draft_id}/abilities", data={})
+    client.post(f"/wizard/{draft_id}/race", data={"race_id": "human"})
+    client.post(f"/wizard/{draft_id}/class", data={"class_id": "magic_user"})
+    client.post(f"/wizard/{draft_id}/adjust", data={})
+    body = client.get(f"/wizard/{draft_id}/class_setup").text
+    assert "Save proficiencies" not in body
+    assert "Save magic_user spells" not in body
+    assert "Save Magic-User spells" not in body
+
+
+def test_proficiency_table_carries_cap_metadata(tmp_path):
+    # magic_user is non-martial: 1 proficiency slot.
+    client = _make_client(tmp_path)
+    draft_id = _new_draft(client)
+    client.post(f"/wizard/{draft_id}/rules", data=_rules_form(weapon_proficiency="on"))
+    _set_abilities(client, draft_id, dict(_GOOD))
+    client.post(f"/wizard/{draft_id}/abilities", data={})
+    client.post(f"/wizard/{draft_id}/race", data={"race_id": "human"})
+    client.post(f"/wizard/{draft_id}/class", data={"class_id": "magic_user"})
+    client.post(f"/wizard/{draft_id}/adjust", data={})
+    body = client.get(f"/wizard/{draft_id}/class_setup").text
+    assert 'data-required="1"' in body  # magic_user: 1 slot
+    assert "prof-weapon" in body

@@ -1228,21 +1228,15 @@ def _proficiency_context(draft: dict[str, Any], data) -> dict:
 
 
 
-@router.post("/{draft_id}/proficiencies")
-async def post_proficiencies(request: Request, draft_id: str):
-    draft = _load(request, draft_id)
-    data = request.app.state.game_data
-    form = await request.form()
+def _apply_proficiencies(draft: dict[str, Any], form, data) -> None:
     weapons = list(dict.fromkeys(form.getlist("weapon")))
     specialisations = list(dict.fromkeys(form.getlist("specialise")))
-
     ids = _class_ids(draft)
     classes = [data.classes[cid] for cid in ids if cid in data.classes]
     pairs = [(c, 1) for c in classes]
     required = total_proficiency_slots(pairs)
     allowed = allowed_weapon_ids(classes, data, _ruleset_of(draft))
     allow_special = specialisation_allowed(classes)
-
     if allowed != "all":
         bad = [w for w in weapons if w not in allowed]
         if bad:
@@ -1251,7 +1245,6 @@ async def post_proficiencies(request: Request, draft_id: str):
         raise HTTPException(400, "This class cannot specialise.")
     if any(s not in weapons for s in specialisations):
         raise HTTPException(400, "Can only specialise a weapon you are proficient with.")
-
     spent = len(weapons) + len(specialisations)
     if spent != required:
         raise HTTPException(
@@ -1259,8 +1252,15 @@ async def post_proficiencies(request: Request, draft_id: str):
             f"Must spend exactly {required} proficiency slot(s) at creation; "
             f"spent {spent} (each weapon = 1, each specialisation = +1).",
         )
-
     draft["proficiencies"] = {"weapons": weapons, "specialisations": specialisations}
+
+
+@router.post("/{draft_id}/proficiencies")
+async def post_proficiencies(request: Request, draft_id: str):
+    draft = _load(request, draft_id)
+    data = request.app.state.game_data
+    form = await request.form()
+    _apply_proficiencies(draft, form, data)
     save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/class_setup")
 
@@ -1402,6 +1402,10 @@ async def get_class_setup(request: Request, draft_id: str):
     choice_ctx = _feature_choices_context(draft, data)
     ctx.update(choice_ctx)
     ctx["features_done"] = _feature_choices_complete(draft)
+    ctx["rolls_ready"] = (
+        ctx["hp_done"]
+        and (not choice_ctx["has_feature_choices"] or _feature_choices_complete(draft))
+    )
     ctx["ready"] = _class_setup_complete(draft)
     return templates.TemplateResponse(request, "wizard.html", ctx)
 
@@ -1440,10 +1444,21 @@ async def post_hp_roll(request: Request, draft_id: str):
 
 @router.post("/{draft_id}/hp")
 async def post_hp(request: Request, draft_id: str):
-    """Single 'Continue' action for the Class Setup page. Advances only when
-    every applicable section is complete; otherwise bounces back to the page
-    via _next_incomplete_step."""
+    """Single 'Next' action for Class Setup. Sections declared via hidden
+    ``section`` markers are validated and saved here; sections saved earlier
+    via their own routes are left untouched. Advances only when every
+    applicable section is complete."""
     draft = _load(request, draft_id)
+    data = request.app.state.game_data
+    form = await request.form()
+    sections = set(form.getlist("section"))
+    if "proficiencies" in sections:
+        _apply_proficiencies(draft, form, data)
+    if "spells" in sections:
+        _apply_spells(draft, form, data)
+    if "features" in sections and not _ruleset_of(draft).strict_mode:
+        _apply_feature_overrides(draft, form, data)
+    save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/{_next_incomplete_step(draft)}")
 
 
@@ -1490,15 +1505,10 @@ def _caster_entries(draft: dict[str, Any], data) -> list[dict]:
 
 
 
-@router.post("/{draft_id}/spells")
-async def post_spells(request: Request, draft_id: str):
-    draft = _load(request, draft_id)
-    data = request.app.state.game_data
-    form = await request.form()
+def _apply_spells(draft: dict[str, Any], form, data) -> None:
     int_score = draft["abilities"].get("INT", 10)
     ruleset = _ruleset_of(draft)
     books: dict[str, list[str]] = dict(draft.get("spellbooks", {}))
-
     for cid in _class_ids(draft):
         cls = data.classes[cid]
         if not _casts_at_level_1(cls):
@@ -1506,12 +1516,9 @@ async def post_spells(request: Request, draft_id: str):
         entry = ClassEntry(class_id=cid, level=1)
         ctype = spell_engine.caster_type_of(cls, data)
         if ctype == "divine":
-            # Divine casters know their whole list; there is no spellbook to
-            # build, so nothing is chosen here.
             books[cid] = []
             continue
-        chosen = form.getlist(f"spell_{cid}")
-        chosen = list(dict.fromkeys(chosen))
+        chosen = list(dict.fromkeys(form.getlist(f"spell_{cid}")))
         required = spell_engine.beginning_spell_count(entry, cls, int_score, ruleset)
         noun = "power" if ctype == "mental" else "starting spell"
         if len(chosen) != required:
@@ -1526,9 +1533,16 @@ async def post_spells(request: Request, draft_id: str):
             if not on_list or (ctype == "arcane" and spell.level not in accessible):
                 raise HTTPException(400, f"{sid!r} is not a valid {cls.name} {noun}.")
         books[cid] = chosen
-
     draft["spellbooks"] = books
     draft["spells_done"] = True
+
+
+@router.post("/{draft_id}/spells")
+async def post_spells(request: Request, draft_id: str):
+    draft = _load(request, draft_id)
+    data = request.app.state.game_data
+    form = await request.form()
+    _apply_spells(draft, form, data)
     save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/{_next_incomplete_step(draft)}")
 
