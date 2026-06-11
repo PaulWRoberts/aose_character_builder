@@ -65,7 +65,7 @@
         {% endif %}
         {% if language_slots > 0 %}
         <p class="muted small">You may choose up to {{ language_slots }} additional language(s). Choosing fewer is allowed.</p>
-        <div class="checkbox-stack">
+        <div class="checkbox-stack" data-language-slots="{{ language_slots }}">
         {% for lang in language_options %}
             <label class="checkbox-row">
                 <input type="checkbox" name="language" value="{{ lang.id }}"
@@ -80,4 +80,21 @@
     <button type="submit" class="primary"
             {% if show_skill and not skill_rolled %}disabled{% endif %}>Next: Equipment &rarr;</button>
 </form>
+
+{% if language_slots > 0 %}
+<script>
+    (function () {
+        const box = document.querySelector('.checkbox-stack[data-language-slots]');
+        if (!box) return;
+        const max = parseInt(box.dataset.languageSlots, 10);
+        const inputs = Array.from(box.querySelectorAll('input[type="checkbox"]'));
+        function update() {
+            const checked = inputs.filter(b => b.checked).length;
+            inputs.forEach(b => { if (!b.checked) b.disabled = checked >= max; });
+        }
+        inputs.forEach(b => b.addEventListener('change', update));
+        update();
+    })();
+</script>
+{% endif %}
 

@@ -166,3 +166,10 @@ def test_identity_does_not_offer_granted_language_as_pick(tmp_path):
     r = client.get(f"/wizard/{draft_id}/identity")
     # Granted tongues must never appear as a learnable checkbox value.
     assert 'value="druidic"' not in r.text
+
+
+def test_language_section_exposes_slot_cap(tmp_path):
+    client = _make_client(tmp_path)
+    draft_id = _drive_to_identity(client, HIGH_INT)  # INT 16 -> 2 additional slots
+    body = client.get(f"/wizard/{draft_id}/identity").text
+    assert 'data-language-slots="2"' in body
