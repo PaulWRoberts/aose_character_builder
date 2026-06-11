@@ -100,14 +100,10 @@ from aose.models import (
     RuleSet,
 )
 from aose.sheet.view import magic_items_view
-from aose.engine.sources import CLASSIC_SOURCE_ID, content_enabled
+from aose.engine.sources import content_enabled
 from aose.web.settings_routes import (
-    ADVANCED_OPTIONS_GROUP,
-    CHOICE_GROUPS,
-    IMPLEMENTED_CHOICE_GROUPS,
-    IMPLEMENTED_RULES,
-    RULE_GROUPS,
-    RULE_LABELS,
+    _content_keys,
+    _ruleset_view_context,
     parse_ruleset_from_form,
 )
 
@@ -393,20 +389,7 @@ async def get_rules(request: Request, draft_id: str):
         return blocked
     ruleset = _ruleset_of(draft)
     ctx = _base_context(request, draft_id, draft, "rules")
-    ctx.update({
-        "ruleset": ruleset.model_dump(),
-        "rule_groups": RULE_GROUPS,
-        "choice_groups": CHOICE_GROUPS,
-        "rule_labels": RULE_LABELS,
-        "implemented_rules": IMPLEMENTED_RULES,
-        "implemented_choice_groups": IMPLEMENTED_CHOICE_GROUPS,
-        "advanced_options_group": ADVANCED_OPTIONS_GROUP,
-        "sources": sorted(
-            request.app.state.game_data.sources.values(),
-            key=lambda s: (not s.core, s.name),
-        ),
-        "classic_source_id": CLASSIC_SOURCE_ID,
-    })
+    ctx.update(_ruleset_view_context(request, ruleset))
     return templates.TemplateResponse(request, "wizard.html", ctx)
 
 
@@ -490,8 +473,7 @@ async def post_rules(request: Request, draft_id: str):
     if blocked:
         return blocked
     form = await request.form()
-    source_ids = list(request.app.state.game_data.sources)
-    new_rs = parse_ruleset_from_form(form, source_ids=source_ids)
+    new_rs = parse_ruleset_from_form(form, content_keys=_content_keys(request))
     old_rs = _ruleset_of(draft)
     _apply_rule_changes(draft, old_rs, new_rs, request.app.state.game_data)
     save_draft(draft_id, draft, _drafts_dir(request))

@@ -57,11 +57,11 @@ _TRUE_DEFAULTS = ()
 
 def _rules_form(**overrides):
     """Build form data for POST /wizard/{id}/rules matching RuleSet() defaults.
-    Pass ``rule="on"`` to enable a bool, ``rule=None`` to drop it, or override
-    ``creation_method`` ("advanced"/"basic") and the radio choices directly."""
+    Pass ``rule="on"`` to enable a bool, ``rule=None`` to drop it (e.g.
+    ``separate_race_class=None`` for Basic mode)."""
     data = {
         "encumbrance": "basic",
-        "creation_method": "advanced",
+        "separate_race_class": "on",
     }
     for r in _TRUE_DEFAULTS:
         data[r] = "on"
@@ -99,8 +99,8 @@ def test_get_rules_renders_every_bool_toggle(client):
     for field in ("ascending_ac", "weapon_proficiency",
                   "secondary_skills", "multiclassing", "lift_demihuman_restrictions"):
         assert f'name="{field}"' in r.text, f"missing toggle for {field}"
-    # Creation method is a radio, not a checkbox
-    assert 'name="creation_method"' in r.text
+    # separate_race_class is now a checkbox (was creation_method radio)
+    assert 'name="separate_race_class"' in r.text
 
 
 def test_get_rules_renders_choice_radios(client):
@@ -152,7 +152,7 @@ def test_toggling_separate_race_class_clears_race_and_class(client):
     client.post(f"/wizard/{draft_id}/class", data={"class_id": "fighter"})
 
     # Switch to Basic (separate_race_class off)
-    client.post(f"/wizard/{draft_id}/rules", data=_rules_form(creation_method="basic"))
+    client.post(f"/wizard/{draft_id}/rules", data=_rules_form(separate_race_class=None))
     draft = load_draft(draft_id, client._drafts_dir)
     assert "race_id" not in draft
     assert "class_id" not in draft
@@ -256,7 +256,7 @@ def test_per_character_rules_persist_to_saved_character(tmp_path):
 def test_basic_method_via_wizard_forces_advanced_rules_off(client):
     draft_id = _start(client)
     client.post(f"/wizard/{draft_id}/rules", data=_rules_form(
-        creation_method="basic", multiclassing="on", lift_demihuman_restrictions="on",
+        separate_race_class=None, multiclassing="on", lift_demihuman_restrictions="on",
     ))
     rs = load_draft(draft_id, client._drafts_dir)["ruleset"]
     assert rs["separate_race_class"] is False

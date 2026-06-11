@@ -56,8 +56,8 @@ _GOOD = {"STR": 13, "INT": 13, "WIS": 13, "DEX": 13, "CON": 13, "CHA": 13}
 
 
 def _rules_form(**overrides):
-    """POST body for /rules matching RuleSet() defaults (Advanced)."""
-    data = {"encumbrance": "basic", "creation_method": "advanced",
+    """POST body for /rules matching RuleSet() defaults (Advanced, strict on)."""
+    data = {"encumbrance": "basic", "separate_race_class": "on",
             "strict_mode": "on"}
     for k, v in overrides.items():
         if v is None:
@@ -87,7 +87,7 @@ def test_flag_forced_off_in_basic(tmp_path):
     client = _make_client(tmp_path)
     draft_id = _new_draft(client)
     client.post(f"/wizard/{draft_id}/rules", data=_rules_form(
-        creation_method="basic", lift_demihuman_restrictions="on",
+        separate_race_class=None, lift_demihuman_restrictions="on",
         human_racial_abilities="on"))
     rs = load_draft(draft_id, client._drafts_dir)["ruleset"]
     assert rs["human_racial_abilities"] is False

@@ -63,6 +63,8 @@ def test_get_settings_renders(client):
     assert r.status_code == 200
     assert "Ruleset Settings" in r.text
     assert "Ascending AC" in r.text
+    assert "Strict Mode" in r.text
+    assert "Carcass Crawler Issue 3" in r.text  # a source panel header
 
 
 def test_get_settings_shows_default_unchecked(client):
@@ -268,7 +270,7 @@ def test_default_ruleset_keeps_normal_hp_roll_flow(client, tmp_path):
     assert "hp_roll" not in draft
 
 
-# ── Creation method + Basic enforcement (Slice 1) ─────────────────────────
+# ── Parser: checkbox-driven rules ──────────────────────────────────────────
 
 from aose.web.settings_routes import parse_ruleset_from_form
 
@@ -278,62 +280,71 @@ class _Form(dict):
     The parser only uses membership tests and `.get`, so a dict suffices."""
 
 
-def test_parser_advanced_method_sets_separate_race_class_true():
-    rs = parse_ruleset_from_form(_Form({"creation_method": "advanced"}))
+def test_parser_separate_race_class_checkbox_on():
+    rs = parse_ruleset_from_form(_Form({"separate_race_class": "on"}))
     assert rs.separate_race_class is True
 
 
-def test_parser_basic_method_sets_separate_race_class_false():
-    rs = parse_ruleset_from_form(_Form({"creation_method": "basic"}))
-    assert rs.separate_race_class is False
-
-
-def test_parser_missing_method_defaults_to_advanced():
+def test_parser_separate_race_class_unchecked_is_basic():
     rs = parse_ruleset_from_form(_Form({}))
-    assert rs.separate_race_class is True
+    assert rs.separate_race_class is False
 
 
-def test_parser_basic_forces_advanced_only_rules_off():
-    """Even if multiclassing / lift_demihuman_restrictions are posted true,
-    Basic mode forces them off server-side."""
+def test_parser_basic_forces_descendant_rules_off():
+    """separate_race_class off forces its whole subtree off, even if posted."""
     rs = parse_ruleset_from_form(_Form({
-        "creation_method": "basic",
         "multiclassing": "on",
         "lift_demihuman_restrictions": "on",
+        "human_racial_abilities": "on",
     }))
     assert rs.separate_race_class is False
     assert rs.multiclassing is False
     assert rs.lift_demihuman_restrictions is False
+    assert rs.human_racial_abilities is False
 
 
-def test_parser_advanced_keeps_advanced_only_rules():
+def test_parser_lift_off_forces_human_off():
     rs = parse_ruleset_from_form(_Form({
-        "creation_method": "advanced",
-        "multiclassing": "on",
+        "separate_race_class": "on",
+        "human_racial_abilities": "on",
+    }))  # lift not checked
+    assert rs.lift_demihuman_restrictions is False
+    assert rs.human_racial_abilities is False
+
+
+def test_parser_full_advanced_chain_kept():
+    rs = parse_ruleset_from_form(_Form({
+        "separate_race_class": "on",
         "lift_demihuman_restrictions": "on",
+        "human_racial_abilities": "on",
+        "multiclassing": "on",
     }))
-    assert rs.multiclassing is True
     assert rs.lift_demihuman_restrictions is True
+    assert rs.human_racial_abilities is True
+    assert rs.multiclassing is True
 
 
-def test_settings_page_shows_creation_method(client):
-    r = client.get("/settings")
-    assert "Character Creation Method" in r.text
-    assert 'value="basic"' in r.text
-    assert 'value="advanced"' in r.text
+def test_parser_strict_mode_is_standalone():
+    assert parse_ruleset_from_form(_Form({"strict_mode": "on"})).strict_mode is True
+    assert parse_ruleset_from_form(_Form({})).strict_mode is False
 
 
-def test_post_settings_basic_forces_advanced_rules_off(client):
-    """Posting Basic with multiclassing + lift checked still persists them off."""
-    client.post("/settings", data={
-        "creation_method": "basic",
-        "multiclassing": "on",
-        "lift_demihuman_restrictions": "on",
-    })
-    rs = load_settings(client._settings_path)
-    assert rs.separate_race_class is False
-    assert rs.multiclassing is False
-    assert rs.lift_demihuman_restrictions is False
+def test_parser_disables_unchecked_content_categories():
+    rs = parse_ruleset_from_form(
+        _Form({}),
+        content_keys=["carcass_crawler_3:classes", "carcass_crawler_3:equipment"],
+    )
+    assert set(rs.disabled_content) == {
+        "carcass_crawler_3:classes", "carcass_crawler_3:equipment",
+    }
+
+
+def test_parser_keeps_checked_content_categories():
+    rs = parse_ruleset_from_form(
+        _Form({"content_carcass_crawler_3:classes": "on"}),
+        content_keys=["carcass_crawler_3:classes", "carcass_crawler_3:equipment"],
+    )
+    assert rs.disabled_content == ["carcass_crawler_3:equipment"]
 
 
 # ── optional_staves rule ───────────────────────────────────────────────────
@@ -397,69 +408,19 @@ def test_class_step_hides_advanced_when_disabled(client, tmp_path):
     assert 'value="druid"' not in r.text
 
 
-def test_parser_disables_unchecked_sources():
-    rs = parse_ruleset_from_form(
-        _Form({"creation_method": "advanced"}),
-        source_ids=["ose_classic_fantasy", "ose_advanced_fantasy"],
-    )
-    assert rs.disabled_content == [
-        "ose_advanced_fantasy:classes",
-        "ose_advanced_fantasy:equipment",
-        "ose_advanced_fantasy:magic_items",
-    ]
-
-
-def test_parser_keeps_checked_sources_enabled():
-    rs = parse_ruleset_from_form(
-        _Form({"creation_method": "advanced", "source_ose_advanced_fantasy": "on"}),
-        source_ids=["ose_classic_fantasy", "ose_advanced_fantasy"],
-    )
-    assert rs.disabled_content == []
-
-
-def test_parser_never_disables_classic():
-    rs = parse_ruleset_from_form(
-        _Form({}),
-        source_ids=["ose_classic_fantasy", "ose_advanced_fantasy"],
-    )
-    assert not any(k.startswith("ose_classic_fantasy:") for k in rs.disabled_content)
-
-
-def test_parser_without_source_ids_disables_nothing():
-    rs = parse_ruleset_from_form(_Form({"creation_method": "advanced"}))
-    assert rs.disabled_content == []
-
-
-def test_settings_page_renders_sources_section(client):
-    r = client.get("/settings")
-    assert "Content Sources" in r.text
-    assert "Necrotic Gnome" in r.text
-    assert 'name="source_ose_advanced_fantasy"' in r.text
-    # Classic checkbox is present but disabled (locked on).
-    import re
-    assert re.search(r'name="source_ose_classic_fantasy"[^>]*\bdisabled\b', r.text)
-
-
-def test_post_settings_persists_disabled_source(client):
-    r = client.post("/settings", data={"creation_method": "advanced"})
-    assert r.status_code == 303
-    rs = load_settings(client._settings_path)
-    assert "ose_advanced_fantasy:classes" in rs.disabled_content
-    assert "carcass_crawler_1:classes" in rs.disabled_content
-    assert not any(k.startswith("ose_classic_fantasy:") for k in rs.disabled_content)
-
-
-def test_disabling_source_clears_orphaned_race(client, tmp_path):
+def test_disabling_content_clears_orphaned_race(client, tmp_path):
     from aose.characters import load_draft, save_draft
     drafts = tmp_path / "drafts"
     draft_id = _new_draft_with_sources(client, drafts, [])
-    client.post(f"/wizard/{draft_id}/race", data={"race_id": "elf"})
-    # Turn strict mode off so the rules step remains navigable after abilities confirmed.
+    client.post(f"/wizard/{draft_id}/race", data={"race_id": "elf"})  # advanced race
     draft = load_draft(draft_id, drafts)
     draft["ruleset"]["strict_mode"] = False
     save_draft(draft_id, draft, drafts)
-    # Re-post the rules step with Advanced now disabled (Advanced creation kept).
-    client.post(f"/wizard/{draft_id}/rules", data={"creation_method": "advanced"})
+    keys = _content_keys_for(client)
+    data = {"separate_race_class": "on"}
+    data.update({f"content_{k}": "on" for k in keys
+                 if k != "ose_advanced_fantasy:classes"})
+    client.post(f"/wizard/{draft_id}/rules", data=data)
     draft = load_draft(draft_id, drafts)
     assert "race_id" not in draft
 
@@ -538,18 +499,17 @@ def test_two_weapon_fighting_flag_is_implemented():
     assert "two_weapon_fighting" in IMPLEMENTED_RULES
 
 
-def test_individual_initiative_flag_is_implemented():
-    from aose.web.settings_routes import RULE_LABELS, IMPLEMENTED_RULES, RULE_GROUPS
+def test_individual_initiative_attributed_to_classic():
+    from aose.web.settings_routes import SOURCE_RULES, flatten_rule_fields, RULE_LABELS
     from aose.models import RuleSet
-
     assert RuleSet().individual_initiative is False
     assert "individual_initiative" in RULE_LABELS
-    assert "individual_initiative" in IMPLEMENTED_RULES
-    combat_fields = dict(RULE_GROUPS)["Combat"]
-    assert any(f == "individual_initiative" for f, _ in combat_fields)
+    assert "individual_initiative" in flatten_rule_fields(
+        SOURCE_RULES["ose_classic_fantasy"]
+    )
 
 
-def test_disabling_source_keeps_classic_race(client, tmp_path):
+def test_disabling_content_keeps_classic_race(client, tmp_path):
     from aose.characters import load_draft, save_draft
     drafts = tmp_path / "drafts"
     draft_id = _new_draft_with_sources(client, drafts, [])
@@ -557,6 +517,52 @@ def test_disabling_source_keeps_classic_race(client, tmp_path):
     draft = load_draft(draft_id, drafts)
     draft["ruleset"]["strict_mode"] = False
     save_draft(draft_id, draft, drafts)
-    client.post(f"/wizard/{draft_id}/rules", data={"creation_method": "advanced"})
+    keys = _content_keys_for(client)
+    data = {"separate_race_class": "on"}
+    data.update({f"content_{k}": "on" for k in keys
+                 if k != "ose_advanced_fantasy:classes"})
+    client.post(f"/wizard/{draft_id}/rules", data=data)
     draft = load_draft(draft_id, drafts)
     assert draft.get("race_id") == "human"
+
+
+def _content_keys_for(client):
+    from aose.web.settings_routes import _content_keys
+
+    class _Req:
+        app = client.app
+    return _content_keys(_Req())
+
+
+def test_settings_renders_content_category_checkbox(client):
+    r = client.get("/settings")
+    assert 'name="content_carcass_crawler_3:equipment"' in r.text
+    # Classic content rows are present but disabled (locked on).
+    assert re.search(
+        r'name="content_ose_classic_fantasy:classes"[^>]*\bdisabled\b', r.text
+    )
+
+
+def test_post_settings_persists_disabled_content_category(client):
+    keys = _content_keys_for(client)
+    # Re-check every content category except CC3 equipment -> only that disabled.
+    data = {f"content_{k}": "on" for k in keys if k != "carcass_crawler_3:equipment"}
+    client.post("/settings", data=data)
+    rs = load_settings(client._settings_path)
+    assert "carcass_crawler_3:equipment" in rs.disabled_content
+    assert "carcass_crawler_3:classes" not in rs.disabled_content
+
+
+def test_race_step_hides_advanced_via_disabled_content(client, tmp_path):
+    from aose.characters import load_draft, save_draft
+    drafts = tmp_path / "drafts"
+    r = client.get("/wizard/new")
+    draft_id = r.headers["location"].split("/")[2]
+    draft = load_draft(draft_id, drafts)
+    draft["abilities"] = {"STR": 13, "INT": 13, "WIS": 13, "DEX": 13, "CON": 13, "CHA": 13}
+    draft["abilities_confirmed"] = True
+    draft["ruleset"]["disabled_content"] = ["ose_advanced_fantasy:classes"]
+    save_draft(draft_id, draft, drafts)
+    r = client.get(f"/wizard/{draft_id}/race")
+    assert 'value="human"' in r.text
+    assert 'value="elf"' not in r.text

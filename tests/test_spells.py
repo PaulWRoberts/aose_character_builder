@@ -90,11 +90,13 @@ def test_ruleset_has_advanced_spell_books_default_off():
 
 
 def test_advanced_spell_books_is_wired():
-    from aose.web.settings_routes import IMPLEMENTED_RULES, RULE_GROUPS, RULE_LABELS
+    from aose.web.settings_routes import IMPLEMENTED_RULES, SOURCE_RULES, RULE_LABELS, flatten_rule_fields
     assert "advanced_spell_books" in IMPLEMENTED_RULES
     assert "advanced_spell_books" in RULE_LABELS
-    all_group_fields = {f for _, fields in RULE_GROUPS for f, _ in fields}
-    assert "advanced_spell_books" in all_group_fields
+    all_source_fields = set()
+    for tree in SOURCE_RULES.values():
+        all_source_fields |= {f for f in flatten_rule_fields(tree) if f is not None}
+    assert "advanced_spell_books" in all_source_fields
 
 
 from aose.models import CharacterSpec, ClassEntry, RuleSet

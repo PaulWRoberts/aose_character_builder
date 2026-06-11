@@ -53,61 +53,6 @@ IMPLEMENTED_RULES = {
 # Choice-group rules that have full integration too.
 IMPLEMENTED_CHOICE_GROUPS = {"encumbrance"}
 
-RULE_GROUPS = [
-    ("Advanced Options", [
-        ("multiclassing",
-         "Demihumans may pursue two or three classes simultaneously, sharing XP."),
-        ("lift_demihuman_restrictions",
-         "Demihuman races ignore their normal class options and per-class "
-         "maximum-level caps."),
-        ("human_racial_abilities",
-         "Humans gain optional racial abilities: +1 CHA, +1 CON, and Blessed "
-         "(roll HP twice, keep the better). Requires lifting demihuman "
-         "restrictions."),
-    ]),
-    ("Character Options", [
-        ("weapon_proficiency",
-         "Characters are only proficient with specific weapons; non-proficient "
-         "attacks suffer −2 to hit."),
-        ("secondary_skills",
-         "Each character has a secondary skill (a non-adventuring trade)."),
-        ("strict_mode",
-         "Ability scores, hit points, and starting gold are locked after a "
-         "single roll (a hopeless ability set may always be re-rolled). Turn "
-         "off to allow free re-rolls."),
-    ]),
-    ("Survivability & Logistics", [
-        ("reroll_1s_2s_hp_l1",
-         "When rolling 1st-level HP, re-roll any result of 1 or 2."),
-    ]),
-    ("Magic", [
-        ("advanced_spell_books",
-         "Arcane spell books have no size limit and the number of beginning "
-         "spells is set by Intelligence. Off = standard rules: the book holds "
-         "exactly the spells the caster can memorise."),
-    ]),
-    ("Combat", [
-        ("variable_weapon_damage",
-         "Each weapon rolls its specific damage die instead of the default 1d6."),
-        ("ascending_ac",
-         "Show armour class as ascending (10 = unarmoured) and use Attack Bonus, "
-         "instead of descending (9 = unarmoured) with THAC0."),
-        ("optional_staves",
-         "Magic-users and illusionists may wield a staff in combat."),
-        ("two_weapon_fighting",
-         "Characters with STR or DEX as a prime requisite may wield a small "
-         "weapon in the off hand: −2 to the primary attack, an extra off-hand "
-         "attack at −4."),
-        ("individual_initiative",
-         "Roll initiative for each combatant individually, modified by DEX, "
-         "instead of one roll per side. Shows your initiative modifier on the "
-         "sheet."),
-    ]),
-]
-
-# Name of the rule group whose inputs are disabled when Basic is selected.
-ADVANCED_OPTIONS_GROUP = "Advanced Options"
-
 # Flat field -> description map (UI copy). Keyed by RuleSet field name so the
 # SOURCE_RULES tree carries structure only, not prose.
 RULE_DESCRIPTIONS = {
@@ -240,74 +185,92 @@ def _settings_path(request: Request) -> Path:
     return request.app.state.settings_path
 
 
+def _ruleset_view_context(request, ruleset):
+    """Shared template context for the source-panel ruleset form. `ruleset` must
+    be a RuleSet **object** (content_rows_for_source reads `.disabled_content`).
+    The template subscripts it (`ruleset['field']`) — Jinja's `[]` falls back to
+    attribute access, so the object works directly."""
+    from aose.engine.sources import CLASSIC_SOURCE_ID as _CLASSIC
+    data = request.app.state.game_data
+    sources = sorted(data.sources.values(), key=lambda s: (not s.core, s.name))
+    panels = []
+    for src in sources:
+        panels.append({
+            "source": src,
+            "content_rows": content_rows_for_source(data, src.id, ruleset),
+            "rule_tree": SOURCE_RULES.get(src.id, []),
+        })
+    return {
+        "ruleset": ruleset,
+        "panels": panels,
+        "rule_labels": RULE_LABELS,
+        "rule_descriptions": RULE_DESCRIPTIONS,
+        "choice_groups": CHOICE_GROUPS,
+        "classic_source_id": _CLASSIC,
+    }
+
+
+def _content_keys(request):
+    from aose.engine.sources import CLASSIC_SOURCE_ID as _CLASSIC, source_content_categories
+    data = request.app.state.game_data
+    cats = source_content_categories(data)
+    return [
+        f"{sid}:{cat}"
+        for sid, cs in cats.items()
+        if sid != _CLASSIC
+        for cat in cs
+    ]
+
+
 @router.get("/settings", response_class=HTMLResponse)
 async def get_settings(request: Request):
     ruleset = load_settings(_settings_path(request))
     saved = request.query_params.get("saved") == "1"
-    sources = sorted(
-        request.app.state.game_data.sources.values(),
-        key=lambda s: (not s.core, s.name),
-    )
-    return templates.TemplateResponse(
-        request,
-        "settings.html",
-        {
-            "ruleset": ruleset,
-            "rule_groups": RULE_GROUPS,
-            "choice_groups": CHOICE_GROUPS,
-            "rule_labels": RULE_LABELS,
-            "implemented_rules": IMPLEMENTED_RULES,
-            "implemented_choice_groups": IMPLEMENTED_CHOICE_GROUPS,
-            "advanced_options_group": ADVANCED_OPTIONS_GROUP,
-            "sources": sources,
-            "classic_source_id": CLASSIC_SOURCE_ID,
-            "saved": saved,
-        },
-    )
+    context = _ruleset_view_context(request, ruleset)
+    context["saved"] = saved
+    return templates.TemplateResponse(request, "settings.html", context)
 
 
-def parse_ruleset_from_form(form, source_ids=None) -> RuleSet:
-    """Build a :class:`RuleSet` from the toggle/radio form fields used by the
-    settings page AND the wizard's per-character rules step.
+def _enforce_rule_tree(bools, tree):
+    """Force every descendant off when an ancestor rule is unchecked."""
+    for node in tree:
+        field = node.get("field")
+        children = node.get("children", [])
+        if field is not None and not bools.get(field, False):
+            for f in flatten_rule_fields(children):
+                if f is not None:
+                    bools[f] = False
+        else:
+            _enforce_rule_tree(bools, children)
 
-    ``creation_method`` (a radio with values ``"advanced"`` / ``"basic"``) is
-    the single source for ``separate_race_class``: Advanced ⇒ True. When Basic
-    is chosen the Advanced-only rules (``multiclassing`` and
-    ``lift_demihuman_restrictions``) are forced off regardless of what was
-    posted. Unknown radio choices are silently dropped so the RuleSet defaults
-    take over."""
-    bool_field_names = {
-        field for _, fields in RULE_GROUPS for field, _ in fields
-    }
-    bools = {field: field in form for field in bool_field_names}
 
-    # Creation method radio → separate_race_class (default Advanced when absent).
-    advanced = form.get("creation_method") != "basic"
-    bools["separate_race_class"] = advanced
-    if not advanced:
-        bools["multiclassing"] = False
-        bools["lift_demihuman_restrictions"] = False
+def parse_ruleset_from_form(form, content_keys=None) -> RuleSet:
+    """Build a :class:`RuleSet` from the per-source panel form used by both the
+    settings page and the wizard's /rules step.
 
-    # human_racial_abilities is gated behind BOTH Advanced and lifted demihuman
-    # restrictions — force it off unless both hold (mirrors the rules-page JS).
-    if not (bools["separate_race_class"] and bools.get("lift_demihuman_restrictions")):
-        bools["human_racial_abilities"] = False
+    Bool rule fields come from checkbox presence; `strict_mode` is standalone.
+    The SOURCE_RULES nesting is enforced server-side: a child rule is forced off
+    whenever any ancestor is unchecked (replaces the old creation_method / lift
+    special cases). `disabled_content` lists every content-category key whose
+    checkbox was absent."""
+    rule_fields = set()
+    for tree in SOURCE_RULES.values():
+        rule_fields |= {f for f in flatten_rule_fields(tree) if f is not None}
+    rule_fields.add("strict_mode")  # standalone toggle
+
+    bools = {field: field in form for field in rule_fields}
+    for tree in SOURCE_RULES.values():
+        _enforce_rule_tree(bools, tree)
 
     choices = {}
     for field, _label, options in CHOICE_GROUPS:
         chosen = form.get(field)
-        valid_values = [v for v, _ in options]
-        if chosen in valid_values:
+        if chosen in [v for v, _ in options]:
             choices[field] = chosen
 
-    from aose.models import CONTENT_CATEGORIES  # local import avoids a cycle at module load
-
-    disabled_content = []
-    for sid in (source_ids or []):
-        if sid == CLASSIC_SOURCE_ID:
-            continue
-        if f"source_{sid}" not in form:
-            disabled_content.extend(f"{sid}:{cat}" for cat in CONTENT_CATEGORIES)
+    disabled_content = [
+        key for key in (content_keys or []) if f"content_{key}" not in form
+    ]
 
     return RuleSet(**bools, **choices, disabled_content=disabled_content)
 
@@ -315,7 +278,6 @@ def parse_ruleset_from_form(form, source_ids=None) -> RuleSet:
 @router.post("/settings")
 async def post_settings(request: Request):
     form = await request.form()
-    source_ids = list(request.app.state.game_data.sources)
-    new_ruleset = parse_ruleset_from_form(form, source_ids=source_ids)
+    new_ruleset = parse_ruleset_from_form(form, content_keys=_content_keys(request))
     save_settings(_settings_path(request), new_ruleset)
     return RedirectResponse("/settings?saved=1", status_code=303)

@@ -1,114 +1,131 @@
-{# Shared ruleset form body: creation-method radio + rule groups + choice
-   groups + the progressive-enhancement JS that greys out Advanced-only rules
-   when Basic is selected. Included by settings.html and wizard/rules.html
-   inside their own <form>. #}
+{# Shared ruleset form body: a standalone Strict Mode toggle, then one
+   expandable panel per content source. Each panel has a Content subsection
+   (derived category checkboxes; Classic locked) and an Optional Rules
+   subsection (SOURCE_RULES tree, nested rows = dependencies). Included by
+   settings.html and wizard/rules.html inside their own <form>. #}
 
-<fieldset class="rule-group creation-method">
-    <legend>Character Creation Method</legend>
-    <div class="radio-stack">
-        <label class="radio-card {% if ruleset['separate_race_class'] %}selected{% endif %}">
-            <input type="radio" name="creation_method" value="advanced" data-creation-method
-                   {% if ruleset['separate_race_class'] %}checked{% endif %}>
-            <span class="radio-label">Advanced</span>
-            <span class="rule-desc">Choose race and class separately. Advanced
-                optional rules become available.</span>
-        </label>
-        <label class="radio-card {% if not ruleset['separate_race_class'] %}selected{% endif %}">
-            <input type="radio" name="creation_method" value="basic" data-creation-method
-                   {% if not ruleset['separate_race_class'] %}checked{% endif %}>
-            <span class="radio-label">Basic</span>
-            <span class="rule-desc">Choose a class; the class determines race. No
-                separate race step. Multi-class and lifting demihuman restrictions
-                are unavailable.</span>
-        </label>
-    </div>
-</fieldset>
-
-{% if sources %}
-<fieldset class="rule-group">
-    <legend>Content Sources</legend>
-    {% for src in sources %}
-    <label class="rule">
-        <input type="checkbox" name="source_{{ src.id }}"
-               {% if src.id == classic_source_id %}checked disabled{% elif src.id not in ruleset['disabled_sources'] %}checked{% endif %}>
-        <span class="rule-body">
-            <span class="rule-name">
-                {{ src.name }}
-                {% if src.core %}<span class="rule-core" title="Core source">core</span>{% endif %}
-            </span>
-            <span class="rule-desc">{{ src.publisher }}</span>
-        </span>
-    </label>
-    {% endfor %}
-</fieldset>
-{% endif %}
-
-{% for group_name, fields in rule_groups %}
-<fieldset class="rule-group"{% if group_name == advanced_options_group %} data-advanced-only{% endif %}>
-    <legend>{{ group_name }}</legend>
-    {% for field, desc in fields %}
-    <label class="rule">
-        <input type="checkbox" name="{{ field }}"
-               {% if field == "human_racial_abilities" %}data-requires-lift{% endif %}
-               {% if ruleset[field] %}checked{% endif %}>
-        <span class="rule-body">
-            <span class="rule-name">
-                {{ rule_labels[field] }}
-                {% if field not in implemented_rules %}
-                <span class="rule-pending" title="Saved with the character, but builder/sheet behaviour for this rule is not yet implemented.">pending</span>
-                {% endif %}
-            </span>
-            <span class="rule-desc">{{ desc }}</span>
-        </span>
-    </label>
-    {% endfor %}
-</fieldset>
-{% endfor %}
-
-{% for field, label, options in choice_groups %}
-<fieldset class="rule-group">
-    <legend>{{ label }}
-        {% if field not in implemented_choice_groups %}
-        <span class="rule-pending" title="Saved with the character, but builder behaviour for this choice is not yet implemented.">pending</span>
-        {% endif %}
-    </legend>
-    <div class="radio-stack">
+{% macro rule_row(node, ruleset, rule_labels, rule_descriptions, choice_groups, depth=0, parent=None) %}
+  {% if node.kind == "choice" %}
+    {% for field, label, options in choice_groups if field == node.field %}
+    <div class="rule rule-choice" style="--rule-depth: {{ depth }};"
+         data-rule="{{ field }}"{% if parent %} data-parent="{{ parent }}"{% endif %}>
+      <span class="rule-name">{{ label }}</span>
+      <div class="radio-stack">
         {% for value, opt_label in options %}
         <label class="radio-card {% if ruleset[field] == value %}selected{% endif %}">
-            <input type="radio" name="{{ field }}" value="{{ value }}"
-                   {% if ruleset[field] == value %}checked{% endif %}>
-            <span class="radio-label">{{ opt_label }}</span>
+          <input type="radio" name="{{ field }}" value="{{ value }}"
+                 {% if ruleset[field] == value %}checked{% endif %}>
+          <span class="radio-label">{{ opt_label }}</span>
         </label>
         {% endfor %}
+      </div>
     </div>
+    {% endfor %}
+  {% else %}
+    <label class="rule" style="--rule-depth: {{ depth }};"
+           data-rule="{{ node.field }}"{% if parent %} data-parent="{{ parent }}"{% endif %}>
+      <input type="checkbox" name="{{ node.field }}"
+             {% if ruleset[node.field] %}checked{% endif %}>
+      <span class="rule-body">
+        <span class="rule-name">{{ rule_labels[node.field] }}</span>
+        <span class="rule-desc">{{ rule_descriptions[node.field] }}</span>
+      </span>
+    </label>
+    {% for child in node.children %}
+      {{ rule_row(child, ruleset, rule_labels, rule_descriptions, choice_groups, depth + 1, node.field) }}
+    {% endfor %}
+  {% endif %}
+{% endmacro %}
+
+<fieldset class="rule-group strict-standalone">
+  <legend>Strict Mode</legend>
+  <label class="rule">
+    <input type="checkbox" name="strict_mode" {% if ruleset['strict_mode'] %}checked{% endif %}>
+    <span class="rule-body">
+      <span class="rule-name">Strict Mode</span>
+      <span class="rule-desc">Ability scores, hit points, and starting gold are
+        locked after a single roll (a hopeless ability set may always be
+        re-rolled). Turn off to allow free re-rolls. This governs how the wizard
+        operates and is not a source option.</span>
+    </span>
+  </label>
 </fieldset>
+
+{% for panel in panels %}
+<details class="source-panel" open>
+  <summary class="source-panel-summary">
+    {{ panel.source.name }}
+    {% if panel.source.core %}<span class="rule-core" title="Core source">core</span>{% endif %}
+  </summary>
+
+  {% if panel.content_rows %}
+  <fieldset class="rule-group content-group">
+    <legend>Content{% if panel.source.id == classic_source_id %} <span class="rule-core" title="Always enabled">locked</span>{% endif %}</legend>
+    {% for row in panel.content_rows %}
+    <label class="rule {% if row.locked %}rule-disabled{% endif %}">
+      <input type="checkbox" name="{{ row.field }}"
+             {% if row.enabled %}checked{% endif %}
+             {% if row.locked %}disabled{% endif %}>
+      <span class="rule-body">
+        <span class="rule-name">{{ row.label }}</span>
+      </span>
+    </label>
+    {% endfor %}
+  </fieldset>
+  {% endif %}
+
+  {% if panel.rule_tree %}
+  <fieldset class="rule-group optional-rules-group">
+    <legend>Optional Rules</legend>
+    {% for node in panel.rule_tree %}
+      {{ rule_row(node, ruleset, rule_labels, rule_descriptions, choice_groups) }}
+    {% endfor %}
+  </fieldset>
+  {% endif %}
+</details>
 {% endfor %}
 
 <script>
 (function () {
-    var radios = document.querySelectorAll('[data-creation-method]');
-    var advancedInputs = document.querySelectorAll('[data-advanced-only] input');
-    var lift = document.querySelector('input[name="lift_demihuman_restrictions"]');
-    var dependent = document.querySelector('[data-requires-lift]');
-    function sync() {
-        var basic = document.querySelector('[data-creation-method][value="basic"]');
-        var disable = !!(basic && basic.checked);
-        advancedInputs.forEach(function (el) {
-            el.disabled = disable;
-            var row = el.closest('.rule');
-            if (row) { row.classList.toggle('rule-disabled', disable); }
-        });
-        // Nested dependency: human_racial_abilities also needs lift checked.
-        if (dependent) {
-            var liftOff = disable || !(lift && lift.checked);
-            dependent.disabled = liftOff;
-            if (liftOff) { dependent.checked = false; }
-            var drow = dependent.closest('.rule');
-            if (drow) { drow.classList.toggle('rule-disabled', liftOff); }
-        }
+  // Generalized dependency greying: a rule's descendants (data-parent chain)
+  // grey out and force off whenever any ancestor checkbox is unchecked.
+  var form = document.currentScript.closest('form');
+  if (!form) { return; }
+
+  function inputFor(field) {
+    return form.querySelector('[data-rule="' + field + '"] input[type="checkbox"]');
+  }
+  function childrenOf(field) {
+    return form.querySelectorAll('[data-parent="' + field + '"]');
+  }
+  function setDisabled(row, disabled) {
+    row.classList.toggle('rule-disabled', disabled);
+    row.querySelectorAll('input').forEach(function (el) {
+      el.disabled = disabled;
+      if (disabled && el.type === 'checkbox') { el.checked = false; }
+    });
+  }
+  function syncFrom(field) {
+    var parentInput = inputFor(field);
+    var parentOff = !parentInput || !parentInput.checked || parentInput.disabled;
+    childrenOf(field).forEach(function (row) {
+      setDisabled(row, parentOff);
+      var childField = row.getAttribute('data-rule');
+      if (childField) { syncFrom(childField); }
+    });
+  }
+
+  form.querySelectorAll('[data-rule] input[type="checkbox"]').forEach(function (el) {
+    el.addEventListener('change', function () {
+      var field = el.closest('[data-rule]').getAttribute('data-rule');
+      syncFrom(field);
+    });
+  });
+  // Initial pass over every top-level rule that has children.
+  form.querySelectorAll('[data-rule]').forEach(function (row) {
+    if (!row.getAttribute('data-parent')) {
+      syncFrom(row.getAttribute('data-rule'));
     }
-    radios.forEach(function (r) { r.addEventListener('change', sync); });
-    if (lift) { lift.addEventListener('change', sync); }
-    sync();
+  });
 })();
 </script>
