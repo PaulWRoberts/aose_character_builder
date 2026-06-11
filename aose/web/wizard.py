@@ -1053,23 +1053,21 @@ async def get_identity(request: Request, draft_id: str):
                 500,
                 "Secondary Skills rule is active but data/secondary_skills.yaml is empty.",
             )
-        if "secondary_skill" not in draft:
-            rolled = _roll_skill(request)
-            if rolled is None:
-                raise HTTPException(500, "No secondary skills configured.")
-            draft["secondary_skill"] = rolled
-            save_draft(draft_id, draft, _drafts_dir(request))
         ctx["skills"] = skills
         ctx["skill_locked"] = rs.strict_mode
+        ctx["skill_rolled"] = "secondary_skill" in draft
         ctx["current_skills"] = draft.get("secondary_skill") or []
     ctx.update(_languages_context(draft, data))
     return templates.TemplateResponse(request, "wizard.html", ctx)
 
 
-@router.post("/{draft_id}/identity/skill-reroll")
-async def post_identity_skill_reroll(request: Request, draft_id: str):
+@router.post("/{draft_id}/identity/skill-roll")
+async def post_identity_skill_roll(request: Request, draft_id: str):
+    """Roll the secondary skill. First roll allowed in every mode;
+    Strict Mode refuses a re-roll once the skill is set (mirrors HP/gold)."""
     draft = _load(request, draft_id)
-    if _ruleset_of(draft).strict_mode:
+    rs = _ruleset_of(draft)
+    if rs.strict_mode and "secondary_skill" in draft:
         raise HTTPException(400, "Secondary skill is locked in Strict Mode.")
     form = await request.form()
 
@@ -1112,16 +1110,14 @@ async def post_identity(request: Request, draft_id: str):
         raise HTTPException(400, "Invalid alignment for the chosen class(es).")
 
     if rs.secondary_skills:
-        if rs.strict_mode:
-            # Locked: keep whatever was rolled on first visit; ignore the form.
-            draft.setdefault("secondary_skill", [])
-        else:
+        if "secondary_skill" not in draft:
+            raise HTTPException(400, "Roll your secondary skill first.")
+        if not rs.strict_mode:
             submitted = form.get("secondary_skill")
             if submitted:
                 if submitted not in _available_skills(request):
                     raise HTTPException(400, f"Unknown skill: {submitted!r}")
                 draft["secondary_skill"] = [submitted]  # manual collapses to one
-            # No submission -> keep the current draft value (re-rolled list).
 
     from aose.engine.languages import LanguageError, validate_languages
 

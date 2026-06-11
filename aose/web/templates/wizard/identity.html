@@ -22,12 +22,15 @@
     {% if show_skill %}
     <fieldset class="wfield">
         <legend>Secondary Skill</legend>
-        {% if skill_locked %}
+        {% if not skill_rolled %}
+        <p class="muted">A humble trade from before adventuring — roll for it.</p>
+        <button type="submit" formaction="/wizard/{{ draft_id }}/identity/skill-roll"
+                formnovalidate>Roll skill</button>
+        {% elif skill_locked %}
         <p class="muted">A humble trade rolled at character creation (Strict Mode — locked).</p>
         <p style="margin:0">{{ current_skills | join(", ") if current_skills else "—" }}</p>
         {% else %}
-        <p class="muted">A humble trade from before adventuring — we've rolled one;
-           re-roll, or choose a single skill instead.</p>
+        <p class="muted">A humble trade from before adventuring — re-roll, or choose one instead.</p>
         <p style="margin:0 0 6px"><strong>Rolled:</strong>
            {{ current_skills | join(", ") if current_skills else "—" }}</p>
         <div class="skill-row">
@@ -41,7 +44,8 @@
                     {% endfor %}
                 </select>
             </label>
-            <button type="submit" formaction="/wizard/{{ draft_id }}/identity/skill-reroll" formnovalidate>Re-roll skill</button>
+            <button type="submit" formaction="/wizard/{{ draft_id }}/identity/skill-roll"
+                    formnovalidate>Re-roll skill</button>
         </div>
         {% endif %}
     </fieldset>
@@ -73,6 +77,7 @@
         {% endif %}
     </fieldset>
 
-    <button type="submit" class="primary">Next: Equipment &rarr;</button>
+    <button type="submit" class="primary"
+            {% if show_skill and not skill_rolled %}disabled{% endif %}>Next: Equipment &rarr;</button>
 </form>
 
