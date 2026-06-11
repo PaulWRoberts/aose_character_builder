@@ -4,7 +4,7 @@ from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from aose.web.templating import make_templates
 
-from aose.characters.storage import list_character_ids, load_character, save_character
+from aose.characters.storage import delete_character, list_character_ids, load_character, save_character
 from aose.engine import currency as _currency, dice, hp, spells as spell_engine
 from aose.engine.currency import CurrencyError
 from aose.engine.equip import WieldError, equip as _equip, unequip as _unequip
@@ -198,6 +198,14 @@ async def character_sheet(request: Request, character_id: str):
             "valuables": sheet.valuables,
         },
     )
+
+
+# ── Delete character ───────────────────────────────────────────────────────
+
+@router.post("/character/{character_id}/delete")
+async def character_delete(request: Request, character_id: str):
+    delete_character(character_id, request.app.state.characters_dir)
+    return RedirectResponse("/", status_code=303)
 
 
 # ── Print preview (browser print / Save as PDF) ────────────────────────────

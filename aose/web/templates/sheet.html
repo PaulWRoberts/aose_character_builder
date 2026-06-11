@@ -40,6 +40,7 @@
     <a href="/character/{{ character_id }}/print" target="_blank" class="button primary">Print / Save PDF</a>
     <a href="/character/{{ character_id }}/pdf" class="button">Download PDF</a>
     <a href="/" class="button">Back</a>
+    <button class="button" style="margin-left:auto" data-modal="modal-delete">Delete</button>
 </div>
 
 <article class="sheet">
@@ -1209,6 +1210,44 @@ document.addEventListener('click', function(e){
     <button class="btn" type="submit">Go</button>
   </form>
 </div>
+
+{# MODAL: delete character #}
+<div class="overlay modal" id="modal-delete" role="dialog" aria-label="Delete Character"
+     data-character-name="{{ sheet.name | lower }}">
+  <div class="ov-head"><h3>Delete Character</h3><button class="x" data-close>×</button></div>
+  <div class="ov-body">
+    <p class="muted small">This is permanent and cannot be undone. Type the character's name to confirm.</p>
+    <p id="delete-name-error" class="muted small" style="display:none;color:var(--stamp);margin-top:6px">That name didn't match — try again.</p>
+    <form id="delete-form" method="post" action="/character/{{ character_id }}/delete" style="margin-top:10px">
+      <div class="inline-form">
+        <input type="text" id="delete-confirm-input" name="confirm_name"
+               placeholder="{{ sheet.name }}" autocomplete="off" style="flex:1">
+        <button class="btn danger" type="submit">Delete</button>
+      </div>
+    </form>
+  </div>
+</div>
+<script>
+(function(){
+  var modal = document.getElementById('modal-delete');
+  var form  = document.getElementById('delete-form');
+  var input = document.getElementById('delete-confirm-input');
+  var error = document.getElementById('delete-name-error');
+  form.addEventListener('submit', function(e){
+    if(input.value.trim().toLowerCase() !== modal.dataset.characterName){
+      e.preventDefault();
+      input.value = '';
+      error.style.display = '';
+    }
+  });
+  new MutationObserver(function(){
+    if(!modal.classList.contains('on')){
+      input.value = '';
+      error.style.display = 'none';
+    }
+  }).observe(modal, {attributes:true, attributeFilter:['class']});
+})();
+</script>
 
 <script src="/static/sheet_overlays.js" defer></script>
 {% endblock %}
