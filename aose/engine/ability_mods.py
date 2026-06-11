@@ -19,6 +19,15 @@ def ability_modifier(score: int) -> int:
     return _MOD_TABLE[score]
 
 
+def initiative_modifier(score: int) -> int:
+    """DEX initiative modifier (banded; clamps below 3 and above 18)."""
+    chosen = _DEX_INIT_VALUES[min(_DEX_INIT_VALUES)]
+    for threshold in sorted(_DEX_INIT_VALUES):
+        if score >= threshold:
+            chosen = _DEX_INIT_VALUES[threshold]
+    return chosen
+
+
 # ── Per-ability reference tables (AOSE ability-modifier tables) ────────────
 # Each column is a banded lookup: keyed by the lowest score of each band; the
 # cell for a score is the entry for the greatest key <= score. Values are the
@@ -42,7 +51,20 @@ _INT_LANGUAGES = {
 _INT_LITERACY = {3: "Illiterate", 6: "Basic", 9: "Literate"}
 
 _DEX_AC = {3: "−3", 4: "−2", 6: "−1", 9: "None", 13: "+1", 16: "+2", 18: "+3"}
-_DEX_INIT = {3: "−2", 4: "−1", 9: "None", 13: "+1", 18: "+2"}
+
+# Numeric source of truth for the DEX initiative modifier (used by the
+# individual-initiative optional rule). The display column below derives from
+# it so the two never drift.
+_DEX_INIT_VALUES = {3: -2, 4: -1, 9: 0, 13: 1, 18: 2}
+
+
+def _fmt_init(value: int) -> str:
+    if value == 0:
+        return "None"
+    return f"+{value}" if value > 0 else f"−{abs(value)}"  # U+2212 minus
+
+
+_DEX_INIT = {k: _fmt_init(v) for k, v in _DEX_INIT_VALUES.items()}
 
 _CHA_REACTIONS = {3: "−2", 4: "−1", 9: "None", 13: "+1", 18: "+2"}
 _CHA_RETAINERS_MAX = {3: "1", 4: "2", 6: "3", 9: "4", 13: "5", 16: "6", 18: "7"}
