@@ -142,6 +142,34 @@ def test_build_sheet_initiative_off_by_default():
     assert "Individual Initiative" not in sheet.enabled_optional_rules
 
 
+def _render(tmp_path, spec, char_id):
+    from aose.characters import save_character
+    characters_dir = tmp_path / "characters"
+    examples_dir = tmp_path / "examples"
+    examples_dir.mkdir(parents=True)
+    app = create_app(
+        data_dir=DATA_DIR, characters_dir=characters_dir,
+        drafts_dir=tmp_path / "drafts", examples_dir=examples_dir,
+        settings_path=tmp_path / "settings.json",
+    )
+    save_character(char_id, spec, characters_dir)
+    client = TestClient(app, follow_redirects=False)
+    return client.get(f"/character/{char_id}")
+
+
+def test_sheet_renders_init_box_only_when_rule_on(tmp_path):
+    on = _render(tmp_path / "on",
+                 _spec("human", "fighter", 13, individual_init=True), "pip_on")
+    assert on.status_code == 200
+    assert 'id="modal-init"' in on.text
+    assert ">INIT" in on.text          # the INIT tab label
+
+    off = _render(tmp_path / "off",
+                  _spec("human", "fighter", 13, individual_init=False), "pip_off")
+    assert off.status_code == 200
+    assert 'id="modal-init"' not in off.text
+
+
 def test_initiative_grants_present_in_data():
     data = GameData.load(DATA_DIR)
 

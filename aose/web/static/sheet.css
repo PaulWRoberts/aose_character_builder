@@ -108,8 +108,11 @@ body{ margin:0; font-family:var(--body); font-size:15px; line-height:1.32; color
 .editable:hover .box, .editable:hover{ box-shadow:inset 0 0 0 1.5px var(--stamp); }
 
 /* ── combat group ──────────────────────────────────────────── */
-.combat-top{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-.shield{ grid-row:span 2; display:flex; flex-direction:column; align-items:center; justify-content:center; border:2px solid var(--ink); background:var(--box); padding:4px; }
+.combat-top{ display:grid; grid-template-columns:1fr 1fr; gap:8px; align-items:stretch; }
+.combat-stats{ display:flex; flex-direction:column; gap:8px; }
+.hp-init{ display:flex; gap:8px; }
+.hp-init > *{ flex:1; min-width:0; }
+.shield{ display:flex; flex-direction:column; align-items:center; justify-content:center; border:2px solid var(--ink); background:var(--box); padding:4px; }
 .shield .lab{ font-family:var(--display); font-weight:600; font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--gray); }
 .shield .ac{ font-size:42px; font-weight:700; line-height:.9; font-variant-numeric:lining-nums tabular-nums; }
 .shield .unarm{ font-family:var(--display); font-size:10px; color:var(--gray); letter-spacing:.04em; }

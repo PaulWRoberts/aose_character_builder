@@ -78,6 +78,12 @@
             {% endfor %}
         </div>
         {% endif %}
+        {% if sheet.individual_initiative %}
+        <div class="stat-row">
+            <span>Initiative</span>
+            <span class="stat-big">{{ "%+d"|format(sheet.initiative_modifier) }}</span>
+        </div>
+        {% endif %}
     </section>
 
     <section class="section">
