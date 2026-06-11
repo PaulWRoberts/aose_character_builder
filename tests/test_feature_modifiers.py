@@ -109,8 +109,9 @@ def test_resolve_value_level_scale_on_race_feature_raises():
         resolve_value(g, level=None, eff={})
 
 
-def test_feature_modifiers_empty_for_plain_character():
-    # Human fighter has no granted modifiers anywhere → all_modifiers == magic only.
+def test_feature_modifiers_no_combat_grants_for_plain_character():
+    # Human fighter has no AC/attack/save grants — only the inert initiative
+    # target from Decisiveness, which no standard consumer reads.
     from aose.engine.features import all_modifiers, feature_modifiers
     from aose.engine.magic import active_modifiers
     from aose.models import CharacterSpec, ClassEntry
@@ -119,8 +120,10 @@ def test_feature_modifiers_empty_for_plain_character():
         race_id="human", classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
         alignment="neutral",
     )
-    assert feature_modifiers(spec, DATA) == []
-    assert all_modifiers(spec, DATA) == active_modifiers(spec, DATA)
+    mods = feature_modifiers(spec, DATA)
+    # Only the inert Decisiveness initiative grant should appear.
+    assert all(m.target == "initiative" for m in mods), mods
+    assert all_modifiers(spec, DATA) == active_modifiers(spec, DATA) + mods
 
 
 # ── Task 3: consumer wiring + conditions ────────────────────────────────────

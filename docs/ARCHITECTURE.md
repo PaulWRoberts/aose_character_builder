@@ -21,8 +21,8 @@ saves — flows through one shared pipeline.
 - **`Modifier`** (`aose/models/modifier.py`) — `target` / `op`
   (`add`|`set`|`set_min`|`set_max`) / `value`, plus `condition: str | None` and
   `source: str` (feature/item name, for hover). Target families seen so far:
-  `ac`, `thac0`, `attack`, `damage`, `save:<cat>`, `save:vs:<thing>`, and ability
-  targets.
+  `ac`, `thac0`, `attack`, `damage`, `save:<cat>`, `save:vs:<thing>`, `initiative`
+  (inert — consumed only by `engine/initiative.py`), and ability targets.
 - **`apply_modifiers`** (`aose/engine/magic.py`) applies ops in the fixed order
   `set → add → set_min → set_max`. This is the literal evaluation core.
 - **`active_modifiers`** (magic.py) collects modifiers from equipped magic items;
@@ -53,6 +53,23 @@ scaled), halfling Missile Attack Bonus (`attack +1 ranged`), dwarf/halfling/
 duergar/gnome CON-scaled save resilience, Kineticist level-AC (a level-scaled
 `ac set` granted modifier — the old `ClassLevelData.armor_class` column was
 retired onto this path).
+
+**`mechanical.requires_rule` — per-feature visibility gating:** a feature whose
+`mechanical` dict carries `requires_rule: <flag>` is hidden from the sheet
+when the named `RuleSet` flag is `False`. This is enforced in
+`_feature_visible()` (view.py), called by both `_race_features` and
+`_class_features`. Used for halfling's "Initiative Bonus (Optional Rule)" — shown
+only when `individual_initiative` is on — while human's "Decisiveness" (no
+`requires_rule`) always appears.
+
+**`engine/initiative.py` — display-only breakdown:** `initiative_detail(spec,
+data)` assembles `InitiativeDetail{base, total, lines, has_conditional}` from
+the DEX initiative modifier (`ability_mods.initiative_modifier`) plus any
+`initiative`-target grants in `all_modifiers`. It is only rendered when
+`RuleSet.individual_initiative` is set; none of the core derivations (AC, saves,
+attacks) import it. The `CharacterSheet` carries `initiative_modifier`,
+`initiative_lines`, and `initiative_has_conditional` for the Combat box INIT
+field and its breakdown modal.
 
 **Generic `mechanical` keys beyond `granted_modifiers`:** `features.py` also
 exposes collectors that read arbitrary `mechanical` dict keys off reached
