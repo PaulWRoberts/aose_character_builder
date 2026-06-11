@@ -472,6 +472,17 @@ def test_two_weapon_fighting_flag_is_implemented():
     assert "two_weapon_fighting" in IMPLEMENTED_RULES
 
 
+def test_individual_initiative_flag_is_implemented():
+    from aose.web.settings_routes import RULE_LABELS, IMPLEMENTED_RULES, RULE_GROUPS
+    from aose.models import RuleSet
+
+    assert RuleSet().individual_initiative is False
+    assert "individual_initiative" in RULE_LABELS
+    assert "individual_initiative" in IMPLEMENTED_RULES
+    combat_fields = dict(RULE_GROUPS)["Combat"]
+    assert any(f == "individual_initiative" for f, _ in combat_fields)
+
+
 def test_disabling_source_keeps_classic_race(client, tmp_path):
     from aose.characters import load_draft, save_draft
     drafts = tmp_path / "drafts"

@@ -28,6 +28,7 @@ RULE_LABELS = {
     "strict_mode": "Strict Mode",
     "optional_staves": "Spellcasters and Staves",
     "two_weapon_fighting": "Attacking with Two Weapons",
+    "individual_initiative": "Individual Initiative",
 }
 
 # Rules whose engine/builder integration is fully wired up.  The settings
@@ -46,6 +47,7 @@ IMPLEMENTED_RULES = {
     "strict_mode",
     "optional_staves",
     "two_weapon_fighting",
+    "individual_initiative",
 }
 
 # Choice-group rules that have full integration too.
@@ -96,6 +98,10 @@ RULE_GROUPS = [
          "Characters with STR or DEX as a prime requisite may wield a small "
          "weapon in the off hand: −2 to the primary attack, an extra off-hand "
          "attack at −4."),
+        ("individual_initiative",
+         "Roll initiative for each combatant individually, modified by DEX, "
+         "instead of one roll per side. Shows your initiative modifier on the "
+         "sheet."),
     ]),
 ]
 

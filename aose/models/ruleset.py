@@ -22,6 +22,7 @@ class RuleSet(BaseModel):
     strict_mode: bool = True
     optional_staves: bool = False
     two_weapon_fighting: bool = False
+    individual_initiative: bool = False
 
     encumbrance: EncumbranceMode = "basic"
 
