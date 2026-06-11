@@ -402,8 +402,11 @@ def test_parser_disables_unchecked_sources():
         _Form({"creation_method": "advanced"}),
         source_ids=["ose_classic_fantasy", "ose_advanced_fantasy"],
     )
-    # Advanced not checked -> disabled; Classic never disabled.
-    assert rs.disabled_sources == ["ose_advanced_fantasy"]
+    assert rs.disabled_content == [
+        "ose_advanced_fantasy:classes",
+        "ose_advanced_fantasy:equipment",
+        "ose_advanced_fantasy:magic_items",
+    ]
 
 
 def test_parser_keeps_checked_sources_enabled():
@@ -411,21 +414,20 @@ def test_parser_keeps_checked_sources_enabled():
         _Form({"creation_method": "advanced", "source_ose_advanced_fantasy": "on"}),
         source_ids=["ose_classic_fantasy", "ose_advanced_fantasy"],
     )
-    assert rs.disabled_sources == []
+    assert rs.disabled_content == []
 
 
 def test_parser_never_disables_classic():
     rs = parse_ruleset_from_form(
-        _Form({}),  # nothing checked
+        _Form({}),
         source_ids=["ose_classic_fantasy", "ose_advanced_fantasy"],
     )
-    assert "ose_classic_fantasy" not in rs.disabled_sources
+    assert not any(k.startswith("ose_classic_fantasy:") for k in rs.disabled_content)
 
 
 def test_parser_without_source_ids_disables_nothing():
-    # Backward-compatible default for existing callers.
     rs = parse_ruleset_from_form(_Form({"creation_method": "advanced"}))
-    assert rs.disabled_sources == []
+    assert rs.disabled_content == []
 
 
 def test_settings_page_renders_sources_section(client):
@@ -439,13 +441,12 @@ def test_settings_page_renders_sources_section(client):
 
 
 def test_post_settings_persists_disabled_source(client):
-    r = client.post("/settings", data={"creation_method": "advanced"})  # no source boxes checked
+    r = client.post("/settings", data={"creation_method": "advanced"})
     assert r.status_code == 303
     rs = load_settings(client._settings_path)
-    # All non-core sources are disabled when their checkboxes are unchecked.
-    assert "ose_advanced_fantasy" in rs.disabled_sources
-    assert "carcass_crawler_1" in rs.disabled_sources
-    assert "ose_classic_fantasy" not in rs.disabled_sources  # core: always enabled
+    assert "ose_advanced_fantasy:classes" in rs.disabled_content
+    assert "carcass_crawler_1:classes" in rs.disabled_content
+    assert not any(k.startswith("ose_classic_fantasy:") for k in rs.disabled_content)
 
 
 def test_disabling_source_clears_orphaned_race(client, tmp_path):

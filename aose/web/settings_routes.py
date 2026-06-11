@@ -181,14 +181,16 @@ def parse_ruleset_from_form(form, source_ids=None) -> RuleSet:
         if chosen in valid_values:
             choices[field] = chosen
 
-    disabled_sources = []
+    from aose.models import CONTENT_CATEGORIES  # local import avoids a cycle at module load
+
+    disabled_content = []
     for sid in (source_ids or []):
         if sid == CLASSIC_SOURCE_ID:
             continue
         if f"source_{sid}" not in form:
-            disabled_sources.append(sid)
+            disabled_content.extend(f"{sid}:{cat}" for cat in CONTENT_CATEGORIES)
 
-    return RuleSet(**bools, **choices, disabled_sources=disabled_sources)
+    return RuleSet(**bools, **choices, disabled_content=disabled_content)
 
 
 @router.post("/settings")

@@ -1,5 +1,5 @@
 from .ability import Ability
-from .ruleset import RuleSet
+from .ruleset import RuleSet, EncumbranceMode, CONTENT_CATEGORIES
 from .race import Race, RaceFeature
 from .character_class import (
     CharClass,
@@ -38,6 +38,8 @@ from .secondary_skill import SecondarySkillEntry
 __all__ = [
     "Ability",
     "RuleSet",
+    "EncumbranceMode",
+    "CONTENT_CATEGORIES",
     "Race",
     "RaceFeature",
     "CharClass",

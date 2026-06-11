@@ -88,7 +88,7 @@ from aose.engine import valuables as valuables_engine
 from aose.engine.valuables import ValuableError
 from aose.engine import possessions as possessions_engine
 from aose.engine.possessions import PossessionError
-from aose.engine.sources import source_enabled
+from aose.engine.sources import content_enabled
 from aose.engine.innate import (
     InnateError, reset_innate, restore_innate, spend_innate,
 )
@@ -111,7 +111,7 @@ def _enchant_choices(game_data, ruleset=None):
     from aose.engine.enchant import compatible_bases
     out = []
     for ench in sorted(game_data.enchantments.values(), key=lambda e: (e.kind, e.id)):
-        if ruleset is not None and not source_enabled(ench.source, ruleset):
+        if ruleset is not None and not content_enabled(ench.source, "magic_items", ruleset):
             continue
         bases = compatible_bases(ench, game_data)
         if not bases:

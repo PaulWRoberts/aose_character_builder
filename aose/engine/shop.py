@@ -18,7 +18,7 @@ from pydantic import BaseModel
 from aose.data.loader import GameData
 from aose.engine.detail import DetailCard, item_card
 from aose.engine.dice import roll
-from aose.engine.sources import source_enabled
+from aose.engine.sources import content_enabled
 from aose.models import Container, ContainerInstance, Item, RuleSet
 
 
@@ -98,8 +98,13 @@ def shop_categories(data: GameData, ruleset: RuleSet | None = None) -> list[Shop
     disabled source are omitted."""
     by_cat: dict[str, list[Item]] = {}
     for item in data.items.values():
-        if ruleset is not None and not source_enabled(item.source, ruleset):
-            continue
+        if ruleset is not None:
+            is_magic = getattr(item, "item_type", None) == "magic" or getattr(
+                item, "magic", False
+            )
+            category = "magic_items" if is_magic else "equipment"
+            if not content_enabled(item.source, category, ruleset):
+                continue
         by_cat.setdefault(item.category, []).append(item)
 
     out: list[ShopCategory] = []

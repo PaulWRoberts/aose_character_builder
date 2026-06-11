@@ -100,7 +100,7 @@ from aose.models import (
     RuleSet,
 )
 from aose.sheet.view import magic_items_view
-from aose.engine.sources import CLASSIC_SOURCE_ID, source_enabled
+from aose.engine.sources import CLASSIC_SOURCE_ID, content_enabled
 from aose.web.settings_routes import (
     ADVANCED_OPTIONS_GROUP,
     CHOICE_GROUPS,
@@ -468,16 +468,16 @@ def _apply_rule_changes(draft: dict[str, Any], old_rs: RuleSet, new_rs: RuleSet,
     if not new_rs.multiclassing and "class_ids" in draft:
         _clear_after_race(draft)
 
-    if data is not None and new_rs.disabled_sources != old_rs.disabled_sources:
+    if data is not None and new_rs.disabled_content != old_rs.disabled_content:
         race_id = draft.get("race_id")
-        if race_id in data.races and not source_enabled(
-            data.races[race_id].source, new_rs
+        if race_id in data.races and not content_enabled(
+            data.races[race_id].source, "classes", new_rs
         ):
             _clear_after_abilities(draft)
             return
         for cid in _class_ids(draft):
-            if cid in data.classes and not source_enabled(
-                data.classes[cid].source, new_rs
+            if cid in data.classes and not content_enabled(
+                data.classes[cid].source, "classes", new_rs
             ):
                 _clear_after_race(draft)
                 break
@@ -614,7 +614,7 @@ async def get_race(request: Request, draft_id: str):
     ruleset = _ruleset_of(draft)
     races = []
     for race in sorted(data.races.values(), key=lambda r: r.name):
-        if not source_enabled(race.source, ruleset):
+        if not content_enabled(race.source, "classes", ruleset):
             continue
         effective = apply_racial_modifiers(abilities, race)
         ability_changes = [
@@ -706,7 +706,7 @@ async def get_class(request: Request, draft_id: str):
         # everything (race-locked entries become the "demihuman as class" picks).
         if ruleset.separate_race_class and cls.race_locked:
             continue
-        if not source_enabled(cls.source, ruleset):
+        if not content_enabled(cls.source, "classes", ruleset):
             continue
 
         meets_abilities = _meets_ability_requirements(cls.ability_requirements, abilities)
@@ -1480,7 +1480,7 @@ def _caster_entries(draft: dict[str, Any], data) -> list[dict]:
         enabled_lists = {
             lid for lid in cls.spell_lists
             if lid in data.spell_lists
-            and source_enabled(data.spell_lists[lid].source, ruleset)
+            and content_enabled(data.spell_lists[lid].source, "classes", ruleset)
         }
         accessible = spell_engine.accessible_levels(entry, cls)
         candidates = sorted(
