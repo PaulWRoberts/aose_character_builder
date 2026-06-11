@@ -53,6 +53,9 @@ features:
     optional_rule: true
     initiative_bonus: 1
     condition: individual_initiative
+    requires_rule: individual_initiative
+  granted_modifiers:
+  - {target: initiative, op: add, value: 1}
 - id: listening_at_doors
   name: Listening at Doors
   text: Has a 2-in-6 chance of hearing noises at doors.

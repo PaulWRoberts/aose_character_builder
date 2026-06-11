@@ -120,6 +120,10 @@ features:
   text: |-
     If using the optional rule for individual initiative (see Combat, p222), halflings get a bonus of +1 to initiative rolls.
   gained_at_level: 1
+  mechanical:
+    requires_rule: individual_initiative
+  granted_modifiers:
+  - {target: initiative, op: add, value: 1}
 - id: listening_at_doors
   name: Listening at Doors
   text: |-

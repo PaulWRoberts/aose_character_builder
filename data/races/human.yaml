@@ -29,6 +29,8 @@ features:
     optional_rule: true
     wins_tied_initiative: true
     individual_initiative_bonus: 1
+  granted_modifiers:
+  - {target: initiative, op: add, value: 1}
 - id: leadership
   name: Leadership
   text: All of a human’s retainers and mercenaries gain a +1 bonus to loyalty and morale.

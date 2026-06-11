@@ -36,3 +36,28 @@ def test_dex_init_display_row_unchanged():
     assert init_cell(10) == "None"
     assert init_cell(15) == "+1"
     assert init_cell(18) == "+2"
+
+
+def test_initiative_grants_present_in_data():
+    data = GameData.load(DATA_DIR)
+
+    def init_grant(feature):
+        return [g for g in feature.granted_modifiers if g.target == "initiative"]
+
+    halfling_race = data.races["halfling"]
+    feat = next(f for f in halfling_race.features
+                if f.id == "initiative_bonus_optional_rule")
+    assert init_grant(feat) and init_grant(feat)[0].value == 1
+    assert (feat.mechanical or {}).get("requires_rule") == "individual_initiative"
+
+    halfling_class = data.classes["halfling"]
+    cfeat = next(f for f in halfling_class.features
+                 if f.id == "initiative_bonus_optional_rule")
+    assert init_grant(cfeat) and init_grant(cfeat)[0].value == 1
+    assert (cfeat.mechanical or {}).get("requires_rule") == "individual_initiative"
+
+    human = data.races["human"]
+    dec = next(f for f in human.features if f.id == "decisiveness")
+    assert init_grant(dec) and init_grant(dec)[0].value == 1
+    # Decisiveness always shows — it must NOT carry requires_rule.
+    assert (dec.mechanical or {}).get("requires_rule") is None

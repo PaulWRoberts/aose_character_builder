@@ -23,7 +23,7 @@ class Modifier(BaseModel):
     ``save:death|wands|paralysis|breath|spells``,
     ``save:vs:<thing>`` (cross-cutting situational bonus — e.g. ``save:vs:fire``;
     never folded into a headline, surfaced by ``situational_save_bonuses``),
-    ``attack``, ``damage``, ``carry_capacity``, ``thac0``.
+    ``attack``, ``damage``, ``carry_capacity``, ``thac0``, ``initiative``.
 
     ``condition`` is open-ended free text (``None`` = unconditional).  Each
     derivation recognises only the conditions it can evaluate in context
