@@ -8,6 +8,7 @@ For the living architecture (how the subsystems fit together *now*), see
 
 | Date | Feature | Branch | Spec/Plan slug |
 |---|---|---|---|
+| 2026-06-10 | Interactive wizard rolls + Class Setup consolidation: roll-first feature choices & secondary skill, consolidated save-and-advance, client-side selection caps | feat/interactive-wizard-rolls | 2026-06-10-interactive-wizard-rolls |
 | 2026-06-10 | Individual initiative optional rule: DEX-derived initiative modifier in the Combat box (clickable breakdown) + halfling/human bonuses; generic `mechanical.requires_rule` feature gating | feat/individual-initiative | 2026-06-10-individual-initiative |
 | 2026-06-10 | CC3 races/classes + feature-choice mechanic & innate abilities | feat/cc3-races-classes | 2026-06-10-cc3-races-and-classes |
 | 2026-06-10 | Wield capacity: named hand slots (main_hand/off_hand), two-weapon fighting rule, dual-wield penalties (−2/−4), gargantua 1H-2H melee exception | main | 2026-06-10-wield-capacity-equip |
