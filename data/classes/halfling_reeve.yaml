@@ -1,0 +1,138 @@
+id: halfling_reeve
+name: Halfling Reeve
+source: carcass_crawler_4
+prime_requisites:
+- CON
+- WIS
+ability_requirements:
+  CON: 9
+  DEX: 9
+  WIS: 9
+max_level: 8
+hit_die: 1d6
+name_level: 8
+hp_after_name_level: 1
+weapons_allowed:
+- any appropriate to size
+armor_allowed:
+- leather
+shields_allowed: true
+race_locked: halfling
+allowed_alignments:
+- law
+spell_lists:
+- druid
+progression:
+  1:
+    xp_required: 0
+    thac0: 19
+    saves: {death: 8, wands: 9, paralysis: 10, breath: 13, spells: 12}
+  2:
+    xp_required: 2500
+    thac0: 19
+    saves: {death: 8, wands: 9, paralysis: 10, breath: 13, spells: 12}
+  3:
+    xp_required: 5000
+    thac0: 19
+    saves: {death: 8, wands: 9, paralysis: 10, breath: 13, spells: 12}
+  4:
+    xp_required: 10000
+    thac0: 17
+    saves: {death: 6, wands: 7, paralysis: 8, breath: 10, spells: 10}
+    spell_slots: {1: 1}
+  5:
+    xp_required: 20000
+    thac0: 17
+    saves: {death: 6, wands: 7, paralysis: 8, breath: 10, spells: 10}
+    spell_slots: {1: 2}
+  6:
+    xp_required: 40000
+    thac0: 17
+    saves: {death: 6, wands: 7, paralysis: 8, breath: 10, spells: 10}
+    spell_slots: {1: 2, 2: 1}
+  7:
+    xp_required: 80000
+    thac0: 14
+    saves: {death: 4, wands: 5, paralysis: 6, breath: 7, spells: 8}
+    spell_slots: {1: 2, 2: 2}
+  8:
+    xp_required: 160000
+    thac0: 14
+    saves: {death: 4, wands: 5, paralysis: 6, breath: 7, spells: 8}
+    spell_slots: {1: 3, 2: 2, 3: 1}
+features:
+- id: prime_requisites
+  name: Prime requisites
+  text: A halfling reeve with at least 13 in one prime requisite gains a 5% bonus to experience. If both CON and WIS are 13 or higher, the halfling gets a +10% bonus.
+  gained_at_level: 1
+- id: alignment
+  name: Alignment
+  text: |-
+    As protectors, reeves must be lawful. If a reeve ever changes alignment, they lose all special class abilities and become a halfling of the same level. The character may be able to regain their reeve status by performing a special quest.
+  gained_at_level: 1
+- id: combat
+  name: Armour and Weapons
+  text: |-
+    Armour must be tailored to halflings' small size. Similarly, they can use any weapon appropriate to their stature (as determined by the referee). They cannot use longbows or two-handed swords.
+  gained_at_level: 1
+  mechanical:
+    armour_requires_tailoring: true
+    weapon_size_restriction: appropriate_to_stature_referee_determined
+    prohibited_weapons:
+    - longbow
+    - two_handed_sword
+- id: defensive_bonus
+  name: Defensive Bonus
+  text: |-
+    Due to their small size, halfling reeves gain a +2 bonus to Armour Class when attacked by large opponents (greater than human-sized).
+  gained_at_level: 1
+  granted_modifiers:
+  - {target: ac, op: add, value: 2, condition: large_attacker}
+- id: divine_magic
+  name: Divine Magic
+  text: |-
+    See Magic in Old-School Essentials for full details on divine magic.
+
+    **Spell casting:** From 4th level, due to a deep connection with nature, a reeve gains the ability to cast spells. The power and number of spells available to a reeve are determined by the character's experience level. Reeves have the same spell selection as druids.
+  gained_at_level: 4
+- id: foraging_and_hunting
+  name: Foraging and Hunting
+  text: |-
+    A party with a reeve succeeds at foraging with a 2-in-6 chance and finds prey when hunting with a 5-in-6 chance (see Wilderness Adventuring in Old-School Essentials).
+  gained_at_level: 1
+- id: goblin_slayer
+  name: Goblin Slayer
+  text: |-
+    Reeves receive a +1 bonus to attack and damage rolls made against goblins and related creatures (e.g. bugbears and hobgoblins). In campaigns where goblins do not commonly threaten halfling communities, the referee may specify other types of enemies instead.
+  gained_at_level: 1
+  granted_modifiers:
+  - {target: attack, op: add, value: 1, condition: vs_goblins}
+  - {target: damage, op: add, value: 1, condition: vs_goblins}
+- id: limited_possessions
+  name: Limited Possessions
+  text: |-
+    A reeve may only keep wealth and possessions that can be kept on their person or mount. Excess must be donated to a halfling community (not other PCs!).
+  gained_at_level: 1
+- id: listening_at_doors
+  name: Listening at Doors
+  text: |-
+    Halfling reeves have a 2-in-6 chance of hearing noises (see Dungeon Adventuring in Old-School Essentials).
+  gained_at_level: 1
+- id: stealth
+  name: Stealth
+  text: |-
+    In the wilderness, a reeve has a 5-in-6 chance of hiding and moving silently.
+  gained_at_level: 1
+- id: wolf_hunter
+  name: Wolf Hunter
+  text: |-
+    Reeves receive a +1 bonus to attack and damage rolls made against wolves of all kinds and werewolves.
+  gained_at_level: 1
+  granted_modifiers:
+  - {target: attack, op: add, value: 1, condition: vs_wolves}
+  - {target: damage, op: add, value: 1, condition: vs_wolves}
+- id: after_reaching_8th_level
+  name: After Reaching 8th Level
+  text: |-
+    A halfling reeve may build a small cabin or hunting lodge within six miles of a halfling community. They will attract the service of 2d6 1st level halflings and one 3rd level halfling reeve to aid them in patrolling the wilderness and protecting the community.
+  gained_at_level: 8

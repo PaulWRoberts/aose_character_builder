@@ -1,0 +1,155 @@
+id: arcane_bard
+name: Arcane Bard
+source: carcass_crawler_4
+prime_requisites:
+- CHA
+- DEX
+ability_requirements:
+  INT: 9
+max_level: 14
+hit_die: 1d6
+name_level: 9
+hp_after_name_level: 2
+weapons_allowed: all
+armor_allowed:
+- leather
+- chainmail
+shields_allowed: false
+spell_lists:
+- magic_user
+progression:
+  1:
+    xp_required: 0
+    thac0: 19
+    saves: {death: 13, wands: 14, paralysis: 13, breath: 16, spells: 15}
+  2:
+    xp_required: 2000
+    thac0: 19
+    saves: {death: 13, wands: 14, paralysis: 13, breath: 16, spells: 15}
+    spell_slots: {1: 1}
+  3:
+    xp_required: 4000
+    thac0: 19
+    saves: {death: 13, wands: 14, paralysis: 13, breath: 16, spells: 15}
+    spell_slots: {1: 2}
+  4:
+    xp_required: 8000
+    thac0: 19
+    saves: {death: 13, wands: 14, paralysis: 13, breath: 16, spells: 15}
+    spell_slots: {1: 3}
+  5:
+    xp_required: 16000
+    thac0: 17
+    saves: {death: 12, wands: 13, paralysis: 11, breath: 14, spells: 13}
+    spell_slots: {1: 3, 2: 1}
+  6:
+    xp_required: 32000
+    thac0: 17
+    saves: {death: 12, wands: 13, paralysis: 11, breath: 14, spells: 13}
+    spell_slots: {1: 3, 2: 2}
+  7:
+    xp_required: 64000
+    thac0: 17
+    saves: {death: 12, wands: 13, paralysis: 11, breath: 14, spells: 13}
+    spell_slots: {1: 3, 2: 3}
+  8:
+    xp_required: 120000
+    thac0: 17
+    saves: {death: 12, wands: 13, paralysis: 11, breath: 14, spells: 13}
+    spell_slots: {1: 3, 2: 3, 3: 1}
+  9:
+    xp_required: 240000
+    thac0: 14
+    saves: {death: 10, wands: 11, paralysis: 9, breath: 12, spells: 10}
+    spell_slots: {1: 3, 2: 3, 3: 2}
+  10:
+    xp_required: 360000
+    thac0: 14
+    saves: {death: 10, wands: 11, paralysis: 9, breath: 12, spells: 10}
+    spell_slots: {1: 3, 2: 3, 3: 3}
+  11:
+    xp_required: 480000
+    thac0: 14
+    saves: {death: 10, wands: 11, paralysis: 9, breath: 12, spells: 10}
+    spell_slots: {1: 3, 2: 3, 3: 3, 4: 1}
+  12:
+    xp_required: 600000
+    thac0: 14
+    saves: {death: 10, wands: 11, paralysis: 9, breath: 12, spells: 10}
+    spell_slots: {1: 3, 2: 3, 3: 3, 4: 2}
+  13:
+    xp_required: 720000
+    thac0: 12
+    saves: {death: 8, wands: 9, paralysis: 7, breath: 10, spells: 8}
+    spell_slots: {1: 3, 2: 3, 3: 3, 4: 3}
+  14:
+    xp_required: 840000
+    thac0: 12
+    saves: {death: 8, wands: 9, paralysis: 7, breath: 10, spells: 8}
+    spell_slots: {1: 4, 2: 4, 3: 3, 4: 3}
+features:
+- id: prime_requisites
+  name: Prime requisites
+  text: An arcane bard with at least 13 CHA and DEX gains a 5% bonus to experience. An arcane bard with a score of 16 or higher in one prime requisite, and a 13 or higher in the other gains a 10% bonus.
+  gained_at_level: 1
+- id: anti_charm
+  name: Anti-Charm
+  text: |-
+    While the arcane bard plays music and sings, allies within 30' are immune to song-based magical effects and the beguiling powers of sylvan creatures or fairies. Allies already under the effect of such magic gain another saving throw with a +4 bonus.
+  gained_at_level: 1
+- id: combat
+  name: Combat
+  text: |-
+    Arcane bards can use leather armour or chainmail but do not have the training required to use shields. They can use any weapon.
+  gained_at_level: 1
+- id: arcane_bard_skills
+  name: Arcane Bard Skills
+  text: |-
+    Arcane bards can use the following skills, with chance of success shown below.
+
+    ▶ **Climb sheer surfaces (CS):** A roll is required for each 100' to be climbed. If the roll fails, the arcane bard falls at the halfway point, suffering falling damage. This skill cannot be used if the arcane bard is wearing chainmail.
+
+    ▶ **Hear noise (HN):** In a quiet environment (e.g. not in combat), an arcane bard can attempt to listen at a door or to hear the sounds of something (e.g. a wandering monster) approaching.
+
+    ▶ **Pick pockets (PP):** If the victim is above 5th level, the arcane bard's roll is penalised by 5% for every level above 5th. There is always at least a 1% chance of failure. A roll of more than twice the percentage required for success means that the attempted theft is noticed.
+
+    ▶ **Read languages (RL):** An arcane bard can read non-magical text in any language (including dead) or basic codes. If the roll fails, the arcane bard may not try the same text again before gaining an experience level.
+
+    | Level | CS | HN | PP | RL |
+    |---|---|---|---|---|
+    | 1 | 77 | 1–2 | 20 | 40 |
+    | 2 | 78 | 1–2 | 25 | 50 |
+    | 3 | 79 | 1–3 | 30 | 60 |
+    | 4 | 80 | 1–3 | 35 | 70 |
+    | 5 | 81 | 1–3 | 40 | 80 |
+    | 6 | 82 | 1–3 | 45 | 82 |
+    | 7 | 83 | 1–4 | 55 | 84 |
+    | 8 | 84 | 1–4 | 65 | 86 |
+    | 9 | 85 | 1–4 | 75 | 88 |
+    | 10 | 86 | 1–4 | 85 | 90 |
+    | 11 | 87 | 1–5 | 95 | 90 |
+    | 12 | 88 | 1–5 | 105 | 90 |
+    | 13 | 90 | 1–5 | 115 | 90 |
+    | 14 | 91 | 1–5 | 125 | 90 |
+
+    **Hear noise** is rolled on 1d6: if the roll is within the listed range, the skill succeeds. **Other skills** are rolled on d%, with a result of less than or equal to the listed percentage indicating success.
+  gained_at_level: 1
+- id: arcane_magic
+  name: Arcane Magic
+  text: |-
+    See Magic in Old-School Essentials for full details on arcane magic.
+
+    **Spell casting:** From 2nd level, arcane bards can cast arcane spells, owning a spell book in which the magical formulae for the spells they know are recorded. The level progression table shows both the number of spells in the arcane bard's spell book and the number they can memorise, determined by the character's experience level. An arcane bard's spells are selected by the referee (who may allow the player to choose). Arcane bards have the same spell selection as magic-users.
+
+    **Using magic items:** As spell casters, bards are able to use magic scrolls of spells on their spell list. They can also use items that may only be used by arcane spell casters (e.g. magic wands).
+  gained_at_level: 2
+- id: lore
+  name: Lore
+  text: |-
+    From 2nd level, an arcane bard has a 2-in-6 chance of knowing lore pertaining to monsters, magic items, or heroes of folktale or legend. This ability can be used to identify the nature and powers of magic items.
+  gained_at_level: 2
+- id: after_reaching_11th_level
+  name: After Reaching 11th Level
+  text: |-
+    An arcane bard can establish a manor. 2d6 apprentice arcane bards of 1st level will come to study under the character.
+  gained_at_level: 11

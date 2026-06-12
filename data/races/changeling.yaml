@@ -1,0 +1,40 @@
+id: changeling
+name: Changeling
+source: carcass_crawler_5
+ability_requirements:
+  INT: 9
+ability_modifiers:
+  CON: -1
+  CHA: 1
+languages:
+- common
+- doppelganger
+allowed_classes:
+- acrobat
+- assassin
+- fighter
+- illusionist
+- magic_user
+- thief
+class_level_caps:
+  acrobat: 8
+  assassin: 10
+  fighter: 6
+  illusionist: 9
+  magic_user: 7
+  thief: 9
+features:
+- id: ability_modifiers
+  name: Ability Modifiers
+  text: –1 CON, +1 CHA.
+- id: listening_at_doors
+  name: Listening at Doors
+  text: Has a 2-in-6 chance of hearing noises at doors.
+  mechanical:
+    chance_in_6: 2
+- id: shape_stealing
+  name: Shape-Stealing
+  text: |-
+    A changeling can alter their form to exactly mimic another person, requiring 1 round of physical contact. The form of a slain (within the last turn) or unconscious victim can be stolen; from 5th level, a conscious victim's form can be stolen with a successful melee attack (the victim may save versus spells to resist).
+
+    The changeling remains in the new form for up to one turn per level, retaining their own intelligence, hit points, saving throws, and attack probabilities, but gaining the new form's physical capabilities (not its non-physical special abilities). Worn or carried items are copied without magical properties and vanish if dropped.

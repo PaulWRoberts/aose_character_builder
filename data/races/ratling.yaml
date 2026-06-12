@@ -1,0 +1,52 @@
+id: ratling
+name: Ratling
+source: carcass_crawler_5
+ability_requirements:
+  CON: 9
+ability_modifiers:
+  CHA: -1
+  DEX: 1
+infravision: 60
+languages:
+- common
+allowed_classes:
+- acrobat
+- assassin
+- fighter
+- illusionist
+- thief
+class_level_caps:
+  acrobat: 8
+  assassin: 7
+  fighter: 6
+  illusionist: 6
+  thief: 8
+features:
+- id: ability_modifiers
+  name: Ability Modifiers
+  text: –1 CHA, +1 DEX.
+- id: awareness
+  name: Awareness
+  text: Only surprised on a roll of 1 due to a strong sense of smell. May act in the surprise round while companions are surprised.
+  mechanical:
+    surprised_only_on: 1
+- id: detect_poison
+  name: Detect Poison
+  text: Has a 25% chance of smelling poisons mixed into food/drink or coated on an object. For poisons with a specified detection chance, this 25% is added to the normal detection chance.
+  mechanical:
+    detect_poison_pct: 25
+- id: infravision
+  name: Infravision
+  text: Infravision to 60'.
+  mechanical:
+    infravision_feet: 60
+- id: listening_at_doors
+  name: Listening at Doors
+  text: Has a 2-in-6 chance of hearing noises at doors.
+  mechanical:
+    chance_in_6: 2
+- id: prehensile_tail
+  name: Prehensile Tail
+  text: Can hold an item (up to 50 coins weight) in their tail, though it cannot attack with a weapon or manipulate fine objects. Cannot climb while holding an object in the tail, as it is required for balance.
+  mechanical:
+    tail_carry_coins: 50

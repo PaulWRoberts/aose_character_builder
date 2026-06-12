@@ -1,0 +1,73 @@
+id: wood_elf
+name: Wood Elf
+source: carcass_crawler_2
+ability_requirements:
+  DEX: 9
+  INT: 9
+ability_modifiers:
+  CHA: -1
+  WIS: 1
+infravision: 60
+languages:
+- common
+- elvish
+- bugbear
+- dryad
+- gnoll
+allowed_classes:
+- acrobat
+- assassin
+- druid
+- fighter
+- magic_user
+- ranger
+- thief
+class_level_caps:
+  acrobat: 10
+  assassin: 8
+  druid: 10
+  fighter: 7
+  magic_user: 7
+  ranger: 11
+  thief: 10
+features:
+- id: ability_modifiers
+  name: Ability Modifiers
+  text: –1 CHA, +1 WIS.
+- id: npc_only_classes_referee_option
+  name: NPC-Only Classes (Referee Option)
+  text: At the referee's option, wood elf druids may only exist as NPCs.
+  mechanical:
+    referee_option: true
+    npc_only_classes:
+    - druid
+- id: detect_secret_doors
+  name: Detect Secret Doors
+  text: When actively searching, detect hidden and secret doors with a 2-in-6 chance.
+  mechanical:
+    chance_in_6: 2
+    condition: actively_searching
+- id: immunity_to_ghoul_paralysis
+  name: Immunity to Ghoul Paralysis
+  text: Completely unaffected by the paralysis ghouls can inflict.
+  mechanical:
+    immunities:
+    - ghoul_paralysis
+- id: infravision
+  name: Infravision
+  text: Infravision to 60'.
+  mechanical:
+    infravision_feet: 60
+- id: listening_at_doors
+  name: Listening at Doors
+  text: Has a 2-in-6 chance of hearing noises at doors.
+  mechanical:
+    chance_in_6: 2
+- id: missile_attack_bonus
+  name: Missile Attack Bonus
+  text: Gains a +1 bonus to attack rolls with all missile weapons.
+  mechanical:
+    attack_roll_bonus: 1
+    weapon_category: missile
+  granted_modifiers:
+  - {target: attack, op: add, value: 1, condition: ranged}

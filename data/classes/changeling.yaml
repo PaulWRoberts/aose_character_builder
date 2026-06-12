@@ -1,0 +1,127 @@
+id: changeling
+name: Changeling
+source: carcass_crawler_5
+prime_requisites:
+- CHA
+- DEX
+ability_requirements:
+  INT: 9
+max_level: 10
+hit_die: 1d6
+name_level: 9
+hp_after_name_level: 2
+weapons_allowed: all
+armor_allowed:
+- leather
+shields_allowed: true
+race_locked: changeling
+progression:
+  1:
+    xp_required: 0
+    thac0: 19
+    saves: {death: 11, wands: 12, paralysis: 12, breath: 15, spells: 12}
+  2:
+    xp_required: 2500
+    thac0: 19
+    saves: {death: 11, wands: 12, paralysis: 12, breath: 15, spells: 12}
+  3:
+    xp_required: 5000
+    thac0: 19
+    saves: {death: 11, wands: 12, paralysis: 12, breath: 15, spells: 12}
+  4:
+    xp_required: 10000
+    thac0: 19
+    saves: {death: 11, wands: 12, paralysis: 12, breath: 15, spells: 12}
+  5:
+    xp_required: 20000
+    thac0: 17
+    saves: {death: 9, wands: 10, paralysis: 10, breath: 13, spells: 10}
+  6:
+    xp_required: 30000
+    thac0: 17
+    saves: {death: 9, wands: 10, paralysis: 10, breath: 13, spells: 10}
+  7:
+    xp_required: 60000
+    thac0: 17
+    saves: {death: 9, wands: 10, paralysis: 10, breath: 13, spells: 10}
+  8:
+    xp_required: 120000
+    thac0: 17
+    saves: {death: 9, wands: 10, paralysis: 10, breath: 13, spells: 10}
+  9:
+    xp_required: 240000
+    thac0: 14
+    saves: {death: 7, wands: 8, paralysis: 8, breath: 11, spells: 8}
+  10:
+    xp_required: 360000
+    thac0: 14
+    saves: {death: 7, wands: 8, paralysis: 8, breath: 11, spells: 8}
+features:
+- id: prime_requisites
+  name: Prime requisites
+  text: A changeling with at least 13 in one prime requisite gets +5% to XP. If both CHA and DEX are 16 or higher, the character gets a +10% bonus.
+  gained_at_level: 1
+- id: combat
+  name: Combat
+  text: |-
+    Changelings can use leather armour and shields, and may use any weapon.
+  gained_at_level: 1
+- id: back_stab
+  name: Back-Stab
+  text: |-
+    When attacking an unaware opponent from behind, a changeling receives a +4 bonus to hit and doubles damage dealt.
+
+    **Increasing Damage (Optional Rule):** Back-stab attacks optionally inflict triple damage at 6th level and above.
+  gained_at_level: 1
+- id: changeling_skills
+  name: Changeling Skills
+  text: |-
+    Changelings can use the following skills, with chance of success shown below.
+
+    ▶ **Beguile (BE):** On a successful check, the changeling's words take on a supernatural potency. A person of HD no greater than the changeling's level must save versus spells or believe the changeling's words. The beguilement lasts for 1 round per level of the changeling. Afterwards, the beguiled person realises they have been tricked. This skill may only be used on any given person once per day.
+
+    ▶ **Hear noise (HN):** In a quiet environment (e.g. not in combat), a changeling can attempt to listen at a door or to hear the sounds of something (e.g. a wandering monster) approaching.
+
+    ▶ **Hide in shadows (HS):** Requires the changeling to be motionless—attacking or moving while hiding is not possible.
+
+    ▶ **Move silently (MS):** A changeling can attempt to sneak past enemies unnoticed.
+
+    | Level | BE | HN | HS | MS |
+    |---|---|---|---|---|
+    | 1 | 20 | 1–2 | 10 | 20 |
+    | 2 | 25 | 1–2 | 15 | 25 |
+    | 3 | 30 | 1–3 | 20 | 30 |
+    | 4 | 35 | 1–3 | 25 | 35 |
+    | 5 | 40 | 1–3 | 30 | 40 |
+    | 6 | 43 | 1–3 | 36 | 45 |
+    | 7 | 46 | 1–4 | 45 | 55 |
+    | 8 | 50 | 1–4 | 55 | 65 |
+    | 9 | 55 | 1–4 | 65 | 75 |
+    | 10 | 60 | 1–4 | 75 | 85 |
+
+    **Hear noise** is rolled on 1d6: if the roll is within the listed range, the skill succeeds. **Other skills** are rolled on d%, with a result of less than or equal to the listed percentage indicating success. The referee should roll for HN, HS, and MS on the player's behalf.
+  gained_at_level: 1
+- id: shape_stealing
+  name: Shape-Stealing
+  text: |-
+    A changeling can alter their form to exactly mimic another person. This requires 1 round of physical contact.
+
+    **Slain victims:** The changeling can steal the form of a person they have killed within the last turn.
+
+    **Unconscious victims:** The changeling can steal the form of a sleeping or unconscious victim.
+
+    **Conscious victims:** From 5th level, the changeling can steal the form of a conscious victim. This requires a successful melee attack in combat. The victim may save versus spells to resist.
+
+    **Duration:** The changeling remains in the new form for up to one turn per level.
+
+    **Stats:** The changeling retains their own intelligence, hit points, saving throws, and attack probabilities.
+
+    **Capabilities:** Physical capabilities of the new form (e.g. strength, physical attack forms, modes of movement) are acquired. Non-physical special abilities (e.g. immunities, breath weapons, spells) are not.
+
+    **Clothing and gear:** Items visibly worn or carried by the victim are copied. Copied items do not possess any magical properties of the original and vanish if dropped.
+  gained_at_level: 1
+- id: after_reaching_9th_level
+  name: After Reaching 9th Level
+  text: |-
+    A changeling may construct a secret hideout, attracting 2d6 apprentices (changelings, thieves, or similar characters of 1st level). Apprentices are usually loyal to the character, but are not automatically replaced if killed. The character may use their apprentices as the beginnings of a Thieves' Guild.
+  gained_at_level: 9

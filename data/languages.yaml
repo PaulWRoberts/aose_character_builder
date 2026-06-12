@@ -4,6 +4,7 @@ names:
   bugbear: Bugbear
   doppelganger: Doppelgänger
   dragon: Dragon
+  dryad: Dryad
   dwarvish: Dwarvish
   elvish: Elvish
   gargoyle: Gargoyle
@@ -33,6 +34,7 @@ additional:
   - bugbear
   - doppelganger
   - dragon
+  - dryad
   - dwarvish
   - elvish
   - gargoyle

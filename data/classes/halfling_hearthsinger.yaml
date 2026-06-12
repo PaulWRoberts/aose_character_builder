@@ -1,0 +1,115 @@
+id: halfling_hearthsinger
+name: Halfling Hearthsinger
+source: carcass_crawler_4
+prime_requisites:
+- CHA
+- CON
+ability_requirements:
+  CHA: 9
+  CON: 9
+  DEX: 9
+max_level: 8
+hit_die: 1d6
+name_level: 8
+hp_after_name_level: 1
+weapons_allowed:
+- any appropriate to size
+armor_allowed:
+- leather
+shields_allowed: true
+race_locked: halfling
+progression:
+  1:
+    xp_required: 0
+    thac0: 19
+    saves: {death: 8, wands: 9, paralysis: 10, breath: 13, spells: 12}
+  2:
+    xp_required: 2000
+    thac0: 19
+    saves: {death: 8, wands: 9, paralysis: 10, breath: 13, spells: 12}
+  3:
+    xp_required: 4000
+    thac0: 19
+    saves: {death: 8, wands: 9, paralysis: 10, breath: 13, spells: 12}
+  4:
+    xp_required: 8000
+    thac0: 17
+    saves: {death: 6, wands: 7, paralysis: 8, breath: 10, spells: 10}
+  5:
+    xp_required: 16000
+    thac0: 17
+    saves: {death: 6, wands: 7, paralysis: 8, breath: 10, spells: 10}
+  6:
+    xp_required: 32000
+    thac0: 17
+    saves: {death: 6, wands: 7, paralysis: 8, breath: 10, spells: 10}
+  7:
+    xp_required: 64000
+    thac0: 14
+    saves: {death: 4, wands: 5, paralysis: 6, breath: 7, spells: 8}
+  8:
+    xp_required: 120000
+    thac0: 14
+    saves: {death: 4, wands: 5, paralysis: 6, breath: 7, spells: 8}
+features:
+- id: prime_requisites
+  name: Prime requisites
+  text: A halfling hearthsinger with at least 13 in one prime requisite gains a 5% bonus to experience. If both CHA and CON are 13 or higher, the halfling gets a +10% bonus.
+  gained_at_level: 1
+- id: combat
+  name: Armour and Weapons
+  text: |-
+    Armour must be tailored to halflings' small size. Similarly, they can use any weapon appropriate to their stature (as determined by the referee). They cannot use longbows or two-handed swords.
+  gained_at_level: 1
+  mechanical:
+    armour_requires_tailoring: true
+    weapon_size_restriction: appropriate_to_stature_referee_determined
+    prohibited_weapons:
+    - longbow
+    - two_handed_sword
+- id: defensive_bonus
+  name: Defensive Bonus
+  text: |-
+    Due to their small size, halfling hearthsingers gain a +2 bonus to Armour Class when attacked by large opponents (greater than human-sized).
+  gained_at_level: 1
+  granted_modifiers:
+  - {target: ac, op: add, value: 2, condition: large_attacker}
+- id: hearthsinger_skills
+  name: Halfling Hearthsinger Skills
+  text: |-
+    Halfling hearthsingers can use the following skills, with the chance of success shown below.
+
+    ▶ **Foster friendship (FF):** If the hearthsinger tells a story to a willing audience for at least one turn and the performance ends without interruption, a number of persons equal to the hearthsinger's level must save versus spells or be placed under a friendship effect. Affected persons regard the hearthsinger as a friend and ally and will come to their defence. The effect lasts for 1 hour per level of the hearthsinger.
+
+    ▶ **Lore (L):** A hearthsinger has a chance of knowing lore pertaining to monsters, magic items, or heroes of folk-tale or legend. This ability can be used to identify the nature and powers of magic items.
+
+    ▶ **Read languages (RL):** A hearthsinger can read non-magical text in any language (including dead) or basic codes. If the roll fails, the hearthsinger may not try the same text again before gaining an experience level. The hearthsinger can use this ability to read scrolls containing arcane spells with a chance of success equal to half the listed percentage. Failure results in the spell scroll backfiring and causing some disastrous or dangerous effect.
+
+    | Level | FF | L | RL |
+    |---|---|---|---|
+    | 1 | 20 | 30 | 35 |
+    | 2 | 27 | 35 | 40 |
+    | 3 | 35 | 40 | 45 |
+    | 4 | 43 | 45 | 55 |
+    | 5 | 50 | 55 | 65 |
+    | 6 | 58 | 65 | 75 |
+    | 7 | 65 | 75 | 85 |
+    | 8 | 75 | 85 | 95 |
+
+    All skills are rolled on d%, with a result of less than or equal to the listed percentage indicating success.
+  gained_at_level: 1
+- id: listening_at_doors
+  name: Listening at Doors
+  text: |-
+    Halfling hearthsingers have a 2-in-6 chance of hearing noises (see Dungeon Adventuring in Old-School Essentials).
+  gained_at_level: 1
+- id: rumour_monger
+  name: Rumour Monger
+  text: |-
+    Whenever there is an opportunity to gain relevant information from local rumours within a community, a halfling hearthsinger can learn twice the normal number of rumours allowed by the circumstances if they spend one hour getting to know the local community.
+  gained_at_level: 1
+- id: tavern
+  name: Tavern
+  text: |-
+    Any time a halfling hearthsinger wishes (and has sufficient money), they may build a tavern or pub, which will draw patrons from across the land and provide revenue to the hearthsinger of 1d4 × 100 gold pieces per month. 1d4+1 1st level halflings will arrive to serve as staff and one 3rd level fighter will arrive to serve as a bouncer.
+  gained_at_level: 1

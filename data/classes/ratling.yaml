@@ -1,0 +1,113 @@
+id: ratling
+name: Ratling
+source: carcass_crawler_5
+prime_requisites:
+- DEX
+ability_requirements:
+  CON: 9
+max_level: 8
+hit_die: 1d6
+name_level: 8
+hp_after_name_level: 1
+weapons_allowed: all
+armor_allowed:
+- leather
+shields_allowed: true
+race_locked: ratling
+progression:
+  1:
+    xp_required: 0
+    thac0: 19
+    saves: {death: 8, wands: 9, paralysis: 10, breath: 13, spells: 12}
+  2:
+    xp_required: 2000
+    thac0: 19
+    saves: {death: 8, wands: 9, paralysis: 10, breath: 13, spells: 12}
+  3:
+    xp_required: 4000
+    thac0: 19
+    saves: {death: 8, wands: 9, paralysis: 10, breath: 13, spells: 12}
+  4:
+    xp_required: 8000
+    thac0: 19
+    saves: {death: 8, wands: 9, paralysis: 10, breath: 13, spells: 12}
+  5:
+    xp_required: 16000
+    thac0: 17
+    saves: {death: 6, wands: 7, paralysis: 8, breath: 10, spells: 10}
+  6:
+    xp_required: 32000
+    thac0: 17
+    saves: {death: 6, wands: 7, paralysis: 8, breath: 10, spells: 10}
+  7:
+    xp_required: 64000
+    thac0: 17
+    saves: {death: 6, wands: 7, paralysis: 8, breath: 10, spells: 10}
+  8:
+    xp_required: 128000
+    thac0: 17
+    saves: {death: 6, wands: 7, paralysis: 8, breath: 10, spells: 10}
+features:
+- id: combat
+  name: Combat
+  text: |-
+    Ratlings can use leather armour and shields, and may use any weapon.
+  gained_at_level: 1
+- id: awareness
+  name: Awareness
+  text: |-
+    Ratlings are only surprised on a roll of 1 due to their strong sense of smell. This may mean that a ratling is able to act in the surprise round while their companions are surprised.
+  gained_at_level: 1
+- id: infravision
+  name: Infravision
+  text: |-
+    Ratlings have infravision to 60' (see Darkness under Hazards and Challenges in Old-School Essentials).
+  gained_at_level: 1
+  mechanical:
+    infravision_feet: 60
+- id: prehensile_tail
+  name: Prehensile Tail
+  text: |-
+    Ratlings can hold an item (up to 50 coins weight) in their tail, though the tail does not have the coordination to attack with a weapon or to manipulate fine objects like keys or scissors. A ratling cannot climb when holding an object in their tail, as it is required for balance.
+  gained_at_level: 1
+- id: rat_affinity
+  name: Rat Affinity
+  text: |-
+    Ratlings live alongside many different species of rats, including giant rats. They can speak the secret language of rats and gain a +1 bonus to reaction rolls when encountering rats.
+  gained_at_level: 1
+  mechanical:
+    reaction_bonus: 1
+    condition: rats
+- id: ratling_skills
+  name: Ratling Skills
+  text: |-
+    Ratlings can use the following skills, with the chance of success shown below.
+
+    ▶ **Climb sheer surfaces (CS):** A roll is required for each 100' to be climbed. If the roll fails, the ratling falls at the halfway point, suffering falling damage.
+
+    ▶ **Detect poison (DP):** A ratling can smell poisons mixed into food/drink or coated on an object. For poisons with a specified detection chance, the ratling's DP is added to the normal detection chance.
+
+    ▶ **Hear noise (HN):** In a quiet environment (e.g. not in combat), a ratling can attempt to listen at a door or to hear the sounds of something (e.g. a wandering monster) approaching.
+
+    ▶ **Hide in shadows (HS):** Requires the ratling to be motionless—attacking or moving while hiding is not possible.
+
+    ▶ **Move silently (MS):** A ratling can attempt to sneak past enemies unnoticed.
+
+    | Level | CS | DP | HN | HS | MS |
+    |---|---|---|---|---|---|
+    | 1 | 87 | 30 | 1–2 | 10 | 20 |
+    | 2 | 88 | 35 | 1–2 | 15 | 25 |
+    | 3 | 89 | 40 | 1–3 | 20 | 30 |
+    | 4 | 90 | 45 | 1–3 | 25 | 35 |
+    | 5 | 91 | 50 | 1–3 | 30 | 40 |
+    | 6 | 92 | 55 | 1–3 | 35 | 45 |
+    | 7 | 93 | 60 | 1–4 | 40 | 50 |
+    | 8 | 94 | 65 | 1–4 | 45 | 55 |
+
+    **Hear noise** is rolled on 1d6: if the roll is within the listed range, the skill succeeds. **Other skills** are rolled on d%, with a result of less than or equal to the listed percentage indicating success. The referee should roll for DP, HN, HS, and MS on the player's behalf.
+  gained_at_level: 1
+- id: after_reaching_8th_level
+  name: After Reaching 8th Level
+  text: |-
+    A ratling may construct a warren: either a burrow in soft soil or a hidden sewer stronghold beneath a major city. The construction will attract 2d6 1st level ratlings who are loyal to the character. In addition, giant rats within 5 miles will treat the ratling as friends and may warn of intruders, carry messages, and so on. This friendship is contingent on the character's protection of the giant rat population.
+  gained_at_level: 8

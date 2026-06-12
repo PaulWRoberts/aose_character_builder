@@ -10,7 +10,19 @@
   name: Carcass Crawler Issue 1
   publisher: Necrotic Gnome
   core: false
+- id: carcass_crawler_2
+  name: Carcass Crawler Issue 2
+  publisher: Necrotic Gnome
+  core: false
 - id: carcass_crawler_3
   name: Carcass Crawler Issue 3
+  publisher: Necrotic Gnome
+  core: false
+- id: carcass_crawler_4
+  name: Carcass Crawler Issue 4
+  publisher: Necrotic Gnome
+  core: false
+- id: carcass_crawler_5
+  name: Carcass Crawler Issue 5
   publisher: Necrotic Gnome
   core: false
