@@ -25,6 +25,7 @@ class NoCacheStaticFiles(StaticFiles):
 from .routes import router
 from .settings_routes import router as settings_router
 from .wizard import router as wizard_router
+from .auth.middleware import WorkspaceAuthMiddleware
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 DEFAULT_DATA_DIR = PROJECT_ROOT / "data"
@@ -60,12 +61,14 @@ def create_app(
     app.state.examples_dir = examples_dir
     app.state.settings_path = settings_path
     app.state.game_data = GameData.load(data_dir)
+    app.state.auth_config = None  # auth disabled by default (Phase D wires it on)
 
     if seed_from_examples:
         _bootstrap_characters(characters_dir, examples_dir)
 
     static_dir = Path(__file__).parent / "static"
     app.mount("/static", NoCacheStaticFiles(directory=str(static_dir)), name="static")
+    app.add_middleware(WorkspaceAuthMiddleware)
 
     app.include_router(router)
     app.include_router(wizard_router)

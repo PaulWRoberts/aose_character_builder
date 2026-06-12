@@ -150,11 +150,11 @@ MAX_CLASSES = 3
 
 
 def _drafts_dir(request: Request) -> Path:
-    return request.app.state.drafts_dir
+    return request.state.drafts_dir
 
 
 def _characters_dir(request: Request) -> Path:
-    return request.app.state.characters_dir
+    return request.state.characters_dir
 
 
 def _load(request: Request, draft_id: str) -> dict[str, Any]:
@@ -372,7 +372,7 @@ def _seed_draft_abilities(draft: dict[str, Any]) -> None:
 @router.get("/new")
 async def new_wizard(request: Request):
     draft_id = new_draft_id()
-    ruleset = load_settings(request.app.state.settings_path)
+    ruleset = load_settings(request.state.settings_path)
     # Abilities are rolled by the player on the abilities step, not here.
     draft: dict[str, Any] = {"ruleset": ruleset.model_dump()}
     save_draft(draft_id, draft, _drafts_dir(request))

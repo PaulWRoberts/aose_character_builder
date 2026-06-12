@@ -140,7 +140,7 @@ def _character_summaries(characters_dir: Path):
 
 @router.get("/", response_class=HTMLResponse)
 async def index(request: Request):
-    characters = _character_summaries(request.app.state.characters_dir)
+    characters = _character_summaries(request.state.characters_dir)
     return templates.TemplateResponse(
         request, "index.html", {"characters": characters}
     )
@@ -151,7 +151,7 @@ async def index(request: Request):
 @router.get("/character/{character_id}", response_class=HTMLResponse)
 async def character_sheet(request: Request, character_id: str):
     try:
-        spec = load_character(character_id, request.app.state.characters_dir)
+        spec = load_character(character_id, request.state.characters_dir)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail=f"Character '{character_id}' not found")
     game_data = request.app.state.game_data
@@ -204,7 +204,7 @@ async def character_sheet(request: Request, character_id: str):
 
 @router.post("/character/{character_id}/delete")
 async def character_delete(request: Request, character_id: str):
-    delete_character(character_id, request.app.state.characters_dir)
+    delete_character(character_id, request.state.characters_dir)
     return RedirectResponse("/", status_code=303)
 
 
@@ -218,7 +218,7 @@ async def character_print(request: Request, character_id: str):
     immediately triggers the print dialog — choose *Save as PDF* there.
     """
     try:
-        spec = load_character(character_id, request.app.state.characters_dir)
+        spec = load_character(character_id, request.state.characters_dir)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail=f"Character '{character_id}' not found")
     sheet = build_sheet(spec, request.app.state.game_data)
@@ -241,7 +241,7 @@ async def character_pdf(request: Request, character_id: str):
     from aose.web.pdf import import_error, is_available, render_pdf
 
     try:
-        spec = load_character(character_id, request.app.state.characters_dir)
+        spec = load_character(character_id, request.state.characters_dir)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail=f"Character '{character_id}' not found")
 
@@ -273,7 +273,7 @@ async def character_pdf(request: Request, character_id: str):
 
 def _load_spec_or_404(request: Request, character_id: str):
     try:
-        return load_character(character_id, request.app.state.characters_dir)
+        return load_character(character_id, request.state.characters_dir)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail=f"Character '{character_id}' not found")
 
@@ -285,7 +285,7 @@ async def grant_xp(request: Request, character_id: str, amount: int = Form(...))
     level (the user can edit the JSON if they really need to)."""
     spec = _load_spec_or_404(request, character_id)
     _grant_xp(spec, request.app.state.game_data, amount)
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -295,7 +295,7 @@ async def grant_gold(request: Request, character_id: str, amount: int = Form(...
     thing in OSE, even if the GM claws back some treasure."""
     spec = _load_spec_or_404(request, character_id)
     spec.gold = max(0, spec.gold + amount)
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -308,7 +308,7 @@ async def add_coins(request: Request, character_id: str,
         raise HTTPException(400, f"unknown denomination {denom!r}")
     attr = _currency._ATTR[denom]
     setattr(spec, attr, max(0, getattr(spec, attr) + amount))
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -324,7 +324,7 @@ async def convert_coins(request: Request, character_id: str,
         raise HTTPException(400, str(e))
     for attr, value in changes.items():
         setattr(spec, attr, value)
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -334,7 +334,7 @@ async def set_carrying_treasure(request: Request, character_id: str,
     """Flip the basic-encumbrance carrying-treasure toggle."""
     spec = _load_spec_or_404(request, character_id)
     spec.carrying_treasure = value.lower() in ("true", "1", "on", "yes")
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -344,7 +344,7 @@ async def set_armor_tailored(request: Request, character_id: str,
     """Flip whether the equipped tailorable body armour is fitted to the wearer."""
     spec = _load_spec_or_404(request, character_id)
     spec.armor_tailored = value.lower() in ("true", "1", "on", "yes")
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -356,7 +356,7 @@ async def hp_damage(request: Request, character_id: str, amount: int = Form(...)
         spec.damage_taken = hp.apply_damage(spec, data, amount)
     except ValueError as e:
         raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -368,7 +368,7 @@ async def hp_heal(request: Request, character_id: str, amount: int = Form(...)):
         spec.damage_taken = hp.apply_healing(spec, data, amount)
     except ValueError as e:
         raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -377,7 +377,7 @@ async def hp_set(request: Request, character_id: str, value: int = Form(...)):
     spec = _load_spec_or_404(request, character_id)
     data = request.app.state.game_data
     spec.damage_taken = hp.set_current_hp(spec, data, value)
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -395,7 +395,7 @@ async def abilities_temp_modifier(request: Request, character_id: str,
     spec.temp_ability_modifiers = _set_temp_ability_modifier(
         spec.temp_ability_modifiers, ab, value,
     )
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -409,7 +409,7 @@ async def level_up_class(request: Request, character_id: str, class_id: str):
         _level_up(spec, request.app.state.game_data, class_id)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -423,7 +423,7 @@ async def level_up_roll(request: Request, character_id: str, class_id: str):
         _roll_pending_hp(spec, request.app.state.game_data, class_id)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}#modal-levelup-{class_id}", status_code=303)
 
 
@@ -436,7 +436,7 @@ async def level_up_confirm(request: Request, character_id: str, class_id: str):
         _confirm_level_up(spec, request.app.state.game_data, class_id)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -445,7 +445,7 @@ async def level_up_cancel(request: Request, character_id: str, class_id: str):
     """Idempotently clear any pending HP roll for this class."""
     spec = _load_spec_or_404(request, character_id)
     _cancel_pending_level_up(spec, class_id)
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -463,7 +463,7 @@ async def energy_drain_route(request: Request, character_id: str,
         _energy_drain(spec, request.app.state.game_data, levels, xp_mode)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -489,7 +489,7 @@ async def equipment_buy(request: Request, character_id: str,
             spec.gold = new_gold
     except (UnknownItem, InsufficientGold, _AmmoInsufficientGold, ValueError) as e:
         raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -513,7 +513,7 @@ async def equipment_add(request: Request, character_id: str,
             spec.inventory = shop_add_free(spec.inventory, item_id, game_data)
     except (UnknownItem, UnknownMagicItem, _UnknownAmmo, ValueError) as e:
         raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -539,7 +539,7 @@ async def equipment_equip(request: Request, character_id: str,
         )
     except (ValueError, WieldError) as e:
         raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -551,7 +551,7 @@ async def equipment_unequip(request: Request, character_id: str,
         spec.equipped = _unequip(item_id, equipped=spec.equipped)
     except ValueError as e:
         raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -574,7 +574,7 @@ async def equipment_remove(request: Request, character_id: str,
             )
     except ValueError as e:
         raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -589,7 +589,7 @@ async def equipment_stash(request: Request, character_id: str,
         )
     except ValueError as e:
         raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -603,7 +603,7 @@ async def equipment_unstash(request: Request, character_id: str,
         )
     except ValueError as e:
         raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -620,7 +620,7 @@ async def equipment_stow(request: Request, character_id: str,
         )
     except ValueError as e:
         raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -636,7 +636,7 @@ async def equipment_take_out(request: Request, character_id: str,
         )
     except ValueError as e:
         raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -648,7 +648,7 @@ async def equipment_stash_container(request: Request, character_id: str,
         spec.containers = shop_stash_container(spec.containers, instance_id)
     except ValueError as e:
         raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -660,7 +660,7 @@ async def equipment_unstash_container(request: Request, character_id: str,
         spec.containers = shop_unstash_container(spec.containers, instance_id)
     except ValueError as e:
         raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -676,7 +676,7 @@ async def equipment_remove_container(request: Request, character_id: str,
         )
     except ValueError as e:
         raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -690,7 +690,7 @@ async def equipment_equip_magic(request: Request, character_id: str,
         spec.magic_items = _equip_magic(spec.magic_items, instance_id, request.app.state.game_data)
     except ValueError as e:
         raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -702,7 +702,7 @@ async def equipment_unequip_magic(request: Request, character_id: str,
         spec.magic_items = _unequip_magic(spec.magic_items, instance_id)
     except ValueError as e:
         raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -714,7 +714,7 @@ async def equipment_use_charge(request: Request, character_id: str,
         spec.magic_items = _use_charge(spec.magic_items, instance_id)
     except ValueError as e:
         raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -726,7 +726,7 @@ async def equipment_reset_charges(request: Request, character_id: str,
         spec.magic_items = _reset_charges(spec.magic_items, instance_id)
     except ValueError as e:
         raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -741,7 +741,7 @@ async def equipment_remove_magic(request: Request, character_id: str,
         )
     except ValueError as e:
         raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -754,7 +754,7 @@ async def equipment_magic_note(request: Request, character_id: str,
         spec.magic_items = _set_magic_note(spec.magic_items, instance_id, note)
     except ValueError as e:
         raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -770,7 +770,7 @@ async def equipment_add_enchanted(request: Request, character_id: str,
             spec.enchanted, base_id, enchantment_id, request.app.state.game_data)
     except (UnknownEnchantment, IncompatibleBase, ValueError) as e:
         raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -801,7 +801,7 @@ async def equipment_equip_enchanted(request: Request, character_id: str,
             )
     except (ValueError, WieldError) as e:
         raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -821,7 +821,7 @@ async def equipment_unequip_enchanted(request: Request, character_id: str,
             spec.equipped = _unequip(instance_id, equipped=spec.equipped)
     except ValueError as e:
         raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -833,7 +833,7 @@ async def equipment_enchanted_use_charge(request: Request, character_id: str,
         spec.enchanted = _use_ench_charge(spec.enchanted, instance_id)
     except ValueError as e:
         raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -845,7 +845,7 @@ async def equipment_enchanted_reset_charges(request: Request, character_id: str,
         spec.enchanted = _reset_ench_charges(spec.enchanted, instance_id)
     except ValueError as e:
         raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -857,7 +857,7 @@ async def equipment_remove_enchanted(request: Request, character_id: str,
         spec.enchanted = _remove_enchanted(spec.enchanted, instance_id)
     except ValueError as e:
         raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -870,7 +870,7 @@ async def equipment_enchanted_note(request: Request, character_id: str,
         spec.enchanted = _set_enchanted_note(spec.enchanted, instance_id, note)
     except ValueError as e:
         raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -895,7 +895,7 @@ async def sheet_spell_learn(request: Request, character_id: str,
         )
     except ValueError as e:
         raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -908,7 +908,7 @@ async def sheet_spell_forget(request: Request, character_id: str,
         spec.classes[idx] = spell_engine.forget(spec.classes[idx], spell_id)
     except ValueError as e:
         raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -926,7 +926,7 @@ async def sheet_spell_assign(request: Request, character_id: str,
         )
     except ValueError as e:
         raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -939,7 +939,7 @@ async def sheet_spell_cast(request: Request, character_id: str,
         spec.classes[idx] = spell_engine.cast_slot(spec.classes[idx], slot_index)
     except ValueError as e:
         raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -952,7 +952,7 @@ async def sheet_spell_restore(request: Request, character_id: str,
         spec.classes[idx] = spell_engine.restore_slot(spec.classes[idx], slot_index)
     except ValueError as e:
         raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -965,7 +965,7 @@ async def sheet_spell_clear(request: Request, character_id: str,
         spec.classes[idx] = spell_engine.clear_slot(spec.classes[idx], slot_index)
     except ValueError as e:
         raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -982,7 +982,7 @@ async def sheet_power_learn(request: Request, character_id: str,
             spec.classes[idx], data.classes[class_id], data, spec.ruleset, power_id)
     except ValueError as e:
         raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -995,7 +995,7 @@ async def sheet_power_forget(request: Request, character_id: str,
         spec.classes[idx] = spell_engine.forget(spec.classes[idx], power_id)
     except ValueError as e:
         raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -1006,7 +1006,7 @@ def _power_pool_op(request: Request, character_id: str, class_id: str, op):
         spec.classes[idx] = op(spec.classes[idx])
     except ValueError as e:
         raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -1038,7 +1038,7 @@ async def sheet_innate_spend(request: Request, character_id: str,
         spec = spend_innate(spec, ability_id, request.app.state.game_data)
     except InnateError as e:
         raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -1047,7 +1047,7 @@ async def sheet_innate_restore(request: Request, character_id: str,
                                ability_id: str = Form(...)):
     spec = _load_spec_or_404(request, character_id)
     spec = restore_innate(spec, ability_id)
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -1055,7 +1055,7 @@ async def sheet_innate_restore(request: Request, character_id: str,
 async def sheet_innate_reset(request: Request, character_id: str):
     spec = _load_spec_or_404(request, character_id)
     spec = reset_innate(spec)
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -1081,7 +1081,7 @@ async def sheet_spell_source_add(request: Request, character_id: str):
         )
     except (SpellSourceError, ValueError) as e:
         raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -1094,7 +1094,7 @@ async def sheet_spell_source_remove(request: Request, character_id: str,
             spec.spell_sources, instance_id)
     except SpellSourceError as e:
         raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -1114,7 +1114,7 @@ async def sheet_spell_source_cast(request: Request, character_id: str,
             spec.spell_sources, instance_id, spell_id)
     except SpellSourceError as e:
         raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -1136,7 +1136,7 @@ async def sheet_spell_source_copy(request: Request, character_id: str,
         raise HTTPException(400, str(e))
     spec.classes[idx] = entry
     spec.spell_sources = sources
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -1163,7 +1163,7 @@ async def rest_night(request: Request, character_id: str, mode: str = Form("rest
         raise HTTPException(400, "A dead character cannot rest")
     spec.classes = [_apply_rest_mode(e, mode) for e in spec.classes]
     spec = reset_innate(spec)
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -1175,7 +1175,7 @@ async def rest_full_day_roll(request: Request, character_id: str):
     if spec.ruleset.strict_mode and spec.pending_rest_heal is not None:
         raise HTTPException(400, "Healing roll is already locked (Strict Mode)")
     spec.pending_rest_heal = dice.roll("1d3")
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}#modal-rest", status_code=303)
 
 
@@ -1195,7 +1195,7 @@ async def rest_full_day(request: Request, character_id: str,
     except ValueError as e:
         raise HTTPException(400, str(e))
     spec.pending_rest_heal = None
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -1210,7 +1210,7 @@ async def ammo_add(request: Request, character_id: str,
                                    enchantment_id or None, request.app.state.game_data)
     except (_UnknownAmmo, _IncompatibleAmmo, ValueError) as e:
         raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -1225,7 +1225,7 @@ async def ammo_adjust(request: Request, character_id: str,
     # drop any load pointing at a now-removed stack
     live = {s.instance_id for s in spec.ammo}
     spec.loaded_ammo = {k: v for k, v in spec.loaded_ammo.items() if v in live}
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -1239,7 +1239,7 @@ async def ammo_remove(request: Request, character_id: str,
         raise HTTPException(400, str(e))
     live = {s.instance_id for s in spec.ammo}
     spec.loaded_ammo = {k: v for k, v in spec.loaded_ammo.items() if v in live}
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -1248,7 +1248,7 @@ async def ammo_load(request: Request, character_id: str,
                     weapon_key: str = Form(...), instance_id: str = Form(...)):
     spec = _load_spec_or_404(request, character_id)
     spec.loaded_ammo = _load_ammo(spec.loaded_ammo, weapon_key, instance_id)
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -1257,7 +1257,7 @@ async def ammo_unload(request: Request, character_id: str,
                       weapon_key: str = Form(...)):
     spec = _load_spec_or_404(request, character_id)
     spec.loaded_ammo = _unload_ammo(spec.loaded_ammo, weapon_key)
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -1280,7 +1280,7 @@ async def sheet_gem_add(request: Request, character_id: str):
         spec.gems = valuables_engine.add_gem(spec.gems, value, count, label)
     except ValuableError as e:
         raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -1292,7 +1292,7 @@ async def sheet_gem_adjust(request: Request, character_id: str,
         spec.gems = valuables_engine.adjust_gem_count(spec.gems, instance_id, delta)
     except ValuableError as e:
         raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -1305,7 +1305,7 @@ async def sheet_gem_sell(request: Request, character_id: str,
             spec.gems, spec.gold, instance_id)
     except ValuableError as e:
         raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -1318,7 +1318,7 @@ async def sheet_gem_sell_all(request: Request, character_id: str,
             spec.gems, spec.gold, instance_id)
     except ValuableError as e:
         raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -1330,7 +1330,7 @@ async def sheet_gem_remove(request: Request, character_id: str,
         spec.gems = valuables_engine.remove_gem(spec.gems, instance_id)
     except ValuableError as e:
         raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -1346,7 +1346,7 @@ async def sheet_jewellery_add(request: Request, character_id: str,
             spec.jewellery, value, _truthy(damaged), label)
     except ValuableError as e:
         raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -1360,7 +1360,7 @@ async def sheet_jewellery_toggle_damaged(request: Request, character_id: str,
             spec.jewellery, instance_id, _truthy(damaged))
     except ValuableError as e:
         raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -1373,7 +1373,7 @@ async def sheet_jewellery_sell(request: Request, character_id: str,
             spec.jewellery, spec.gold, instance_id)
     except ValuableError as e:
         raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -1386,7 +1386,7 @@ async def sheet_jewellery_remove(request: Request, character_id: str,
             spec.jewellery, instance_id)
     except ValuableError as e:
         raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -1396,7 +1396,7 @@ async def sheet_possession_add(request: Request, character_id: str,
     spec = _load_spec_or_404(request, character_id)
     spec.other_possessions = possessions_engine.add_possession(
         spec.other_possessions, text)
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -1409,7 +1409,7 @@ async def sheet_possession_remove(request: Request, character_id: str,
             spec.other_possessions, index)
     except PossessionError as e:
         raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
@@ -1418,5 +1418,5 @@ async def sheet_notes_set(request: Request, character_id: str,
                           notes: str = Form("")):
     spec = _load_spec_or_404(request, character_id)
     spec.notes = notes
-    save_character(character_id, spec, request.app.state.characters_dir)
+    save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
