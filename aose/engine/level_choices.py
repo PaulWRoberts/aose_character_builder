@@ -38,10 +38,34 @@ def proficiency_capacity(spec: CharacterSpec, data: GameData) -> Capacity | None
     )
 
 
+def talent_capacities(spec: CharacterSpec, data: GameData) -> list[Capacity]:
+    """One Capacity per applicable level-banded choice group whose ``requires_rule``
+    is satisfied (combat talents today). ``earned`` bands by the granting class's
+    level; ``spent`` is how many options are already chosen."""
+    from aose.engine.feature_choices import effective_pick
+    out: list[Capacity] = []
+    for entry in spec.classes:
+        cls = data.classes.get(entry.class_id)
+        if cls is None:
+            continue
+        for g in cls.feature_choices:
+            if g.pick_by_level is None:
+                continue
+            if g.requires_rule and not getattr(spec.ruleset, g.requires_rule, False):
+                continue
+            out.append(Capacity(
+                kind="talent", group_id=g.id, label=g.name,
+                earned=effective_pick(g, entry.level),
+                spent=len(spec.feature_choices.get(g.id, [])),
+            ))
+    return out
+
+
 def all_capacities(spec: CharacterSpec, data: GameData) -> list[Capacity]:
-    """Every provider's capacity with ``remaining > 0`` (talents added in Task B2)."""
+    """Every provider's capacity with ``remaining > 0``."""
     out: list[Capacity] = []
     prof = proficiency_capacity(spec, data)
     if prof is not None and prof.remaining > 0:
         out.append(prof)
+    out += [c for c in talent_capacities(spec, data) if c.remaining > 0]
     return out
