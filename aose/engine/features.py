@@ -147,10 +147,13 @@ def feature_modifiers(spec: CharacterSpec, data: GameData) -> list[Modifier]:
     out: list[Modifier] = []
     for feat, level, _src in iter_reached(spec, data):
         for g in feat.granted_modifiers:
+            condition = g.condition
+            if condition and "{param}" in condition:
+                condition = condition.replace("{param}", spec.choice_params.get(feat.id, ""))
             out.append(Modifier(
                 target=g.target, op=g.op,
                 value=resolve_value(g, level=level, eff=eff),
-                condition=g.condition, source=feat.name,
+                condition=condition, source=feat.name,
             ))
     return out
 
