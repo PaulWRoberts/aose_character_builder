@@ -29,6 +29,7 @@ RULE_LABELS = {
     "optional_staves": "Spellcasters and Staves",
     "two_weapon_fighting": "Attacking with Two Weapons",
     "individual_initiative": "Individual Initiative",
+    "combat_talents": "Combat Talents",
 }
 
 # Rules whose engine/builder integration is fully wired up.  The settings
@@ -48,6 +49,7 @@ IMPLEMENTED_RULES = {
     "optional_staves",
     "two_weapon_fighting",
     "individual_initiative",
+    "combat_talents",
 }
 
 # Choice-group rules that have full integration too.
@@ -95,6 +97,9 @@ RULE_DESCRIPTIONS = {
         "Roll initiative for each combatant individually, modified by DEX, "
         "instead of one roll per side. Shows your initiative modifier on the "
         "sheet.",
+    "combat_talents":
+        "Fighters may select a combat talent at 1st, 5th, and 10th level "
+        "(Cleave, Defender, Leader, Main gauche, Slayer, Weapon specialist).",
 }
 
 
@@ -108,9 +113,12 @@ def _choice(field):
 
 # Optional rules attributed to the source they come from, in display order.
 # Nesting expresses dependencies: a child rule is unavailable when any ancestor
-# is unchecked. Sources absent from this map (Carcass Crawler 1 & 3) contribute
+# is unchecked. Sources absent from this map (Carcass Crawler 3) contribute
 # no optional rules.
 SOURCE_RULES = {
+    "carcass_crawler_1": [
+        _rule("combat_talents"),
+    ],
     "ose_classic_fantasy": [
         _rule("ascending_ac"),
         _rule("variable_weapon_damage"),
