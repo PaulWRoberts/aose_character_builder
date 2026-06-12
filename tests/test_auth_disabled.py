@@ -3,6 +3,7 @@ from fastapi.responses import PlainTextResponse
 from fastapi.testclient import TestClient
 from starlette.requests import Request
 
+from aose.web.auth.config import AuthConfig
 from aose.web.auth.middleware import WorkspaceAuthMiddleware
 from aose.web.auth.workspace import Workspace, resolve_workspace
 
@@ -48,3 +49,37 @@ def test_middleware_sets_request_state_when_auth_off(tmp_path):
     resp = client.get("/probe")
     assert resp.status_code == 200
     assert resp.text.endswith("characters")
+
+
+def _auth_state(tmp_path):
+    cfg = AuthConfig(
+        session_secret="s",
+        whitelist_path=tmp_path / "whitelist.txt",
+        users_root=tmp_path / "users",
+        firebase_project_id="demo", firebase_api_key="k",
+        firebase_auth_domain="demo.firebaseapp.com",
+        use_emulator=True, emulator_host="localhost:9099", cookie_secure=False,
+    )
+    return {
+        "auth_config": cfg,
+        "characters_dir": tmp_path / "characters",
+        "drafts_dir": tmp_path / "drafts",
+        "settings_path": tmp_path / "settings.json",
+        "examples_dir": tmp_path / "examples",
+    }
+
+
+def test_resolve_workspace_auth_on_is_per_user(tmp_path):
+    state = _auth_state(tmp_path)
+    ws_a = resolve_workspace(_fake_request(state, session={"uid": "uid-alice"}))
+    ws_b = resolve_workspace(_fake_request(state, session={"uid": "uid-bob"}))
+    assert ws_a.characters_dir.is_relative_to(tmp_path / "users")
+    assert ws_a.settings_path.name == "settings.json"
+    assert ws_a.characters_dir.parent != ws_b.characters_dir.parent
+
+
+def test_resolve_workspace_rejects_unsafe_uid(tmp_path):
+    import pytest
+    state = _auth_state(tmp_path)
+    with pytest.raises(ValueError):
+        resolve_workspace(_fake_request(state, session={"uid": "../escape"}))
