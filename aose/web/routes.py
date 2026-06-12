@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 from fastapi import APIRouter, Form, HTTPException, Request
@@ -276,6 +277,20 @@ def _load_spec_or_404(request: Request, character_id: str):
         return load_character(character_id, request.state.characters_dir)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail=f"Character '{character_id}' not found")
+
+
+# ── Character export ───────────────────────────────────────────────────────
+
+@router.get("/character/{character_id}/export")
+async def character_export(request: Request, character_id: str):
+    """Download character as JSON."""
+    spec = _load_spec_or_404(request, character_id)
+    headers = {"Content-Disposition": f'attachment; filename="{character_id}.json"'}
+    return Response(
+        content=json.dumps(spec.model_dump(mode="json"), indent=2),
+        media_type="application/json",
+        headers=headers,
+    )
 
 
 @router.post("/character/{character_id}/xp")
