@@ -34,11 +34,7 @@ class WorkspaceAuthMiddleware(BaseHTTPMiddleware):
         if not (config is not None and is_public):
             # Skip workspace resolution for public auth routes (login/logout) —
             # they have no uid yet and don't need per-user storage dirs.
-            try:
-                ws = resolve_workspace(request)
-            except NotImplementedError:
-                return RedirectResponse(url="/login", status_code=303)
-
+            ws = resolve_workspace(request)
             request.state.characters_dir = ws.characters_dir
             request.state.drafts_dir = ws.drafts_dir
             request.state.settings_path = ws.settings_path

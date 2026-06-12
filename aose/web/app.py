@@ -2,9 +2,19 @@ from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.sessions import SessionMiddleware
 from starlette.types import Scope
 
 from aose.data.loader import GameData
+
+from .auth.config import AuthConfig
+from .auth.middleware import WorkspaceAuthMiddleware
+from .auth.routes import router as auth_router
+from .auth.verify import build_verifier
+from .auth.whitelist import Whitelist
+from .routes import router
+from .settings_routes import router as settings_router
+from .wizard import router as wizard_router
 
 
 class NoCacheStaticFiles(StaticFiles):
@@ -21,17 +31,6 @@ class NoCacheStaticFiles(StaticFiles):
         response = await super().get_response(path, scope)
         response.headers["Cache-Control"] = "no-cache"
         return response
-
-from starlette.middleware.sessions import SessionMiddleware
-
-from .routes import router
-from .settings_routes import router as settings_router
-from .wizard import router as wizard_router
-from .auth.config import AuthConfig
-from .auth.middleware import WorkspaceAuthMiddleware
-from .auth.routes import router as auth_router
-from .auth.verify import build_verifier
-from .auth.whitelist import Whitelist
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 DEFAULT_DATA_DIR = PROJECT_ROOT / "data"
