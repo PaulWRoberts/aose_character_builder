@@ -36,7 +36,7 @@ def resolve_workspace(request: Request) -> Workspace:
     characters_dir = user_base / "characters"
     drafts_dir = user_base / "drafts"
     settings_path = user_base / "settings.json"
-    _seed_new_user(user_base, characters_dir, getattr(state, "examples_dir", None))
+    seed_user_workspace(user_base, characters_dir, getattr(state, "examples_dir", None))
     return Workspace(
         characters_dir=characters_dir,
         drafts_dir=drafts_dir,
@@ -44,8 +44,8 @@ def resolve_workspace(request: Request) -> Workspace:
     )
 
 
-def _seed_new_user(user_base: Path, characters_dir: Path, examples_dir) -> None:
-    """First time we see a user, create their dirs and seed example characters."""
+def seed_user_workspace(user_base: Path, characters_dir: Path, examples_dir) -> None:
+    """Create dirs and seed examples on first login; no-op if user already exists."""
     if user_base.exists():
         return
     characters_dir.mkdir(parents=True, exist_ok=True)
