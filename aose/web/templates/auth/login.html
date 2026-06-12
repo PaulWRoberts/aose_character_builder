@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="auth-card">
+  <h1>Sign in</h1>
+  <p>This is an invite-only tool. Sign in with the Google account you were invited with.</p>
+  <button id="google-signin" type="button">Sign in with Google</button>
+  <p id="auth-error" class="auth-error" hidden></p>
+</section>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth, connectAuthEmulator, GoogleAuthProvider, signInWithPopup }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+  const app = initializeApp({
+    apiKey: "{{ firebase_api_key }}",
+    authDomain: "{{ firebase_auth_domain }}",
+    projectId: "{{ firebase_project_id }}",
+  });
+  const auth = getAuth(app);
+  {% if use_emulator %}
+  connectAuthEmulator(auth, "http://{{ emulator_host }}", { disableWarnings: true });
+  {% endif %}
+
+  const errEl = document.getElementById("auth-error");
+  function showError(msg) { errEl.textContent = msg; errEl.hidden = false; }
+
+  document.getElementById("google-signin").addEventListener("click", async () => {
+    errEl.hidden = true;
+    try {
+      const cred = await signInWithPopup(auth, new GoogleAuthProvider());
+      const idToken = await cred.user.getIdToken();
+      const resp = await fetch("/login/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken }),
+      });
+      if (resp.ok) { window.location.assign("/"); return; }
+      const data = await resp.json().catch(() => ({}));
+      showError(data.error === "not invited"
+        ? "That Google account isn't on the invite list."
+        : "Sign-in failed. Please try again.");
+    } catch (e) {
+      showError("Sign-in was cancelled or failed.");
+    }
+  });
+</script>
+{% endblock %}
