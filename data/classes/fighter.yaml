@@ -152,3 +152,61 @@ features:
   text: |-
     A fighter may be granted a title such as Baron or Baroness. The land under the fighter’s control is then known as a Barony.
   gained_at_level: 9
+feature_choices:
+- id: combat_talents
+  name: Combat Talents
+  requires_rule: combat_talents
+  pick_by_level:
+    1: 1
+    5: 2
+    10: 3
+  text: |-
+    Carcass Crawler #1 optional rule. Select one combat talent at 1st, 5th, and
+    10th level.
+  options:
+  - id: cleave
+    name: Cleave
+    text: |-
+      When in melee with multiple foes, if you strike a killing blow you may
+      immediately make another attack against a second foe at −2.
+  - id: defender
+    name: Defender
+    text: |-
+      While you are in melee with a foe, any attacks that foe makes against
+      characters other than you are penalised at −2.
+  - id: leader
+    name: Leader
+    text: |-
+      Mercenaries or retainers under your command within 60′ gain +1 to
+      morale/loyalty. All allies within 60′ gain +1 to saves vs fear.
+  - id: main_gauche
+    name: Main gauche
+    text: |-
+      When fighting with a dagger in the off hand (in place of a shield), choose
+      each round to gain +1 AC or +1 to attack rolls.
+  - id: slayer
+    name: Slayer
+    text: |-
+      +1 to attack and damage rolls against foes of a chosen type (chosen when
+      this talent is taken).
+    param:
+      kind: text
+      label: Enemy type
+    granted_modifiers:
+    - target: attack
+      op: add
+      value: 1
+      condition: "vs {param}"
+    - target: damage
+      op: add
+      value: 1
+      condition: "vs {param}"
+  - id: weapon_specialist
+    name: Weapon specialist
+    text: |-
+      +1 to attack and damage rolls with a chosen weapon type. Disallowed when
+      the optional Weapon Proficiency rule is in use.
+    excluded_when_rule: weapon_proficiency
+    param:
+      kind: weapon
+      label: Weapon
