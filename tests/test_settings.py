@@ -435,8 +435,9 @@ def test_source_rules_attributes_rules_to_sources():
     assert "multiclassing" in advanced
     # strict_mode is standalone, never inside a source tree.
     assert "strict_mode" not in classic and "strict_mode" not in advanced
-    # Carcass Crawler issues contribute no optional rules.
-    assert SOURCE_RULES.get("carcass_crawler_1", []) == []
+    # CC1 contributes combat_talents; CC3 contributes nothing.
+    cc1 = flatten_rule_fields(SOURCE_RULES.get("carcass_crawler_1", []))
+    assert "combat_talents" in cc1
     assert SOURCE_RULES.get("carcass_crawler_3", []) == []
 
 
