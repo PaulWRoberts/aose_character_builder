@@ -10,7 +10,7 @@ _PUBLIC_PREFIXES = ("/login", "/logout", "/static")
 
 
 def _is_public(path: str) -> bool:
-    return any(path == p or path.startswith(p + "/") or path.startswith(p)
+    return any(path == p or path.startswith(p + "/")
                for p in _PUBLIC_PREFIXES)
 
 
