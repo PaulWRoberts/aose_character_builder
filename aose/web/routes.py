@@ -1,11 +1,12 @@
 import json
 from pathlib import Path
 
-from fastapi import APIRouter, Form, HTTPException, Request
+from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from aose.web.templating import make_templates
 
-from aose.characters.storage import delete_character, list_character_ids, load_character, save_character
+from aose.characters.storage import delete_character, list_character_ids, load_character, save_character, slugify, unique_character_id
+from aose.models import CharacterSpec
 from aose.engine import currency as _currency, dice, hp, spells as spell_engine
 from aose.engine.currency import CurrencyError
 from aose.engine.equip import WieldError, equip as _equip, unequip as _unequip
@@ -291,6 +292,22 @@ async def character_export(request: Request, character_id: str):
         media_type="application/json",
         headers=headers,
     )
+
+
+# ── Character import ──────────────────────────────────────────────────────
+
+@router.post("/import")
+async def character_import(request: Request, file: UploadFile = File(...)):
+    """Upload and import a character from a JSON file."""
+    raw = await file.read()
+    try:
+        spec = CharacterSpec.model_validate(json.loads(raw))
+    except (json.JSONDecodeError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail=f"Invalid character file: {exc}")
+    characters_dir = request.state.characters_dir
+    cid = unique_character_id(slugify(spec.name), characters_dir)
+    save_character(cid, spec, characters_dir)
+    return RedirectResponse(url=f"/character/{cid}", status_code=303)
 
 
 @router.post("/character/{character_id}/xp")
