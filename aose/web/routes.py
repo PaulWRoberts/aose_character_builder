@@ -81,9 +81,12 @@ from aose.engine.features import one_handed_two_handed_weapons as _1h2h
 from aose.engine.proficiency import (
     allowed_armor_ids,
     allowed_weapon_ids,
+    base_weapon_id,
     shields_allowed,
+    specialisation_allowed,
     two_weapon_eligible,
 )
+from aose.engine.level_choices import proficiency_capacity
 from aose.engine import spell_sources as spell_source_engine
 from aose.engine.spell_sources import SpellSourceError
 from aose.engine import valuables as valuables_engine
@@ -94,7 +97,7 @@ from aose.engine.sources import content_enabled
 from aose.engine.innate import (
     InnateError, reset_innate, restore_innate, spend_innate,
 )
-from aose.models import Ability, Ammunition
+from aose.models import Ability, Ammunition, Weapon
 from aose.sheet.view import build_sheet, spell_source_add_options
 
 router = APIRouter()
@@ -441,6 +444,35 @@ async def level_up_class(request: Request, character_id: str, class_id: str):
         _level_up(spec, request.app.state.game_data, class_id)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    save_character(character_id, spec, request.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/proficiency/add")
+async def add_proficiency(request: Request, character_id: str,
+                          weapon_id: str = Form(...),
+                          specialise: bool = Form(False)):
+    data = request.app.state.game_data
+    spec = _load_spec_or_404(request, character_id)
+    cap = proficiency_capacity(spec, data)
+    if cap is None or cap.remaining <= 0:
+        raise HTTPException(400, "No weapon-proficiency slots remaining.")
+    classes = [data.classes[e.class_id] for e in spec.classes if e.class_id in data.classes]
+    allowed = allowed_weapon_ids(classes, data, spec.ruleset)
+    item = data.items.get(weapon_id)
+    if not isinstance(item, Weapon) or base_weapon_id(item) != weapon_id:
+        raise HTTPException(400, "Pick a base weapon type.")
+    if allowed != "all" and weapon_id not in allowed:
+        raise HTTPException(400, "Weapon not allowed for this class.")
+    if specialise:
+        if not specialisation_allowed(classes):
+            raise HTTPException(400, "This class cannot specialise.")
+        if cap.remaining < 2 and weapon_id not in spec.weapon_proficiencies:
+            raise HTTPException(400, "Specialising a new weapon needs 2 slots.")
+    if weapon_id not in spec.weapon_proficiencies:
+        spec.weapon_proficiencies.append(weapon_id)
+    if specialise and weapon_id not in spec.weapon_specialisations:
+        spec.weapon_specialisations.append(weapon_id)
     save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
