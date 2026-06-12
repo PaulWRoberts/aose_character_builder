@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -18,6 +18,20 @@ class DailyUses(BaseModel):
     scales_with_level: bool = False
 
 
+class OptionParam(BaseModel):
+    """A free player-chosen parameter attached to a ChoiceOption.
+
+    ``kind="text"`` → a free-text value substituted into the option's modifier
+    ``condition`` where it contains ``{param}`` (Slayer's enemy type).
+    ``kind="weapon"`` → a base-weapon id written to
+    ``CharacterSpec.weapon_specialisations`` (Weapon specialist).
+    """
+    model_config = ConfigDict(extra="forbid")
+
+    kind: Literal["text", "weapon"]
+    label: str
+
+
 class ChoiceOption(BaseModel):
     """One selectable option in a ``FeatureChoice`` group. Deliberately
     feature-shaped (``mechanical`` + ``granted_modifiers`` + ``daily_uses``) so a
@@ -33,6 +47,8 @@ class ChoiceOption(BaseModel):
     granted_modifiers: list[GrantedModifier] = Field(default_factory=list)
     daily_uses: DailyUses | None = None
     spell_id: str | None = None
+    excluded_when_rule: str | None = None
+    param: OptionParam | None = None
 
 
 class FeatureChoice(BaseModel):
@@ -49,3 +65,5 @@ class FeatureChoice(BaseModel):
     roll_dice: str | None = None     # e.g. "d8" / "d10" for the Roll button
     cosmetic: bool = False           # purely flavor (Fiendish Appearance)
     options: list[ChoiceOption]
+    requires_rule: str | None = None
+    pick_by_level: dict[int, int] | None = None

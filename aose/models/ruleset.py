@@ -30,6 +30,7 @@ class RuleSet(BaseModel):
     optional_staves: bool = False
     two_weapon_fighting: bool = False
     individual_initiative: bool = False
+    combat_talents: bool = False
 
     encumbrance: EncumbranceMode = "basic"
 

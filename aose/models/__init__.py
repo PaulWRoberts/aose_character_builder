@@ -6,7 +6,7 @@ from .character_class import (
     ClassLevelData,
     ClassFeature,
 )
-from .choice import ChoiceOption, DailyUses, FeatureChoice
+from .choice import ChoiceOption, DailyUses, FeatureChoice, OptionParam
 from .spell import Spell
 from .spell_list import SpellList
 from .language import LanguageData
@@ -48,6 +48,7 @@ __all__ = [
     "ChoiceOption",
     "DailyUses",
     "FeatureChoice",
+    "OptionParam",
     "Spell",
     "SpellList",
     "LanguageData",

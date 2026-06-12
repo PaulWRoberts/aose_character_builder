@@ -225,6 +225,10 @@ class CharacterSpec(BaseModel):
     weapon_specialisations: list[str] = Field(default_factory=list)
     # CC3 feature choices: group id -> chosen option ids (distinct).
     feature_choices: dict[str, list[str]] = Field(default_factory=dict)
+    # Free player-chosen params for parameterised choice options: option id ->
+    # value. Slayer: enemy-type text. (Weapon specialist's weapon lives in
+    # weapon_specialisations.)
+    choice_params: dict[str, str] = Field(default_factory=dict)
     # Innate daily-use ability id -> uses spent today (reset on rest).
     innate_uses: dict[str, int] = Field(default_factory=dict)
     ruleset: RuleSet = Field(default_factory=RuleSet)
