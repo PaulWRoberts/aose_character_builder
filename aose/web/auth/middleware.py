@@ -24,19 +24,24 @@ class WorkspaceAuthMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next):  # type: ignore[override]
         config = getattr(request.app.state, "auth_config", None)
+        is_public = _is_public(request.url.path)
 
-        if config is not None and not _is_public(request.url.path):
+        if config is not None and not is_public:
             uid = request.session.get("uid") if "session" in request.scope else None
             if not uid:
                 return RedirectResponse(url="/login", status_code=303)
 
-        try:
-            ws = resolve_workspace(request)
-        except NotImplementedError:
-            return RedirectResponse(url="/login", status_code=303)
+        if not (config is not None and is_public):
+            # Skip workspace resolution for public auth routes (login/logout) —
+            # they have no uid yet and don't need per-user storage dirs.
+            try:
+                ws = resolve_workspace(request)
+            except NotImplementedError:
+                return RedirectResponse(url="/login", status_code=303)
 
-        request.state.characters_dir = ws.characters_dir
-        request.state.drafts_dir = ws.drafts_dir
-        request.state.settings_path = ws.settings_path
+            request.state.characters_dir = ws.characters_dir
+            request.state.drafts_dir = ws.drafts_dir
+            request.state.settings_path = ws.settings_path
+
         response: Response = await call_next(request)
         return response

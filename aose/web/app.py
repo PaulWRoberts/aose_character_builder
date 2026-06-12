@@ -22,10 +22,16 @@ class NoCacheStaticFiles(StaticFiles):
         response.headers["Cache-Control"] = "no-cache"
         return response
 
+from starlette.middleware.sessions import SessionMiddleware
+
 from .routes import router
 from .settings_routes import router as settings_router
 from .wizard import router as wizard_router
+from .auth.config import AuthConfig
 from .auth.middleware import WorkspaceAuthMiddleware
+from .auth.routes import router as auth_router
+from .auth.verify import build_verifier
+from .auth.whitelist import Whitelist
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 DEFAULT_DATA_DIR = PROJECT_ROOT / "data"
@@ -53,6 +59,8 @@ def create_app(
     examples_dir: Path = DEFAULT_EXAMPLES_DIR,
     settings_path: Path = DEFAULT_SETTINGS_PATH,
     seed_from_examples: bool = True,
+    auth_config: "AuthConfig | None" = None,
+    auth_verifier=None,
 ) -> FastAPI:
     app = FastAPI(title="AOSE Character Builder")
     app.state.data_dir = data_dir
@@ -61,14 +69,29 @@ def create_app(
     app.state.examples_dir = examples_dir
     app.state.settings_path = settings_path
     app.state.game_data = GameData.load(data_dir)
-    app.state.auth_config = None  # auth disabled by default (Phase D wires it on)
+    if auth_config is None:
+        auth_config = AuthConfig.from_env(PROJECT_ROOT)
+    app.state.auth_config = auth_config
 
-    if seed_from_examples:
+    if auth_config is not None:
+        app.state.auth_whitelist = Whitelist(auth_config.whitelist_path)
+        app.state.auth_verifier = auth_verifier or build_verifier(auth_config)
+
+    if seed_from_examples and auth_config is None:
         _bootstrap_characters(characters_dir, examples_dir)
 
     static_dir = Path(__file__).parent / "static"
     app.mount("/static", NoCacheStaticFiles(directory=str(static_dir)), name="static")
     app.add_middleware(WorkspaceAuthMiddleware)
+
+    if auth_config is not None:
+        app.add_middleware(
+            SessionMiddleware,
+            secret_key=auth_config.session_secret,
+            https_only=auth_config.cookie_secure,
+            same_site="lax",
+        )
+        app.include_router(auth_router)
 
     app.include_router(router)
     app.include_router(wizard_router)

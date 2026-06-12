@@ -5,8 +5,9 @@ from pathlib import Path
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
-from aose.web.auth.identity import normalise_email
+from aose.web.auth.identity import normalise_email, safe_uid
 from aose.web.auth.verify import TokenError
+from aose.web.auth.workspace import _seed_new_user
 from aose.web.templating import make_templates
 
 router = APIRouter()
@@ -45,6 +46,11 @@ async def login_session(request: Request):
         return JSONResponse({"error": "not invited"}, status_code=403)
     request.session["uid"] = user.uid
     request.session["email"] = normalise_email(user.email)
+    # Eagerly seed the per-user workspace so it exists before the first page load.
+    cfg = request.app.state.auth_config
+    uid = safe_uid(user.uid)
+    user_base = cfg.users_root / uid
+    _seed_new_user(user_base, user_base / "characters", getattr(request.app.state, "examples_dir", None))
     return JSONResponse({"ok": True})
 
 
