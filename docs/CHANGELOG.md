@@ -8,6 +8,7 @@ For the living architecture (how the subsystems fit together *now*), see
 
 | Date | Feature | Branch | Spec/Plan slug |
 |---|---|---|---|
+| 2026-06-12 | Combat Talents (CC1) + level-up choice mechanism | feat/combat-talents | 2026-06-12-combat-talents |
 | 2026-06-12 | Hosted auth & multi-tenancy: invite-only GCIP Google sign-in, per-user workspaces, export/import | feat/hosted-auth-multitenancy | 2026-06-11-hosted-auth-multitenancy |
 | 2026-06-11 | CC2/4/5 races & classes: Wood Elf, Halfling Hearthsinger, Halfling Reeve, Arcane Bard, Ratling, Changeling (class + race duals); Goblin/Wolf Hunter conditional `attack`/`damage` grants; `dryad` language | feat/cc2-4-5-races-classes | — |
 | 2026-06-10 | Source-organized content & optional rules: per-category `disabled_content`, source-panel settings/wizard UI, `SOURCE_RULES` dependency tree | feature/source-content-rules-organization | source-content-rules-organization |

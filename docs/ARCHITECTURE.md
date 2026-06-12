@@ -90,12 +90,51 @@ group. Selections live on `CharacterSpec.feature_choices: dict[str, list[str]]`
 (group id → chosen option ids). Chosen `ChoiceOption`s are feature-shaped
 (`mechanical`, `granted_modifiers`, `daily_uses`, `spell_id`), so they flow
 through `iter_reached` / `feature_modifiers` / `feature_weapons` with no
-per-option engine code. The wizard's `class_setup` step shows a Features picker (roll-first:
-`POST /{id}/feature-choices/roll?group_id=X` rolls one table; Strict Mode locks
-after the first roll; non-strict allows re-roll and manual checkbox override via
-`POST /{id}/feature-choices`). Engine: `aose/engine/feature_choices.py`
-`roll_choice`/`validate_choice`. Selected features render on the sheet alongside
+per-option engine code. Engine: `aose/engine/feature_choices.py`
+`roll_choice`/`validate_choice`/`effective_pick`. Selected features render on the sheet alongside
 normal class/race features.
+
+*Level-banded pick count:* `FeatureChoice.pick_by_level: dict[int, int]` gives
+the number of picks at each level band (e.g. `{1:1, 5:2, 10:3}`). `effective_pick(group,
+level)` returns the right count; at creation (wizard) level is always 1.
+Groups with `pick_by_level` feed the **unspent-capacity** mechanism below.
+
+*Rule gating:* `FeatureChoice.requires_rule: str` hides a group unless
+`spec.ruleset.<field>` is True. `ChoiceOption.excluded_when_rule: str` hides a
+single option (Weapon specialist hides when `weapon_proficiency` is on).
+All gating flows through the single chokepoint `_active_choice_groups` (wizard)
+and the equivalent filter in `_level_choice_extras` (sheet).
+
+*Parameterised options:* `ChoiceOption.param: OptionParam` declares a player-chosen
+free value. `kind="text"` stores the value in `CharacterSpec.choice_params: dict[str,str]`
+keyed by option id; `feature_modifiers` substitutes it into any `{param}` in a
+modifier's `condition` (Slayer: `"vs {param}"` → `"vs dragons"`).
+`kind="weapon"` writes the value directly into `spec.weapon_specialisations`
+(Weapon specialist).
+
+**Wizard feature-choices flow:** `class_setup` step shows a picker (roll-first
+for groups with `roll_dice`; manual checkbox grid for groups without, like Combat
+Talents). `POST /{id}/feature-choices/roll?group_id=X` rolls one table; Strict Mode
+locks after the first roll; non-strict allows re-roll and manual override via
+`POST /{id}/feature-choices` which calls `_apply_feature_overrides` (reads
+`param_<option_id>` fields for parameterised options). Cascading clear in
+`_apply_rule_changes` removes `feature_choices["combat_talents"]`,
+`choice_params`, and any talent-granted `weapon_specialisations` when
+`combat_talents` is toggled off.
+
+**Unspent-capacity mechanism (`aose/engine/level_choices.py`):** A subsystem-agnostic
+`Capacity(kind, group_id, label, earned, spent)` model tracks how many selections
+a character has earned vs. spent for any pick-granting subsystem. Two providers:
+`proficiency_capacity(spec, data)` (weapon-proficiency slots from THAC0 progression)
+and `talent_capacities(spec, data)` (one entry per level-banded group whose rule is
+active). `all_capacities` aggregates both and returns only those with `remaining > 0`.
+The sheet exposes these as `level_choices`, with matching pickers rendered by
+`_levelup_choices.html` (proficiency: `POST /character/{id}/proficiency/add`;
+talent: `POST /character/{id}/talent/add`). The level-up modal shows a reminder
+note when any capacity is outstanding. `CharacterSheet.proficiency_weapon_options`
+and `talent_options` carry the selectable choices for the pickers.
+
+**Weapon specialisation gate:** `attacks.py:_profile_for` checks `spec.ruleset.weapon_proficiency OR spec.ruleset.combat_talents` for `is_specialised`. Under proficiency the weapon must also appear in `weapon_proficiencies`; under combat talents (Weapon specialist) it need not — the two subsystems are mutually exclusive via the `excluded_when_rule` gate.
 
 **Race vs race-as-class are distinct stat blocks that share only a name.** A
 race-as-class character is defined wholly by its `race_locked` `CharClass`; the
