@@ -286,6 +286,25 @@ Routes `/character/{id}/innate/{spend,restore,reset}` mirror the powers routes.
 "Innate Abilities" block (column 3, alongside Mental Powers) with Use/+1 buttons
 and a spell-expander in the feature modal when `spell_id` is set.
 
+### Carcass Crawler 2 / 4 / 5 content (`source: carcass_crawler_{2,4,5}`)
+
+Pure-data import (no new mechanics — same shape as the CC1 duals). **Classes:**
+Wood Elf (CC2, 10-level race-as-class, `spell_lists: [druid]` from L1, missile
+`attack +1 ranged`, detect-secret-doors / ghoul-immunity / hiding text), Halfling
+Hearthsinger (CC4, 8-level, `race_locked: halfling`, no caster, Foster-Friendship /
+Lore / Read-Languages skill tables as feature text, Defensive Bonus `ac +2
+large_attacker`), Halfling Reeve (CC4, 8-level, `race_locked: halfling`,
+`allowed_alignments: [law]`, `spell_lists: [druid]` from L4, Goblin Slayer /
+Wolf Hunter as conditional `attack`/`damage +1` grants — surfaced in the
+conditional-attack breakdown), Arcane Bard (CC4, 14-level, **not** race-locked,
+`spell_lists: [magic_user]` from L2, CS/HN/PP/RL skill tables), Ratling (CC5,
+8-level race-as-class, semi-martial, skill tables, Prehensile Tail / Rat Affinity
+text), Changeling (CC5, 10-level race-as-class, Back-Stab + Shape-Stealing text,
+BE/HN/HS/MS skill tables). **Races:** Wood Elf (–1 CHA +1 WIS), Ratling (–1 CHA
++1 DEX), Changeling (–1 CON +1 CHA) — split-mode duals carrying their own grants.
+New language: `dryad` (Wood Elf). The percentage/d6 skill tables are **feature
+text only** (no skills engine), matching the acrobat/thief precedent.
+
 ### Carcass Crawler 3 content (`source: carcass_crawler_3`)
 
 **Classes:** Beast Master (14-level, no race-lock, animal companion / speak-with-
@@ -430,7 +449,7 @@ Illusionist/Magic-user/Thief). New languages: `hephaestan`, `language_of_wolves`
 ## Content sources & optional rules
 
 - **Sources** — `Source` model + `data/sources.yaml` (OSE Classic Fantasy + OSE
-  Advanced Fantasy + Carcass Crawler 1 + Carcass Crawler 3, Necrotic Gnome). A
+  Advanced Fantasy + Carcass Crawler 1–5, Necrotic Gnome). A
   `source` field on `ItemBase`/`Race`/`CharClass`/`SpellList`/`Enchantment`/
   `Spell` defaults to `ose_classic_fantasy`; only non-Classic entries carry their
   own id. `CONTENT_CATEGORIES = ("classes", "equipment", "magic_items")` in
@@ -504,3 +523,48 @@ Illusionist/Magic-user/Thief). New languages: `hephaestan`, `language_of_wolves`
   `shop_categories`) is rendered via `detail_card` in a `row-detail` expander row
   toggled by `inventory.js` (same pattern as drawer inventory rows). Buy/add
   controls are unaffected — the toggle ignores clicks inside forms/buttons.
+
+---
+
+## Hosting & auth
+
+All auth behaviour is **off by default**. When `AOSE_AUTH` is not set (or `0`)
+the app is identical to the local-only single-user build — zero behaviour
+change. Auth is enabled by setting `AOSE_AUTH=1`.
+
+- **`AuthConfig.from_env()`** (`aose/web/auth/`) returns `None` (auth off) or an
+  `AuthConfig` instance (auth on). The `create_app()` factory accepts an optional
+  `auth_verifier` keyword for testing; production uses `FirebaseVerifier`.
+- **`WorkspaceAuthMiddleware`** is the single integration point. It resolves
+  `request.state.{characters_dir, drafts_dir, settings_path}` from
+  `resolve_workspace(request)`. Auth-off: mirrors the global root dirs
+  (`characters/`, `drafts/`, `settings.json`). Auth-on: derives
+  `users/<uid>/characters/`, `users/<uid>/drafts/`, `users/<uid>/settings.json`
+  from the session cookie. All route handlers read these three state attrs and
+  never touch the raw filesystem paths directly.
+- **Per-user workspace** — `users/<uid>/` at the project root mirrors the root
+  layout (characters/, drafts/, settings.json). Keyed by GCIP uid;
+  `safe_uid(uid)` strips any path-traversal characters before the directory is
+  created. First login is seeded with example characters via
+  `seed_user_workspace(uid)`.
+- **GCIP Google-only sign-in** — the `/login` page loads the Firebase JS SDK
+  from CDN (the one exception to the server-rendered-only ethos) and triggers a
+  Google OAuth pop-up. The resulting ID token is POSTed to `/auth/verify`, which
+  calls `FirebaseVerifier` (wraps firebase-admin, lazy-imported to keep the
+  auth-off path import-free) → `Whitelist` check → sets a signed
+  `SessionMiddleware` cookie (itsdangerous).
+- **Whitelist** — `whitelist.txt` at the project root (gitignored). Read fresh
+  per request. Lines starting with `#` and blank lines are ignored. Every
+  Google-authenticated user whose email is not listed receives a 403. This is
+  the sole invite gate — no email is sent at any point, no SMTP/DNS dependency.
+- **`FakeVerifier` test seam** — inject via `create_app(auth_verifier=FakeVerifier({email: uid, ...}))`.
+  Tests never need firebase-admin installed; the real verifier is only imported
+  when `AOSE_AUTH=1` in production.
+- **Firebase emulator for offline dev** — set
+  `FIREBASE_AUTH_EMULATOR_HOST=localhost:9099` and both the Firebase JS SDK
+  (frontend) and firebase-admin (backend verifier) route to the local emulator.
+- **Export / import** — `GET /character/{id}/export` returns a JSON download of
+  the full `CharacterSpec`. `POST /import` accepts a JSON file upload, validates
+  it as a `CharacterSpec`, saves it under a new id, and redirects to the sheet.
+  These routes work in both auth-on and auth-off modes and provide a self-serve
+  backup / escape hatch.

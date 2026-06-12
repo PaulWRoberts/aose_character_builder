@@ -182,7 +182,7 @@ CHOICE_GROUPS = [
 
 
 def _settings_path(request: Request) -> Path:
-    return request.app.state.settings_path
+    return request.state.settings_path
 
 
 def _ruleset_view_context(request, ruleset):

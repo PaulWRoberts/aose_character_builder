@@ -11,6 +11,10 @@
         <a href="/" class="brand">AOSE Character Builder</a>
         <nav>
             <a href="/settings">Settings</a>
+            {% set session_email = request.scope.get("session", {}).get("email", "") %}
+            {% if session_email %}
+              <a href="/logout" class="logout-link">Sign out ({{ session_email }})</a>
+            {% endif %}
         </nav>
     </header>
     <main class="page">

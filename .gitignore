@@ -39,3 +39,8 @@ Thumbs.db
 
 # Copyrighted source PDFs for the content-import pipeline
 import/pdfs/
+
+# hosted-auth (never commit invitee data / per-user data / service-account keys)
+whitelist.txt
+users/
+*service-account*.json

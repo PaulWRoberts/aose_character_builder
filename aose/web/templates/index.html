@@ -12,11 +12,16 @@
         <li>
             <a href="/character/{{ c.id }}">{{ c.name }}</a>
             <span class="muted">({{ c.race_id }})</span>
+            <a href="/character/{{ c.id }}/export">Export</a>
         </li>
         {% endfor %}
     </ul>
     {% else %}
     <p class="muted">No characters yet. Create one to get started.</p>
     {% endif %}
+    <form method="post" action="/import" enctype="multipart/form-data" class="import-form">
+      <label>Import character <input type="file" name="file" accept="application/json" required></label>
+      <button type="submit">Import</button>
+    </form>
 </section>
 {% endblock %}
