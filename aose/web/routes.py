@@ -86,7 +86,7 @@ from aose.engine.proficiency import (
     specialisation_allowed,
     two_weapon_eligible,
 )
-from aose.engine.level_choices import proficiency_capacity
+from aose.engine.level_choices import proficiency_capacity, talent_capacities
 from aose.engine import spell_sources as spell_source_engine
 from aose.engine.spell_sources import SpellSourceError
 from aose.engine import valuables as valuables_engine
@@ -473,6 +473,46 @@ async def add_proficiency(request: Request, character_id: str,
         spec.weapon_proficiencies.append(weapon_id)
     if specialise and weapon_id not in spec.weapon_specialisations:
         spec.weapon_specialisations.append(weapon_id)
+    save_character(character_id, spec, request.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/talent/add")
+async def add_talent(request: Request, character_id: str,
+                     group_id: str = Form(...), option_id: str = Form(...),
+                     param: str = Form("")):
+    data = request.app.state.game_data
+    spec = _load_spec_or_404(request, character_id)
+    caps = {c.group_id: c for c in talent_capacities(spec, data)}
+    cap = caps.get(group_id)
+    if cap is None or cap.remaining <= 0:
+        raise HTTPException(400, "No talent selections remaining.")
+    group = next(
+        (g for e in spec.classes if (cls := data.classes.get(e.class_id))
+         for g in cls.feature_choices if g.id == group_id),
+        None,
+    )
+    if group is None:
+        raise HTTPException(400, "Unknown talent group.")
+    opt = next((o for o in group.options if o.id == option_id), None)
+    if opt is None:
+        raise HTTPException(400, "Unknown talent.")
+    if opt.excluded_when_rule and getattr(spec.ruleset, opt.excluded_when_rule, False):
+        raise HTTPException(400, "That talent is unavailable under the current rules.")
+    chosen = list(spec.feature_choices.get(group_id, []))
+    if option_id in chosen:
+        raise HTTPException(400, "Talent already taken.")
+    raw = (param or "").strip()
+    if opt.param is not None and not raw:
+        raise HTTPException(400, f"{opt.name}: choose {opt.param.label}.")
+    chosen.append(option_id)
+    spec.feature_choices[group_id] = chosen
+    if opt.param is not None:
+        if opt.param.kind == "weapon":
+            if raw not in spec.weapon_specialisations:
+                spec.weapon_specialisations.append(raw)
+        else:
+            spec.choice_params[option_id] = raw
     save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
