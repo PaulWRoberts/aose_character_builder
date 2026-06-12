@@ -448,6 +448,13 @@ class CharacterSheet(BaseModel):
     encumbrance_mode: str
     encumbrance_description: str
 
+    # Unspent level-up selections (proficiency slots, talent picks).
+    level_choices: list = Field(default_factory=list)
+    # Weapon options for the inline proficiency picker (base types only).
+    proficiency_weapon_options: list = Field(default_factory=list)
+    # Available talent options per group id, keyed by group_id.
+    talent_options: dict = Field(default_factory=dict)
+
 
 def _summarize_modifier(m) -> str:
     """Return a human-readable one-line description of a Modifier."""
@@ -1131,6 +1138,55 @@ def _labeled_ability_mods(spec: CharacterSpec, data: GameData) -> list[tuple]:
     return out
 
 
+def _level_choice_extras(spec: CharacterSpec, data: GameData) -> dict:
+    """Compute level_choices, proficiency_weapon_options, and talent_options
+    for the CharacterSheet."""
+    from aose.engine.level_choices import all_capacities
+    from aose.models import Weapon as _W
+    from aose.engine.proficiency import base_weapon_id as _bwid, allowed_weapon_ids as _awi
+
+    caps = all_capacities(spec, data)
+
+    # Weapon options for the proficiency picker.
+    prof_weapon_opts: list = []
+    if any(c.kind == "proficiency" for c in caps):
+        classes = [data.classes[e.class_id] for e in spec.classes if e.class_id in data.classes]
+        allowed = _awi(classes, data, spec.ruleset)
+        for w in sorted(
+            (i for i in data.items.values() if isinstance(i, _W) and _bwid(i) == i.id),
+            key=lambda w: w.name,
+        ):
+            if allowed == "all" or w.id in allowed:
+                prof_weapon_opts.append({"id": w.id, "name": w.name})
+
+    # Available options per talent group.
+    talent_opts: dict = {}
+    for c in caps:
+        if c.kind != "talent":
+            continue
+        grp = next(
+            (g for e in spec.classes if (cl := data.classes.get(e.class_id))
+             for g in cl.feature_choices if g.id == c.group_id),
+            None,
+        )
+        if grp is None:
+            continue
+        already = set(spec.feature_choices.get(c.group_id, []))
+        talent_opts[c.group_id] = [
+            {"id": o.id, "name": o.name,
+             "param": (o.param.model_dump() if o.param else None)}
+            for o in grp.options
+            if o.id not in already
+            and not (o.excluded_when_rule and getattr(spec.ruleset, o.excluded_when_rule, False))
+        ]
+
+    return {
+        "level_choices": caps,
+        "proficiency_weapon_options": prof_weapon_opts,
+        "talent_options": talent_opts,
+    }
+
+
 def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
     race = data.races[spec.race_id]
 
@@ -1357,4 +1413,5 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
         armor_tailored=spec.armor_tailored,
         pending_rest_heal=spec.pending_rest_heal,
         strict_mode=spec.ruleset.strict_mode,
+        **_level_choice_extras(spec, data),
     )

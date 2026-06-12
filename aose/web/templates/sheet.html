@@ -188,7 +188,7 @@
             {% for f in sheet.race_features %}
             {% set spell_html %}{% if f.spell_detail %}{{ detail_card(f.spell_detail) }}{% endif %}{% endset %}
             <li class="info" data-modal="modal-feature" data-title="{{ f.name }}"
-                data-text="{{ f.text | markdown }}"{% if f.spell_detail %} data-spell="{{ spell_html }}"{% endif %}>
+                data-text="{{ f.text | markdown }}"{% if f.spell_detail %} data-spell="{{ spell_html | forceescape }}"{% endif %}>
               <span>{{ f.name }}</span>
               <span class="src">{{ f.source | replace("Race: ", "") }}</span>
             </li>
@@ -196,7 +196,7 @@
             {% for f in sheet.class_features %}
             {% set spell_html %}{% if f.spell_detail %}{{ detail_card(f.spell_detail) }}{% endif %}{% endset %}
             <li class="info" data-modal="modal-feature" data-title="{{ f.name }}"
-                data-text="{{ f.text | markdown }}"{% if f.spell_detail %} data-spell="{{ spell_html }}"{% endif %}>
+                data-text="{{ f.text | markdown }}"{% if f.spell_detail %} data-spell="{{ spell_html | forceescape }}"{% endif %}>
               <span>{{ f.name }}</span>
               <span class="src">{{ f.source | replace("Class: ", "") }}</span>
             </li>
@@ -221,6 +221,7 @@
           <p style="margin:0 0 4px">{% for w in sheet.proficiencies.weapons %}{{ w.name }}{% if w.specialised %} (specialised){% endif %}{% if not loop.last %}, {% endif %}{% endfor %}</p>
           <p style="margin:0 0 4px;font-size:11px;">Non-proficiency penalty: <strong>−{{ -sheet.proficiencies.penalty }}</strong></p>
           {% endif %}
+          {% include "_levelup_choices.html" %}
           <div class="subhead">Notes</div>
           <div class="notes-body" data-modal="modal-notes">{{ sheet.notes }}</div>
           {# print-only notes paragraph #}
@@ -322,7 +323,7 @@
             {% for ab in sheet.innate_abilities %}
             {% set ab_spell_html %}{% if ab.spell_detail %}{{ detail_card(ab.spell_detail) }}{% endif %}{% endset %}
             <li class="info" data-modal="modal-feature" data-title="{{ ab.name }}"
-                data-text="{{ ab.text | markdown }}"{% if ab.spell_detail %} data-spell="{{ ab_spell_html }}"{% endif %}>
+                data-text="{{ ab.text | markdown }}"{% if ab.spell_detail %} data-spell="{{ ab_spell_html | forceescape }}"{% endif %}>
               <span>{{ ab.name }} <span class="muted small">({{ ab.remaining }}/{{ ab.max_uses }})</span></span>
               <span class="row-actions">
                 <form method="post" action="/character/{{ character_id }}/innate/spend" class="inline-form">
@@ -1011,6 +1012,11 @@
     <form method="post" action="/character/{{ character_id }}/level-up/{{ m.class_id }}/cancel" class="inline-form" style="margin-top:6px">
       <button class="btn" type="submit">Cancel</button>
     </form>
+    {% endif %}
+    {% if sheet.level_choices %}
+    <p class="muted small" style="margin-top:8px">
+      You have selections to make below (new proficiencies/talents) — they appear on your sheet after confirming.
+    </p>
     {% endif %}
   </div>
 </div>

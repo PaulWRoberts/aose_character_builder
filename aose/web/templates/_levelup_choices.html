@@ -1,0 +1,30 @@
+{# Renders pickers for any unspent capacity. Expects: character_id, sheet. #}
+{% for cap in sheet.level_choices %}
+  {% if cap.kind == "proficiency" %}
+  <div class="capacity-picker" data-kind="proficiency">
+    <div class="subhead">New Weapon Proficiency ({{ cap.remaining }} slot{{ "s" if cap.remaining != 1 }})</div>
+    <form method="post" action="/character/{{ character_id }}/proficiency/add" class="inline-form">
+      <select name="weapon_id" required>
+        {% for w in sheet.proficiency_weapon_options %}<option value="{{ w.id }}">{{ w.name }}</option>{% endfor %}
+      </select>
+      <label class="small"><input type="checkbox" name="specialise" value="true"> specialise (+1 slot)</label>
+      <button class="btn solid" type="submit">Add</button>
+    </form>
+  </div>
+  {% endif %}
+  {% if cap.kind == "talent" %}
+  <div class="capacity-picker" data-kind="talent">
+    <div class="subhead">New Combat Talent ({{ cap.remaining }} to choose)</div>
+    <form method="post" action="/character/{{ character_id }}/talent/add" class="inline-form">
+      <input type="hidden" name="group_id" value="{{ cap.group_id }}">
+      <select name="option_id" required>
+        {% for o in sheet.talent_options.get(cap.group_id, []) %}
+        <option value="{{ o.id }}"{% if o.param %} data-param="{{ o.param.kind }}"{% endif %}>{{ o.name }}</option>
+        {% endfor %}
+      </select>
+      <input type="text" name="param" placeholder="Enemy type (Slayer) / weapon id (Specialist)">
+      <button class="btn solid" type="submit">Add</button>
+    </form>
+  </div>
+  {% endif %}
+{% endfor %}
