@@ -1,8 +1,9 @@
 # AOSE Character Builder — agent notes
 
 Python + FastAPI + Jinja2 character builder for Advanced Old-School Essentials.
-Pydantic v2 models, YAML data, no JS framework. Local-only single-user app
-(no auth model anywhere — every route mutates by URL).
+Pydantic v2 models, YAML data, no JS framework. Local-only single-user by
+default; opt-in hosted multi-user via `AOSE_AUTH=1` (GCIP Google sign-in,
+per-user workspaces). Every route still mutates by URL.
 
 **Doing any sheet/UI work?** Read `docs/STYLE-GUIDE.md` first — the OSR-zine
 design system (tokens, components, overlay model) plus hard-won invariants
@@ -51,6 +52,7 @@ quirk in pytest 9; ignore it.
 | `aose/sheet/view.py` | `build_sheet(spec, data) -> CharacterSheet` — assembles every derivation for the live sheet |
 | `aose/characters/` | Persistence: `storage.py` (saved characters), `drafts.py` (in-progress), `settings.py` (global default RuleSet) |
 | `aose/web/` | FastAPI routes (`routes.py`, `wizard.py`, `settings_routes.py`) + Jinja templates |
+| `aose/web/auth/` | Auth package: `AuthConfig`, `WorkspaceAuthMiddleware`, `Whitelist`, verifier (Firebase+fake), workspace resolver, login/logout routes |
 | `data/` | YAML game data: `races/`, `classes/`, `equipment/` (weapons, armor, adventuring_gear, ...), `spells/`, `spell_lists.yaml`, `enchantments.yaml`, `sources.yaml`, `languages.yaml`, `secondary_skills.yaml` |
 
 The engine import DAG is roughly `models → loader → magic → features →
@@ -82,6 +84,7 @@ back-navigation links (or a 🔒 when a roll has locked an earlier step).
 - `RuleSet.disabled_content`: `list[str]` — `"{source_id}:{category}"` keys for disabled
   content categories (`classes`, `equipment`, `magic_items`); Classic source never added;
   legacy `disabled_sources` is coerced to `disabled_content` at load time
+- Per-user workspaces (auth-on): `users/<uid>/` at project root mirrors root `characters/`, `drafts/`, `settings.json`; keyed by GCIP uid; seeded with examples on first login. Auth off → global dirs unchanged.
 
 ## Settings vs per-character ruleset
 
