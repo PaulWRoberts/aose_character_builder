@@ -195,7 +195,7 @@ def _clear_after_abilities(draft: dict[str, Any]) -> None:
     for k in ("race_id", "class_id", "class_ids", "ability_adjustments",
               "hp_roll", "hp_rolls", "proficiencies",
               "spellcasting", "spellbooks", "spells_done", "languages",
-              "feature_choices", "_has_feature_choices", "_feature_choice_group_ids"):
+              "feature_choices", "_has_feature_choices", "_feature_choice_group_ids", "_roll_group_ids"):
         draft.pop(k, None)
 
 
@@ -203,7 +203,7 @@ def _clear_after_race(draft: dict[str, Any]) -> None:
     for k in ("class_id", "class_ids", "ability_adjustments",
               "hp_roll", "hp_rolls", "proficiencies",
               "spellcasting", "spellbooks", "spells_done", "languages",
-              "feature_choices", "_has_feature_choices", "_feature_choice_group_ids"):
+              "feature_choices", "_has_feature_choices", "_feature_choice_group_ids", "_roll_group_ids"):
         draft.pop(k, None)
 
 
@@ -212,7 +212,7 @@ def _clear_after_class(draft: dict[str, Any]) -> None:
     # after choosing chaos). name and secondary_skill don't depend on class.
     for k in ("ability_adjustments", "hp_roll", "hp_rolls", "proficiencies",
               "spellcasting", "spellbooks", "spells_done", "alignment", "languages",
-              "feature_choices", "_has_feature_choices", "_feature_choice_group_ids"):
+              "feature_choices", "_has_feature_choices", "_feature_choice_group_ids", "_roll_group_ids"):
         draft.pop(k, None)
 
 
@@ -835,6 +835,8 @@ async def post_class(request: Request, draft_id: str):
     groups = _active_choice_groups(draft, data)
     draft["_has_feature_choices"] = bool(groups)
     draft["_feature_choice_group_ids"] = [g.id for g in groups]
+    # Only roll-dice groups block rolls_ready; pick-only groups are validated client-side.
+    draft["_roll_group_ids"] = [g.id for g in groups if g.roll_dice]
     save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/{_next_incomplete_step(draft)}")
 
@@ -1434,9 +1436,13 @@ async def get_class_setup(request: Request, draft_id: str):
     choice_ctx = _feature_choices_context(draft, data)
     ctx.update(choice_ctx)
     ctx["features_done"] = _feature_choices_complete(draft)
+    # Pick-only groups (no roll_dice) are validated client-side; only groups
+    # that require a server-side roll block rolls_ready.
+    roll_group_ids = draft.get("_roll_group_ids", [])
+    chosen = draft.get("feature_choices", {})
     ctx["rolls_ready"] = (
         ctx["hp_done"]
-        and (not choice_ctx["has_feature_choices"] or _feature_choices_complete(draft))
+        and all(gid in chosen for gid in roll_group_ids)
     )
     ctx["ready"] = _class_setup_complete(draft)
     return templates.TemplateResponse(request, "wizard.html", ctx)
