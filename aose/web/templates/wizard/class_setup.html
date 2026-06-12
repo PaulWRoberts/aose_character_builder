@@ -200,11 +200,11 @@
         <h4>{{ g.name }}{% if g.cosmetic %} <span class="muted small">(cosmetic)</span>{% endif %}</h4>
         {% if g.text %}<p class="muted small">{{ g.text }}</p>{% endif %}
 
-        {% if not g.rolled %}
+        {% if not g.rolled and g.roll_dice %}
         <p class="muted small">Roll <strong>{{ g.pick }}</strong> on the {{ g.roll_dice }} table.</p>
         <button type="submit" formnovalidate
                 formaction="/wizard/{{ draft_id }}/feature-choices/roll"
-                name="group_id" value="{{ g.id }}">Roll {{ g.roll_dice or "" }}</button>
+                name="group_id" value="{{ g.id }}">Roll {{ g.roll_dice }}</button>
         {% elif feature_choices_locked %}
         <ul>
             {% for o in g.options if o.selected %}
@@ -212,7 +212,7 @@
             {% endfor %}
         </ul>
         {% else %}
-        {# Non-strict: rolled, with re-roll + manual override. #}
+        {# Non-strict: manual pick (and re-roll if the group has roll_dice). #}
         <div class="card-grid" data-required="{{ g.pick }}">
             {% for o in g.options %}
             <label class="card {% if o.selected %}selected{% endif %}">
@@ -222,11 +222,22 @@
                 <div class="card-name">{{ o.name }}</div>
                 {% if o.text %}<div class="card-detail small">{{ o.text }}</div>{% endif %}
             </label>
+            {% if o.param %}
+              {% if o.param.kind == "weapon" %}
+              <select name="param_{{ o.id }}" style="margin-bottom:4px">
+                {% for w in feature_weapon_options %}<option value="{{ w.id }}">{{ w.name }}</option>{% endfor %}
+              </select>
+              {% else %}
+              <input type="text" name="param_{{ o.id }}" placeholder="{{ o.param.label }}" style="margin-bottom:4px">
+              {% endif %}
+            {% endif %}
             {% endfor %}
         </div>
+        {% if g.roll_dice %}
         <button type="submit" formnovalidate
                 formaction="/wizard/{{ draft_id }}/feature-choices/roll"
-                name="group_id" value="{{ g.id }}">Re-roll {{ g.roll_dice or "" }}</button>
+                name="group_id" value="{{ g.id }}">Re-roll {{ g.roll_dice }}</button>
+        {% endif %}
         {% endif %}
     </div>
     {% endfor %}

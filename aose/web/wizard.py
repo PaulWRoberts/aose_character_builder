@@ -448,6 +448,16 @@ def _apply_rule_changes(draft: dict[str, Any], old_rs: RuleSet, new_rs: RuleSet,
     if new_rs.weapon_proficiency != old_rs.weapon_proficiency:
         draft.pop("proficiencies", None)
 
+    if old_rs.combat_talents and not new_rs.combat_talents:
+        fc = dict(draft.get("feature_choices", {}))
+        removed = fc.pop("combat_talents", [])
+        draft["feature_choices"] = fc
+        # Drop talent-granted specialisation(s) and Slayer params.
+        if "weapon_specialist" in removed:
+            draft["weapon_specialisations"] = []
+        draft["choice_params"] = {k: v for k, v in draft.get("choice_params", {}).items()
+                                  if k not in removed}
+
     if not new_rs.multiclassing and "class_ids" in draft:
         _clear_after_race(draft)
 
@@ -1124,7 +1134,8 @@ async def post_identity(request: Request, draft_id: str):
 
 def _active_choice_groups(draft: dict[str, Any], data) -> list:
     """The FeatureChoice groups that apply: each class's groups, plus the race's
-    groups in separate-race-class mode. In race-as-class mode the race groups
+    groups in separate-race-class mode. Groups gated by ``requires_rule`` are
+    excluded when that rule is off. In race-as-class mode the race groups
     don't apply — the class carries them."""
     rs = _ruleset_of(draft)
     groups = []
@@ -1136,33 +1147,56 @@ def _active_choice_groups(draft: dict[str, Any], data) -> list:
         race = data.races.get(draft.get("race_id"))
         if race is not None:
             groups.extend(race.feature_choices)
+    groups = [g for g in groups
+              if not g.requires_rule or getattr(rs, g.requires_rule, False)]
     return groups
 
 
 def _feature_choices_context(draft: dict[str, Any], data) -> dict:
     """Render rows for the Features section. Rolling is an explicit player
     action (see post_feature_choice_roll); nothing is auto-rolled here."""
+    from aose.engine.feature_choices import effective_pick
+    from aose.models import Weapon as _W
+    from aose.engine.proficiency import base_weapon_id as _bwid, allowed_weapon_ids as _awi
     groups = _active_choice_groups(draft, data)
     rs = _ruleset_of(draft)
     chosen_map = dict(draft.get("feature_choices", {}))
 
+    # Weapon options for param inputs on Weapon specialist.
+    ids = _class_ids(draft)
+    classes = [data.classes[cid] for cid in ids if cid in data.classes]
+    allowed = _awi(classes, data, rs)
+    feature_weapon_options = sorted(
+        (
+            {"id": i.id, "name": i.name}
+            for i in data.items.values()
+            if isinstance(i, _W) and _bwid(i) == i.id
+            and (allowed == "all" or i.id in allowed)
+        ),
+        key=lambda w: w["name"],
+    )
+
     rows = []
     for g in groups:
         chosen = set(chosen_map.get(g.id, []))
+        pick = effective_pick(g, 1)  # creation is always level 1
         rows.append({
-            "id": g.id, "name": g.name, "text": g.text, "pick": g.pick,
+            "id": g.id, "name": g.name, "text": g.text, "pick": pick,
             "cosmetic": g.cosmetic, "roll_dice": g.roll_dice,
             "rolled": g.id in chosen_map,
             "options": [
                 {"id": o.id, "name": o.name, "text": o.text,
-                 "selected": o.id in chosen}
+                 "selected": o.id in chosen,
+                 "param": (o.param.model_dump() if o.param else None)}
                 for o in g.options
+                if not (o.excluded_when_rule and getattr(rs, o.excluded_when_rule, False))
             ],
         })
     return {
         "feature_groups": rows,
         "feature_choices_locked": rs.strict_mode,
         "has_feature_choices": bool(groups),
+        "feature_weapon_options": feature_weapon_options,
     }
 
 
@@ -1250,19 +1284,35 @@ async def post_proficiencies(request: Request, draft_id: str):
 def _apply_feature_overrides(draft: dict[str, Any], form, data) -> None:
     """Validate & merge submitted feature picks (non-strict manual override).
     Only groups present in the form are touched; others keep their rolled value."""
+    from aose.engine.feature_choices import effective_pick
     groups = {g.id: g for g in _active_choice_groups(draft, data)}
     chosen_map = dict(draft.get("feature_choices", {}))
+    params = dict(draft.get("choice_params", {}))
+    specials = list(draft.get("weapon_specialisations", []))
     for gid, g in groups.items():
         field = form.getlist(f"choice_{gid}")
         if not field:
             continue
         picked = list(dict.fromkeys(field))
         try:
-            validate_choice(g, picked)
+            validate_choice(g, picked, pick=effective_pick(g, 1))
         except ChoiceError as e:
             raise HTTPException(400, str(e))
         chosen_map[gid] = picked
+        for opt in g.options:
+            if opt.id not in picked or opt.param is None:
+                continue
+            raw = (form.get(f"param_{opt.id}") or "").strip()
+            if not raw:
+                raise HTTPException(400, f"{opt.name}: choose {opt.param.label}.")
+            if opt.param.kind == "weapon":
+                if raw not in specials:
+                    specials.append(raw)
+            else:
+                params[opt.id] = raw
     draft["feature_choices"] = chosen_map
+    draft["choice_params"] = params
+    draft["weapon_specialisations"] = specials
 
 
 @router.post("/{draft_id}/feature-choices")
