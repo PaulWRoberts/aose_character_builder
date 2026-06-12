@@ -143,17 +143,20 @@ def _profile_for(weapon: Weapon, spec: CharacterSpec, data: GameData,
         atk_mod = dex_mod
         dmg_mod = 0
 
-    # Proficiency penalty applies only when the rule is on AND we lack the weapon.
+    # Proficiency penalty applies only under the weapon_proficiency rule.
+    # Specialisation (+1/+1) applies under weapon_proficiency OR combat_talents
+    # (Weapon specialist is hidden under proficiency, so the two never overlap).
     proficient = True
     prof_pen = 0
     specialised = False
+    base_id = base_weapon_id(weapon)   # magic variants count as their base type
+    if spec.ruleset.weapon_proficiency or spec.ruleset.combat_talents:
+        specialised = is_specialised(base_id, spec)
     if spec.ruleset.weapon_proficiency:
         classes = [data.classes[e.class_id] for e in spec.classes if e.class_id in data.classes]
-        base_id = base_weapon_id(weapon)   # magic variants count as their base type
         proficient = is_proficient(base_id, spec)
         if not proficient:
             prof_pen = penalty_for_classes(classes)
-        specialised = is_specialised(base_id, spec)
     spec_hit = 1 if specialised else 0
     spec_dmg = 1 if specialised else 0
 
