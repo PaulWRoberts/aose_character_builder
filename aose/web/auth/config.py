@@ -33,9 +33,15 @@ class AuthConfig:
         """
         if os.environ.get("AOSE_AUTH", "").lower() not in ("1", "true", "yes"):
             return None
+        session_secret = os.environ.get("AOSE_SESSION_SECRET", "")
+        if not session_secret:
+            raise ValueError(
+                "AOSE_SESSION_SECRET must be set when AOSE_AUTH is enabled. "
+                "Generate one with: python -c \"import secrets; print(secrets.token_urlsafe(32))\""
+            )
         emulator_host = os.environ.get("FIREBASE_AUTH_EMULATOR_HOST", "")
         return AuthConfig(
-            session_secret=os.environ.get("AOSE_SESSION_SECRET", ""),
+            session_secret=session_secret,
             whitelist_path=project_root / os.environ.get("AOSE_WHITELIST", "whitelist.txt"),
             users_root=project_root / os.environ.get("AOSE_USERS_DIR", "users"),
             firebase_project_id=os.environ.get("AOSE_FIREBASE_PROJECT_ID", ""),
