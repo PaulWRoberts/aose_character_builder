@@ -205,13 +205,16 @@ def test_spell_list_sources(data):
 def test_spell_sources_match_their_list(data):
     for spell in data.spells.values():
         lists = set(spell.spell_lists)
-        # A spell's source must match the source of at least one of its spell
-        # lists.  This allows spells from non-OSE sources (e.g. carcass_crawler_1)
-        # without hard-coding the source mapping.
+        # A spell's source must either match the source of at least one of its
+        # spell lists, OR be a known source in data.sources.  The latter allows
+        # supplements (e.g. carcass_crawler_5 cantrips) to add spells to
+        # existing core spell lists (magic_user, illusionist) without the spell
+        # list's source having to match the supplement's source.
         list_sources = {data.spell_lists[lid].source
                         for lid in lists if lid in data.spell_lists}
-        assert spell.source in list_sources, (
+        assert spell.source in list_sources or spell.source in data.sources, (
             f"{spell.id}: source {spell.source!r} not in list sources {list_sources}"
+            f" and not a known source"
         )
 
 

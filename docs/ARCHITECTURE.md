@@ -287,8 +287,20 @@ is a data field, not a constant.
   the power-pool ops (`power_pool`/`spend_power`/`restore_power`/`reset_powers`).
 - **Standard vs advanced books** = the `advanced_spell_books` rule. Off: book
   capped at memorizable, free learn-on-level-up. On: INT beginning spells,
-  uncapped book, copy-only (no free adds). There is **no special Read Magic
-  rule** — it's an ordinary magic-user spell.
+  uncapped book, copy-only (no free adds).
+- **Cantrips (CC5, `cantrips` rule)** are level-0 arcane spells for *dedicated
+  arcane casters* (`spells.is_dedicated_arcane`: arcane caster type + a L1 spell
+  slot at level 1). They ride the normal spellbook/slots — `memorizable_slots` /
+  `accessible_levels` inject `{0: cantrip_count(level)}` (2/3/4 by level) when
+  passed `data`+`ruleset`, so the sheet renders a "Cantrips" group and
+  prepare/cast reuse the spell path. Cantrips obey the active book rule: standard
+  = free learn, book cap = memorise cap = the cantrip table; advanced = copy-only
+  from books/scrolls, uncapped book; the memorise cap stays 2/3/4 in both. The
+  dependent `read_magic_cantrip` rule hides the L1 read magic
+  (`DEMOTED_READ_MAGIC_IDS`) and auto-grants a level-0 `read_magic_cantrip`
+  (beyond the cap) to dedicated arcane casters. Spells:
+  `data/spells/carcass_crawler_5_cantrips.yaml`. Source rules wired in
+  `SOURCE_RULES["carcass_crawler_5"]`.
 - **Arcane reversed** is fixed at memorize time; **divine reversed** is a cast-
   time button only (not stored).
 - **Spell books & scrolls** — owned documents as a per-instance `SpellSource`

@@ -1027,6 +1027,7 @@ async def sheet_spell_assign(request: Request, character_id: str,
     try:
         spec.classes[idx] = spell_engine.assign_slot(
             spec.classes[idx], data.classes[class_id], data, level, spell_id, rev,
+            ruleset=spec.ruleset,
         )
     except ValueError as e:
         raise HTTPException(400, str(e))

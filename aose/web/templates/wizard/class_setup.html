@@ -161,6 +161,21 @@
             {% endfor %}
         </div>
         <p class="muted spell-counter">Pick exactly {{ c.required }}.</p>
+        {% if c.cantrip_required %}
+        <h5 style="margin-top:10px">Cantrips</h5>
+        <p>Choose <strong>{{ c.cantrip_required }}</strong> cantrip(s) (level-0 spells) for your spell book.</p>
+        <div class="card-grid" data-required="{{ c.cantrip_required }}">
+            {% for s in c.cantrip_candidates %}
+            <label class="card {% if s.selected %}selected{% endif %}">
+                <input type="checkbox" name="cantrip_{{ c.class_id }}" value="{{ s.id }}"
+                       class="spell-checkbox" {% if s.selected %}checked{% endif %}>
+                <div class="card-name">{{ s.name }}</div>
+                <div class="card-detail small">{{ s.description }}</div>
+            </label>
+            {% endfor %}
+        </div>
+        <p class="muted spell-counter">Pick exactly {{ c.cantrip_required }}.</p>
+        {% endif %}
         {% endif %}
     </div>
     {% endfor %}

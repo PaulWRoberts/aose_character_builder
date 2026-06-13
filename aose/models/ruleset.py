@@ -31,6 +31,8 @@ class RuleSet(BaseModel):
     two_weapon_fighting: bool = False
     individual_initiative: bool = False
     combat_talents: bool = False
+    cantrips: bool = False
+    read_magic_cantrip: bool = False
 
     encumbrance: EncumbranceMode = "basic"
 

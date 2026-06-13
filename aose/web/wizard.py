@@ -458,6 +458,13 @@ def _apply_rule_changes(draft: dict[str, Any], old_rs: RuleSet, new_rs: RuleSet,
         draft["choice_params"] = {k: v for k, v in draft.get("choice_params", {}).items()
                                   if k not in removed}
 
+    if old_rs.cantrips and not new_rs.cantrips and data is not None:
+        books = dict(draft.get("spellbooks", {}))
+        for cid, ids in books.items():
+            books[cid] = [sid for sid in ids
+                          if sid in data.spells and data.spells[sid].level != 0]
+        draft["spellbooks"] = books
+
     if not new_rs.multiclassing and "class_ids" in draft:
         _clear_after_race(draft)
 
@@ -1527,6 +1534,26 @@ def _caster_entries(draft: dict[str, Any], data) -> list[dict]:
              and (ctype == "mental" or s.level in accessible)),
             key=lambda s: (s.level, s.name),
         )
+        is_dedicated = (ctype == "arcane"
+                        and spell_engine.is_dedicated_arcane(cls, data))
+        cantrip_required = (spell_engine.beginning_cantrip_count(entry, cls, data, ruleset)
+                            if is_dedicated else 0)
+        cantrip_candidates = []
+        if cantrip_required:
+            hide = set()
+            if ruleset.read_magic_cantrip:
+                hide = spell_engine.DEMOTED_READ_MAGIC_IDS | {spell_engine.READ_MAGIC_CANTRIP_ID}
+            cantrip_candidates = [
+                {"id": s.id, "name": s.name, "level": s.level,
+                 "description": s.description,
+                 "selected": s.id in books.get(cid, [])}
+                for s in sorted(
+                    (sp for sp in data.spells.values()
+                     if sp.level == 0 and set(sp.spell_lists) & enabled_lists
+                     and sp.id not in hide),
+                    key=lambda sp: sp.name,
+                )
+            ]
         rows.append({
             "class_id": cid,
             "class_name": cls.name,
@@ -1538,6 +1565,8 @@ def _caster_entries(draft: dict[str, Any], data) -> list[dict]:
                             "description": s.description,
                             "selected": s.id in books.get(cid, [])}
                            for s in candidates],
+            "cantrip_required": cantrip_required,
+            "cantrip_candidates": cantrip_candidates,
         })
     return rows
 
@@ -1570,7 +1599,23 @@ def _apply_spells(draft: dict[str, Any], form, data) -> None:
             on_list = spell is not None and bool(set(spell.spell_lists) & set(cls.spell_lists))
             if not on_list or (ctype == "arcane" and spell.level not in accessible):
                 raise HTTPException(400, f"{sid!r} is not a valid {cls.name} {noun}.")
-        books[cid] = chosen
+
+        # Cantrips (CC5): a separate pick, merged into the same spell book.
+        cantrips_chosen: list[str] = []
+        if ctype == "arcane" and spell_engine.is_dedicated_arcane(cls, data):
+            cantrip_required = spell_engine.beginning_cantrip_count(entry, cls, data, ruleset)
+            cantrips_chosen = list(dict.fromkeys(form.getlist(f"cantrip_{cid}")))
+            if len(cantrips_chosen) != cantrip_required:
+                raise HTTPException(
+                    400, f"{cls.name} must choose exactly {cantrip_required} cantrip(s); "
+                         f"got {len(cantrips_chosen)}."
+                )
+            for sid in cantrips_chosen:
+                spell = data.spells.get(sid)
+                on_list = spell is not None and bool(set(spell.spell_lists) & set(cls.spell_lists))
+                if not on_list or spell.level != 0:
+                    raise HTTPException(400, f"{sid!r} is not a valid {cls.name} cantrip.")
+        books[cid] = [*chosen, *cantrips_chosen]
     draft["spellbooks"] = books
     draft["spells_done"] = True
 

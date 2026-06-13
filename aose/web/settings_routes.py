@@ -30,6 +30,8 @@ RULE_LABELS = {
     "two_weapon_fighting": "Attacking with Two Weapons",
     "individual_initiative": "Individual Initiative",
     "combat_talents": "Combat Talents",
+    "cantrips": "Cantrips",
+    "read_magic_cantrip": "Read Magic Cantrip",
 }
 
 # Rules whose engine/builder integration is fully wired up.  The settings
@@ -50,6 +52,8 @@ IMPLEMENTED_RULES = {
     "two_weapon_fighting",
     "individual_initiative",
     "combat_talents",
+    "cantrips",
+    "read_magic_cantrip",
 }
 
 # Choice-group rules that have full integration too.
@@ -100,6 +104,14 @@ RULE_DESCRIPTIONS = {
     "combat_talents":
         "Fighters may select a combat talent at 1st, 5th, and 10th level "
         "(Cleave, Defender, Leader, Main gauche, Slayer, Weapon specialist).",
+    "cantrips":
+        "Dedicated arcane spell casters (magic-users, illusionists) know minor "
+        "level-0 spells called cantrips: 2 at levels 1–2, 3 at 3–4, 4 at 5+ "
+        "(both known and memorised).",
+    "read_magic_cantrip":
+        "Read magic is demoted from a 1st-level spell to a cantrip that arcane "
+        "casters know automatically, in addition to their normal cantrips. Makes "
+        "found scrolls easier to use.",
 }
 
 
@@ -118,6 +130,10 @@ def _choice(field):
 SOURCE_RULES = {
     "carcass_crawler_1": [
         _rule("combat_talents"),
+    ],
+    "carcass_crawler_5": [
+        _rule("cantrips",
+              _rule("read_magic_cantrip")),
     ],
     "ose_classic_fantasy": [
         _rule("ascending_ac"),
