@@ -237,14 +237,14 @@
       <section class="group">
         <div class="bar">Spells — {{ block.caster_type|title }}
           <span class="tools">
-            {% for lvl in block.levels %}<span class="meta">L{{ lvl.level }} {{ lvl.used }}/{{ lvl.cap }}</span>{% endfor %}
+            {% for lvl in block.levels %}<span class="meta">{% if lvl.level == 0 %}Cantrips{% else %}L{{ lvl.level }}{% endif %} {{ lvl.used }}/{{ lvl.cap }}</span>{% endfor %}
             <button class="btn tool" data-drawer="drawer-spells">Manage</button>
           </span>
         </div>
         <div class="gbody scroll" style="max-height:360px">
           {% for lvl in block.levels %}
           <div class="lvl-head">
-            <span>Level {{ lvl.level }}</span>
+            <span>{% if lvl.level == 0 %}Cantrips{% else %}Level {{ lvl.level }}{% endif %}</span>
             <span>
               {% if block.caster_type == "arcane" %}book · {{ lvl.rows|selectattr('known')|list|length }}{% endif %}
             </span>
@@ -265,7 +265,7 @@
           </div>
           {% else %}
           {% if block.caster_type == "arcane" and lvl.rows|length == 0 %}
-          <p class="hint" style="margin:4px 0">No level-{{ lvl.level }} spells in book yet.</p>
+          <p class="hint" style="margin:4px 0">{% if lvl.level == 0 %}No cantrips in book yet.{% else %}No level-{{ lvl.level }} spells in book yet.{% endif %}</p>
           {% endif %}
           {% endfor %}
           {% endfor %}
@@ -551,7 +551,7 @@
       <h4>{{ block.class_name }} — {{ block.caster_type|title }}</h4>
       {% for grp in block.slot_groups %}
       <div style="margin-bottom:14px">
-        <div class="lvl-head"><span>Level {{ grp.level }}</span><span style="font-weight:400;text-transform:none;letter-spacing:0;">slots {{ grp.slots|length }} / {{ grp.cap }}</span></div>
+        <div class="lvl-head"><span>{% if grp.level == 0 %}Cantrips{% else %}Level {{ grp.level }}{% endif %}</span><span style="font-weight:400;text-transform:none;letter-spacing:0;">slots {{ grp.slots|length }} / {{ grp.cap }}</span></div>
         <table class="dtable">
           <tbody>
           {# Slots filled at this level #}
