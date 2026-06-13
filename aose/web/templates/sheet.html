@@ -317,27 +317,24 @@
 
       {% if sheet.innate_abilities %}
       <section class="group">
-        <div class="bar">Innate Abilities</div>
+        <div class="bar">Innate Abilities
+          <span class="tools"><span class="meta">resets on rest</span></span>
+        </div>
         <div class="gbody scroll" style="max-height:240px">
-          <ul class="feat-list">
-            {% for ab in sheet.innate_abilities %}
-            {% set ab_spell_html %}{% if ab.spell_detail %}{{ detail_card(ab.spell_detail) }}{% endif %}{% endset %}
-            <li class="info" data-modal="modal-feature" data-title="{{ ab.name }}"
-                data-text="{{ ab.text | markdown }}"{% if ab.spell_detail %} data-spell="{{ ab_spell_html | forceescape }}"{% endif %}>
-              <span>{{ ab.name }} <span class="muted small">({{ ab.remaining }}/{{ ab.max_uses }})</span></span>
-              <span class="row-actions">
-                <form method="post" action="/character/{{ character_id }}/innate/spend" class="inline-form">
-                  <input type="hidden" name="ability_id" value="{{ ab.id }}">
-                  <button type="submit" {% if ab.remaining == 0 %}disabled{% endif %}>Use</button>
-                </form>
-                <form method="post" action="/character/{{ character_id }}/innate/restore" class="inline-form">
-                  <input type="hidden" name="ability_id" value="{{ ab.id }}">
-                  <button type="submit" {% if ab.used == 0 %}disabled{% endif %}>+1</button>
-                </form>
-              </span>
-            </li>
-            {% endfor %}
-          </ul>
+          {% for ab in sheet.innate_abilities %}
+          <div class="spell{% if ab.remaining == 0 %} allspent{% endif %}"
+               data-modal="modal-innate-{{ ab.id }}">
+            <span class="snm">{{ ab.name }}</span>
+            <span class="pips">
+              {% for _ in range(ab.remaining) %}<i class="pip"></i>{% endfor %}
+              {% for _ in range(ab.used) %}<i class="pip spent"></i>{% endfor %}
+            </span>
+          </div>
+          {% endfor %}
+          <div class="cast-legend">
+            <span><i class="pip"></i> ready</span>
+            <span><i class="pip spent"></i> spent</span>
+          </div>
         </div>
       </section>
       {% endif %}
@@ -839,6 +836,33 @@
 {% endfor %}
 {% endfor %}
 {% endif %}
+
+{# MODALS: per-innate-ability (use / restore) — mirrors per-spell management #}
+{% for ab in sheet.innate_abilities %}
+<div class="overlay modal" id="modal-innate-{{ ab.id }}" role="dialog" aria-label="{{ ab.name }}">
+  <div class="ov-head"><h3>{{ ab.name }}</h3><button class="x" data-close>×</button></div>
+  <div class="ov-body">
+    <div class="prose">{{ ab.text | markdown | safe }}</div>
+    {% if ab.spell_detail %}
+    <details style="margin-top:10px">
+      <summary>Spell details</summary>
+      <div style="margin-top:6px">{{ detail_card(ab.spell_detail) }}</div>
+    </details>
+    {% endif %}
+    <p class="hint" style="margin:10px 0 0">{{ ab.remaining }} / {{ ab.max_uses }} uses remaining today · resets on rest.</p>
+    <div class="row-actions">
+      <form method="post" action="/character/{{ character_id }}/innate/spend" style="display:inline">
+        <input type="hidden" name="ability_id" value="{{ ab.id }}">
+        <button class="btn solid" type="submit" data-close{% if ab.remaining == 0 %} disabled{% endif %}>Use</button>
+      </form>
+      <form method="post" action="/character/{{ character_id }}/innate/restore" style="display:inline">
+        <input type="hidden" name="ability_id" value="{{ ab.id }}">
+        <button class="btn" type="submit" data-close{% if ab.used == 0 %} disabled{% endif %}>Restore</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endfor %}
 
 {# MODALS: per-item inventory management #}
 {% for row in inventory_view.carried %}{{ item_modal(row, "carried", "carried", target_url_prefix) }}{% endfor %}

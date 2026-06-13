@@ -334,8 +334,13 @@ granting class's level. `CharacterSpec.innate_uses: dict[str, int]` tracks
 uses-spent; `spend_innate`/`restore_innate`/`reset_innate` mutate it.
 Routes `/character/{id}/innate/{spend,restore,reset}` mirror the powers routes.
 `rest_night` and `rest_full_day` call `reset_innate`. The sheet renders an
-"Innate Abilities" block (column 3, alongside Mental Powers) with Use/+1 buttons
-and a spell-expander in the feature modal when `spell_id` is set.
+"Innate Abilities" block (column 3, alongside Mental Powers) styled like the
+spellbook: each ability is a pip row (ready/spent) that opens a dedicated
+`modal-innate-{id}` overlay carrying the Use/Restore forms (plus a spell-detail
+expander when `spell_id` is set). The actions **must** live in that standalone
+modal, not inline in the row — the global overlay click handler intercepts any
+click inside a `[data-modal]` trigger with `preventDefault`, so an inline Use
+button would never submit.
 
 ### Carcass Crawler 2 / 4 / 5 content (`source: carcass_crawler_{2,4,5}`)
 

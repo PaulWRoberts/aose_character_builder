@@ -76,6 +76,47 @@ def test_innate_spend_route(tmp_path):
     assert r.status_code == 400
 
 
+def test_innate_row_opens_dedicated_modal_with_use_form(tmp_path):
+    """Regression: the innate Use/Restore actions must live in a dedicated,
+    top-level overlay modal (spell style) — NOT nested inside the row's
+    ``data-modal`` trigger. When nested, the global overlay click handler
+    (sheet_overlays.js) intercepts the button click with preventDefault and
+    opens the modal instead of submitting the form, so Use never fires and
+    Restore stays permanently disabled."""
+    client, characters_dir = _make_client(tmp_path)
+    # Inject a class carrying an innate daily-use ability into the live app data.
+    data = client.app.state.game_data
+    data.classes["zinn"] = CharClass(
+        id="zinn", name="ZInn", prime_requisites=[Ability.STR], hit_die="1d8",
+        weapons_allowed="all", armor_allowed="all", shields_allowed=True,
+        progression=data.classes["fighter"].progression,
+        features=[ClassFeature(id="breath", name="Breath", text="3/day",
+                  daily_uses=DailyUses(per_day=3),
+                  spell_id="magic_user_magic_missile")],
+    )
+    spec = CharacterSpec(name="Hero", abilities={a: 10 for a in Ability},
+                         race_id="human", alignment="neutral",
+                         classes=[ClassEntry(class_id="zinn", level=1)],
+                         innate_uses={"breath": 1})
+    save_character("hero", spec, characters_dir)
+    html = client.get("/character/hero").text
+
+    # The list row is a spell-style trigger pointing at a dedicated modal.
+    assert 'data-modal="modal-innate-breath"' in html
+    # That dedicated modal exists (keyed by id=, a top-level sibling overlay)…
+    assert 'id="modal-innate-breath"' in html
+    # …and it carries the Use (spend) and Restore forms.
+    assert "/character/hero/innate/spend" in html
+    assert "/character/hero/innate/restore" in html
+    # The Use/Restore forms must NOT sit inside a data-modal trigger element
+    # (the original bug). Slice from the spend form back to its nearest opening
+    # tag and confirm no unclosed data-modal wraps it: the only place the spend
+    # form may appear is after the modal's id= attribute.
+    spend_at = html.index("/character/hero/innate/spend")
+    modal_at = html.index('id="modal-innate-breath"')
+    assert modal_at < spend_at, "Use form must live inside the dedicated modal"
+
+
 def test_sheet_html_has_innate_and_spell_expander(tmp_path):
     from aose.data.loader import GameData
     client, characters_dir = _make_client(tmp_path)
