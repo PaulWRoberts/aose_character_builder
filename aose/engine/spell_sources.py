@@ -136,14 +136,14 @@ def can_cast_scroll(source: SpellSource, spec: CharacterSpec, data: GameData) ->
 
 
 def copyable_spell_ids(source: SpellSource, entry: ClassEntry, cls: CharClass,
-                       data: GameData) -> set[str]:
+                       data: GameData, ruleset=None) -> set[str]:
     """Spell ids in ``source`` an arcane caster may attempt to copy right now:
     arcane source, spell arcane-learnable for this class (on-list, accessible
-    level, not already known — see ``spells.learnable_spells``), and not already
-    marked ``copy_failed`` on this source.  Empty for non-arcane sources/casters."""
+    level — including level-0 cantrips when the rule is on — not already known),
+    and not already marked ``copy_failed`` on this source."""
     if source.caster_type != "arcane":
         return set()
-    learnable = {s.id for s in spell_engine.learnable_spells(entry, cls, data)}
+    learnable = {s.id for s in spell_engine.learnable_spells(entry, cls, data, ruleset)}
     return {
         e.spell_id for e in source.entries
         if not e.copy_failed and e.spell_id in learnable
@@ -166,7 +166,7 @@ def copy_spell(entry: ClassEntry, cls: CharClass, data: GameData, ruleset,
         raise SpellSourceError("copying from a source requires the Advanced Spell Book rule")
     idx = _index(sources, instance_id)
     src = sources[idx]
-    if spell_id not in copyable_spell_ids(src, entry, cls, data):
+    if spell_id not in copyable_spell_ids(src, entry, cls, data, ruleset):
         raise SpellSourceError(
             f"{spell_id!r} cannot be copied from this source "
             "(wrong type, not castable yet, already known, or already failed here)"
