@@ -1528,10 +1528,13 @@ def _caster_entries(draft: dict[str, Any], data) -> list[dict]:
             and content_enabled(data.spell_lists[lid].source, "classes", ruleset)
         }
         accessible = spell_engine.accessible_levels(entry, cls)
+        demoted = (spell_engine.DEMOTED_READ_MAGIC_IDS
+                   if spell_engine._read_magic_demoted(cls, data, ruleset) else set())
         candidates = sorted(
             (s for s in data.spells.values()
              if set(s.spell_lists) & enabled_lists
-             and (ctype == "mental" or s.level in accessible)),
+             and (ctype == "mental" or s.level in accessible)
+             and s.id not in demoted),
             key=lambda s: (s.level, s.name),
         )
         is_dedicated = (ctype == "arcane"
@@ -1594,11 +1597,15 @@ def _apply_spells(draft: dict[str, Any], form, data) -> None:
                      f"got {len(chosen)}."
             )
         accessible = spell_engine.accessible_levels(entry, cls)
+        demoted = (spell_engine.DEMOTED_READ_MAGIC_IDS
+                   if spell_engine._read_magic_demoted(cls, data, ruleset) else set())
         for sid in chosen:
             spell = data.spells.get(sid)
             on_list = spell is not None and bool(set(spell.spell_lists) & set(cls.spell_lists))
             if not on_list or (ctype == "arcane" and spell.level not in accessible):
                 raise HTTPException(400, f"{sid!r} is not a valid {cls.name} {noun}.")
+            if sid in demoted:
+                raise HTTPException(400, f"{sid!r} is replaced by the Read Magic Cantrip rule.")
 
         # Cantrips (CC5): a separate pick, merged into the same spell book.
         cantrips_chosen: list[str] = []
