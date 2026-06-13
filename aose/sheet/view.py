@@ -51,6 +51,8 @@ OPTIONAL_RULE_LABELS = {
     "lift_demihuman_restrictions": "Lift Demihuman Class & Level Restrictions",
     "variable_weapon_damage": "Variable Weapon Damage",
     "individual_initiative": "Individual Initiative",
+    "cantrips": "Cantrips",
+    "read_magic_cantrip": "Read Magic Cantrip",
 }
 
 ENCUMBRANCE_DESCRIPTIONS = {
@@ -782,8 +784,8 @@ def spells_view(spec: CharacterSpec, data: GameData) -> list[SpellClassView]:
         ctype = spell_engine.caster_type_of(cls, data)
         if ctype is None or ctype == "mental":
             continue
-        known = spell_engine.known_spells(entry, cls, data)
-        caps = spell_engine.memorizable_slots(entry, cls)
+        known = spell_engine.known_spells(entry, cls, data, spec.ruleset)
+        caps = spell_engine.memorizable_slots(entry, cls, data, spec.ruleset)
         groups: list[SpellLevelGroup] = []
         for level in sorted(caps):
             filled = [
@@ -822,7 +824,7 @@ def spells_view(spec: CharacterSpec, data: GameData) -> list[SpellClassView]:
             slot_groups=groups,
             learnable=(
                 [] if spec.ruleset.advanced_spell_books
-                else [_spell_entry(s) for s in spell_engine.learnable_spells(entry, cls, data)]
+                else [_spell_entry(s) for s in spell_engine.learnable_spells(entry, cls, data, spec.ruleset)]
             ),
         ))
     return out
@@ -839,8 +841,8 @@ def spellbook_view(spec: CharacterSpec, data: GameData) -> list[SpellbookBlock]:
         ctype = spell_engine.caster_type_of(cls, data)
         if ctype is None or ctype == "mental":
             continue
-        caps = spell_engine.memorizable_slots(entry, cls)         # {level: cap}
-        known = spell_engine.known_spells(entry, cls, data)       # book (arcane) / list (divine)
+        caps = spell_engine.memorizable_slots(entry, cls, data, spec.ruleset)  # {level: cap}
+        known = spell_engine.known_spells(entry, cls, data, spec.ruleset)      # book (arcane) / list (divine)
         known_ids = {s.id for s in known}
         # tally memorised copies per (level, spell_id, reversed), tracking slot indices
         ready: dict[tuple[int, str, bool], int] = {}
