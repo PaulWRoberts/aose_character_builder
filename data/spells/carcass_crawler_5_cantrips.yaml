@@ -1,0 +1,143 @@
+- id: cantrip_book_leaf
+  name: Book Leaf
+  level: 0
+  spell_lists: [magic_user, illusionist]
+  source: carcass_crawler_5
+  range: 10'
+  duration: Concentration
+  description: |-
+    The caster can magically open a book and leaf through its pages without touching it.
+- id: cantrip_cleaning_brush
+  name: Cleaning Brush
+  level: 0
+  spell_lists: [magic_user, illusionist]
+  source: carcass_crawler_5
+  range: Touch
+  duration: 1 turn
+  description: |-
+    A broom or mop takes on a life of its own and cleans an area designated by the caster (up to a 30' x 30' area in 1 turn).
+- id: cantrip_coloured_flame
+  name: Coloured Flame
+  level: 0
+  spell_lists: [magic_user, illusionist]
+  source: carcass_crawler_5
+  range: 20'
+  duration: 1 turn
+  description: |-
+    A flame within range is imbued with a hue of the caster's choosing.
+- id: cantrip_floating_trinket
+  name: Floating Trinket
+  level: 0
+  spell_lists: [magic_user, illusionist]
+  source: carcass_crawler_5
+  range: 10'
+  duration: Concentration
+  description: |-
+    The caster causes a small possession within range to levitate and float through the air at up to 1' per round.
+
+    Object weight limit: 10 coins or less.
+
+    Possessions: Only objects owned by the caster for at least a day can be affected.
+
+    Manipulation: The object cannot be manipulated with enough force or precision to enact its function as a tool.
+- id: cantrip_magic_quill
+  name: Magic Quill
+  level: 0
+  spell_lists: [magic_user, illusionist]
+  source: carcass_crawler_5
+  range: 10'
+  duration: Concentration
+  description: |-
+    A quill floats and moves of its own accord, magically transcribing the caster's words onto a page.
+- id: cantrip_open_close_portal
+  name: Open / Close Portal
+  level: 0
+  spell_lists: [magic_user, illusionist]
+  source: carcass_crawler_5
+  range: 20'
+  duration: Instant
+  description: |-
+    An unlocked portal (e.g. door, window, chest lid) within range swings open or shut as the caster desires.
+- id: cantrip_rune
+  name: Rune
+  level: 0
+  spell_lists: [magic_user, illusionist]
+  source: carcass_crawler_5
+  range: Touch
+  duration: 1 turn
+  description: |-
+    The caster traces a glowing sigil in the air or on a surface or object.
+
+    Personal sigil: Each caster's rune is unique and can be used to identify them.
+- id: cantrip_sense_magic
+  name: Sense Magic
+  level: 0
+  spell_lists: [magic_user, illusionist]
+  source: carcass_crawler_5
+  range: Touch
+  duration: Concentration
+  description: |-
+    The caster attunes their mind to subtle arcane energies, attempting to detect magic on a creature or object touched.
+
+    Chance: Each turn the caster spends in concentration, they have a 2-in-6 chance of detecting magic on the subject. The referee should roll this chance, as the caster does not know if the roll failed or if there is no magic present.
+- id: cantrip_smoke_rings
+  name: Smoke Rings
+  level: 0
+  spell_lists: [magic_user, illusionist]
+  source: carcass_crawler_5
+  range: The caster
+  duration: Concentration
+  description: |-
+    While smoking a pipe, the caster gains the ability to blow impressive smoke rings of any colour desired.
+- id: cantrip_spark
+  name: Spark
+  level: 0
+  spell_lists: [magic_user, illusionist]
+  source: carcass_crawler_5
+  range: Touch
+  duration: Instant
+  description: |-
+    A tiny spark of flame flashes at the caster's fingertip.
+
+    Light: The spark sheds momentary light in a 5' radius.
+
+    Igniting: The spark can be used to ignite flammable material (e.g. oil, tinder).
+- id: cantrip_vanish
+  name: Vanish
+  level: 0
+  spell_lists: [magic_user, illusionist]
+  source: carcass_crawler_5
+  range: Touch
+  duration: 1 round
+  description: |-
+    A small object touched by the caster becomes invisible for 1 round.
+
+    Object weight limit: 10 coins or less.
+- id: cantrip_wizard_flame
+  name: Wizard Flame
+  level: 0
+  spell_lists: [magic_user, illusionist]
+  source: carcass_crawler_5
+  range: Touch
+  duration: Concentration
+  description: |-
+    A wan flame wreathes the caster's hand, producing flickering, heatless light.
+
+    Radius of light: 5'.
+- id: read_magic_cantrip
+  name: Read Magic
+  level: 0
+  spell_lists: [magic_user, illusionist]
+  source: carcass_crawler_5
+  range: The caster
+  duration: 1 turn
+  description: |-
+    By means of read magic, the caster can decipher magical inscriptions or runes, as follows:
+
+    Scrolls: The magical script of a scroll of arcane spells can be understood. The caster is then able to activate the scroll at any time in the future.
+
+    Spell books: A spell book written by another arcane spell caster can be deciphered.
+
+    Inscriptions: Runes or magical words inscribed on an object or surface can be understood.
+
+    Reading again: Once the caster has read a magical inscription using read magic, they are thereafter able to read that particular writing without recourse to the use of this spell.
