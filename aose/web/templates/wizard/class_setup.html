@@ -133,6 +133,7 @@
 
 {# ── Spells ─────────────────────────────────────────────────────────────── #}
 {% if show_spells %}
+{% from "_book_entry.html" import book_entry %}
 <section class="class-setup-section">
     <h3>Spells</h3>
     <input type="hidden" name="section" value="spells">
@@ -141,37 +142,46 @@
         <h4>{{ c.class_name }}</h4>
         {% if c.caster_type == "divine" %}
         <p>{{ c.class_name }} casters know <strong>every spell</strong> on their list
-           that they are high enough level to cast. Nothing to choose here.</p>
-        <ul>
+           that they are high enough level to cast. Click a spell to read it.</p>
+        <div class="card-grid">
             {% for s in c.candidates %}
-            <li><strong>{{ s.name }}</strong> <span class="small muted">(L{{ s.level }})</span></li>
+            <div class="card spell-card" data-spell>
+                <div class="card-name">{{ s.name }} <span class="spell-meta">L{{ s.level }}</span></div>
+                <div class="spell-detail">{{ book_entry(s.entry) }}</div>
+            </div>
             {% endfor %}
-        </ul>
+        </div>
         {% else %}
         <p>Choose <strong>{{ c.required }}</strong> starting spell(s) for your spell
-           book{% if c.advanced %} (Advanced Spell Book rules: determined by Intelligence){% else %} (the spells you can memorise at this level){% endif %}.</p>
-        <div class="card-grid" data-required="{{ c.required }}">
+           book{% if c.advanced %} (Advanced Spell Book rules: determined by Intelligence){% else %} (the spells you can memorise at this level){% endif %}. Click a card to read it; press Learn to add it.</p>
+        <div class="card-grid spell-grid" data-required="{{ c.required }}">
             {% for s in c.candidates %}
-            <label class="card {% if s.selected %}selected{% endif %}">
+            <div class="card spell-card {% if s.selected %}learned selected{% endif %}" data-spell>
                 <input type="checkbox" name="spell_{{ c.class_id }}" value="{{ s.id }}"
-                       class="spell-checkbox" {% if s.selected %}checked{% endif %}>
-                <div class="card-name">{{ s.name }}</div>
-                <div class="card-detail small">{{ s.description }}</div>
-            </label>
+                       class="spell-checkbox" hidden {% if s.selected %}checked{% endif %}>
+                <div class="card-name">{{ s.name }} <span class="spell-meta">L{{ s.level }}</span></div>
+                <div class="spell-actions">
+                    <button type="button" class="btn-learn">{{ "Forget" if s.selected else "Learn" }}</button>
+                </div>
+                <div class="spell-detail">{{ book_entry(s.entry) }}</div>
+            </div>
             {% endfor %}
         </div>
         <p class="muted spell-counter">Pick exactly {{ c.required }}.</p>
         {% if c.cantrip_required %}
         <h5 style="margin-top:10px">Cantrips</h5>
         <p>Choose <strong>{{ c.cantrip_required }}</strong> cantrip(s) (level-0 spells) for your spell book.</p>
-        <div class="card-grid" data-required="{{ c.cantrip_required }}">
+        <div class="card-grid spell-grid" data-required="{{ c.cantrip_required }}">
             {% for s in c.cantrip_candidates %}
-            <label class="card {% if s.selected %}selected{% endif %}">
+            <div class="card spell-card {% if s.selected %}learned selected{% endif %}" data-spell>
                 <input type="checkbox" name="cantrip_{{ c.class_id }}" value="{{ s.id }}"
-                       class="spell-checkbox" {% if s.selected %}checked{% endif %}>
-                <div class="card-name">{{ s.name }}</div>
-                <div class="card-detail small">{{ s.description }}</div>
-            </label>
+                       class="spell-checkbox" hidden {% if s.selected %}checked{% endif %}>
+                <div class="card-name">{{ s.name }} <span class="spell-meta">L{{ s.level }}</span></div>
+                <div class="spell-actions">
+                    <button type="button" class="btn-learn">{{ "Forget" if s.selected else "Learn" }}</button>
+                </div>
+                <div class="spell-detail">{{ book_entry(s.entry) }}</div>
+            </div>
             {% endfor %}
         </div>
         <p class="muted spell-counter">Pick exactly {{ c.cantrip_required }}.</p>
@@ -179,27 +189,6 @@
         {% endif %}
     </div>
     {% endfor %}
-    <script>
-        (function () {
-            document.querySelectorAll('.spell-class .card-grid[data-required]').forEach(function (grid) {
-                const required = parseInt(grid.dataset.required, 10);
-                const boxes = Array.from(grid.querySelectorAll('.spell-checkbox'));
-                const spellDiv = grid.closest('.spell-class');
-                const counter = spellDiv ? spellDiv.querySelector('.spell-counter') : null;
-                function update() {
-                    const checked = boxes.filter(b => b.checked).length;
-                    boxes.forEach(function (b) {
-                        b.disabled = !b.checked && checked >= required;
-                        b.closest('.card').classList.toggle('selected', b.checked);
-                    });
-                    if (counter) { counter.textContent = 'Picked ' + checked + ' of ' + required + '.'; }
-                    if (window.csValidate) { window.csValidate(); }
-                }
-                boxes.forEach(b => b.addEventListener('change', update));
-                update();
-            });
-        })();
-    </script>
 </section>
 {% endif %}
 

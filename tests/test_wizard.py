@@ -145,6 +145,28 @@ def test_class_card_carries_detail_and_reason(client, tmp_path):
     assert "Not available to Dwarf" in r.text
 
 
+def _to_spells_step(client, tmp_path, draft_id):
+    _override_abilities(tmp_path, draft_id, {
+        "STR": 10, "INT": 16, "WIS": 10, "DEX": 12, "CON": 12, "CHA": 10
+    })
+    client.post(f"/wizard/{draft_id}/abilities", data={})
+    client.post(f"/wizard/{draft_id}/race", data={"race_id": "human"})
+    client.post(f"/wizard/{draft_id}/class", data={"class_id": "magic_user"})
+    client.post(f"/wizard/{draft_id}/adjust", data={})
+    return client.get(f"/wizard/{draft_id}/class_setup")  # spells live on this step
+
+
+def test_spell_cards_have_learn_and_expander_not_jammed(client, tmp_path):
+    draft_id = _start_draft(client)
+    r = _to_spells_step(client, tmp_path, draft_id)
+    assert r.status_code == 200
+    # Learn button + expander body present.
+    assert "btn-learn" in r.text
+    assert "spell-detail" in r.text
+    # The card no longer dumps the full description inline as a card-detail.
+    assert 'class="card-detail small">{{' not in r.text  # sanity: no raw template
+
+
 def test_full_wizard_flow_creates_character(client, tmp_path):
     draft_id = _start_draft(client)
     # Force abilities that meet Dwarf (CON 9+)

@@ -1561,6 +1561,7 @@ def _caster_entries(draft: dict[str, Any], data) -> list[dict]:
             cantrip_candidates = [
                 {"id": s.id, "name": s.name, "level": s.level,
                  "description": s.description,
+                 "entry": spell_entry(s),
                  "selected": s.id in books.get(cid, [])}
                 for s in sorted(
                     (sp for sp in data.spells.values()
@@ -1578,6 +1579,7 @@ def _caster_entries(draft: dict[str, Any], data) -> list[dict]:
             "advanced": ruleset.advanced_spell_books,
             "candidates": [{"id": s.id, "name": s.name, "level": s.level,
                             "description": s.description,
+                            "entry": spell_entry(s),
                             "selected": s.id in books.get(cid, [])}
                            for s in candidates],
             "cantrip_required": cantrip_required,
