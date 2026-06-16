@@ -197,8 +197,9 @@ def test_race_step_shows_ability_change_for_dwarf(tmp_path):
     client.post(f"/wizard/{draft_id}/abilities", data={})
     r = client.get(f"/wizard/{draft_id}/race")
     assert r.status_code == 200
-    assert "14 → 15" in r.text or "14 &rarr; 15" in r.text
-    assert "10 → 9" in r.text or "10 &rarr; 9" in r.text
+    # Trimmed card shows delta format (e.g. "CON +1", "CHA -1").
+    assert "CON +1" in r.text
+    assert "CHA -1" in r.text
 
 
 def test_race_step_no_change_block_for_human(tmp_path):
@@ -208,8 +209,8 @@ def test_race_step_no_change_block_for_human(tmp_path):
     client.post(f"/wizard/{draft_id}/abilities", data={})
     r = client.get(f"/wizard/{draft_id}/race")
     assert r.status_code == 200
-    # The dwarf card has at least one "Ability changes:" block.
-    assert r.text.count("Ability changes:") >= 1
+    # The dwarf card shows ability modifier deltas.
+    assert "CON +1" in r.text
 
 
 # ── HP step reads effective CON ───────────────────────────────────────────

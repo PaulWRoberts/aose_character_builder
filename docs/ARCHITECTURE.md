@@ -579,6 +579,15 @@ Illusionist/Magic-user/Thief). New languages: `hephaestan`, `language_of_wolves`
   `shop_categories`) is rendered via `detail_card` in a `row-detail` expander row
   toggled by `inventory.js` (same pattern as drawer inventory rows). Buy/add
   controls are unaffected — the toggle ignores clicks inside forms/buttons.
+- **Wizard card detail surfaces** — race/class cards open a shared zine
+  `#wizard-detail` overlay (`wizard.html`) whose body is built by `aose/web/book.py`
+  (`class_entry`/`race_entry`/`spell_entry`) and rendered by the `book_entry` macro
+  (`_book_entry.html`). Modal Select drives client-side selection (radio/checkbox
+  check + grid collapse); Clear restores the grid; multiclass grid collapses at the
+  cap (`data-multi`/`data-cap`). The spells step renders the same `book_entry` inline
+  as per-card expanders with a Learn/Forget toggle and slot cap. Controller:
+  `aose/web/static/wizard_cards.js`; styles: `wizard_cards.css` (reuses zine tokens,
+  wizard-only).
 
 ---
 
