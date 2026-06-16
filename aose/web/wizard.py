@@ -725,6 +725,12 @@ async def get_class(request: Request, draft_id: str):
             allowed_by_race = True  # no race chosen yet
             level_cap = None         # race caps don't bind a race-as-class entry
 
+        if not allowed_by_race:
+            reason = f"Not available to {race_name}"
+        elif not meets_abilities:
+            reason = "Ability requirements not met"
+        else:
+            reason = None
         classes.append({
             "id": cls.id,
             "name": cls.name,
@@ -736,6 +742,8 @@ async def get_class(request: Request, draft_id: str):
             "meets_abilities": meets_abilities,
             "available": allowed_by_race and meets_abilities,
             "selected": cls.id in _class_ids(draft),
+            "entry": class_entry(cls),
+            "select_reason": reason,
         })
 
     # Free-form multi-classing: when the rule is on (split mode only) the user

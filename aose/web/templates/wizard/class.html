@@ -1,9 +1,10 @@
+{% from "_book_entry.html" import book_entry %}
 <h2>{% if race_as_class_mode %}Choose Class &amp; Race{% else %}Choose Class{% endif %}</h2>
 {% if race_as_class_mode %}
 <p class="muted">Race-as-Class mode is active &mdash; demihumans are full classes.
    Picking one (e.g. <em>Dwarf</em>) sets both class and race in one step.</p>
 {% else %}
-<p class="muted">Filtered by your race ({{ race_name }}) and ability scores.</p>
+<p class="muted">Filtered by your race ({{ race_name }}) and ability scores. Click a card to read the entry, then Select.</p>
 {% endif %}
 
 {% if multiclass_enabled %}
@@ -15,9 +16,13 @@
 {% include "wizard/_ability_summary.html" %}
 
 <form method="post" action="/wizard/{{ draft_id }}/class" class="step-form">
-    <div class="card-grid">
+    <div class="card-grid"
+         {% if multiclass_enabled %}data-multi data-cap="{{ max_classes }}"{% else %}data-single{% endif %}>
     {% for cls in classes %}
-        <label class="card {% if not cls.available %}disabled{% endif %} {% if cls.selected %}selected{% endif %}">
+        <label class="card {% if not cls.available %}disabled{% endif %} {% if cls.selected %}selected{% endif %}"
+               data-detail data-name="{{ cls.name }}"
+               data-available="{{ 0 if cls.select_reason else 1 }}"
+               {% if cls.select_reason %}data-reason="{{ cls.select_reason }}"{% endif %}>
             <input type="{% if multiclass_enabled %}checkbox{% else %}radio{% endif %}"
                    name="class_id" value="{{ cls.id }}"
                    {% if not multiclass_enabled %}required{% endif %}
@@ -34,11 +39,8 @@
             {% if cls.level_cap %}
             <div class="card-detail">{{ race_name }} max level: {{ cls.level_cap }}</div>
             {% endif %}
-            {% if not cls.allowed_by_race %}
-            <div class="card-detail warn">Not available to {{ race_name }}</div>
-            {% elif not cls.meets_abilities %}
-            <div class="card-detail warn">Ability requirements not met</div>
-            {% endif %}
+            <button type="button" class="card-clear">Clear</button>
+            <div class="detail-body" hidden>{{ book_entry(cls.entry) }}</div>
         </label>
     {% endfor %}
     </div>

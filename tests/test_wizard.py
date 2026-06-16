@@ -131,6 +131,20 @@ def test_race_card_is_trimmed_and_carries_detail(client, tmp_path):
     assert 'data-role="select"' in r.text  # shared shell rendered on the page
 
 
+def test_class_card_carries_detail_and_reason(client, tmp_path):
+    draft_id = _start_draft(client)
+    _override_abilities(tmp_path, draft_id, {
+        "STR": 15, "INT": 11, "WIS": 12, "DEX": 13, "CON": 14, "CHA": 10
+    })
+    client.post(f"/wizard/{draft_id}/abilities", data={})
+    client.post(f"/wizard/{draft_id}/race", data={"race_id": "dwarf"})
+    r = client.get(f"/wizard/{draft_id}/class")
+    assert r.status_code == 200
+    assert 'class="detail-body"' in r.text
+    # A class Dwarf can't take (e.g. magic_user) carries a select reason.
+    assert "Not available to Dwarf" in r.text
+
+
 def test_full_wizard_flow_creates_character(client, tmp_path):
     draft_id = _start_draft(client)
     # Force abilities that meet Dwarf (CON 9+)
