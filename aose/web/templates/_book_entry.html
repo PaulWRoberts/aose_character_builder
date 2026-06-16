@@ -1,0 +1,23 @@
+{# Book-style detail renderer, shared by the wizard race/class modal and the
+   spell expander. `entry` is the dict from aose/web/book.py. Markdown text is
+   trusted local data. #}
+{% macro book_entry(entry) %}
+<div class="book-entry">
+  {% if entry.stats %}
+  <dl class="book-stats">
+    {% for s in entry.stats %}
+    <div><dt>{{ s.label }}</dt><dd>{{ s.value }}</dd></div>
+    {% endfor %}
+  </dl>
+  {% endif %}
+  {% if entry.body %}
+  <div class="book-body prose">{{ entry.body | markdown | safe }}</div>
+  {% endif %}
+  {% for f in entry.features %}
+  <section class="book-feature">
+    <h4 class="book-feature-head">{{ f.name }}</h4>
+    <div class="book-feature-body prose">{{ f.text | markdown | safe }}</div>
+  </section>
+  {% endfor %}
+</div>
+{% endmacro %}
