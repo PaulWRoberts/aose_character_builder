@@ -1,7 +1,15 @@
 {% extends "base.html" %}
 {% block title %}New Character - AOSE Character Builder{% endblock %}
+{% block head %}<link rel="stylesheet" href="/static/wizard_cards.css">{% endblock %}
 {% block content %}
 <div class="wizard">
+    <div class="overlay modal" id="wizard-detail" role="dialog" aria-label="Detail">
+      <div class="ov-head"><h3 data-role="title">Detail</h3><button class="x" data-close>×</button></div>
+      <div class="ov-body" data-role="body"></div>
+      <div class="ov-foot">
+        <button type="button" class="primary" data-role="select">Select</button>
+      </div>
+    </div>
     <header class="wizard-header">
         <h1>New Character</h1>
         <ol class="wizard-steps">
@@ -30,3 +38,4 @@
     </footer>
 </div>
 {% endblock %}
+{% block scripts %}<script src="/static/wizard_cards.js" defer></script>{% endblock %}
