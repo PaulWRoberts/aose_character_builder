@@ -1,12 +1,16 @@
+{% from "_book_entry.html" import book_entry %}
 <h2>Choose Race</h2>
-<p class="muted">Greyed-out races require ability scores you don't have.</p>
+<p class="muted">Click a card to read the full entry, then Select. Greyed-out races require ability scores you don't have.</p>
 
 {% include "wizard/_ability_summary.html" %}
 
 <form method="post" action="/wizard/{{ draft_id }}/race" class="step-form">
-    <div class="card-grid">
+    <div class="card-grid" data-single>
     {% for race in races %}
-        <label class="card {% if not race.meets_requirements %}disabled{% endif %} {% if race.selected %}selected{% endif %}">
+        <label class="card {% if not race.meets_requirements %}disabled{% endif %} {% if race.selected %}selected{% endif %}"
+               data-detail data-name="{{ race.name }}"
+               data-available="{{ 0 if race.select_reason else 1 }}"
+               {% if race.select_reason %}data-reason="{{ race.select_reason }}"{% endif %}>
             <input type="radio" name="race_id" value="{{ race.id }}" required
                    {% if not race.meets_requirements %}disabled{% endif %}
                    {% if race.selected %}checked{% endif %}>
@@ -18,21 +22,18 @@
                 {%- endfor %}
             </div>
             {% endif %}
-            <div class="card-detail">Movement: {{ race.base_movement }}'/turn</div>
             {% if race.ability_changes %}
-            <div class="card-detail small">Ability changes:
+            <div class="card-detail small">
                 {%- for ch in race.ability_changes %}
-                    {{ ch.name }} {{ ch.rolled }} &rarr; {{ ch.effective }}
-                    ({{ '+' if ch.delta > 0 else '' }}{{ ch.delta }}){% if not loop.last %},{% endif %}
+                    {{ ch.name }} {{ '+' if ch.delta > 0 else '' }}{{ ch.delta }}{% if not loop.last %}, {% endif %}
                 {%- endfor %}
             </div>
             {% endif %}
             {% if race.infravision %}
             <div class="card-detail">Infravision: {{ race.infravision }}'</div>
             {% endif %}
-            {% if race.languages %}
-            <div class="card-detail muted small">{{ race.languages | length }} languages</div>
-            {% endif %}
+            <button type="button" class="card-clear">Clear</button>
+            <div class="detail-body" hidden>{{ book_entry(race.entry) }}</div>
         </label>
     {% endfor %}
     </div>

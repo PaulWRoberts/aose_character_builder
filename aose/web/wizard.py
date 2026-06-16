@@ -6,6 +6,7 @@ from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from aose.web.templating import make_templates
 
+from aose.web.book import class_entry, race_entry, spell_entry
 from aose.characters import (
     delete_draft,
     load_draft,
@@ -625,6 +626,7 @@ async def get_race(request: Request, draft_id: str):
             }
             for ab, delta in race.ability_modifiers.items()
         ]
+        meets = _meets_ability_requirements(race.ability_requirements, abilities)
         races.append({
             "id": race.id,
             "name": race.name,
@@ -633,8 +635,10 @@ async def get_race(request: Request, draft_id: str):
             "requirements": {ab.value: v for ab, v in race.ability_requirements.items()},
             "languages": race.languages,
             "ability_changes": ability_changes,
-            "meets_requirements": _meets_ability_requirements(race.ability_requirements, abilities),
+            "meets_requirements": meets,
             "selected": draft.get("race_id") == race.id,
+            "entry": race_entry(race),
+            "select_reason": None if meets else "Ability requirements not met",
         })
     ctx = _base_context(request, draft_id, draft, "race")
     ctx["races"] = races

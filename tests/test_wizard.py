@@ -115,6 +115,22 @@ def _override_abilities(tmp_path, draft_id, abilities):
     save_draft(draft_id, draft, tmp_path / "drafts")
 
 
+def test_race_card_is_trimmed_and_carries_detail(client, tmp_path):
+    draft_id = _start_draft(client)
+    _override_abilities(tmp_path, draft_id, {
+        "STR": 12, "INT": 12, "WIS": 12, "DEX": 12, "CON": 12, "CHA": 12
+    })
+    client.post(f"/wizard/{draft_id}/abilities", data={})
+    r = client.get(f"/wizard/{draft_id}/race")
+    assert r.status_code == 200
+    # Trimmed: no Movement line, no "languages" count line.
+    assert "Movement:" not in r.text
+    assert "languages</div>" not in r.text
+    # Book detail body present (hidden) for the modal to inject.
+    assert 'class="detail-body"' in r.text
+    assert 'data-role="select"' in r.text  # shared shell rendered on the page
+
+
 def test_full_wizard_flow_creates_character(client, tmp_path):
     draft_id = _start_draft(client)
     # Force abilities that meet Dwarf (CON 9+)
