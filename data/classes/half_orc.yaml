@@ -111,6 +111,7 @@ features:
   name: Retainers
   text: |-
     Half-orcs often have difficulty gaining the trust of humans and demihumans, due to orcs’ chaotic tendencies. Retainers in a half-orc’s employ have their loyalty score reduced by one. (This does not apply to retainers who are also half-orcs.)
+  mechanical: {retainer_loyalty_modifier: {value: -1, except_same_race: true}}
   gained_at_level: 1
 - id: thieving_skills
   name: Thieving Skills

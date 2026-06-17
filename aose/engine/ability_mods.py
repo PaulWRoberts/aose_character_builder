@@ -70,6 +70,16 @@ _CHA_REACTIONS = {3: "−2", 4: "−1", 9: "None", 13: "+1", 18: "+2"}
 _CHA_RETAINERS_MAX = {3: "1", 4: "2", 6: "3", 9: "4", 13: "5", 16: "6", 18: "7"}
 _CHA_RETAINERS_LOYALTY = {3: "4", 4: "5", 6: "6", 9: "7", 13: "8", 16: "9", 18: "10"}
 
+
+def max_retainers(cha: int) -> int:
+    """Maximum retainers the hiring PC may employ (AOSE CHA table)."""
+    return int(_band(_CHA_RETAINERS_MAX, cha))
+
+
+def base_loyalty(cha: int) -> int:
+    """Starting loyalty rating for the PC's retainers (AOSE CHA table)."""
+    return int(_band(_CHA_RETAINERS_LOYALTY, cha))
+
 # WIS magic saves, CON hit points, and STR/DEX melee all equal the standard
 # ability-modifier column.
 _MODIFIER_COL = _MELEE

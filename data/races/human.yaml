@@ -38,3 +38,4 @@ features:
     optional_rule: true
     retainer_loyalty_bonus: 1
     mercenary_morale_bonus: 1
+    retainer_loyalty_modifier: {value: 1}

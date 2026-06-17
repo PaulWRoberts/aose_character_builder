@@ -25,3 +25,7 @@ features:
 - id: ability_modifiers
   name: Ability Modifiers
   text: –2 CHA, +1 CON, +1 STR.
+- id: half_orc_distrust
+  name: Distrust
+  text: "Retainers in a half-orc's employ have their loyalty reduced by one (except retainers who are also half-orcs)."
+  mechanical: {retainer_loyalty_modifier: {value: -1, except_same_race: true}}
