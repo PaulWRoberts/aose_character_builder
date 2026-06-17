@@ -230,4 +230,8 @@ features:
     ### Player Knowledge
     The referee should roll for HN, HS, and MS on the player’s behalf, as the assassin does not immediately know if the attempt was successful. If an HS or MS roll fails, the referee knows that the assassin has been noticed and should determine enemies’ actions appropriately.
   gained_at_level: 1
-
+retainer_hiring:
+  - {min_level: 1, allows: none}
+  - {min_level: 4, allows: [assassin]}
+  - {min_level: 8, allows: [assassin, thief]}
+  - {min_level: 12, allows: any}

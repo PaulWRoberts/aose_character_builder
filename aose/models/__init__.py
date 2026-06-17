@@ -5,6 +5,7 @@ from .character_class import (
     CharClass,
     ClassLevelData,
     ClassFeature,
+    RetainerHiringRule,
 )
 from .choice import ChoiceOption, DailyUses, FeatureChoice, OptionParam
 from .spell import Spell
@@ -50,6 +51,7 @@ __all__ = [
     "CharClass",
     "ClassLevelData",
     "ClassFeature",
+    "RetainerHiringRule",
     "ChoiceOption",
     "DailyUses",
     "FeatureChoice",

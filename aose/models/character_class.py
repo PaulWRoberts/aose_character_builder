@@ -36,6 +36,12 @@ class ClassFeature(BaseModel):
 AllowedList = Union[list[str], Literal["all"]]
 
 
+class RetainerHiringRule(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    min_level: int                                     # hiring PC level this tier applies at
+    allows: list[str] | Literal["any", "none"]         # class ids, or "any"/"none"
+
+
 class CharClass(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -81,3 +87,4 @@ class CharClass(BaseModel):
     # feature text stays on `features` for the sheet). Empty = unrestricted
     # (any of the three). E.g. paladin=[law], ranger=[law, neutral].
     allowed_alignments: list[Literal["law", "neutral", "chaos"]] = Field(default_factory=list)
+    retainer_hiring: list[RetainerHiringRule] = Field(default_factory=list)
