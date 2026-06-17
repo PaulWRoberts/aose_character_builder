@@ -633,3 +633,55 @@ change. Auth is enabled by setting `AOSE_AUTH=1`.
   it as a `CharacterSpec`, saves it under a new id, and redirects to the sheet.
   These routes work in both auth-on and auth-off modes and provide a self-serve
   backup / escape hatch.
+
+---
+
+## Companions & Holdings (Phase A)
+
+Animals and vehicles are first-class storage locations owned by a character,
+each with its own capacity that never contributes to the PC's encumbrance.
+
+**Item variants** (`aose/models/item.py`): three new discriminated-union members —
+`Animal` (hd, hp, ac, attacks, morale, load limits), `Vehicle` (hull_points,
+cargo_capacity_cn, vehicle_category), and `AnimalArmor` (sets_ac, fits list).
+All three are catalog items purchasable through the existing shop machinery.
+
+**Roster instances** (`aose/models/character.py`): `AnimalInstance` and
+`VehicleInstance` mirror `ContainerInstance`. Each has `instance_id`,
+`catalog_id`, a mutable `name`, damage/hull fields, and a `contents: list[str]`
+of loaded item ids. `ContainerInstance` gains `location` + `location_id` so a
+container can be placed *on* an animal or vehicle (excluded from PC encumbrance).
+`CharacterSpec` carries `animals: list[AnimalInstance]` and
+`vehicles: list[VehicleInstance]`.
+
+**Monster-stats engine** (`aose/engine/monster_stats.py`): HD string → THAC0,
+attack bonus, and all five save scores. Two YAML lookup tables are loaded by
+`GameData`: `data/monster_attack_matrix.yaml` (16 HD bands) and
+`data/monster_saves.yaml` (9 HD bands). The engine imports only `models` and
+`loader` — no cycle risk.
+
+**Catalog data**: `data/equipment/animals.yaml` (7 animals: camel, draft/riding/
+war horse, mule, hunting/war dog), `data/equipment/vehicles.yaml` (16 land and
+water vehicles), `data/equipment/tack.yaml` (dog armour, horse barding,
+saddle & bridle, saddle bags container).
+
+**Companions engine** (`aose/engine/companions.py`): buy/remove animals &
+vehicles (deducting/refunding gold), assign/clear animal armour, load/unload
+loose gear onto a carrier (capacity-checked), move a container between person
+and carrier. `encumbrance.py` and `shop.py` skip containers whose `location !=
+"person"`.
+
+**Sheet view** (`aose/sheet/companions_view.py`): `companions_block(spec, data)`
+assembles `AnimalCard` and `VehicleCard` view models — derives ascending AC
+(overridden by equipped armour), THAC0/attack bonus, and saves from catalog stats
+— and attaches resolved `InventoryRow` contents. Returns `None` when the
+character has no companions. `CharacterSheet.companions` carries this block.
+
+**Routes**: `POST /character/{id}/animal/{buy,remove,rename,hp,armor,load,unload}`
+and the parallel vehicle set (add hull, extra-animals toggle). All follow the
+standard `_load_spec_or_404` → mutate → `save_character` → 303 pattern.
+
+**Sheet UI** (`aose/web/templates/_companions.html`, included from `sheet.html`):
+one `companion-card` per animal/vehicle with inline HP/hull buttons, armour
+select, and a collapsible load details block. Print sheet includes a static
+text block in `sheet_print.html`.

@@ -8,6 +8,7 @@ For the living architecture (how the subsystems fit together *now*), see
 
 | Date | Feature | Branch | Spec/Plan slug |
 |---|---|---|---|
+| 2026-06-16 | Animals & vehicles (Companions & Holdings Phase A) | feat/companions-and-holdings | animals-and-vehicles |
 | 2026-06-16 | Wizard book-style detail modals + trimmed race/spell cards | main | 2026-06-16-wizard-detail-modals |
 | 2026-06-12 | Fix: innate abilities now usable — spell-style pip rows + dedicated Use/Restore modal | main | — |
 | 2026-06-12 | CC5 Cantrips optional rule (+ Read Magic Cantrip) | feat/cc5-cantrips | 2026-06-12-cc5-cantrips |
