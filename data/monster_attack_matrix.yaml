@@ -1,0 +1,16 @@
+nh:          {thac0: 20, attack_bonus: -1}
+up_to_1:     {thac0: 19, attack_bonus: 0}
+"1+_to_2":   {thac0: 18, attack_bonus: 1}
+"2+_to_3":   {thac0: 17, attack_bonus: 2}
+"3+_to_4":   {thac0: 16, attack_bonus: 3}
+"4+_to_5":   {thac0: 15, attack_bonus: 4}
+"5+_to_6":   {thac0: 14, attack_bonus: 5}
+"6+_to_7":   {thac0: 13, attack_bonus: 6}
+"7+_to_9":   {thac0: 12, attack_bonus: 7}
+"9+_to_11":  {thac0: 11, attack_bonus: 8}
+"11+_to_13": {thac0: 10, attack_bonus: 9}
+"13+_to_15": {thac0: 9,  attack_bonus: 10}
+"15+_to_17": {thac0: 8,  attack_bonus: 11}
+"17+_to_19": {thac0: 7,  attack_bonus: 12}
+"19+_to_21": {thac0: 6,  attack_bonus: 13}
+"21+":       {thac0: 5,  attack_bonus: 14}

@@ -158,6 +158,18 @@ def _load_sources(data_dir: Path) -> dict[str, Source]:
     return result
 
 
+def _load_table(data_dir: Path, filename: str) -> dict:
+    """Read a flat mapping table (band -> values). Empty dict if absent."""
+    path = data_dir / filename
+    if not path.exists():
+        return {}
+    with path.open("r", encoding="utf-8") as f:
+        raw = yaml.safe_load(f) or {}
+    if not isinstance(raw, dict):
+        raise ValueError(f"{filename} must be a YAML mapping")
+    return raw
+
+
 def _load_enchantments(data_dir: Path) -> dict[str, Enchantment]:
     """Read ``enchantments.yaml`` (a list of mappings) into an id-keyed dict.
 
@@ -243,6 +255,8 @@ class GameData:
     languages: LanguageData = field(default_factory=LanguageData)
     enchantments: dict[str, Enchantment] = field(default_factory=dict)
     sources: dict[str, Source] = field(default_factory=dict)
+    monster_attack_matrix: dict = field(default_factory=dict)
+    monster_saves: dict = field(default_factory=dict)
 
     @classmethod
     def load(cls, data_dir: Path) -> "GameData":
@@ -260,4 +274,6 @@ class GameData:
             languages=_load_languages(data_dir),
             enchantments=_load_enchantments(data_dir),
             sources=_load_sources(data_dir),
+            monster_attack_matrix=_load_table(data_dir, "monster_attack_matrix.yaml"),
+            monster_saves=_load_table(data_dir, "monster_saves.yaml"),
         )

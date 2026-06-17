@@ -1,0 +1,9 @@
+nh:      {death: 14, wands: 15, paralysis: 16, breath: 17, spells: 18}
+"1-3":   {death: 12, wands: 13, paralysis: 14, breath: 15, spells: 16}
+"4-6":   {death: 10, wands: 11, paralysis: 12, breath: 13, spells: 14}
+"7-9":   {death: 8,  wands: 9,  paralysis: 10, breath: 10, spells: 12}
+"10-12": {death: 6,  wands: 7,  paralysis: 8,  breath: 8,  spells: 10}
+"13-15": {death: 4,  wands: 5,  paralysis: 6,  breath: 5,  spells: 8}
+"16-18": {death: 2,  wands: 3,  paralysis: 4,  breath: 3,  spells: 6}
+"19-21": {death: 2,  wands: 2,  paralysis: 2,  breath: 2,  spells: 4}
+"22+":   {death: 2,  wands: 2,  paralysis: 2,  breath: 2,  spells: 2}
