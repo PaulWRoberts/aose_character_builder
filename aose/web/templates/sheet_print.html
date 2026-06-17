@@ -222,6 +222,26 @@
     </section>
     {% endif %}
 
+    {% if sheet.companions %}
+    <section class="section print-companions">
+        <h2>Companions &amp; Holdings</h2>
+        {% for a in sheet.companions.animals %}
+        <p><strong>{{ a.name }}</strong> ({{ a.species }}) — AC {{ a.ac_descending }}
+           [{{ a.ac_ascending }}], HP {{ a.hp_current }}/{{ a.hp_max }},
+           THAC0 {{ a.thac0 }} [{{ '%+d' % a.attack_bonus }}],
+           Save D{{ a.saves.death }} W{{ a.saves.wands }} P{{ a.saves.paralysis }}
+           B{{ a.saves.breath }} S{{ a.saves.spells }}.
+           {% if a.contents %}Carrying: {{ a.contents | map(attribute='name') | join(', ') }}.{% endif %}</p>
+        {% endfor %}
+        {% for v in sheet.companions.vehicles %}
+        <p><strong>{{ v.name }}</strong> ({{ v.kind }}) — AC {{ v.ac_descending }}
+           [{{ v.ac_ascending }}], Hull {{ v.hull_current }}/{{ v.hull_max }},
+           Cargo {{ v.cargo_used }}/{{ v.cargo_capacity }} cn.
+           {% if v.contents %}Cargo: {{ v.contents | map(attribute='name') | join(', ') }}.{% endif %}</p>
+        {% endfor %}
+    </section>
+    {% endif %}
+
     {% if sheet.magic_items %}
     <section class="section">
         <h2>Magic Items</h2>
