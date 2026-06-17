@@ -709,6 +709,8 @@ async def get_class(request: Request, draft_id: str):
         # everything (race-locked entries become the "demihuman as class" picks).
         if ruleset.separate_race_class and cls.race_locked:
             continue
+        if cls.id == "normal_human":   # retainer-only class; not player-choosable
+            continue
         if not content_enabled(cls.source, "classes", ruleset):
             continue
 

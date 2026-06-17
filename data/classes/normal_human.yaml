@@ -1,0 +1,23 @@
+id: normal_human
+name: Normal Human
+source: ose_classic_fantasy
+prime_requisites: []
+ability_requirements: {}
+max_level: 1
+hit_die: "1d4"
+name_level: 1
+hp_after_name_level: 0
+weapons_allowed: all
+armor_allowed: all
+shields_allowed: true
+progression:
+  1:
+    xp_required: 0
+    thac0: 20
+    saves: {death: 14, wands: 15, paralysis: 16, breath: 17, spells: 18}
+features:
+  - id: zero_level
+    name: 0-level
+    text: >-
+      A normal human has no character class. On gaining experience from an
+      adventure, they must choose an adventuring class.
