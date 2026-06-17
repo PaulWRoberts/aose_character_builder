@@ -177,7 +177,61 @@ class Ammunition(ItemBase):
     # weight_cn defaults to 0 (ItemBase) — ammo never contributes encumbrance.
 
 
+class AnimalAttack(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    name: str                       # "bite", "hoof", "kick"
+    count: int = 1                  # attacks per round of this kind
+    damage: str                     # "1d4", "1", "2d4"
+    note: str | None = None         # e.g. "or" to flag an alternative routine
+
+
+class Animal(ItemBase):
+    item_type: Literal["animal"]
+    hd: str                         # HD rating, e.g. "2", "1+2", "½" → THAC0/XP
+    save_as_hd: int | str           # parenthesised save-as ("NH" or int) → saves
+    hp: int                         # average hp (the parenthesised value)
+    ac: int                         # descending; ascending derived (19 - ac)
+    attacks: list[AnimalAttack] = Field(default_factory=list)
+    morale: int
+    alignment: Literal["law", "neutral", "chaos", "any"] = "neutral"
+    xp: int = 0
+    movement: str                   # "150' (50')" base (encounter)
+    miles_per_day: int | None = None
+    max_load_unencumbered_cn: int | None = None
+    max_load_encumbered_cn: int | None = None
+    movement_encumbered: str | None = None
+    miles_per_day_encumbered: int | None = None
+    armor_fits: list[str] = Field(default_factory=list)
+    traits: list[str] = Field(default_factory=list)
+
+
+class Vehicle(ItemBase):
+    item_type: Literal["vehicle"]
+    vehicle_category: Literal["land_vehicle", "water_vessel"]
+    ac: int                         # descending; ascending derived
+    hull_points: str                # dice ("1d4") OR range ("60-90")
+    cargo_capacity_cn: int
+    cargo_capacity_extra_cn: int | None = None
+    required_animals: str | None = None
+    required_crew: str | None = None
+    miles_per_day: str | None = None
+    movement: str | None = None
+    max_mercenaries: int | None = None
+    seaworthy: bool | None = None
+    requires_captain: bool | None = None
+    passengers: str | None = None
+    dimensions: str | None = None
+    traits: list[str] = Field(default_factory=list)
+
+
+class AnimalArmor(ItemBase):
+    item_type: Literal["animal_armor"]
+    sets_ac: int                    # descending; replaces natural AC
+    fits: list[str] = Field(default_factory=list)
+
+
 Item = Annotated[
-    Union[Weapon, Armor, AdventuringGear, Poison, Container, MagicItem, Ammunition],
+    Union[Weapon, Armor, AdventuringGear, Poison, Container, MagicItem,
+          Ammunition, Animal, Vehicle, AnimalArmor],
     Field(discriminator="item_type"),
 ]
