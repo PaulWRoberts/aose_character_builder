@@ -94,6 +94,28 @@ def generate_retainer(*, name: str, class_ids: list[str], level: int,
     return Retainer(id=uuid.uuid4().hex, spec=spec, loyalty=loyalty, role="")
 
 
+def allowed_retainer_classes(hiring_spec: CharacterSpec, data: GameData):
+    """Effective hiring allowance across the PC's classes (most permissive wins):
+    returns "any", or a set of class ids (empty set == may not hire). A class
+    with no retainer_hiring rules is unrestricted ("any")."""
+    per_class = []
+    for entry in hiring_spec.classes:
+        cls = data.classes.get(entry.class_id)
+        if not cls or not cls.retainer_hiring:
+            return "any"                      # an unrestricted class permits all
+        tier = None
+        for rule in sorted(cls.retainer_hiring, key=lambda r: r.min_level):
+            if entry.level >= rule.min_level:
+                tier = rule
+        if tier is None or tier.allows == "any":
+            return "any"
+        per_class.append(set() if tier.allows == "none" else set(tier.allows))
+    union: set = set()
+    for s in per_class:
+        union |= s
+    return union
+
+
 def initial_loyalty(hiring_spec: CharacterSpec, retainer_race_id: str,
                     data: GameData) -> int:
     """Base loyalty from the hiring PC's CHA, adjusted by class/race
