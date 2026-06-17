@@ -23,6 +23,7 @@ from aose.engine.languages import (
 )
 from aose.engine.leveling import ClassAdvancement, all_advancement
 from aose.engine.detail import DetailCard, item_card, spell_card
+from aose.sheet.companions_view import CompanionsBlock, companions_block
 from aose.engine.features import is_race_as_class, open_doors_category_bonus, selected_options
 from aose.engine.initiative import initiative_detail
 from aose.engine.innate import innate_abilities as _innate_abilities
@@ -431,6 +432,7 @@ class CharacterSheet(BaseModel):
         gems=[], jewellery=[], total_value=0))
     ammo: list[AmmoRow] = Field(default_factory=list)
     ammo_load_options: dict[str, list[AmmoOption]] = Field(default_factory=dict)
+    companions: CompanionsBlock | None = None
     other_possessions: list[str] = Field(default_factory=list)
     notes: str = ""
 
@@ -1396,6 +1398,7 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
         valuables=valuables_view(spec),
         ammo=ammo_rows,
         ammo_load_options=ammo_options,
+        companions=companions_block(spec, data),
         other_possessions=list(spec.other_possessions),
         notes=spec.notes,
         coins={
