@@ -158,7 +158,7 @@ def equipment_weight_cn(spec: CharacterSpec, data: GameData) -> int:
     # are NOT subsumed into the flat-80 abstraction.
     from aose.models import Container as _Container
     for c in spec.containers:
-        if c.state != "carried":
+        if c.state != "carried" or c.location != "person":
             continue
         catalog = data.items.get(c.catalog_id)
         if not isinstance(catalog, _Container):

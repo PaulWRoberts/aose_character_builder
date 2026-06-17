@@ -223,6 +223,8 @@ def inventory_view(inventory: list[str], stashed: list[str],
 
     container_views: list[ContainerView] = []
     for c in containers:
+        if getattr(c, "location", "person") != "person":
+            continue   # rendered inside its carrier's card, not the loose list
         catalog = data.items.get(c.catalog_id)
         if not isinstance(catalog, Container):
             continue   # stale catalog id; surface as zero-state
