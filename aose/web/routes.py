@@ -1719,3 +1719,127 @@ async def vehicle_unload(request: Request, character_id: str, instance_id: str,
         raise HTTPException(400, str(e))
     save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+# ── Retainer routes ────────────────────────────────────────────────────────
+
+from aose.engine import retainers as retainers_engine
+
+
+@router.post("/character/{character_id}/retainer/add")
+async def retainer_add(request: Request, character_id: str,
+                       name: str = Form(...), class_id: str = Form(...),
+                       level: int = Form(1), race_id: str = Form("human"),
+                       alignment: str = Form("neutral")):
+    spec = _load_spec_or_404(request, character_id)
+    data = request.app.state.game_data
+    pc_level = max((e.level for e in spec.classes), default=1)
+    if class_id != "normal_human" and level > pc_level:
+        raise HTTPException(400, "A retainer may not exceed your level")
+    try:
+        ret = retainers_engine.generate_retainer(
+            name=name, class_ids=[class_id], level=level, race_id=race_id,
+            alignment=alignment, hiring_spec=spec, data=data)
+    except (KeyError, ValueError) as e:
+        raise HTTPException(400, str(e))
+    spec.retainers.append(ret)
+    save_character(character_id, spec, request.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/retainer/{retainer_id}/remove")
+async def retainer_remove(request: Request, character_id: str, retainer_id: str):
+    spec = _load_spec_or_404(request, character_id)
+    spec.retainers = [r for r in spec.retainers if r.id != retainer_id]
+    save_character(character_id, spec, request.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/retainer/{retainer_id}/loyalty")
+async def retainer_loyalty(request: Request, character_id: str, retainer_id: str,
+                           value: int = Form(...)):
+    spec = _load_spec_or_404(request, character_id)
+    for r in spec.retainers:
+        if r.id == retainer_id:
+            r.loyalty = value
+    save_character(character_id, spec, request.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/retainer/{retainer_id}/role")
+async def retainer_role(request: Request, character_id: str, retainer_id: str,
+                        role: str = Form("")):
+    spec = _load_spec_or_404(request, character_id)
+    for r in spec.retainers:
+        if r.id == retainer_id:
+            r.role = role
+    save_character(character_id, spec, request.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/retainer/{retainer_id}/xp")
+async def retainer_xp(request: Request, character_id: str, retainer_id: str,
+                      amount: int = Form(...)):
+    spec = _load_spec_or_404(request, character_id)
+    data = request.app.state.game_data
+    for r in spec.retainers:
+        if r.id == retainer_id:
+            retainers_engine.grant_retainer_xp(r, data, amount)
+    save_character(character_id, spec, request.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/retainer/{retainer_id}/levelup")
+async def retainer_levelup(request: Request, character_id: str, retainer_id: str,
+                           class_id: str = Form(...)):
+    spec = _load_spec_or_404(request, character_id)
+    data = request.app.state.game_data
+    for r in spec.retainers:
+        if r.id == retainer_id:
+            try:
+                _level_up(r.spec, data, class_id)
+            except ValueError as e:
+                raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/retainer/{retainer_id}/promote")
+async def retainer_promote(request: Request, character_id: str, retainer_id: str,
+                           class_id: str = Form(...)):
+    spec = _load_spec_or_404(request, character_id)
+    data = request.app.state.game_data
+    for r in spec.retainers:
+        if r.id == retainer_id:
+            try:
+                retainers_engine.promote_normal_human(r, class_id, data)
+            except ValueError as e:
+                raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/retainer/{retainer_id}/give")
+async def retainer_give(request: Request, character_id: str, retainer_id: str,
+                        item_id: str = Form(...)):
+    spec = _load_spec_or_404(request, character_id)
+    data = request.app.state.game_data
+    try:
+        retainers_engine.transfer_to_retainer(spec, retainer_id, item_id, data)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/retainer/{retainer_id}/take")
+async def retainer_take(request: Request, character_id: str, retainer_id: str,
+                        item_id: str = Form(...)):
+    spec = _load_spec_or_404(request, character_id)
+    data = request.app.state.game_data
+    try:
+        retainers_engine.transfer_to_pc(spec, retainer_id, item_id, data)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
