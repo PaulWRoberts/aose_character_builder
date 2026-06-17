@@ -255,6 +255,8 @@
 - { id: vial_glass, item_type: gear, name: Vial (glass), category: adventuring_gear, cost_gp: 1, source: carcass_crawler_3, description: "Holds up to half a pint of liquid." }
 - { id: whistle, item_type: gear, name: Whistle, category: adventuring_gear, cost_gp: 1, source: carcass_crawler_3, description: "Useful for signalling or faking bird calls." }
 
+- { id: sprig_of_mistletoe, item_type: gear, name: Sprig of Mistletoe, category: adventuring_gear, cost_gp: 0, description: "A holy symbol for druids." }
+
 - { id: belt_pouch, item_type: container, name: Belt Pouch, category: adventuring_gear, cost_gp: 1, capacity_cn: 50, weight_multiplier: 1.0, source: carcass_crawler_3, description: "A leather pouch that holds up to 50 coins." }
 - { id: box_iron_small, item_type: container, name: "Box (iron, small)", category: adventuring_gear, cost_gp: 10, capacity_cn: 250, weight_multiplier: 1.0, source: carcass_crawler_3, description: "A solid iron casket holding up to 250 coins." }
 - { id: box_iron_large, item_type: container, name: "Box (iron, large)", category: adventuring_gear, cost_gp: 30, capacity_cn: 800, weight_multiplier: 1.0, source: carcass_crawler_3, description: "A solid iron casket holding up to 800 coins." }

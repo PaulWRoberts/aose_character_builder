@@ -1,0 +1,82 @@
+tables:
+  armour_d6:
+    - [{armor: leather_armor}]
+    - [{armor: leather_armor}, {shield: true}]
+    - [{armor: chain_mail}]
+    - [{armor: chain_mail}, {shield: true}]
+    - [{armor: plate_mail}]
+    - [{armor: plate_mail}, {shield: true}]
+  general:
+    - [{id: battle_axe}]
+    - [{id: crossbow}, {ammo: crossbow_bolt, n: 20}]
+    - [{id: hand_axe}]
+    - [{id: mace}]
+    - [{id: polearm}]
+    - [{id: short_bow}, {ammo: arrow, n: 20}]
+    - [{id: short_sword}]
+    - [{id: silver_dagger}]
+    - [{id: sling}, {ammo: sling_stone, n: 20}]
+    - [{id: spear}]
+    - [{id: sword}]
+    - [{id: war_hammer}]
+  acrobat:
+    - [{id: polearm}]
+    - [{id: short_bow}, {ammo: arrow, n: 20}]
+    - [{id: spear}]
+    - [{id: staff}]
+  bard:
+    - [{id: crossbow}, {ammo: crossbow_bolt, n: 20}]
+    - [{id: short_sword}]
+    - [{id: sling}, {ammo: sling_stone, n: 20}]
+    - [{id: sword}]
+  cleric:
+    - [{id: mace}]
+    - [{id: sling}, {ammo: sling_stone, n: 20}]
+    - [{id: staff}]
+    - [{id: war_hammer}]
+  druid:
+    - [{id: club}]
+    - [{id: dagger}]
+    - [{id: sling}, {ammo: sling_stone, n: 20}]
+    - [{id: staff}]
+  knight:
+    - [{id: lance}]
+    - [{id: short_sword}]
+    - [{id: sword}]
+    - [{id: war_hammer}]
+  adventuring_gear:
+    - [{id: crowbar}]
+    - [{id: hammer_small}, {id: iron_spike, n: 12}]
+    - [{id: holy_water_vial}]
+    - [{id: lantern}, {id: flask_of_oil, n: 3}]
+    - [{id: mirror_small}]
+    - [{id: pole_10ft}]
+    - [{id: rope_50ft}]
+    - [{id: rope_50ft}, {id: grappling_hook}]
+    - [{id: sack_large}]
+    - [{id: sack_small}]
+    - [{id: stakes_and_mallet}]
+    - [{id: wolfsbane}]
+
+classes:
+  fighter:     {armour: armour_d6, weapons: {table: general, rolls: 2}}
+  paladin:     {armour: armour_d6, weapons: {table: general, rolls: 2}, extras: [holy_symbol]}
+  ranger:      {armour: {table: armour_d6, die: "1d4"}, weapons: {table: general, rolls: 2}}
+  barbarian:   {armour: {table: armour_d6, die: "1d4"}, weapons: {table: general, rolls: 2}}
+  cleric:      {armour: armour_d6, weapons: {table: cleric, rolls: 2}, extras: [holy_symbol]}
+  druid:       {armour: {fixed: leather_armor}, weapons: {table: druid, rolls: 2}, extras: [sprig_of_mistletoe]}
+  thief:       {armour: {fixed: leather_armor}, weapons: {table: general, rolls: 2}, extras: [thieves_tools]}
+  acrobat:     {armour: {fixed: leather_armor}, weapons: {table: acrobat, rolls: 2}}
+  assassin:    {armour: {fixed: leather_armor}, weapons: {table: general, rolls: 2}}
+  magic_user:  {armour: none, weapons: {fixed: [dagger]}}
+  illusionist: {armour: none, weapons: {fixed: [dagger]}}
+  knight:      {armour: {table: armour_d6, die: "1d4", modifier: 2}, weapons: {table: knight, rolls: 2}}
+  arcane_bard: {armour: {table: armour_d6, die: "1d4", ignore_shields: true}, weapons: {table: bard, rolls: 2}}
+  dwarf:       {armour: armour_d6, weapons: {table: general, rolls: 2}}
+  elf:         {armour: armour_d6, weapons: {table: general, rolls: 2}}
+  halfling:    {armour: armour_d6, weapons: {table: general, rolls: 2}}
+  half_elf:    {armour: armour_d6, weapons: {table: general, rolls: 2}}
+  half_orc:    {armour: {table: armour_d6, die: "1d4"}, weapons: {table: general, rolls: 2}}
+  gnome:       {armour: {fixed: leather_armor}, weapons: {table: general, rolls: 2}}
+  duergar:     {armour: armour_d6, weapons: {table: general, rolls: 2}}
+  svirfneblin: {armour: armour_d6, weapons: {table: general, rolls: 2}}

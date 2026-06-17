@@ -257,6 +257,7 @@ class GameData:
     sources: dict[str, Source] = field(default_factory=dict)
     monster_attack_matrix: dict = field(default_factory=dict)
     monster_saves: dict = field(default_factory=dict)
+    quick_equipment: dict = field(default_factory=dict)
 
     @classmethod
     def load(cls, data_dir: Path) -> "GameData":
@@ -276,4 +277,5 @@ class GameData:
             sources=_load_sources(data_dir),
             monster_attack_matrix=_load_table(data_dir, "monster_attack_matrix.yaml"),
             monster_saves=_load_table(data_dir, "monster_saves.yaml"),
+            quick_equipment=_load_table(data_dir, "quick_equipment.yaml"),
         )
