@@ -58,9 +58,29 @@ class VehicleCard(BaseModel):
     detail: DetailCard
 
 
+class RetainerCard(BaseModel):
+    id: str
+    name: str
+    descriptor: str          # "Human Fighter 1" or "0-level Normal Human"
+    is_normal_human: bool
+    ac_descending: int
+    ac_ascending: int
+    hp_current: int
+    hp_max: int
+    thac0: int
+    saves: dict[str, int]
+    equipped: dict[str, str]     # slot -> item name (display)
+    loyalty: int
+    role: str
+    inventory: list[InventoryRow]
+    xp: int
+
+
 class CompanionsBlock(BaseModel):
     animals: list[AnimalCard] = []
     vehicles: list[VehicleCard] = []
+    retainers: list[RetainerCard] = []
+    max_retainers: int = 0
 
 
 def _content_rows(item_ids: list[str], data: GameData) -> list[InventoryRow]:

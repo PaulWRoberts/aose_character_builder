@@ -433,6 +433,8 @@ class CharacterSheet(BaseModel):
     ammo: list[AmmoRow] = Field(default_factory=list)
     ammo_load_options: dict[str, list[AmmoOption]] = Field(default_factory=dict)
     companions: CompanionsBlock | None = None
+    race_id: str = ""
+    retainer_class_options: list[dict] = Field(default_factory=list)
     other_possessions: list[str] = Field(default_factory=list)
     notes: str = ""
 
@@ -1191,6 +1193,56 @@ def _level_choice_extras(spec: CharacterSpec, data: GameData) -> dict:
     }
 
 
+def _retainer_class_options(spec: CharacterSpec, data: GameData) -> list[dict]:
+    from aose.engine.retainers import allowed_retainer_classes
+    allowed = allowed_retainer_classes(spec, data)
+    return [
+        {"id": c.id, "name": c.name}
+        for c in data.classes.values()
+        if c.id == "normal_human" or allowed == "any" or (isinstance(allowed, set) and c.id in allowed)
+    ]
+
+
+def _retainer_cards(spec: CharacterSpec, data: GameData) -> list:
+    from collections import Counter
+    from aose.sheet.companions_view import RetainerCard
+    from aose.engine.shop import _build_row
+    cards = []
+    for r in spec.retainers:
+        rs = build_sheet(r.spec, data)   # recursive; bounded (retainer.spec.retainers is empty)
+        entry = r.spec.classes[0]
+        cls = data.classes.get(entry.class_id)
+        is_nh = entry.class_id == "normal_human"
+        race_name = data.races[r.spec.race_id].name if r.spec.race_id in data.races else ""
+        descriptor = ("0-level Normal Human" if is_nh
+                      else f"{race_name} {cls.name} {entry.level}".strip() if cls else "")
+        equipped_names = {slot: data.items[i].name
+                         for slot, i in r.spec.equipped.items() if i in data.items}
+        inv_rows = [_build_row(i, n, data) for i, n in Counter(r.spec.inventory).items()]
+        inv_rows.sort(key=lambda x: x.name)
+        cards.append(RetainerCard(
+            id=r.id, name=r.spec.name, descriptor=descriptor, is_normal_human=is_nh,
+            ac_descending=rs.ac_descending, ac_ascending=rs.ac_ascending,
+            hp_current=rs.current_hp, hp_max=rs.max_hp, thac0=rs.thac0,
+            saves={s.name: s.modified for s in rs.saves},
+            equipped=equipped_names,
+            loyalty=r.loyalty, role=r.role, inventory=inv_rows, xp=entry.xp))
+    return cards
+
+
+def _with_retainers(block, spec: CharacterSpec, data: GameData):
+    from aose.sheet.companions_view import CompanionsBlock
+    from aose.engine.ability_mods import max_retainers
+    cards = _retainer_cards(spec, data)
+    if block is None and not cards:
+        return None
+    block = block or CompanionsBlock()
+    block.retainers = cards
+    cha = int(spec.abilities.get(Ability.CHA, 9))
+    block.max_retainers = max_retainers(cha)
+    return block
+
+
 def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
     race = data.races[spec.race_id]
 
@@ -1398,7 +1450,9 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
         valuables=valuables_view(spec),
         ammo=ammo_rows,
         ammo_load_options=ammo_options,
-        companions=companions_block(spec, data),
+        companions=_with_retainers(companions_block(spec, data), spec, data),
+        race_id=spec.race_id,
+        retainer_class_options=_retainer_class_options(spec, data),
         other_possessions=list(spec.other_possessions),
         notes=spec.notes,
         coins={
