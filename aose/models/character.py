@@ -270,6 +270,7 @@ class CharacterSpec(BaseModel):
     # Innate daily-use ability id -> uses spent today (reset on rest).
     innate_uses: dict[str, int] = Field(default_factory=dict)
     ruleset: RuleSet = Field(default_factory=RuleSet)
+    retainers: list["Retainer"] = Field(default_factory=list)
 
     @model_validator(mode="before")
     @classmethod
@@ -319,3 +320,19 @@ class CharacterSpec(BaseModel):
                 else:
                     data["secondary_skills"] = legacy
         return data
+
+
+class Retainer(BaseModel):
+    """A hired NPC the character employs. Wraps a full CharacterSpec so the
+    whole engine (sheet, leveling, HP, saves, attacks, equip) works on it
+    unchanged. ``loyalty`` is the current (editable) loyalty value; ``role`` is
+    a free-text note. A retainer's own ``spec.retainers`` stays empty."""
+    model_config = ConfigDict(extra="forbid")
+
+    id: str                       # uuid4 hex
+    spec: CharacterSpec
+    loyalty: int
+    role: str = ""
+
+
+CharacterSpec.model_rebuild()
