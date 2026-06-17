@@ -730,3 +730,15 @@ input:focus-visible, select:focus-visible, textarea:focus-visible{
 .attack-conditional td{ padding-top:0; border-top:none; }
 .attack-conditional{ color:var(--gray); }
 .unarmed-row{ color:var(--gray); }
+
+/* ── Companions & Holdings ──────────────────────────────────────────────── */
+.companion-card{ border:1px solid var(--rule); padding:.5rem .75rem; margin-block:.5rem; }
+.companion-head{ display:flex; flex-wrap:wrap; gap:.5rem 1rem; align-items:baseline; }
+.companion-name{ font-weight:700; }
+.companion-sub{ color:var(--ink-2); font-style:italic; }
+.companion-stat{ font-variant-numeric:tabular-nums; }
+.companion-saves{ color:var(--ink-2); font-size:.9em; margin-top:.25rem; }
+.companion-traits{ margin:.25rem 0 0; padding-left:1.1rem; font-size:.9em; }
+.contents-list{ list-style:none; padding:0; margin:.25rem 0 0; }
+.contents-list li{ display:flex; gap:.5rem; align-items:center; }
+.inline-form{ display:inline-flex; gap:.25rem; margin-top:.25rem; }

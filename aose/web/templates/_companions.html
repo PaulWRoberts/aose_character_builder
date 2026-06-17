@@ -1,0 +1,119 @@
+{% if sheet.companions %}
+<section class="group companions-group">
+  <h2 class="group-bar">Companions &amp; Holdings</h2>
+  <div class="group-body">
+
+    {% for a in sheet.companions.animals %}
+    <article class="companion-card" data-kind="animal">
+      <header class="companion-head">
+        <span class="companion-name">{{ a.name }}</span>
+        <span class="companion-sub">{{ a.species }}</span>
+        <span class="companion-stat">AC {{ a.ac_descending }} [{{ a.ac_ascending }}]</span>
+        <span class="companion-stat">THAC0 {{ a.thac0 }} [{{ '%+d' % a.attack_bonus }}]</span>
+        <span class="companion-stat">HP {{ a.hp_current }}/{{ a.hp_max }}</span>
+      </header>
+
+      <div class="companion-saves">
+        D {{ a.saves.death }} · W {{ a.saves.wands }} · P {{ a.saves.paralysis }}
+        · B {{ a.saves.breath }} · S {{ a.saves.spells }}
+        · Move {{ a.movement }} · ML {{ a.morale }}
+      </div>
+
+      {% if a.traits %}
+      <ul class="companion-traits">
+        {% for t in a.traits %}<li>{{ t }}</li>{% endfor %}
+      </ul>
+      {% endif %}
+
+      <form method="post"
+            action="/character/{{ character_id }}/animal/{{ a.instance_id }}/hp"
+            class="inline-form">
+        <button name="delta" value="-1" class="chip">−1 HP</button>
+        <button name="delta" value="1" class="chip">+1 HP</button>
+      </form>
+
+      {% if a.armor_options or a.armor_id %}
+      <form method="post"
+            action="/character/{{ character_id }}/animal/{{ a.instance_id }}/armor"
+            class="inline-form">
+        <label>Armour
+          <select name="armor_id" onchange="this.form.submit()">
+            <option value="">— none —</option>
+            {% for aid, aname in a.armor_options %}
+              <option value="{{ aid }}"{% if a.armor_id == aid %} selected{% endif %}>{{ aname }}</option>
+            {% endfor %}
+          </select>
+        </label>
+      </form>
+      {% endif %}
+
+      {% if a.load_capacity %}
+      <details class="companion-load">
+        <summary>Load {{ a.load_used }} / {{ a.load_capacity }} cn</summary>
+        <ul class="contents-list">
+          {% for row in a.contents %}
+          <li>
+            {{ row.name }}{% if row.count > 1 %} ×{{ row.count }}{% endif %}
+            <form method="post"
+                  action="/character/{{ character_id }}/animal/{{ a.instance_id }}/unload"
+                  class="inline-form">
+              <input type="hidden" name="item_id" value="{{ row.id }}">
+              <button class="chip">Unload</button>
+            </form>
+          </li>
+          {% endfor %}
+        </ul>
+      </details>
+      {% endif %}
+    </article>
+    {% endfor %}
+
+    {% for v in sheet.companions.vehicles %}
+    <article class="companion-card" data-kind="vehicle">
+      <header class="companion-head">
+        <span class="companion-name">{{ v.name }}</span>
+        <span class="companion-sub">{{ v.kind }}</span>
+        <span class="companion-stat">AC {{ v.ac_descending }} [{{ v.ac_ascending }}]</span>
+        <span class="companion-stat">Hull {{ v.hull_current }}/{{ v.hull_max }}</span>
+        <span class="companion-stat">Cargo {{ v.cargo_used }}/{{ v.cargo_capacity }} cn</span>
+      </header>
+
+      <form method="post"
+            action="/character/{{ character_id }}/vehicle/{{ v.instance_id }}/hull"
+            class="inline-form">
+        <button name="delta" value="-1" class="chip">−1 Hull</button>
+        <button name="delta" value="1" class="chip">+1 Hull</button>
+      </form>
+
+      {% if v.has_extra %}
+      <form method="post"
+            action="/character/{{ character_id }}/vehicle/{{ v.instance_id }}/extra-animals"
+            class="inline-form">
+        <label><input type="checkbox" name="on" value="true"
+               {% if v.extra_animals %}checked{% endif %}
+               onchange="this.form.submit()"> Extra animals</label>
+      </form>
+      {% endif %}
+
+      <details class="companion-load">
+        <summary>Cargo {{ v.cargo_used }} / {{ v.cargo_capacity }} cn</summary>
+        <ul class="contents-list">
+          {% for row in v.contents %}
+          <li>
+            {{ row.name }}{% if row.count > 1 %} ×{{ row.count }}{% endif %}
+            <form method="post"
+                  action="/character/{{ character_id }}/vehicle/{{ v.instance_id }}/unload"
+                  class="inline-form">
+              <input type="hidden" name="item_id" value="{{ row.id }}">
+              <button class="chip">Unload</button>
+            </form>
+          </li>
+          {% endfor %}
+        </ul>
+      </details>
+    </article>
+    {% endfor %}
+
+  </div>
+</section>
+{% endif %}
