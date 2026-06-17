@@ -11,7 +11,7 @@ import uuid
 from typing import Optional
 
 from aose.data.loader import GameData
-from aose.engine import ability_mods, quick_equipment
+from aose.engine import ability_mods, leveling, quick_equipment
 from aose.engine.ability_mods import apply_racial_modifiers
 from aose.engine.dice import roll_hp
 from aose.models import Ability, CharacterSpec, ClassEntry, Retainer
@@ -128,3 +128,29 @@ def initial_loyalty(hiring_spec: CharacterSpec, retainer_race_id: str,
             continue
         total += int(mod.get("value", 0))
     return total
+
+
+def grant_retainer_xp(retainer: Retainer, data: GameData, amount: int) -> None:
+    """Award XP to a retainer with the AOSE -50% penalty on positive awards
+    (retainers follow orders rather than solve problems). Clawbacks pass through."""
+    adjusted = amount // 2 if amount > 0 else amount
+    leveling.grant_xp(retainer.spec, data, adjusted)
+
+
+def promote_normal_human(retainer: Retainer, new_class_id: str, data: GameData,
+                         rng: Optional[random.Random] = None) -> None:
+    """A 0-level normal human 'chooses a class' on gaining XP: replace the
+    normal_human entry with a level-1 entry of the new class (fresh HD roll),
+    keeping accrued XP, and bump abilities to the new class's requirements."""
+    rng = rng or random.Random()
+    entry = retainer.spec.classes[0]
+    if entry.class_id != "normal_human":
+        raise ValueError("Only a normal human can be promoted")
+    cls = data.classes[new_class_id]
+    kept_xp = entry.xp
+    retainer.spec.classes[0] = ClassEntry(
+        class_id=new_class_id, level=1,
+        hp_rolls=[roll_hp(cls.hit_die, rng)], xp=kept_xp)
+    for ab, req in cls.ability_requirements.items():
+        if retainer.spec.abilities.get(ab, 0) < req:
+            retainer.spec.abilities[ab] = req
