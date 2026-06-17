@@ -1,0 +1,179 @@
+- item_type: animal
+  id: camel
+  name: Camel
+  category: animals
+  cost_gp: 100
+  hd: "2"
+  save_as_hd: 1
+  hp: 9
+  ac: 7
+  attacks:
+    - {name: bite, damage: "1"}
+    - {name: hoof, damage: "1d4"}
+  morale: 7
+  alignment: neutral
+  xp: 20
+  movement: "150' (50')"
+  miles_per_day: 30
+  max_load_unencumbered_cn: 3000
+  max_load_encumbered_cn: 6000
+  movement_encumbered: "75' (25')"
+  miles_per_day_encumbered: 15
+  description: >-
+    Irascible animals that are adapted to life in dry climates. Often used for
+    transportation in deserts.
+  traits:
+    - "Ill-tempered: Bite or kick creatures in their way, including owners."
+    - "Water: After drinking well, can survive 2 weeks without water."
+    - "Desert travel: Move at full speed through broken lands and deserts."
+
+- item_type: animal
+  id: draft_horse
+  name: Draft horse
+  category: animals
+  cost_gp: 40
+  hd: "3"
+  save_as_hd: 2
+  hp: 13
+  ac: 7
+  attacks: []
+  morale: 6
+  alignment: neutral
+  xp: 35
+  movement: "90' (30')"
+  miles_per_day: 18
+  max_load_unencumbered_cn: 4500
+  max_load_encumbered_cn: 9000
+  movement_encumbered: "45' (15')"
+  miles_per_day_encumbered: 9
+  armor_fits: [horse_barding]
+  description: >-
+    Bred for great strength and endurance. Used to pull vehicles and ploughs or
+    as beasts of burden.
+  traits:
+    - "Non-combatants: Flee, if attacked."
+
+- item_type: animal
+  id: riding_horse
+  name: Riding horse
+  category: animals
+  cost_gp: 75
+  hd: "2"
+  save_as_hd: 1
+  hp: 9
+  ac: 7
+  attacks:
+    - {name: hoof, count: 2, damage: "1d4"}
+  morale: 7
+  alignment: neutral
+  xp: 20
+  movement: "240' (80')"
+  miles_per_day: 48
+  max_load_unencumbered_cn: 3000
+  max_load_encumbered_cn: 6000
+  movement_encumbered: "120' (40')"
+  miles_per_day_encumbered: 24
+  armor_fits: [horse_barding]
+  description: >-
+    Lightly built horses adapted to run at high speed. Can survive purely on
+    grass, wherever available.
+
+- item_type: animal
+  id: war_horse
+  name: War horse
+  category: animals
+  cost_gp: 250
+  hd: "3"
+  save_as_hd: 2
+  hp: 13
+  ac: 7
+  attacks:
+    - {name: hoof, count: 2, damage: "1d6"}
+  morale: 9
+  alignment: neutral
+  xp: 35
+  movement: "120' (40')"
+  miles_per_day: 24
+  max_load_unencumbered_cn: 4000
+  max_load_encumbered_cn: 8000
+  movement_encumbered: "60' (20')"
+  miles_per_day_encumbered: 12
+  armor_fits: [horse_barding]
+  description: >-
+    Bred for strength and courage in battle. Adapted to short bursts of speed;
+    not suited to long-distance riding.
+  traits:
+    - "Charge: When not in melee. Requires a clear run of at least 20 yards. Rider's lance inflicts double damage. Horse cannot attack when charging."
+    - "Melee: When in melee, both rider and horse can attack."
+
+- item_type: animal
+  id: mule
+  name: Mule
+  category: animals
+  cost_gp: 30
+  hd: "2"
+  save_as_hd: "NH"
+  hp: 9
+  ac: 7
+  attacks:
+    - {name: kick, damage: "1d4"}
+    - {name: bite, damage: "1d3", note: "or"}
+  morale: 8
+  alignment: neutral
+  xp: 20
+  movement: "120' (40')"
+  miles_per_day: 24
+  max_load_unencumbered_cn: 2000
+  max_load_encumbered_cn: 4000
+  movement_encumbered: "60' (20')"
+  miles_per_day_encumbered: 12
+  description: >-
+    Stubborn horse/donkey cross-breeds used as beasts of burden.
+  traits:
+    - "Tenacious: Can be taken underground, if the referee allows it."
+    - "Defensive: May attack if threatened, but cannot be trained to attack on command."
+
+- item_type: animal
+  id: hunting_dog
+  name: Hunting dog
+  category: animals
+  cost_gp: 17
+  hd: "1+2"
+  save_as_hd: 1
+  hp: 6
+  ac: 7
+  attacks:
+    - {name: bite, damage: "1d6"}
+  morale: 10
+  alignment: neutral
+  xp: 15
+  movement: "180' (60')"
+  miles_per_day: 36
+  description: >-
+    Domestic breeds selected for their intelligence and excellent sense of smell.
+  traits:
+    - "Tracking: By scent. Once started, very difficult to put off the trail."
+    - "Command: Trained to attack on owner's command."
+
+- item_type: animal
+  id: war_dog
+  name: War dog
+  category: animals
+  cost_gp: 25
+  hd: "2+2"
+  save_as_hd: 1
+  hp: 11
+  ac: 8
+  attacks:
+    - {name: bite, damage: "2d4"}
+  morale: 11
+  alignment: neutral
+  xp: 25
+  movement: "120' (40')"
+  miles_per_day: 24
+  armor_fits: [dog_armour]
+  description: >-
+    Large domestic breeds selected for their bulk and ferocious nature.
+  traits:
+    - "Armour: Trained to wear armour (see Tack and Harness)."
+    - "Command: Trained to attack on owner's command."

@@ -1,0 +1,36 @@
+- item_type: animal_armor
+  id: dog_armour
+  name: Dog armour
+  category: tack_and_harness
+  cost_gp: 25
+  sets_ac: 6
+  fits: [war_dog]
+  description: >-
+    Light leather armour with a spiked collar. Provides the animal with an AC of
+    6 [13].
+
+- item_type: animal_armor
+  id: horse_barding
+  name: Horse barding
+  category: tack_and_harness
+  cost_gp: 150
+  weight_cn: 600
+  sets_ac: 5
+  fits: [draft_horse, riding_horse, war_horse]
+  description: >-
+    Armour made of leather and plates of metal. Provides the animal with an AC
+    of 5 [14] and weighs 600 coins.
+
+- item_type: gear
+  id: saddle_and_bridle
+  name: Saddle and bridle
+  category: tack_and_harness
+  cost_gp: 25
+
+- item_type: container
+  id: saddle_bags
+  name: Saddle bags
+  category: tack_and_harness
+  cost_gp: 5
+  capacity_cn: 300
+  description: "Hold up to 300 coins weight."

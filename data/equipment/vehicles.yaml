@@ -1,0 +1,326 @@
+- item_type: vehicle
+  id: cart
+  name: Cart
+  category: vehicles
+  vehicle_category: land_vehicle
+  cost_gp: 100
+  ac: 9
+  hull_points: "1d4"
+  cargo_capacity_cn: 4000
+  cargo_capacity_extra_cn: 8000
+  required_animals: "1 draft horse or 2 mules"
+  movement: "60' (20')"
+  miles_per_day: "12"
+  description: >-
+    A two-wheeled vehicle.
+  traits:
+    - "Difficult terrain: Can only travel on maintained roads through desert, forest, mountains, or swamp."
+
+- item_type: vehicle
+  id: wagon
+  name: Wagon
+  category: vehicles
+  vehicle_category: land_vehicle
+  cost_gp: 200
+  ac: 9
+  hull_points: "2d4"
+  cargo_capacity_cn: 15000
+  cargo_capacity_extra_cn: 25000
+  required_animals: "2 draft horses or 4 mules"
+  movement: "60' (20')"
+  miles_per_day: "12"
+  description: >-
+    A four-wheeled, open vehicle.
+  traits:
+    - "Difficult terrain: Can only travel on maintained roads through desert, forest, mountains, or swamp."
+
+# --- Water vessels (seaworthy) ---
+- item_type: vehicle
+  id: lifeboat
+  name: Lifeboat
+  category: vehicles
+  vehicle_category: water_vessel
+  cost_gp: 1000
+  ac: 9
+  hull_points: "10-20"
+  cargo_capacity_cn: 15000
+  seaworthy: true
+  requires_captain: false
+  required_crew: "1 sailor (may be piloted by an unskilled character)"
+  movement: "90' (30')"
+  miles_per_day: "18"
+  dimensions: "20' / 4'-5' / 1'-2'"
+  description: >-
+    A small boat with a mast that folds down for storage. Usually equipped with
+    rations to feed ten human-sized beings for one week. Weighs 5,000 coins.
+
+- item_type: vehicle
+  id: longship
+  name: Longship
+  category: vehicles
+  vehicle_category: water_vessel
+  cost_gp: 15000
+  ac: 8
+  hull_points: "60-80"
+  cargo_capacity_cn: 40000
+  seaworthy: true
+  requires_captain: true
+  max_mercenaries: 75
+  required_crew: "60 oarsmen or 75 sailors (crew act as rowers, sailors, and fighters)"
+  movement: "90' (90') rowed / 450' (150') sailed"
+  miles_per_day: "18 rowed / 90 sailed"
+  dimensions: "60'-80' / 10'-15' / 2'-3'"
+  description: >-
+    A narrow ship which may be used in rivers, coastal waters, or the open seas.
+    May be rowed or sailed, depending on the conditions.
+
+- item_type: vehicle
+  id: sailing_ship_large
+  name: Sailing ship, large
+  category: vehicles
+  vehicle_category: water_vessel
+  cost_gp: 20000
+  ac: 7
+  hull_points: "120-180"
+  cargo_capacity_cn: 300000
+  seaworthy: true
+  requires_captain: true
+  required_crew: "20 sailors"
+  movement: "360' (120')"
+  miles_per_day: "72"
+  dimensions: "100'-150' / 25'-30' / 10'-12'"
+  description: >-
+    A large, seaworthy vessel with up to three masts. Usually has multiple decks
+    and raised "castles" at the bow and stern.
+
+- item_type: vehicle
+  id: sailing_ship_small
+  name: Sailing ship, small
+  category: vehicles
+  vehicle_category: water_vessel
+  cost_gp: 5000
+  ac: 8
+  hull_points: "60-90"
+  cargo_capacity_cn: 100000
+  seaworthy: true
+  requires_captain: true
+  required_crew: "10 sailors"
+  movement: "450' (150')"
+  miles_per_day: "90"
+  dimensions: "60'-80' / 20'-30' / 5'-8'"
+  description: >-
+    A small, seaworthy vessel with a single mast.
+
+- item_type: vehicle
+  id: troop_transport_large
+  name: Troop transport, large
+  category: vehicles
+  vehicle_category: water_vessel
+  cost_gp: 26600
+  ac: 7
+  hull_points: "160-240"
+  cargo_capacity_cn: 300000
+  seaworthy: true
+  requires_captain: true
+  max_mercenaries: 100
+  required_crew: "20 sailors"
+  movement: "360' (120')"
+  miles_per_day: "72"
+  dimensions: "100'-150' / 25'-30' / 10'-12'"
+  description: >-
+    Similar to a large sailing ship, specially designed to carry troops, mounts,
+    and equipment of war as cargo.
+
+- item_type: vehicle
+  id: troop_transport_small
+  name: Troop transport, small
+  category: vehicles
+  vehicle_category: water_vessel
+  cost_gp: 6600
+  ac: 8
+  hull_points: "80-120"
+  cargo_capacity_cn: 100000
+  seaworthy: true
+  requires_captain: true
+  max_mercenaries: 50
+  required_crew: "10 sailors"
+  movement: "450' (150')"
+  miles_per_day: "90"
+  dimensions: "60'-80' / 20'-30' / 5'-8'"
+  description: >-
+    Similar to a small sailing ship, specially designed to carry troops, mounts,
+    and equipment of war as cargo.
+
+- item_type: vehicle
+  id: warship_large
+  name: Warship, large
+  category: vehicles
+  vehicle_category: water_vessel
+  cost_gp: 26600
+  ac: 7
+  hull_points: "120-180"
+  cargo_capacity_cn: 300000
+  seaworthy: true
+  requires_captain: true
+  max_mercenaries: 50
+  required_crew: "20 sailors"
+  movement: "360' (120')"
+  miles_per_day: "72"
+  dimensions: "100'-150' / 25'-30' / 10'-12'"
+  description: >-
+    Similar to a large sailing ship, specially designed to carry mercenaries and
+    war gear.
+
+- item_type: vehicle
+  id: warship_small
+  name: Warship, small
+  category: vehicles
+  vehicle_category: water_vessel
+  cost_gp: 6600
+  ac: 8
+  hull_points: "60-90"
+  cargo_capacity_cn: 100000
+  seaworthy: true
+  requires_captain: true
+  max_mercenaries: 25
+  required_crew: "10 sailors"
+  movement: "450' (150')"
+  miles_per_day: "90"
+  dimensions: "60'-80' / 20'-30' / 5'-8'"
+  description: >-
+    Similar to a small sailing ship, specially designed to carry mercenaries and
+    war gear.
+
+# --- Water vessels (unseaworthy) ---
+- item_type: vehicle
+  id: boat_river
+  name: Boat, river
+  category: vehicles
+  vehicle_category: water_vessel
+  cost_gp: 4000
+  ac: 8
+  hull_points: "20-40"
+  cargo_capacity_cn: 30000
+  seaworthy: false
+  requires_captain: false
+  required_crew: "8 oarsmen"
+  movement: "180' (60')"
+  miles_per_day: "36"
+  dimensions: "20'-30' / 10' / 2'-3'"
+  description: >-
+    Rowed or pushed with poles. Cost increases by 1,000gp if it has a roof.
+
+- item_type: vehicle
+  id: boat_sailing
+  name: Boat, sailing
+  category: vehicles
+  vehicle_category: water_vessel
+  cost_gp: 2000
+  ac: 8
+  hull_points: "20-40"
+  cargo_capacity_cn: 20000
+  seaworthy: false
+  requires_captain: false
+  required_crew: "1 sailor"
+  movement: "360' (120')"
+  miles_per_day: "72"
+  dimensions: "20'-40' / 10'-15' / 2'-3'"
+  description: >-
+    A small boat typically used for fishing in lakes or coastal waters.
+
+- item_type: vehicle
+  id: canoe
+  name: Canoe
+  category: vehicles
+  vehicle_category: water_vessel
+  cost_gp: 50
+  ac: 9
+  hull_points: "5-10"
+  cargo_capacity_cn: 6000
+  seaworthy: false
+  requires_captain: false
+  required_crew: "1 (may be piloted by an unskilled character)"
+  movement: "90' (60')"
+  miles_per_day: "18"
+  dimensions: "15' / 3' / 1'"
+  description: >-
+    A small boat made of hide or canvas over a wooden frame. May be carried by
+    two people (weighing 500 coins).
+
+- item_type: vehicle
+  id: galley_large
+  name: Galley, large
+  category: vehicles
+  vehicle_category: water_vessel
+  cost_gp: 30000
+  ac: 7
+  hull_points: "100-120"
+  cargo_capacity_cn: 40000
+  seaworthy: false
+  requires_captain: true
+  max_mercenaries: 50
+  required_crew: "180 oarsmen or 20 sailors"
+  movement: "90' (90') rowed / 360' (120') sailed"
+  miles_per_day: "18 rowed / 72 sailed"
+  dimensions: "120'-150' / 15'-20' / 3'"
+  description: >-
+    A long ship with a shallow draft and a single, square-sailed mast.
+
+- item_type: vehicle
+  id: galley_small
+  name: Galley, small
+  category: vehicles
+  vehicle_category: water_vessel
+  cost_gp: 10000
+  ac: 8
+  hull_points: "80-100"
+  cargo_capacity_cn: 20000
+  seaworthy: false
+  requires_captain: true
+  max_mercenaries: 20
+  required_crew: "60 oarsmen or 10 sailors"
+  movement: "90' (90') rowed / 450' (150') sailed"
+  miles_per_day: "18 rowed / 90 sailed"
+  dimensions: "60'-100' / 10'-15' / 2'-3'"
+  description: >-
+    A ship with a shallow draft and a single, square-sailed mast.
+
+- item_type: vehicle
+  id: galley_war
+  name: Galley, war
+  category: vehicles
+  vehicle_category: water_vessel
+  cost_gp: 60000
+  ac: 7
+  hull_points: "120-150"
+  cargo_capacity_cn: 60000
+  seaworthy: false
+  requires_captain: true
+  max_mercenaries: 75
+  required_crew: "300 oarsmen or 30 sailors"
+  movement: "60' (60') rowed / 360' (120') sailed"
+  miles_per_day: "12 rowed / 72 sailed"
+  dimensions: "120'-150' / 20'-30' / 4'-6'"
+  description: >-
+    A large, specially constructed galley, generally a fleet's flagship. Always
+    fitted with a ram and a full deck above the rowers; two masts and bow/stern
+    towers.
+
+- item_type: vehicle
+  id: raft_professional
+  name: Raft, professional
+  category: vehicles
+  vehicle_category: water_vessel
+  cost_gp: 0
+  ac: 9
+  hull_points: "5-10"
+  cargo_capacity_cn: 100
+  seaworthy: false
+  requires_captain: false
+  required_crew: "1 (may be piloted by an unskilled character)"
+  movement: "60' (30')"
+  miles_per_day: "12"
+  description: >-
+    A professionally built raft with raised sides, a basic steering oar, and
+    shelter. Up to 30' x 40'. Costs 1gp per square foot; capacity is per square
+    foot.
