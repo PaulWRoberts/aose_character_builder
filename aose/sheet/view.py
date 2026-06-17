@@ -1230,11 +1230,11 @@ def _retainer_cards(spec: CharacterSpec, data: GameData) -> list:
     return cards
 
 
-def _with_retainers(block, spec: CharacterSpec, data: GameData):
+def _with_retainers(block, spec: CharacterSpec, data: GameData, class_options=None):
     from aose.sheet.companions_view import CompanionsBlock
     from aose.engine.ability_mods import max_retainers
     cards = _retainer_cards(spec, data)
-    if block is None and not cards:
+    if block is None and not cards and not class_options:
         return None
     block = block or CompanionsBlock()
     block.retainers = cards
@@ -1450,7 +1450,7 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
         valuables=valuables_view(spec),
         ammo=ammo_rows,
         ammo_load_options=ammo_options,
-        companions=_with_retainers(companions_block(spec, data), spec, data),
+        companions=_with_retainers(companions_block(spec, data), spec, data, class_options=_retainer_class_options(spec, data)),
         race_id=spec.race_id,
         retainer_class_options=_retainer_class_options(spec, data),
         other_possessions=list(spec.other_possessions),

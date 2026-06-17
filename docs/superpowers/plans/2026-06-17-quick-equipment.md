@@ -461,8 +461,8 @@ def test_two_handed_main_leaves_off_hand_empty():
 def test_apply_kit_writes_onto_spec():
     from aose.models import CharacterSpec
     spec = CharacterSpec(
-        name="R", abilities={"str": 10, "int": 10, "wis": 10, "dex": 10,
-                             "con": 10, "cha": 10},
+        name="R", abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10,
+                             "CON": 10, "CHA": 10},
         race_id="human", classes=[{"class_id": "fighter"}], alignment="neutral")
     kit = qe.roll_kit("fighter", DATA, rng=random.Random(1))
     qe.apply_kit(spec, kit)

@@ -8,6 +8,7 @@ For the living architecture (how the subsystems fit together *now*), see
 
 | Date | Feature | Branch | Spec/Plan slug |
 |---|---|---|---|
+| 2026-06-17 | Retainers (Companions & Holdings Phase B): hired classed NPCs, loyalty, CHA cap, XP −50%, promote normal human, PC↔retainer transfer | feat/companions-and-holdings | 2026-06-17-retainers |
 | 2026-06-16 | Animals & vehicles (Companions & Holdings Phase A) | feat/companions-and-holdings | animals-and-vehicles |
 | 2026-06-16 | Wizard book-style detail modals + trimmed race/spell cards | main | 2026-06-16-wizard-detail-modals |
 | 2026-06-12 | Fix: innate abilities now usable — spell-style pip rows + dedicated Use/Restore modal | main | — |

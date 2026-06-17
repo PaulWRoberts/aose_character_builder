@@ -636,7 +636,7 @@ change. Auth is enabled by setting `AOSE_AUTH=1`.
 
 ---
 
-## Companions & Holdings (Phase A)
+## Companions & Holdings
 
 Animals and vehicles are first-class storage locations owned by a character,
 each with its own capacity that never contributes to the PC's encumbrance.
@@ -685,3 +685,52 @@ standard `_load_spec_or_404` → mutate → `save_character` → 303 pattern.
 one `companion-card` per animal/vehicle with inline HP/hull buttons, armour
 select, and a collapsible load details block. Print sheet includes a static
 text block in `sheet_print.html`.
+
+### Phase B — Retainers
+
+Hired classed NPCs (and 0-level normal humans) stored as embedded `CharacterSpec`s
+inside the hiring PC's `CharacterSpec.retainers: list[Retainer]`. Each `Retainer`
+carries a `spec`, `loyalty: int`, `role: str`, and a uuid4 `id`.
+
+**`Retainer` model** (`aose/models/character.py`): defined after `CharacterSpec`
+with `CharacterSpec.model_rebuild()` to resolve the forward reference.
+
+**`RetainerHiringRule`** (`aose/models/character_class.py`): `{min_level, allows}`
+entries on `CharClass.retainer_hiring`. `allows` is `"any"`, `"none"`, or a list
+of class ids. Only `assassin.yaml` carries non-default rules; all other classes
+default to unrestricted hiring.
+
+**`normal_human` class** (`data/classes/normal_human.yaml`): max_level 1, 1d4 HP,
+THAC0 20, weakest saves. Excluded from the wizard class list. Used as the starting
+class for 0-level retainer hirelings; `promote_normal_human` replaces it with a
+real class at L1 (keeping accumulated XP).
+
+**Retainers engine** (`aose/engine/retainers.py`):
+- `allowed_retainer_classes(hiring_spec, data)` — returns `"any"` or a `set` of
+  class ids (empty = may not hire) derived from `retainer_hiring` rules.
+- `initial_loyalty(hiring_spec, retainer_race_id, data)` — CHA base + racial
+  modifiers (`retainer_loyalty_modifier` in race/class features; `except_same_race`
+  flag for half-orc). Race-as-class double-counting is prevented in `_features_with`.
+- `generate_retainer(...)` — rolls 3d6-drop-lowest abilities, applies racial mods,
+  bumps to class minimums, rolls HP per level, assigns quick-equipment kit.
+- `grant_retainer_xp(retainer, data, amount)` — halves positive XP (−50% rule)
+  then delegates to `leveling.grant_xp`.
+- `promote_normal_human(retainer, new_class_id, data)` — replaces the normal_human
+  ClassEntry in-place, re-rolls HP, reassigns kit.
+- `transfer_to_retainer` / `transfer_to_pc` — move a single item id between the
+  PC's `inventory` and the retainer's `spec.inventory`.
+
+**CHA accessors** (`aose/engine/ability_mods.py`): `max_retainers(cha)` and
+`base_loyalty(cha)` read from the existing `_CHA_RETAINERS_MAX` and
+`_CHA_RETAINERS_LOYALTY` tables.
+
+**Sheet view**: `_retainer_cards(spec, data)` recursively calls `build_sheet` on
+each retainer spec (safe because `retainer.spec.retainers` is always empty).
+`_with_retainers` attaches cards and `max_retainers` to `CompanionsBlock`; it
+also returns a non-None block when `retainer_class_options` exist (so the add
+form is visible even for PCs with no existing companions). `CharacterSheet`
+gains `race_id` and `retainer_class_options: list[dict]`.
+
+**Routes**: 9 POST routes under `/character/{id}/retainer/` — `add`, `{rid}/remove`,
+`{rid}/loyalty`, `{rid}/role`, `{rid}/xp`, `{rid}/levelup`, `{rid}/promote`,
+`{rid}/give`, `{rid}/take`.

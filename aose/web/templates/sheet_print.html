@@ -239,6 +239,16 @@
            Cargo {{ v.cargo_used }}/{{ v.cargo_capacity }} cn.
            {% if v.contents %}Cargo: {{ v.contents | map(attribute='name') | join(', ') }}.{% endif %}</p>
         {% endfor %}
+        {% if sheet.companions.retainers %}
+        <p><em>Retainers ({{ sheet.companions.retainers|length }}/{{ sheet.companions.max_retainers }}):</em></p>
+        {% for r in sheet.companions.retainers %}
+        <p><strong>{{ r.name }}</strong> {{ r.descriptor }} — AC {{ r.ac_descending }} [{{ r.ac_ascending }}],
+           HP {{ r.hp_current }}/{{ r.hp_max }}, THAC0 {{ r.thac0 }}, Loyalty {{ r.loyalty }}.
+           Save D{{ r.saves.death }} W{{ r.saves.wands }} P{{ r.saves.paralysis }}
+           B{{ r.saves.breath }} S{{ r.saves.spells }}.
+           {% if r.equipped %}{{ r.equipped.values() | join(', ') }}.{% endif %}</p>
+        {% endfor %}
+        {% endif %}
     </section>
     {% endif %}
 
