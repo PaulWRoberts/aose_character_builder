@@ -11,8 +11,10 @@ import uuid
 from typing import Optional
 
 from aose.data.loader import GameData
-from aose.engine import ability_mods
-from aose.models import Ability, CharacterSpec, Retainer
+from aose.engine import ability_mods, quick_equipment
+from aose.engine.ability_mods import apply_racial_modifiers
+from aose.engine.dice import roll_hp
+from aose.models import Ability, CharacterSpec, ClassEntry, Retainer
 
 
 def _features_with(spec: CharacterSpec, data: GameData, key: str):
@@ -38,6 +40,58 @@ def _features_with(spec: CharacterSpec, data: GameData, key: str):
         for f in cls.features:
             if f.gained_at_level <= entry.level and f.mechanical and key in f.mechanical:
                 yield f.mechanical[key]
+
+
+_ABILITIES = ["STR", "INT", "WIS", "DEX", "CON", "CHA"]
+
+
+def generate_retainer(*, name: str, class_ids: list[str], level: int,
+                      race_id: str, alignment: str,
+                      hiring_spec: CharacterSpec, data: GameData,
+                      rng: Optional[random.Random] = None) -> Retainer:
+    rng = rng or random.Random()
+    primary = data.classes[class_ids[0]]
+
+    # 1. baseline 10s
+    abilities: dict[str, int] = {a: 10 for a in _ABILITIES}
+
+    # 2. race-as-class vs split: a race-locked class is self-contained (no racial
+    #    mods); a split race+class applies Advanced racial modifiers.
+    race_locked = primary.race_locked is not None
+    if race_locked:
+        race_id = primary.race_locked
+    elif hiring_spec.ruleset.separate_race_class and race_id in data.races:
+        abilities = apply_racial_modifiers(abilities, data.races[race_id])
+
+    # 3. bump each class's ability_requirements to its minimum (post-racial)
+    for cid in class_ids:
+        for ab, req in data.classes[cid].ability_requirements.items():
+            k = ab.value
+            if abilities.get(k, 0) < req:
+                abilities[k] = req
+
+    # 4. class entries: roll `level` hit dice (capped at name level); xp set to
+    #    the level's threshold so XP is consistent with the level.
+    entries: list[ClassEntry] = []
+    for cid in class_ids:
+        cls = data.classes[cid]
+        n_rolls = min(level, cls.name_level)
+        rolls = [roll_hp(cls.hit_die, rng) for _ in range(max(1, n_rolls))]
+        xp = cls.progression[level].xp_required if level in cls.progression else 0
+        entries.append(ClassEntry(class_id=cid, level=level, hp_rolls=rolls, xp=xp))
+
+    spec = CharacterSpec(
+        name=name, abilities=abilities, race_id=race_id, classes=entries,
+        alignment=alignment, ruleset=hiring_spec.ruleset.model_copy(deep=True))
+
+    # 5. quick-equipment kit
+    kit = quick_equipment.roll_kit(class_ids[0], data, rng=rng)
+    quick_equipment.apply_kit(spec, kit)
+
+    # 6. loyalty
+    loyalty = initial_loyalty(hiring_spec, race_id, data)
+
+    return Retainer(id=uuid.uuid4().hex, spec=spec, loyalty=loyalty, role="")
 
 
 def initial_loyalty(hiring_spec: CharacterSpec, retainer_race_id: str,
