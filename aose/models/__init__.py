@@ -32,8 +32,9 @@ from .item import (
 from .modifier import GrantedModifier, Modifier, RolledModifier, Scaling
 from .enchantment import AppliesTo, Enchantment
 from .character import (
-    AmmoStack, CharacterSpec, ClassEntry, ContainerInstance, EnchantedInstance,
-    MagicItemInstance, SpellSlot, SpellSource, SpellSourceEntry,
+    AmmoStack, AnimalInstance, CharacterSpec, ClassEntry, ContainerInstance,
+    EnchantedInstance, MagicItemInstance, SpellSlot, SpellSource, SpellSourceEntry,
+    VehicleInstance,
 )
 from .valuable import GemStack, JewelleryPiece
 from .source import Source
@@ -80,6 +81,7 @@ __all__ = [
     "AppliesTo",
     "Enchantment",
     "AmmoStack",
+    "AnimalInstance",
     "CharacterSpec",
     "ClassEntry",
     "ContainerInstance",
@@ -88,6 +90,7 @@ __all__ = [
     "SpellSlot",
     "SpellSource",
     "SpellSourceEntry",
+    "VehicleInstance",
     "GemStack",
     "JewelleryPiece",
     "Source",

@@ -73,6 +73,42 @@ class ContainerInstance(BaseModel):
     catalog_id: str
     state: Literal["carried", "stashed"]
     contents: list[str] = Field(default_factory=list)
+    # A container is normally on the person (carried/stashed via ``state``).
+    # When loaded onto an animal/vehicle, ``location`` names the carrier kind
+    # and ``location_id`` its instance_id; its weight then counts toward that
+    # carrier, not the PC. Defaults keep old saves valid.
+    location: Literal["person", "animal", "vehicle"] = "person"
+    location_id: str | None = None
+
+
+class AnimalInstance(BaseModel):
+    """A specific animal the character owns — per-instance state separate from
+    the catalog ``Animal``.  Acts as a top-level storage location: ``contents``
+    are loose item ids loaded onto the animal, never in ``inventory``."""
+    model_config = ConfigDict(extra="forbid")
+
+    instance_id: str                 # uuid4 hex
+    catalog_id: str                  # references an Animal
+    name: str = ""                   # optional label
+    hp_damage: int = 0               # current hp = max(0, catalog.hp - hp_damage)
+    armor_id: str | None = None      # references an AnimalArmor in catalog.armor_fits
+    contents: list[str] = Field(default_factory=list)
+    magic_note: str = ""             # free-text placeholder until magic items land
+
+
+class VehicleInstance(BaseModel):
+    """A specific vehicle the character owns.  Acts as a top-level storage
+    location; ``contents`` are loose cargo ids."""
+    model_config = ConfigDict(extra="forbid")
+
+    instance_id: str
+    catalog_id: str                  # references a Vehicle
+    name: str = ""
+    hull_max: int                    # resolved from catalog.hull_points at purchase
+    hull_damage: int = 0
+    contents: list[str] = Field(default_factory=list)
+    extra_animals: bool = False      # raises cap to cargo_capacity_extra_cn
+    note: str = ""
 
 
 class SpellSourceEntry(BaseModel):
@@ -199,6 +235,8 @@ class CharacterSpec(BaseModel):
     # (one body-armour slot), remembered across re-equips.
     armor_tailored: bool = True
     containers: list[ContainerInstance] = Field(default_factory=list)
+    animals: list[AnimalInstance] = Field(default_factory=list)
+    vehicles: list[VehicleInstance] = Field(default_factory=list)
     magic_items: list[MagicItemInstance] = Field(default_factory=list)
     enchanted: list[EnchantedInstance] = Field(default_factory=list)
     # Ammunition stacks (counts), plus which stack is loaded into each launcher.
