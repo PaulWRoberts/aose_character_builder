@@ -6,7 +6,8 @@ Imports only ``aose.models`` so both ``aose/engine/shop.py`` and
 from pydantic import BaseModel, ConfigDict
 
 from aose.models import (
-    AdventuringGear, Ammunition, Armor, Container, MagicItem, Poison, Spell, Weapon,
+    AdventuringGear, Ammunition, Animal, AnimalArmor, Armor, Container,
+    MagicItem, Poison, Spell, Vehicle, Weapon,
 )
 
 
@@ -120,6 +121,50 @@ def item_card(item) -> DetailCard:
             stats.append(StatLine(label="Onset", value=item.onset))
         if item.effect:
             stats.append(StatLine(label="Effect", value=item.effect))
+        stats += _cost_weight(item)
+
+    elif isinstance(item, Animal):
+        stats.append(StatLine(label="Type", value="Animal"))
+        stats.append(StatLine(label="AC", value=f"{item.ac} [{19 - item.ac}]"))
+        stats.append(StatLine(label="HD", value=item.hd))
+        if item.attacks:
+            stats.append(StatLine(
+                label="Attacks",
+                value=", ".join(
+                    (f"{a.note} " if a.note else "")
+                    + (f"{a.count}× " if a.count > 1 else "")
+                    + f"{a.name} ({a.damage})"
+                    for a in item.attacks)))
+        stats.append(StatLine(label="Move", value=item.movement))
+        if item.max_load_unencumbered_cn:
+            stats.append(StatLine(
+                label="Max Load",
+                value=f"{item.max_load_unencumbered_cn} / "
+                      f"{item.max_load_encumbered_cn} cn"))
+        stats.append(StatLine(label="Morale", value=str(item.morale)))
+        stats += _cost_weight(item)
+
+    elif isinstance(item, Vehicle):
+        stats.append(StatLine(label="Type", value="Vehicle"))
+        stats.append(StatLine(label="AC", value=f"{item.ac} [{19 - item.ac}]"))
+        stats.append(StatLine(label="Hull Points", value=item.hull_points))
+        cargo = f"{item.cargo_capacity_cn} cn"
+        if item.cargo_capacity_extra_cn:
+            cargo += f" ({item.cargo_capacity_extra_cn} with extra animals)"
+        stats.append(StatLine(label="Cargo", value=cargo))
+        if item.required_animals:
+            stats.append(StatLine(label="Animals", value=item.required_animals))
+        if item.required_crew:
+            stats.append(StatLine(label="Crew", value=item.required_crew))
+        if item.max_mercenaries:
+            stats.append(StatLine(label="Mercenaries", value=str(item.max_mercenaries)))
+        stats += _cost_weight(item)
+
+    elif isinstance(item, AnimalArmor):
+        stats.append(StatLine(label="Type", value="Animal Armour"))
+        stats.append(StatLine(label="AC", value=f"{item.sets_ac} [{19 - item.sets_ac}]"))
+        if item.fits:
+            stats.append(StatLine(label="Fits", value=", ".join(item.fits)))
         stats += _cost_weight(item)
 
     else:  # AdventuringGear and anything else
