@@ -1350,8 +1350,10 @@ def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevel
         catalog = data.items.get(animal.catalog_id)
         label = animal.name or (catalog.name if catalog else animal.catalog_id)
         count: Counter = Counter(animal.contents)
+        barding = [_build_row(animal.armor_id, 1, data)] if animal.armor_id else []
         groups.append(TopLevelGroup(
             kind="animal", id=animal.instance_id, label=label,
+            has_equipped=bool(barding), equipped=barding,
             loose=sorted([_build_row(i, n, data) for i, n in count.items()],
                          key=lambda r: r.name),
             coins=_coin_rows(animal_loc),
@@ -1383,8 +1385,11 @@ def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevel
         ret_coins = [CoinRow(denom=s.denom, count=s.count)
                      for s in retainer.spec.coins
                      if s.location == ret_carried and s.count > 0]
+        ret_equipped = [_build_row(iid, 1, data)
+                        for iid in retainer.spec.equipped.values()]
         groups.append(TopLevelGroup(
             kind="retainer", id=retainer.id, label=retainer.spec.name,
+            has_equipped=bool(ret_equipped), equipped=ret_equipped,
             loose=sorted([_build_row(i, n, data) for i, n in count.items()],
                          key=lambda r: r.name),
             coins=ret_coins,

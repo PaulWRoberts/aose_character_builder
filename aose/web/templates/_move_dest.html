@@ -1,0 +1,19 @@
+{# Destination <select> for a Move form. Lists every top-level inventory group
+   (and, when allow_containers, each group's containers) except the current
+   location. A submit handler in inventory.js copies the chosen option's
+   data-kind/data-id into the form's hidden dest_kind/dest_id inputs. Shared by
+   the carrier/retainer group panels and the Carried/Stashed row actions. #}
+{% macro move_dest_control(groups, cur_kind, cur_id, allow_containers=True) %}
+  <select class="move-dest" style="max-width:9rem">
+    {% for g in groups %}
+      {% if not (g.kind == cur_kind and (g.id or '') == (cur_id or '')) %}
+      <option data-kind="{{ g.kind }}" data-id="{{ g.id or '' }}">{{ g.label }}</option>
+      {% endif %}
+      {% if allow_containers %}{% for c in g.containers %}
+      <option data-kind="container" data-id="{{ c.instance_id }}">{{ g.label }} ▸ {{ c.name }}</option>
+      {% endfor %}{% endif %}
+    {% endfor %}
+  </select>
+  <input type="hidden" class="dest-kind" name="dest_kind" value="">
+  <input type="hidden" class="dest-id" name="dest_id" value="">
+{% endmacro %}

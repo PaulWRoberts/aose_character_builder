@@ -2,6 +2,7 @@
    macro can read `inventory_view` (for the stow dropdown).  Used by both the
    equipment drawer (`_equipment_ui.html`) and the sheet's per-item modals
    (`sheet.html`).  `state` is "equipped" | "carried" | "stashed". #}
+{% from "_move_dest.html" import move_dest_control with context %}
 {% macro inv_row_actions(row, target_url_prefix, state, show_remove=True) %}
     {% if state == "equipped" %}
     <form method="post" action="{{ target_url_prefix }}/unequip" class="inline-form">
@@ -44,6 +45,17 @@
     <form method="post" action="{{ target_url_prefix }}/stash" class="inline-form">
         <input type="hidden" name="item_id" value="{{ row.id }}">
         <button type="submit" title="Move off-person; stops contributing to encumbrance">Stash</button>
+    </form>
+    {% endif %}
+    {# Move to another top-level (animal / vehicle / retainer / the other person bucket).
+       Only on the live sheet drawer, where inventory_groups + coins_url_prefix exist. #}
+    {% if state in ("carried", "stashed") and sheet is defined and sheet.inventory_groups is defined and coins_url_prefix is defined %}
+    <form method="post" action="{{ coins_url_prefix }}/inventory/move-item" class="inline-form move-form">
+        <input type="hidden" name="item_id" value="{{ row.id }}">
+        <input type="hidden" name="src_kind" value="{{ state }}">
+        <input type="hidden" name="src_id" value="">
+        {{ move_dest_control(sheet.inventory_groups, state, none) }}
+        <button type="submit" title="Move to a carrier, retainer, or the other person bucket">Move</button>
     </form>
     {% endif %}
     {% if show_remove %}

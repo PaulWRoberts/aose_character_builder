@@ -128,6 +128,25 @@ def test_animal_group_renders_on_sheet(client):
     assert 'data-inv-group="animal:a1"' in r.text
 
 
+def test_carried_item_offers_move_to_carrier(client):
+    """A loose Carried item must expose a Move control that can target a carrier."""
+    from aose.models import AnimalInstance, ClassEntry
+    spec = CharacterSpec(
+        name="Hero",
+        abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
+        race_id="human",
+        classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
+        alignment="neutral",
+        inventory=["torch"],
+        animals=[AnimalInstance(instance_id="a1", catalog_id="mule")],
+    )
+    save_character("hero", spec, client._characters_dir)
+    r = client.get("/character/hero")
+    assert r.status_code == 200
+    assert "/character/hero/inventory/move-item" in r.text
+    assert 'data-kind="animal"' in r.text   # the mule is an available destination
+
+
 def test_convert_route_per_stack(client):
     from aose.models import CoinStack
     _save_char(client, coins=[CoinStack(denom="gp", count=3)])

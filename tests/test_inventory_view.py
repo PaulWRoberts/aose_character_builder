@@ -37,6 +37,48 @@ def test_inventory_row_carries_detail_card():
     assert any(s.label == "Damage" for s in row.detail.stats)
 
 
+def _base_spec(**extra):
+    from aose.models import CharacterSpec, ClassEntry
+    base = dict(
+        name="Hero",
+        abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
+        race_id="human",
+        classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
+        alignment="neutral",
+    )
+    base.update(extra)
+    return CharacterSpec(**base)
+
+
+def test_animal_group_renders_barding_in_equipped():
+    from aose.models import AnimalInstance
+    from aose.sheet.view import build_inventory_groups
+    spec = _base_spec(animals=[AnimalInstance(
+        instance_id="a1", catalog_id="war_dog", armor_id="dog_armour")])
+    groups = build_inventory_groups(spec, DATA)
+    animal = next(g for g in groups if g.kind == "animal")
+    assert animal.has_equipped
+    assert any(r.id == "dog_armour" for r in animal.equipped)
+
+
+def test_retainer_group_renders_equipped_gear():
+    from aose.models import CharacterSpec, ClassEntry, Retainer
+    from aose.sheet.view import build_inventory_groups
+    npc = CharacterSpec(
+        name="Hireling",
+        abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
+        race_id="human",
+        classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[5])],
+        alignment="neutral",
+        inventory=["dagger"], equipped={"main_hand": "dagger"},
+    )
+    spec = _base_spec(retainers=[Retainer(id="r1", spec=npc, loyalty=7)])
+    groups = build_inventory_groups(spec, DATA)
+    retainer = next(g for g in groups if g.kind == "retainer")
+    assert retainer.has_equipped
+    assert any(r.id == "dagger" for r in retainer.equipped)
+
+
 def test_inventory_row_detail_none_for_stale_id():
     view = inventory_view(["no_such_item"], [], {}, [], DATA)
     assert view.carried[0].detail is None
