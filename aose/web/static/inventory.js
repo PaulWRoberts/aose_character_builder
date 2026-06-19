@@ -39,6 +39,27 @@
     });
 })();
 
+/* Move-destination form.
+ *
+ * A `.move-form` carries a `select.move-dest` whose chosen <option> holds
+ * data-kind / data-id for the destination top-level (or container). On submit
+ * we copy those into the form's hidden `dest_kind` / `dest_id` inputs so the
+ * move-* routes receive the split fields they expect. Server-rendered options;
+ * this is the only client glue. */
+(function () {
+    document.addEventListener("submit", function (e) {
+        const form = e.target;
+        if (!form.classList || !form.classList.contains("move-form")) return;
+        const sel = form.querySelector("select.move-dest");
+        if (!sel || sel.selectedIndex < 0) return;
+        const opt = sel.options[sel.selectedIndex];
+        const kind = form.querySelector("input.dest-kind");
+        const id = form.querySelector("input.dest-id");
+        if (kind) kind.value = opt.getAttribute("data-kind") || "";
+        if (id) id.value = opt.getAttribute("data-id") || "";
+    });
+})();
+
 /* Inline row-detail toggle.
  *
  * A trigger row carries data-detail-toggle="<uid>"; its detail row carries

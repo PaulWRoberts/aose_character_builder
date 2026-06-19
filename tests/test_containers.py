@@ -47,6 +47,11 @@ def test_container_defaults_unlimited_and_full_weight():
 from aose.models import CharacterSpec, ClassEntry, ContainerInstance, RuleSet
 
 
+def _gp(spec):
+    return next((s.count for s in spec.coins
+                 if s.denom == "gp" and s.location.kind == "carried"), 0)
+
+
 def test_container_exceptions_exist():
     from aose.engine.shop import ContainerFull, ContainerNotEmpty, UnknownContainer
     assert issubclass(ContainerFull, ValueError)
@@ -74,7 +79,7 @@ def test_container_instance_construct():
         state="carried",
         contents=["torch", "rope"],
     )
-    assert inst.state == "carried"
+    assert inst.location.kind == "carried"
     assert inst.contents == ["torch", "rope"]
 
 
@@ -117,7 +122,7 @@ def test_new_container_instance_validates_catalog_type():
     fake = _fake_container_data()
     inst = new_container_instance("backpack", fake)
     assert inst.catalog_id == "backpack"
-    assert inst.state == "carried"
+    assert inst.location.kind == "carried"
     assert inst.contents == []
     assert len(inst.instance_id) >= 16  # uuid4 hex length
 
@@ -282,7 +287,7 @@ def test_stash_container_flips_state():
     fake = _fake_container_data()
     bp = _carried_backpack(fake)
     result = stash_container([bp], bp.instance_id)
-    assert result[0].state == "stashed"
+    assert result[0].location.kind == "stashed"
     # Contents are untouched
     assert result[0].contents == []
 
@@ -291,7 +296,7 @@ def test_unstash_container_reverses():
     fake = _fake_container_data()
     bp = new_container_instance("backpack", fake, state="stashed")
     result = unstash_container([bp], bp.instance_id)
-    assert result[0].state == "carried"
+    assert result[0].location.kind == "carried"
 
 
 def test_stash_container_unknown_raises():
@@ -556,12 +561,12 @@ def test_sheet_buy_creates_container_instance(tmp_path):
     r = client.post("/character/test/equipment/buy", data={"item_id": "backpack"})
     assert r.status_code == 303
     spec = load_character("test", client._characters_dir)
-    assert spec.gold == 15  # 20 - 5
+    assert _gp(spec) == 15  # 20 - 5
     # Container is in spec.containers, NOT in inventory
     assert spec.inventory == []
     assert len(spec.containers) == 1
     assert spec.containers[0].catalog_id == "backpack"
-    assert spec.containers[0].state == "carried"
+    assert spec.containers[0].location.kind == "carried"
 
 
 def test_sheet_add_creates_container_instance_without_gold_deduction(tmp_path):
@@ -570,7 +575,7 @@ def test_sheet_add_creates_container_instance_without_gold_deduction(tmp_path):
     r = client.post("/character/test/equipment/add", data={"item_id": "bag_of_holding"})
     assert r.status_code == 303
     spec = load_character("test", client._characters_dir)
-    assert spec.gold == 20  # unchanged
+    assert _gp(spec) == 20  # unchanged
     assert len(spec.containers) == 1
     assert spec.containers[0].catalog_id == "bag_of_holding"
 
@@ -741,7 +746,7 @@ def test_sheet_stash_container_flips_state(tmp_path):
     })
     assert r.status_code == 303
     spec = load_character("test", client._characters_dir)
-    assert spec.containers[0].state == "stashed"
+    assert spec.containers[0].location.kind == "stashed"
 
 
 def test_sheet_unstash_container_flips_state(tmp_path):
@@ -758,7 +763,7 @@ def test_sheet_unstash_container_flips_state(tmp_path):
     })
     assert r.status_code == 303
     spec = load_character("test", client._characters_dir)
-    assert spec.containers[0].state == "carried"
+    assert spec.containers[0].location.kind == "carried"
 
 
 def test_sheet_remove_container_drop_clears_contents(tmp_path):
@@ -778,7 +783,7 @@ def test_sheet_remove_container_drop_clears_contents(tmp_path):
     spec = load_character("test", client._characters_dir)
     assert spec.containers == []
     assert spec.inventory == []
-    assert spec.gold == 0
+    assert _gp(spec) == 0
 
 
 def test_sheet_remove_container_sell_non_empty_returns_400(tmp_path):
@@ -809,7 +814,7 @@ def test_sheet_remove_container_sell_empty_refunds_half(tmp_path):
     assert r.status_code == 303
     spec = load_character("test", client._characters_dir)
     assert spec.containers == []
-    assert spec.gold == 2  # 5 // 2
+    assert _gp(spec) == 2  # 5 // 2
 
 
 # â”€â”€ Wizard container routes: stash-container, remove-container â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -825,7 +830,7 @@ def test_wizard_stash_container_endpoint(tmp_path):
     })
     assert r.status_code == 303
     draft = load_draft(draft_id, client._drafts_dir)
-    assert draft["containers"][0]["state"] == "stashed"
+    assert draft["containers"][0]["location"]["kind"] == "stashed"
 
 
 def test_wizard_remove_container_drop_clears_contents(tmp_path):

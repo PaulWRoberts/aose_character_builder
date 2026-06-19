@@ -101,7 +101,7 @@ def treasure_weight_cn(spec: CharacterSpec, data: GameData) -> int:
     held as spell sources (1 cn each)."""
     from aose.engine import currency, valuables
 
-    total = currency.coin_count(spec) + valuables.valuables_weight_cn(spec)
+    total = currency.coin_count(spec, carried_only=True) + valuables.valuables_weight_cn(spec)
     for mi in spec.magic_items:
         item = data.items.get(mi.catalog_id)
         if item is not None:
@@ -157,8 +157,9 @@ def equipment_weight_cn(spec: CharacterSpec, data: GameData) -> int:
     # They have listed weights (Bag of Holding has a 0.06 multiplier), so they
     # are NOT subsumed into the flat-80 abstraction.
     from aose.models import Container as _Container
+    from aose.models.storage import StorageLocation
     for c in spec.containers:
-        if c.state != "carried" or c.location != "person":
+        if c.location.kind != "carried":
             continue
         catalog = data.items.get(c.catalog_id)
         if not isinstance(catalog, _Container):
@@ -168,6 +169,11 @@ def equipment_weight_cn(spec: CharacterSpec, data: GameData) -> int:
             (data.items[x].weight_cn if x in data.items else 0)
             for x in c.contents
         )
+        # coins (1cn) + gems (1cn) + jewellery (10cn) stowed in this container
+        here = StorageLocation(kind="container", id=c.instance_id)
+        raw += sum(s.count for s in spec.coins if s.location == here)
+        raw += sum(g.count for g in spec.gems if g.location == here)
+        raw += 10 * sum(1 for j in spec.jewellery if j.location == here)
         total += int(catalog.weight_multiplier * raw)
 
     if has_gear:

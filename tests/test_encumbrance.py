@@ -16,7 +16,7 @@ from aose.engine.encumbrance import (
     carried_weight_cn,
     effective_movement,
 )
-from aose.models import CharacterSpec, ClassEntry, RuleSet
+from aose.models import CharacterSpec, ClassEntry, CoinStack, RuleSet
 from aose.sheet.view import build_sheet
 from aose.web.app import create_app
 
@@ -311,8 +311,7 @@ from aose.models import GemStack, JewelleryPiece, MagicItemInstance, SpellSource
 
 def test_treasure_weight_coins_gems_jewellery(data):
     spec = _spec()
-    spec.gold = 50
-    spec.silver = 30
+    spec.coins = [CoinStack(denom="gp", count=50), CoinStack(denom="sp", count=30)]
     spec.gems = [GemStack(instance_id="g", value=100, count=5)]
     spec.jewellery = [JewelleryPiece(instance_id="j", value=900)]
     assert treasure_weight_cn(spec, data) == 50 + 30 + 5 + 10
@@ -371,14 +370,14 @@ def test_weight_band_thresholds():
 
 def test_carried_weight_is_treasure_plus_equipment(data):
     spec = _spec(inventory=["sword"])   # 60 cn equipment, no gear
-    spec.gold = 100                     # 100 cn treasure
+    spec.coins = [CoinStack(denom="gp", count=100)]   # 100 cn treasure
     assert carried_weight_cn(spec, data) == 160
 
 
 def test_detailed_movement_bands(data):
     def move(coins):
         s = _spec(encumbrance="detailed")
-        s.gold = coins
+        s.coins = [CoinStack(denom="cp", count=coins)]
         return effective_movement(s, data)
     assert move(400) == 120
     assert move(600) == 90
@@ -391,7 +390,7 @@ def test_detailed_includes_armour_weight(data):
     # Chain mail 400 + 1 coin -> band 1 (>400) -> 90'
     s = _spec(inventory=["chain_mail"], equipped={"armor": "chain_mail"},
               encumbrance="detailed")
-    s.gold = 1
+    s.coins = [CoinStack(denom="cp", count=1)]
     assert effective_movement(s, data) == 90
 
 
@@ -424,7 +423,7 @@ def test_basic_heavy_armour(data):
 
 def test_basic_over_max_load_is_immobile(data):
     s = _spec(encumbrance="basic")
-    s.gold = 1601   # treasure alone exceeds the 1,600 cap
+    s.coins = [CoinStack(denom="cp", count=1601)]   # treasure alone exceeds the 1,600 cap
     assert effective_movement(s, data) == 0
 
 
@@ -454,7 +453,7 @@ def test_basic_table_shape_and_current(data):
 
 def test_detailed_table_shape_and_current(data):
     s = _spec(encumbrance="detailed")
-    s.gold = 500   # band 1 (401-600)
+    s.coins = [CoinStack(denom="cp", count=500)]   # band 1 (401-600)
     t = encumbrance_table(s, data)
     assert t.mode == "detailed"
     assert t.columns == ["Movement"]
@@ -472,8 +471,7 @@ from aose.sheet.view import build_sheet
 
 def test_sheet_exposes_purse_and_treasure(data):
     s = _spec(encumbrance="basic")
-    s.gold = 5
-    s.silver = 30
+    s.coins = [CoinStack(denom="gp", count=5), CoinStack(denom="sp", count=30)]
     s.gems = [GemStack(instance_id="g", value=100, count=2)]
     sheet = build_sheet(s, data)
     assert sheet.coins == {"pp": 0, "gp": 5, "ep": 0, "sp": 30, "cp": 0}

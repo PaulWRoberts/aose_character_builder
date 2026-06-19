@@ -18,6 +18,11 @@ from aose.engine.shop import (
     shop_categories,
 )
 from aose.models import CharacterSpec, ClassEntry, RuleSet
+
+
+def _gp(spec):
+    return next((s.count for s in spec.coins
+                 if s.denom == "gp" and s.location.kind == "carried"), 0)
 from aose.web.app import create_app
 
 PROJECT_ROOT = Path(__file__).parent.parent
@@ -311,7 +316,7 @@ def test_inventory_persists_to_saved_character(client):
     spec = load_character(char_id, client._characters_dir)
     assert set(spec.inventory) == {"sword", "chain_mail"}
     # 200 - 10 (long sword) - 40 (chain mail) = 150
-    assert spec.gold == 150
+    assert _gp(spec) == 150
 
 
 # â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -348,7 +353,7 @@ def test_sheet_buy_deducts_gold_and_adds_inventory(client):
     assert r.status_code == 303
     assert r.headers["location"] == "/character/test"
     spec = load_character("test", client._characters_dir)
-    assert spec.gold == 40
+    assert _gp(spec) == 40
     assert spec.inventory == ["sword"]
 
 
@@ -365,7 +370,7 @@ def test_sheet_remove_modes(client):
                     data={"item_id": "sword", "mode": "refund"})
     assert r.status_code == 303
     spec = load_character("test", client._characters_dir)
-    assert spec.gold == 10
+    assert _gp(spec) == 10
     assert spec.inventory == []
 
 
@@ -385,7 +390,7 @@ def test_sheet_add_route_grants_item_without_spending_gold(client):
     assert r.status_code == 303
     spec = load_character("test", client._characters_dir)
     assert spec.inventory == ["sword"]
-    assert spec.gold == 5  # unchanged
+    assert _gp(spec) == 5  # unchanged
 
 
 def test_sheet_add_rejects_unknown_item(client):
@@ -431,10 +436,10 @@ def test_sheet_shop_rows_carry_search_metadata(client):
 
 # â"€â"€ Gold-grant form on the sheet â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 
-def test_sheet_grant_gold_form_present(client):
+def test_sheet_coins_add_form_present(client):
     _seed_character(client, gold=10)
     r = client.get("/character/test")
-    assert 'action="/character/test/gold"' in r.text
+    assert 'action="/character/test/coins/add"' in r.text
 
 
 def test_grant_gold_adds(client):
@@ -443,14 +448,14 @@ def test_grant_gold_adds(client):
     assert r.status_code == 303
     assert r.headers["location"] == "/character/test"
     spec = load_character("test", client._characters_dir)
-    assert spec.gold == 60
+    assert _gp(spec) == 60
 
 
 def test_grant_gold_negative_clamps_at_zero(client):
     _seed_character(client, gold=5)
     client.post("/character/test/gold", data={"amount": "-9999"})
     spec = load_character("test", client._characters_dir)
-    assert spec.gold == 0
+    assert _gp(spec) == 0
 
 
 def test_grant_gold_missing_character_404s(client):

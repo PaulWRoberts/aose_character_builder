@@ -267,26 +267,33 @@ def unload_from_vehicle(inventory: list[str], vehicles: list[VehicleInstance],
 # ── Container-on-carrier ───────────────────────────────────────────────────
 
 def _set_container_location(spec: CharacterSpec, container_id: str,
-                            location: str, location_id: str | None) -> None:
+                            new_location) -> None:
+    from aose.models.storage import StorageLocation
     for i, c in enumerate(spec.containers):
         if c.instance_id == container_id:
-            spec.containers[i] = c.model_copy(
-                update={"location": location, "location_id": location_id})
+            if not isinstance(new_location, StorageLocation):
+                new_location = StorageLocation.model_validate(new_location)
+            spec.containers[i] = c.model_copy(update={"location": new_location})
             return
     raise ValueError(f"No container with id {container_id!r}")
 
 
 def move_container_to_animal(spec: CharacterSpec, container_id: str,
                              animal_id: str, data: GameData) -> None:
+    from aose.models.storage import StorageLocation
     _find_animal(spec.animals, animal_id)
-    _set_container_location(spec, container_id, "animal", animal_id)
+    _set_container_location(spec, container_id,
+                            StorageLocation(kind="animal", id=animal_id))
 
 
 def move_container_to_vehicle(spec: CharacterSpec, container_id: str,
                               vehicle_id: str, data: GameData) -> None:
+    from aose.models.storage import StorageLocation
     _find_vehicle(spec.vehicles, vehicle_id)
-    _set_container_location(spec, container_id, "vehicle", vehicle_id)
+    _set_container_location(spec, container_id,
+                            StorageLocation(kind="vehicle", id=vehicle_id))
 
 
 def move_container_to_person(spec: CharacterSpec, container_id: str) -> None:
-    _set_container_location(spec, container_id, "person", None)
+    from aose.models.storage import StorageLocation
+    _set_container_location(spec, container_id, StorageLocation(kind="carried"))

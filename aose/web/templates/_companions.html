@@ -1,8 +1,19 @@
 {% if sheet.companions %}
-<section class="group companions-group">
-  <h2 class="group-bar">Companions &amp; Holdings</h2>
-  <div class="group-body">
+<section class="group full companions-group">
+  <div class="bar">Companions &amp; Vehicles
+    <span class="meta">
+      {%- set n_animals = sheet.companions.animals|length -%}
+      {%- set n_vehicles = sheet.companions.vehicles|length -%}
+      {%- set n_retainers = sheet.companions.retainers|length -%}
+      {{ n_animals }} animal{{ '' if n_animals == 1 else 's' }} ·
+      {{ n_vehicles }} vehicle{{ '' if n_vehicles == 1 else 's' }} ·
+      {{ n_retainers }} retainer{{ '' if n_retainers == 1 else 's' }}
+    </span>
+  </div>
+  <div class="gbody scroll" style="max-height:420px">
 
+    {% if sheet.companions.animals %}
+    <div class="companion-grid">
     {% for a in sheet.companions.animals %}
     <article class="companion-card" data-kind="animal">
       <header class="companion-head">
@@ -25,49 +36,75 @@
       </ul>
       {% endif %}
 
-      <form method="post"
-            action="/character/{{ character_id }}/animal/{{ a.instance_id }}/hp"
-            class="inline-form">
-        <button name="delta" value="-1" class="chip">−1 HP</button>
-        <button name="delta" value="1" class="chip">+1 HP</button>
-      </form>
+      <div class="companion-controls">
+        <form method="post"
+              action="/character/{{ character_id }}/animal/{{ a.instance_id }}/hp"
+              class="inline-form">
+          <span class="ctl-label">HP</span>
+          <button name="delta" value="-1" class="btn">−1</button>
+          <button name="delta" value="1" class="btn">+1</button>
+        </form>
 
-      {% if a.armor_options or a.armor_id %}
-      <form method="post"
-            action="/character/{{ character_id }}/animal/{{ a.instance_id }}/armor"
-            class="inline-form">
-        <label>Armour
-          <select name="armor_id" onchange="this.form.submit()">
-            <option value="">— none —</option>
-            {% for aid, aname in a.armor_options %}
-              <option value="{{ aid }}"{% if a.armor_id == aid %} selected{% endif %}>{{ aname }}</option>
-            {% endfor %}
-          </select>
-        </label>
-      </form>
-      {% endif %}
+        {% if a.armor_options or a.armor_id %}
+        <form method="post"
+              action="/character/{{ character_id }}/animal/{{ a.instance_id }}/armor"
+              class="inline-form">
+          <label class="ctl-label">Barding
+            <select name="armor_id" onchange="this.form.submit()">
+              <option value="">— none —</option>
+              {% for aid, aname in a.armor_options %}
+                <option value="{{ aid }}"{% if a.armor_id == aid %} selected{% endif %}>{{ aname }}</option>
+              {% endfor %}
+              {% if a.armor_id and a.armor_id not in a.armor_options|map(attribute=0)|list %}
+                <option value="{{ a.armor_id }}" selected>{{ a.armor_id }} (worn)</option>
+              {% endif %}
+            </select>
+          </label>
+        </form>
+        {% endif %}
+      </div>
 
       {% if a.load_capacity %}
       <details class="companion-load">
         <summary>Load {{ a.load_used }} / {{ a.load_capacity }} cn</summary>
+        {% if a.contents %}
         <ul class="contents-list">
           {% for row in a.contents %}
           <li>
-            {{ row.name }}{% if row.count > 1 %} ×{{ row.count }}{% endif %}
+            <span>{{ row.name }}{% if row.count > 1 %} ×{{ row.count }}{% endif %}</span>
             <form method="post"
                   action="/character/{{ character_id }}/animal/{{ a.instance_id }}/unload"
                   class="inline-form">
               <input type="hidden" name="item_id" value="{{ row.id }}">
-              <button class="chip">Unload</button>
+              <button class="btn">Unload</button>
             </form>
           </li>
           {% endfor %}
         </ul>
+        {% else %}
+        <p class="companion-empty">Nothing loaded.</p>
+        {% endif %}
+        {% if inventory_view.carried %}
+        <form method="post"
+              action="/character/{{ character_id }}/animal/{{ a.instance_id }}/load"
+              class="inline-form load-form">
+          <label class="ctl-label">Load
+            <select name="item_id">
+              {% for row in inventory_view.carried %}<option value="{{ row.id }}">{{ row.name }}</option>{% endfor %}
+            </select>
+          </label>
+          <button class="btn solid">Load</button>
+        </form>
+        {% endif %}
       </details>
       {% endif %}
     </article>
     {% endfor %}
+    </div>
+    {% endif %}
 
+    {% if sheet.companions.vehicles %}
+    <div class="companion-grid">
     {% for v in sheet.companions.vehicles %}
     <article class="companion-card" data-kind="vehicle">
       <header class="companion-head">
@@ -78,41 +115,62 @@
         <span class="companion-stat">Cargo {{ v.cargo_used }}/{{ v.cargo_capacity }} cn</span>
       </header>
 
-      <form method="post"
-            action="/character/{{ character_id }}/vehicle/{{ v.instance_id }}/hull"
-            class="inline-form">
-        <button name="delta" value="-1" class="chip">−1 Hull</button>
-        <button name="delta" value="1" class="chip">+1 Hull</button>
-      </form>
+      <div class="companion-controls">
+        <form method="post"
+              action="/character/{{ character_id }}/vehicle/{{ v.instance_id }}/hull"
+              class="inline-form">
+          <span class="ctl-label">Hull</span>
+          <button name="delta" value="-1" class="btn">−1</button>
+          <button name="delta" value="1" class="btn">+1</button>
+        </form>
 
-      {% if v.has_extra %}
-      <form method="post"
-            action="/character/{{ character_id }}/vehicle/{{ v.instance_id }}/extra-animals"
-            class="inline-form">
-        <label><input type="checkbox" name="on" value="true"
-               {% if v.extra_animals %}checked{% endif %}
-               onchange="this.form.submit()"> Extra animals</label>
-      </form>
-      {% endif %}
+        {% if v.has_extra %}
+        <form method="post"
+              action="/character/{{ character_id }}/vehicle/{{ v.instance_id }}/extra-animals"
+              class="inline-form">
+          <label class="ctl-label"><input type="checkbox" name="on" value="true"
+                 {% if v.extra_animals %}checked{% endif %}
+                 onchange="this.form.submit()"> Extra animals</label>
+        </form>
+        {% endif %}
+      </div>
 
       <details class="companion-load">
         <summary>Cargo {{ v.cargo_used }} / {{ v.cargo_capacity }} cn</summary>
+        {% if v.contents %}
         <ul class="contents-list">
           {% for row in v.contents %}
           <li>
-            {{ row.name }}{% if row.count > 1 %} ×{{ row.count }}{% endif %}
+            <span>{{ row.name }}{% if row.count > 1 %} ×{{ row.count }}{% endif %}</span>
             <form method="post"
                   action="/character/{{ character_id }}/vehicle/{{ v.instance_id }}/unload"
                   class="inline-form">
               <input type="hidden" name="item_id" value="{{ row.id }}">
-              <button class="chip">Unload</button>
+              <button class="btn">Unload</button>
             </form>
           </li>
           {% endfor %}
         </ul>
+        {% else %}
+        <p class="companion-empty">Nothing loaded.</p>
+        {% endif %}
+        {% if inventory_view.carried %}
+        <form method="post"
+              action="/character/{{ character_id }}/vehicle/{{ v.instance_id }}/load"
+              class="inline-form load-form">
+          <label class="ctl-label">Load
+            <select name="item_id">
+              {% for row in inventory_view.carried %}<option value="{{ row.id }}">{{ row.name }}</option>{% endfor %}
+            </select>
+          </label>
+          <button class="btn solid">Load</button>
+        </form>
+        {% endif %}
       </details>
     </article>
     {% endfor %}
+    </div>
+    {% endif %}
 
     {% if sheet.companions.retainers or sheet.retainer_class_options %}
     <div class="companions-retainers">
@@ -120,10 +178,11 @@
         Retainers
         <span class="companion-stat">{{ sheet.companions.retainers|length }} / {{ sheet.companions.max_retainers }}</span>
         {% if sheet.companions.retainers|length > sheet.companions.max_retainers %}
-          <span class="warn">over CHA limit</span>
+          <span class="tag stamp">over CHA limit</span>
         {% endif %}
       </h3>
 
+      <div class="companion-grid">
       {% for r in sheet.companions.retainers %}
       <article class="companion-card" data-kind="retainer">
         <header class="companion-head">
@@ -144,56 +203,63 @@
         </div>
         {% endif %}
 
-        <form method="post" action="/character/{{ character_id }}/retainer/{{ r.id }}/loyalty" class="inline-form">
-          <label>Loyalty <input type="number" name="value" value="{{ r.loyalty }}" style="width:3.5rem"></label>
-          <button class="chip">Set</button>
-        </form>
+        <div class="companion-controls">
+          <form method="post" action="/character/{{ character_id }}/retainer/{{ r.id }}/loyalty" class="inline-form">
+            <label class="ctl-label">Loyalty <input type="number" name="value" value="{{ r.loyalty }}" style="width:3.5rem"></label>
+            <button class="btn">Set</button>
+          </form>
 
-        <form method="post" action="/character/{{ character_id }}/retainer/{{ r.id }}/role" class="inline-form">
-          <input type="text" name="role" value="{{ r.role }}" placeholder="role">
-          <button class="chip">Save</button>
-        </form>
+          <form method="post" action="/character/{{ character_id }}/retainer/{{ r.id }}/role" class="inline-form">
+            <input type="text" name="role" value="{{ r.role }}" placeholder="role">
+            <button class="btn">Save</button>
+          </form>
+        </div>
 
         {% if r.is_normal_human and sheet.retainer_class_options %}
         <form method="post" action="/character/{{ character_id }}/retainer/{{ r.id }}/promote" class="inline-form">
-          <label>Promote to
+          <label class="ctl-label">Promote to
             <select name="class_id">
               {% for c in sheet.retainer_class_options %}{% if c.id != 'normal_human' %}<option value="{{ c.id }}">{{ c.name }}</option>{% endif %}{% endfor %}
             </select>
           </label>
-          <button class="chip">Promote</button>
+          <button class="btn">Promote</button>
         </form>
         {% endif %}
 
         <details class="companion-load">
           <summary>Inventory ({{ r.inventory|length }})</summary>
+          {% if r.inventory %}
           <ul class="contents-list">
             {% for row in r.inventory %}
-            <li>{{ row.name }} ×{{ row.count }}
+            <li><span>{{ row.name }} ×{{ row.count }}</span>
               <form method="post" action="/character/{{ character_id }}/retainer/{{ r.id }}/take" class="inline-form">
                 <input type="hidden" name="item_id" value="{{ row.id }}">
-                <button class="chip">Take</button>
+                <button class="btn">Take</button>
               </form>
             </li>
             {% endfor %}
           </ul>
+          {% else %}
+          <p class="companion-empty">Carrying nothing.</p>
+          {% endif %}
           {% if inventory_view.carried %}
-          <form method="post" action="/character/{{ character_id }}/retainer/{{ r.id }}/give" class="inline-form">
-            <label>Give
+          <form method="post" action="/character/{{ character_id }}/retainer/{{ r.id }}/give" class="inline-form load-form">
+            <label class="ctl-label">Give
               <select name="item_id">
                 {% for row in inventory_view.carried %}<option value="{{ row.id }}">{{ row.name }}</option>{% endfor %}
               </select>
             </label>
-            <button class="chip">Give</button>
+            <button class="btn solid">Give</button>
           </form>
           {% endif %}
         </details>
 
         <form method="post" action="/character/{{ character_id }}/retainer/{{ r.id }}/remove" class="inline-form" style="margin-top:.5rem">
-          <button class="chip danger">Dismiss</button>
+          <button class="btn danger">Dismiss</button>
         </form>
       </article>
       {% endfor %}
+      </div>
 
       <form method="post" action="/character/{{ character_id }}/retainer/add" class="retainer-add inline-form">
         <input type="text" name="name" placeholder="name" required>
@@ -203,7 +269,7 @@
         <input type="number" name="level" value="1" min="1" style="width:3.5rem">
         <input type="hidden" name="race_id" value="{{ sheet.race_id }}">
         <input type="hidden" name="alignment" value="neutral">
-        <button class="chip">Add retainer</button>
+        <button class="btn solid">Add retainer</button>
       </form>
     </div>
     {% endif %}

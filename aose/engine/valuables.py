@@ -14,6 +14,7 @@ from typing import Optional
 
 from aose.engine.dice import roll
 from aose.models import CharacterSpec, GemStack, JewelleryPiece
+from aose.models.storage import StorageLocation
 
 # Table increments — a dropdown affordance only; custom values are also valid.
 GEM_INCREMENTS = (10, 50, 100, 500, 1000)
@@ -35,20 +36,22 @@ def _gem_index(gems: list[GemStack], instance_id: str) -> int:
 
 
 def add_gem(gems: list[GemStack], value: int, count: int = 1,
-            label: str = "") -> list[GemStack]:
+            label: str = "",
+            location: StorageLocation | None = None) -> list[GemStack]:
     """Add ``count`` gems worth ``value`` each.  Stacks onto an existing entry
-    with the same (value, label); otherwise appends a new stack."""
+    with the same (value, label, location); otherwise appends a new stack."""
     if value <= 0:
         raise ValuableError("a gem must be worth more than 0 gp")
     if count <= 0:
         raise ValuableError("gem count must be positive")
     label = label.strip()
+    location = location or StorageLocation(kind="carried")
     for i, g in enumerate(gems):
-        if g.value == value and g.label == label:
+        if g.value == value and g.label == label and g.location == location:
             updated = g.model_copy(update={"count": g.count + count})
             return [*gems[:i], updated, *gems[i + 1:]]
     return [*gems, GemStack(instance_id=uuid.uuid4().hex, value=value,
-                            count=count, label=label)]
+                            count=count, label=label, location=location)]
 
 
 def adjust_gem_count(gems: list[GemStack], instance_id: str,
@@ -108,14 +111,16 @@ def roll_jewellery_value(rng: Optional[random.Random] = None) -> int:
 
 
 def add_jewellery(jewellery: list[JewelleryPiece], value: int,
-                  damaged: bool = False, label: str = "") -> list[JewelleryPiece]:
+                  damaged: bool = False, label: str = "",
+                  location: StorageLocation | None = None) -> list[JewelleryPiece]:
     """Append a jewellery piece (Add-only).  ``value`` is the full, un-halved
     worth even when ``damaged`` is set."""
     if value <= 0:
         raise ValuableError("a jewellery piece must be worth more than 0 gp")
+    location = location or StorageLocation(kind="carried")
     return [*jewellery, JewelleryPiece(
         instance_id=uuid.uuid4().hex, value=value,
-        damaged=damaged, label=label.strip(),
+        damaged=damaged, label=label.strip(), location=location,
     )]
 
 
@@ -155,7 +160,16 @@ def total_value(spec: CharacterSpec) -> int:
     )
 
 
+def total_wealth_gp(spec: CharacterSpec) -> int:
+    """Whole-gp wealth across all PC buckets (coins + gems + jewellery),
+    excluding retainers (they own their own purse)."""
+    from aose.engine import currency
+    return currency.total_value_gp(spec) + total_value(spec)
+
+
 def valuables_weight_cn(spec: CharacterSpec) -> int:
-    """Encumbrance weight of owned gems + jewellery: 1 cn per gem,
-    10 cn per jewellery piece (damaged state does not affect weight)."""
-    return sum(g.count for g in spec.gems) + 10 * len(spec.jewellery)
+    """Encumbrance weight of CARRIED gems + jewellery: 1 cn per gem,
+    10 cn per piece. Stashed / on-carrier treasure weighs nothing for the PC."""
+    gems = sum(g.count for g in spec.gems if g.location.kind == "carried")
+    jewel = 10 * sum(1 for j in spec.jewellery if j.location.kind == "carried")
+    return gems + jewel

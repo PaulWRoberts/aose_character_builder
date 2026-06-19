@@ -183,6 +183,33 @@
 
     <section class="section">
         <h2>Equipment</h2>
+        {% if sheet.inventory_groups is defined %}
+        {% set _has_items = namespace(val=false) %}
+        {% for group in sheet.inventory_groups %}
+        {% if group.equipped or group.loose or group.containers %}
+        {% set _has_items.val = true %}
+        <h3>{{ group.label }}</h3>
+        {% if group.equipped %}
+        <ul>
+            {% for r in group.equipped %}
+            <li><em>{{ r.name }}{% if r.count > 1 %} ×{{ r.count }}{% endif %}</em></li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        {% if group.loose %}
+        <ul>
+            {% for r in group.loose %}
+            <li>{{ r.name }}{% if r.count > 1 %} ×{{ r.count }}{% endif %}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        {% for c in group.containers %}
+        <p style="margin:2pt 0; font-size:8.5pt;"><strong>{{ c.name }}</strong> ({{ c.used_cn }}/{{ c.capacity_cn or "∞" }} cn){% if c.contents %}: {{ c.contents | map(attribute="name") | join(", ") }}{% endif %}</p>
+        {% endfor %}
+        {% endif %}
+        {% endfor %}
+        {% if not _has_items.val %}<p class="muted" style="font-size:8.5pt; margin:2pt 0;">No equipment.</p>{% endif %}
+        {% else %}
         {% if sheet.equipped %}
         <h3>Equipped</h3>
         <ul>
@@ -202,7 +229,27 @@
         {% if not sheet.equipped and not sheet.inventory %}
         <p class="muted" style="font-size:8.5pt; margin:2pt 0;">No equipment.</p>
         {% endif %}
+        {% endif %}
     </section>
+
+    {% if sheet.inventory_groups is defined %}
+    {% set _has_coins = namespace(val=false) %}
+    {% for group in sheet.inventory_groups %}{% if group.coins or group.treasure_gems or group.treasure_jewellery %}{% set _has_coins.val = true %}{% endif %}{% endfor %}
+    {% if _has_coins.val %}
+    <section class="section">
+        <h2>Currency &amp; Treasure</h2>
+        {% for group in sheet.inventory_groups %}
+        {% if group.coins or group.treasure_gems or group.treasure_jewellery %}
+        <h3>{{ group.label }}</h3>
+        {% if group.coins %}<p style="margin:2pt 0; font-size:8.5pt;">Coins: {% for c in group.coins %}{{ c.count }} {{ c.denom }}{% if not loop.last %}, {% endif %}{% endfor %}</p>{% endif %}
+        {% if group.treasure_gems %}<p style="margin:2pt 0; font-size:8.5pt;">Gems: {% for g in group.treasure_gems %}{{ g.count }}×{{ g.value }}gp{% if g.label %} {{ g.label }}{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}</p>{% endif %}
+        {% if group.treasure_jewellery %}<p style="margin:2pt 0; font-size:8.5pt;">Jewellery: {% for j in group.treasure_jewellery %}{{ j.label or "piece" }} ({{ j.effective_value }}gp{% if j.damaged %} dmg{% endif %}){% if not loop.last %}, {% endif %}{% endfor %}</p>{% endif %}
+        {% endif %}
+        {% endfor %}
+        <p style="margin:4pt 0; font-size:8.5pt; font-style:italic;">Total wealth: {{ sheet.total_wealth_gp }} gp</p>
+    </section>
+    {% endif %}
+    {% endif %}
 
     {% if sheet.other_possessions %}
     <section class="section">
@@ -224,7 +271,7 @@
 
     {% if sheet.companions %}
     <section class="section print-companions">
-        <h2>Companions &amp; Holdings</h2>
+        <h2>Companions &amp; Vehicles</h2>
         {% for a in sheet.companions.animals %}
         <p><strong>{{ a.name }}</strong> ({{ a.species }}) — AC {{ a.ac_descending }}
            [{{ a.ac_ascending }}], HP {{ a.hp_current }}/{{ a.hp_max }},

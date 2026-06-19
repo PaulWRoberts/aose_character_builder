@@ -32,6 +32,7 @@ from .item import (
 )
 from .modifier import GrantedModifier, Modifier, RolledModifier, Scaling
 from .enchantment import AppliesTo, Enchantment
+from .storage import StorageLocation, CoinStack
 from .character import (
     AmmoStack, AnimalInstance, CharacterSpec, ClassEntry, ContainerInstance,
     EnchantedInstance, MagicItemInstance, Retainer, SpellSlot, SpellSource,
@@ -98,4 +99,6 @@ __all__ = [
     "JewelleryPiece",
     "Source",
     "SecondarySkillEntry",
+    "StorageLocation",
+    "CoinStack",
 ]

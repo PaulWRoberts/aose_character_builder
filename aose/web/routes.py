@@ -48,16 +48,17 @@ from aose.engine.magic import (
 )
 from aose.engine.shop import (
     REMOVE_MODES,
+    InsufficientFunds,
     InsufficientGold,
     UnknownItem,
     add_free as shop_add_free,
     add_free_container,
-    buy as shop_buy,
     buy_container,
+    buy_item as shop_buy_item,
     inventory_view as shop_inventory_view,
-    remove as shop_remove,
-    remove_container as shop_remove_container,
-    remove_from_stash as shop_remove_from_stash,
+    sell_container as shop_sell_container,
+    sell_from_stash as shop_sell_from_stash,
+    sell_item as shop_sell_item,
     shop_categories,
     stash as shop_stash,
     stash_container as shop_stash_container,
@@ -105,6 +106,32 @@ from aose.sheet.view import build_sheet, spell_source_add_options
 router = APIRouter()
 
 TEMPLATES_DIR = Path(__file__).parent / "templates"
+
+# ---------------------------------------------------------------------------
+# Carried-gp shims: bridge the old single-int gold API until all call sites
+# are migrated to the CoinStack model.  Both helpers operate on the "carried"
+# gp stack only — the shop-spendable balance.
+# ---------------------------------------------------------------------------
+from aose.models import CoinStack as _CoinStack
+from aose.models.storage import StorageLocation as _SL
+
+
+def _get_gold(spec) -> int:
+    """Return the count of carried gp (0 if none)."""
+    for s in spec.coins:
+        if s.denom == "gp" and s.location.kind == "carried":
+            return s.count
+    return 0
+
+
+def _set_gold(spec, amount: int) -> None:
+    """Replace (or create) the carried gp stack with ``amount``.
+    Passing 0 removes the stack entirely."""
+    carried = _SL(kind="carried")
+    spec.coins = [s for s in spec.coins
+                  if not (s.denom == "gp" and s.location == carried)]
+    if amount > 0:
+        spec.coins.append(_CoinStack(denom="gp", count=amount))
 STATIC_DIR = Path(__file__).parent / "static"
 
 templates = make_templates(str(TEMPLATES_DIR))
@@ -170,7 +197,7 @@ async def character_sheet(request: Request, character_id: str):
             "sheet": sheet,
             "character_id": character_id,
             # Equipment partial context (sheet-side: no starting-gold reroll).
-            "gold": spec.gold,
+            "gold": _get_gold(spec),
             "gold_locked": True,
             "inventory_view": shop_inventory_view(
                 spec.inventory, spec.stashed, spec.equipped,
@@ -331,36 +358,126 @@ async def grant_gold(request: Request, character_id: str, amount: int = Form(...
     """Add or subtract gold.  Clamped at zero — negative balances aren't a
     thing in OSE, even if the GM claws back some treasure."""
     spec = _load_spec_or_404(request, character_id)
-    spec.gold = max(0, spec.gold + amount)
+    _set_gold(spec, max(0, _get_gold(spec) + amount))
     save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
 @router.post("/character/{character_id}/coins/add")
-async def add_coins(request: Request, character_id: str,
-                    denom: str = Form(...), amount: int = Form(...)):
-    """Add or subtract coins of one denomination, clamped at zero."""
+async def add_coins(request: Request, character_id: str):
+    """Add coins of one denomination at a location, clamped at zero."""
+    from aose.engine import storage as _storage
     spec = _load_spec_or_404(request, character_id)
+    form = await request.form()
+    denom = form.get("denom", "")
     if denom not in _currency.RATES:
         raise HTTPException(400, f"unknown denomination {denom!r}")
-    attr = _currency._ATTR[denom]
-    setattr(spec, attr, max(0, getattr(spec, attr) + amount))
+    loc_kind = form.get("loc_kind", "carried") or "carried"
+    loc_id = form.get("loc_id") or None
+    try:
+        count = int(form.get("count", 0))
+    except (ValueError, TypeError):
+        raise HTTPException(400, "count must be an integer")
+    loc = _SL(kind=loc_kind, id=loc_id)  # type: ignore[arg-type]
+    if count > 0:
+        _storage.add_coins(spec, denom, count, loc)
+    elif count < 0:
+        # Clamped removal: remove as many as available, never below 0
+        remove_count = min(-count, sum(
+            s.count for s in spec.coins if s.denom == denom and s.location == loc
+        ))
+        if remove_count > 0:
+            _storage._take_coins(spec, denom, remove_count, loc)
     save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
 @router.post("/character/{character_id}/coins/convert")
-async def convert_coins(request: Request, character_id: str,
-                        from_denom: str = Form(...), to_denom: str = Form(...),
-                        count: int = Form(...)):
-    """Make change between two denominations at official rates."""
+async def convert_coins(request: Request, character_id: str):
+    """Make change between two denominations at a specific location."""
+    from aose.engine import storage as _storage
     spec = _load_spec_or_404(request, character_id)
+    form = await request.form()
+    loc_kind = form.get("loc_kind", "carried") or "carried"
+    loc_id = form.get("loc_id") or None
+    frm = form.get("frm") or form.get("from_denom", "")
+    to = form.get("to") or form.get("to_denom", "")
     try:
-        changes = _currency.convert(spec, from_denom, to_denom, count)
-    except CurrencyError as e:
+        count = int(form.get("count", 0))
+    except (ValueError, TypeError):
+        raise HTTPException(400, "count must be an integer")
+    loc = _SL(kind=loc_kind, id=loc_id)  # type: ignore[arg-type]
+    try:
+        _storage.convert_coins(spec, loc, frm, to, count)
+    except (CurrencyError, _storage.StorageError) as e:
         raise HTTPException(400, str(e))
-    for attr, value in changes.items():
-        setattr(spec, attr, value)
+    save_character(character_id, spec, request.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/inventory/move-item")
+async def inventory_move_item(request: Request, character_id: str):
+    """Move one copy of an item from src location to dest location."""
+    from aose.engine import storage as _storage
+    spec = _load_spec_or_404(request, character_id)
+    form = await request.form()
+    src = _SL(kind=form.get("src_kind", "carried"), id=form.get("src_id") or None)  # type: ignore[arg-type]
+    dest = _SL(kind=form.get("dest_kind", "carried"), id=form.get("dest_id") or None)  # type: ignore[arg-type]
+    try:
+        _storage.move_item(spec, form["item_id"], src, dest)
+    except (KeyError, _storage.StorageError) as e:
+        raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/inventory/move-container")
+async def inventory_move_container(request: Request, character_id: str):
+    """Re-home a container instance to a new location."""
+    from aose.engine import storage as _storage
+    spec = _load_spec_or_404(request, character_id)
+    form = await request.form()
+    dest = _SL(kind=form.get("dest_kind", "carried"), id=form.get("dest_id") or None)  # type: ignore[arg-type]
+    try:
+        _storage.move_container(spec, form["container_id"], dest)
+    except (KeyError, _storage.StorageError) as e:
+        raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/inventory/move-coins")
+async def inventory_move_coins(request: Request, character_id: str):
+    """Move some coins of one denomination from src to dest."""
+    from aose.engine import storage as _storage
+    spec = _load_spec_or_404(request, character_id)
+    form = await request.form()
+    denom = form.get("denom", "")
+    src = _SL(kind=form.get("src_kind", "carried"), id=form.get("src_id") or None)  # type: ignore[arg-type]
+    dest = _SL(kind=form.get("dest_kind", "stashed"), id=form.get("dest_id") or None)  # type: ignore[arg-type]
+    try:
+        count = int(form.get("count", 0))
+    except (ValueError, TypeError):
+        raise HTTPException(400, "count must be an integer")
+    try:
+        _storage.move_coins(spec, denom, src, dest, count)
+    except _storage.StorageError as e:
+        raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/inventory/move-valuable")
+async def inventory_move_valuable(request: Request, character_id: str):
+    """Move a gem stack or jewellery piece to a new location."""
+    from aose.engine import storage as _storage
+    spec = _load_spec_or_404(request, character_id)
+    form = await request.form()
+    dest = _SL(kind=form.get("dest_kind", "carried"), id=form.get("dest_id") or None)  # type: ignore[arg-type]
+    try:
+        _storage.move_valuable(spec, form["instance_id"], dest)
+    except (KeyError, _storage.StorageError) as e:
+        raise HTTPException(400, str(e))
     save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
@@ -581,19 +698,31 @@ async def equipment_buy(request: Request, character_id: str,
     spec = _load_spec_or_404(request, character_id)
     game_data = request.app.state.game_data
     item = game_data.items.get(item_id)
-    from aose.models import Container
+    from aose.models import Animal, Container, Vehicle
     try:
         if isinstance(item, Ammunition):
-            spec.ammo, spec.gold = _buy_ammo(spec.ammo, spec.gold, item_id, game_data)
+            spec.ammo, new_gold = _buy_ammo(spec.ammo, _get_gold(spec), item_id, game_data)
+            _set_gold(spec, new_gold)
         elif isinstance(item, Container):
-            spec.containers, spec.gold = buy_container(
-                spec.containers, spec.gold, item_id, game_data,
+            spec.containers, new_gold = buy_container(
+                spec.containers, _get_gold(spec), item_id, game_data,
             )
+            _set_gold(spec, new_gold)
+        elif isinstance(item, Animal):
+            # Animals are roster instances, not carried inventory.
+            spec.animals, new_gold = companions_engine.buy_animal(
+                spec.animals, _get_gold(spec), item_id, game_data,
+            )
+            _set_gold(spec, new_gold)
+        elif isinstance(item, Vehicle):
+            # Vehicles are roster instances; hull_max resolves at purchase.
+            spec.vehicles, new_gold = companions_engine.buy_vehicle(
+                spec.vehicles, _get_gold(spec), item_id, game_data,
+            )
+            _set_gold(spec, new_gold)
         else:
-            new_inventory, new_gold = shop_buy(spec.inventory, spec.gold, item_id, game_data)
-            spec.inventory = new_inventory
-            spec.gold = new_gold
-    except (UnknownItem, InsufficientGold, _AmmoInsufficientGold, ValueError) as e:
+            shop_buy_item(spec, item_id, game_data)
+    except (UnknownItem, InsufficientFunds, InsufficientGold, _AmmoInsufficientGold, ValueError) as e:
         raise HTTPException(400, str(e))
     save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
@@ -670,14 +799,9 @@ async def equipment_remove(request: Request, character_id: str,
     game_data = request.app.state.game_data
     try:
         if from_state == "stashed":
-            spec.stashed, spec.gold = shop_remove_from_stash(
-                spec.stashed, spec.gold, item_id, mode, game_data,
-            )
+            shop_sell_from_stash(spec, item_id, mode, game_data)
         else:
-            spec.inventory, spec.gold, spec.equipped = shop_remove(
-                spec.inventory, spec.gold, item_id, mode, game_data,
-                spec.equipped,
-            )
+            shop_sell_item(spec, item_id, mode, game_data)
     except ValueError as e:
         raise HTTPException(400, str(e))
     save_character(character_id, spec, request.state.characters_dir)
@@ -776,10 +900,7 @@ async def equipment_remove_container(request: Request, character_id: str,
                                      mode: str = Form(...)):
     spec = _load_spec_or_404(request, character_id)
     try:
-        spec.containers, spec.gold = shop_remove_container(
-            spec.containers, spec.gold, instance_id, mode,
-            request.app.state.game_data,
-        )
+        shop_sell_container(spec, instance_id, mode, request.app.state.game_data)
     except ValueError as e:
         raise HTTPException(400, str(e))
     save_character(character_id, spec, request.state.characters_dir)
@@ -842,9 +963,10 @@ async def equipment_remove_magic(request: Request, character_id: str,
                                  mode: str = Form("drop")):
     spec = _load_spec_or_404(request, character_id)
     try:
-        spec.magic_items, spec.gold = _remove_magic(
-            spec.magic_items, spec.gold, instance_id, mode, request.app.state.game_data,
+        spec.magic_items, new_gold = _remove_magic(
+            spec.magic_items, _get_gold(spec), instance_id, mode, request.app.state.game_data,
         )
+        _set_gold(spec, new_gold)
     except ValueError as e:
         raise HTTPException(400, str(e))
     save_character(character_id, spec, request.state.characters_dir)
@@ -1408,8 +1530,9 @@ async def sheet_gem_sell(request: Request, character_id: str,
                          instance_id: str = Form(...)):
     spec = _load_spec_or_404(request, character_id)
     try:
-        spec.gems, spec.gold = valuables_engine.sell_gem(
-            spec.gems, spec.gold, instance_id)
+        spec.gems, new_gold = valuables_engine.sell_gem(
+            spec.gems, _get_gold(spec), instance_id)
+        _set_gold(spec, new_gold)
     except ValuableError as e:
         raise HTTPException(400, str(e))
     save_character(character_id, spec, request.state.characters_dir)
@@ -1421,8 +1544,9 @@ async def sheet_gem_sell_all(request: Request, character_id: str,
                              instance_id: str = Form(...)):
     spec = _load_spec_or_404(request, character_id)
     try:
-        spec.gems, spec.gold = valuables_engine.sell_gem_all(
-            spec.gems, spec.gold, instance_id)
+        spec.gems, new_gold = valuables_engine.sell_gem_all(
+            spec.gems, _get_gold(spec), instance_id)
+        _set_gold(spec, new_gold)
     except ValuableError as e:
         raise HTTPException(400, str(e))
     save_character(character_id, spec, request.state.characters_dir)
@@ -1476,8 +1600,9 @@ async def sheet_jewellery_sell(request: Request, character_id: str,
                                instance_id: str = Form(...)):
     spec = _load_spec_or_404(request, character_id)
     try:
-        spec.jewellery, spec.gold = valuables_engine.sell_jewellery(
-            spec.jewellery, spec.gold, instance_id)
+        spec.jewellery, new_gold = valuables_engine.sell_jewellery(
+            spec.jewellery, _get_gold(spec), instance_id)
+        _set_gold(spec, new_gold)
     except ValuableError as e:
         raise HTTPException(400, str(e))
     save_character(character_id, spec, request.state.characters_dir)
@@ -1536,8 +1661,9 @@ async def animal_buy(request: Request, character_id: str, item_id: str = Form(..
     spec = _load_spec_or_404(request, character_id)
     data = request.app.state.game_data
     try:
-        spec.animals, spec.gold = companions_engine.buy_animal(
-            spec.animals, spec.gold, item_id, data)
+        spec.animals, new_gold = companions_engine.buy_animal(
+            spec.animals, _get_gold(spec), item_id, data)
+        _set_gold(spec, new_gold)
     except (ValueError,) as e:
         raise HTTPException(400, str(e))
     save_character(character_id, spec, request.state.characters_dir)
@@ -1550,8 +1676,9 @@ async def animal_remove(request: Request, character_id: str,
     spec = _load_spec_or_404(request, character_id)
     data = request.app.state.game_data
     try:
-        spec.animals, spec.gold = companions_engine.remove_animal(
-            spec.animals, spec.gold, instance_id, mode, data)
+        spec.animals, new_gold = companions_engine.remove_animal(
+            spec.animals, _get_gold(spec), instance_id, mode, data)
+        _set_gold(spec, new_gold)
     except ValueError as e:
         raise HTTPException(400, str(e))
     save_character(character_id, spec, request.state.characters_dir)
@@ -1637,8 +1764,9 @@ async def vehicle_buy(request: Request, character_id: str, item_id: str = Form(.
     spec = _load_spec_or_404(request, character_id)
     data = request.app.state.game_data
     try:
-        spec.vehicles, spec.gold = companions_engine.buy_vehicle(
-            spec.vehicles, spec.gold, item_id, data)
+        spec.vehicles, new_gold = companions_engine.buy_vehicle(
+            spec.vehicles, _get_gold(spec), item_id, data)
+        _set_gold(spec, new_gold)
     except ValueError as e:
         raise HTTPException(400, str(e))
     save_character(character_id, spec, request.state.characters_dir)
@@ -1651,8 +1779,9 @@ async def vehicle_remove(request: Request, character_id: str,
     spec = _load_spec_or_404(request, character_id)
     data = request.app.state.game_data
     try:
-        spec.vehicles, spec.gold = companions_engine.remove_vehicle(
-            spec.vehicles, spec.gold, instance_id, mode, data)
+        spec.vehicles, new_gold = companions_engine.remove_vehicle(
+            spec.vehicles, _get_gold(spec), instance_id, mode, data)
+        _set_gold(spec, new_gold)
     except ValueError as e:
         raise HTTPException(400, str(e))
     save_character(character_id, spec, request.state.characters_dir)

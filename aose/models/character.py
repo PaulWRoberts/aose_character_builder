@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from .ability import Ability
 from .modifier import Modifier
 from .ruleset import RuleSet
+from .storage import CoinStack, StorageLocation
 from .valuable import GemStack, JewelleryPiece
 
 
@@ -65,20 +66,39 @@ class ContainerInstance(BaseModel):
     """A specific container the character owns — per-instance state, separate
     from the catalog ``Container`` item.  Items inside ``contents`` are not in
     ``CharacterSpec.inventory`` or ``CharacterSpec.stashed``; they live inside
-    the container and follow its state (carried/stashed) for weight purposes.
+    the container and follow its location for weight purposes.
     """
     model_config = ConfigDict(extra="forbid")
 
     instance_id: str
     catalog_id: str
-    state: Literal["carried", "stashed"]
+    # carried/stashed/animal/vehicle only — never "container" (no nesting).
+    location: StorageLocation = Field(default_factory=lambda: StorageLocation(kind="carried"))
     contents: list[str] = Field(default_factory=list)
-    # A container is normally on the person (carried/stashed via ``state``).
-    # When loaded onto an animal/vehicle, ``location`` names the carrier kind
-    # and ``location_id`` its instance_id; its weight then counts toward that
-    # carrier, not the PC. Defaults keep old saves valid.
-    location: Literal["person", "animal", "vehicle"] = "person"
-    location_id: str | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _migrate_legacy_location(cls, data):
+        """Coerce old (state, location=person|animal|vehicle, location_id) into
+        a single StorageLocation."""
+        if not isinstance(data, dict):
+            return data
+        if "state" not in data and "location_id" not in data:
+            return data  # already new shape (or default)
+        state = data.pop("state", "carried")
+        carrier = data.pop("location", "person")
+        carrier_id = data.pop("location_id", None)
+        if carrier == "person":
+            data["location"] = {"kind": state}
+        else:
+            data["location"] = {"kind": carrier, "id": carrier_id}
+        return data
+
+    @model_validator(mode="after")
+    def _no_nesting(self):
+        if self.location.kind == "container":
+            raise ValueError("a container cannot live inside another container")
+        return self
 
 
 class AnimalInstance(BaseModel):
@@ -196,11 +216,9 @@ class CharacterSpec(BaseModel):
     race_id: str
     classes: list[ClassEntry] = Field(min_length=1)
     alignment: Literal["law", "neutral", "chaos"]
-    gold: int = 0            # gp — the shop-spendable balance
-    platinum: int = 0        # pp
-    electrum: int = 0        # ep
-    silver: int = 0          # sp
-    copper: int = 0          # cp
+    # Coins are located stackable items: at most one stack per (denom, location).
+    # The shop spends only carried (on-person) stacks. See aose/engine/storage.py.
+    coins: list[CoinStack] = Field(default_factory=list)
     # Basic-encumbrance referee toggle: carrying a significant amount of
     # treasure (drops the movement rate one step). Detailed mode ignores it.
     carrying_treasure: bool = False
@@ -319,6 +337,29 @@ class CharacterSpec(BaseModel):
                     data["secondary_skills"] = [legacy]
                 else:
                     data["secondary_skills"] = legacy
+        return data
+
+    @model_validator(mode="before")
+    @classmethod
+    def _migrate_legacy_int_coins(cls, data):
+        """Coerce the pre-located int coin fields (gold/platinum/electrum/
+        silver/copper) into carried CoinStacks. Zero denominations are dropped.
+        Keeps old saves loadable under extra='forbid'."""
+        if not isinstance(data, dict):
+            return data
+        _legacy = {"copper": "cp", "silver": "sp", "electrum": "ep",
+                   "gold": "gp", "platinum": "pp"}
+        present = [k for k in _legacy if k in data]
+        if not present:
+            return data
+        existing = list(data.get("coins") or [])
+        for attr, denom in _legacy.items():
+            count = data.get(attr) or 0
+            if count:
+                existing.append({"denom": denom, "count": count,
+                                 "location": {"kind": "carried"}})
+        data = {k: v for k, v in data.items() if k not in _legacy}
+        data["coins"] = existing
         return data
 
 

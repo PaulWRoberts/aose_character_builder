@@ -71,4 +71,6 @@ def test_apply_kit_writes_onto_spec():
     assert spec.inventory == kit.inventory
     assert spec.equipped == kit.equipped
     assert spec.ammo == kit.ammo
-    assert spec.gold == kit.gold
+    carried_gp = next((s.count for s in spec.coins
+                       if s.denom == "gp" and s.location.kind == "carried"), 0)
+    assert carried_gp == kit.gold

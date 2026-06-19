@@ -48,7 +48,7 @@ quirk in pytest 9; ignore it.
 |---|---|
 | `aose/models/` | Pydantic v2 models (CharacterSpec, RuleSet, Race, CharClass, Item discriminated union, ProficiencyConfig) |
 | `aose/data/loader.py` | `GameData.load(data_dir)` — single side-effecting entry; `items` is a flat dict keyed by id |
-| `aose/engine/` | Pure, cycle-free derivations: `ability_mods`, `armor_class`, `attack_bonus`, `saves`, `hp`, `dice`, `proficiency`, `leveling`, `attacks`, `equip`, `shop`, `encumbrance`, `magic`, `features`, `currency`, `valuables`, `ammo`, `enchant`, `spells`, `spell_sources`, `secondary_skills`, `sources`, `monster_stats`, `companions`, `quick_equipment`, `retainers` |
+| `aose/engine/` | Pure, cycle-free derivations: `ability_mods`, `armor_class`, `attack_bonus`, `saves`, `hp`, `dice`, `proficiency`, `leveling`, `attacks`, `equip`, `shop`, `encumbrance`, `magic`, `features`, `currency`, `valuables`, `ammo`, `enchant`, `spells`, `spell_sources`, `secondary_skills`, `sources`, `monster_stats`, `companions`, `quick_equipment`, `retainers`, `storage` |
 | `aose/sheet/view.py` | `build_sheet(spec, data) -> CharacterSheet` — assembles every derivation for the live sheet |
 | `aose/characters/` | Persistence: `storage.py` (saved characters), `drafts.py` (in-progress), `settings.py` (global default RuleSet) |
 | `aose/web/` | FastAPI routes (`routes.py`, `wizard.py`, `settings_routes.py`) + Jinja templates |
@@ -79,10 +79,18 @@ back-navigation links (or a 🔒 when a roll has locked an earlier step).
 - Equipped items live *inside* `inventory` — weight is counted once
 - `stashed`, `containers`, `magic_items`, `ammo`, `spell_sources`, gems/jewellery
   each have their own shapes — see `docs/ARCHITECTURE.md`
+- `coins`: `list[CoinStack]` — each `CoinStack(denom, count, location: StorageLocation)`
+  is at most one stack per `(denom, location)`; replaces five int fields
+  `gold/platinum/electrum/silver/copper`. `StorageLocation(kind, id)` where
+  `kind ∈ {"carried","stashed","animal","vehicle","container"}`. Old saves coerced by
+  `_migrate_legacy_int_coins`. Shop spends only Carried coins (lowest-first).
+- `gems: list[GemStack]` / `jewellery: list[JewelleryPiece]` — each carry a
+  `location: StorageLocation` (default Carried). Encumbrance counts only Carried.
 - `animals`: `list[AnimalInstance]` / `vehicles`: `list[VehicleInstance]` — per-instance
   roster entries; each is a storage carrier with its own load capacity, never counted toward
-  PC encumbrance; `ContainerInstance.location` (`"person"|"animal"|"vehicle"`) + `location_id`
-  puts a container on a carrier instead of on the PC
+  PC encumbrance; `ContainerInstance.location: StorageLocation` (carried/stashed/animal/vehicle,
+  never container) puts a container at a location; old `state`+`location`+`location_id`
+  shape is coerced on load
 - `retainers`: `list[Retainer]` — each wraps a full `CharacterSpec` (the NPC) plus
   `id` (uuid4 hex), `loyalty: int`, `role: str`; `Retainer` is defined after `CharacterSpec`
   with `model_rebuild()` to resolve the forward reference; retainer spec's own `retainers`

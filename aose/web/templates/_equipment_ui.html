@@ -146,7 +146,196 @@
 {% endif %}
 {% endmacro %}
 
-{% if show_gold_grant %}
+{# Destination <select> for a Move form. Lists every top-level group (and, when
+   allow_containers, each group's containers) except the current location. A JS
+   handler in inventory.js copies the chosen option's data-kind/data-id into the
+   form's hidden dest_kind/dest_id inputs on submit. #}
+{% macro move_dest_control(groups, cur_kind, cur_id, allow_containers=True) %}
+  <select class="move-dest" style="max-width:9rem">
+    {% for g in groups %}
+      {% if not (g.kind == cur_kind and (g.id or '') == (cur_id or '')) %}
+      <option data-kind="{{ g.kind }}" data-id="{{ g.id or '' }}">{{ g.label }}</option>
+      {% endif %}
+      {% if allow_containers %}{% for c in g.containers %}
+      <option data-kind="container" data-id="{{ c.instance_id }}">{{ g.label }} ▸ {{ c.name }}</option>
+      {% endfor %}{% endif %}
+    {% endfor %}
+  </select>
+  <input type="hidden" class="dest-kind" name="dest_kind" value="">
+  <input type="hidden" class="dest-id" name="dest_id" value="">
+{% endmacro %}
+
+{# A non-Carried/Stashed top-level group (animal / vehicle / retainer): its
+   loose items, coins, treasure, and containers, each with a Move control. #}
+{% macro inv_group_panel(group, prefix, groups) %}
+<div class="ov-section" data-inv-group="{{ group.kind }}{% if group.id %}:{{ group.id }}{% endif %}">
+  <h4>{{ group.label }} <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--faint);font-size:11px">{{ group.kind }}</span></h4>
+
+  {% if group.equipped %}
+  <table class="dtable"><thead><tr><th>Equipped</th><th></th></tr></thead><tbody>
+  {% for row in group.equipped %}<tr><td>{{ row.name }}</td><td class="n">—</td></tr>{% endfor %}
+  </tbody></table>
+  {% endif %}
+
+  {% if group.loose %}
+  <table class="dtable">
+    <thead><tr><th>Item</th><th class="n">Qty</th><th></th></tr></thead>
+    <tbody>
+    {% for row in group.loose %}
+    <tr><td>{{ row.name }}</td><td class="n">{{ row.count }}</td>
+      <td class="n">
+        <form method="post" action="{{ prefix }}/inventory/move-item" class="inline-form move-form">
+          <input type="hidden" name="item_id" value="{{ row.id }}">
+          <input type="hidden" name="src_kind" value="{{ group.kind }}">
+          <input type="hidden" name="src_id" value="{{ group.id or '' }}">
+          {{ move_dest_control(groups, group.kind, group.id) }}
+          <button type="submit">Move</button>
+        </form>
+      </td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
+  {% if group.coins %}
+  <table class="dtable">
+    <thead><tr><th>Coins</th><th class="n">Qty</th><th></th></tr></thead>
+    <tbody>
+    {% for coin in group.coins %}
+    <tr><td>{{ coin.denom }}</td><td class="n">{{ coin.count }}</td>
+      <td class="n">
+        <form method="post" action="{{ prefix }}/inventory/move-coins" class="inline-form move-form">
+          <input type="hidden" name="denom" value="{{ coin.denom }}">
+          <input type="hidden" name="src_kind" value="{{ group.kind }}">
+          <input type="hidden" name="src_id" value="{{ group.id or '' }}">
+          <input type="number" name="count" value="{{ coin.count }}" min="1" max="{{ coin.count }}" style="width:3.5rem">
+          {{ move_dest_control(groups, group.kind, group.id) }}
+          <button type="submit">Move</button>
+        </form>
+      </td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
+  {% if group.treasure_gems or group.treasure_jewellery %}
+  <table class="dtable"><thead><tr><th>Treasure</th><th></th></tr></thead><tbody>
+    {% for g in group.treasure_gems %}
+    <tr><td>{{ g.value }} gp gem{% if g.label %} · {{ g.label }}{% endif %} ×{{ g.count }}</td>
+      <td class="n">
+        <form method="post" action="{{ prefix }}/inventory/move-valuable" class="inline-form move-form">
+          <input type="hidden" name="instance_id" value="{{ g.instance_id }}">
+          {{ move_dest_control(groups, group.kind, group.id) }}
+          <button type="submit">Move</button>
+        </form>
+      </td></tr>
+    {% endfor %}
+    {% for j in group.treasure_jewellery %}
+    <tr><td>{% if j.label %}{{ j.label }}{% else %}jewellery{% endif %} · {{ j.effective_value }} gp{% if j.damaged %} (damaged){% endif %}</td>
+      <td class="n">
+        <form method="post" action="{{ prefix }}/inventory/move-valuable" class="inline-form move-form">
+          <input type="hidden" name="instance_id" value="{{ j.instance_id }}">
+          {{ move_dest_control(groups, group.kind, group.id) }}
+          <button type="submit">Move</button>
+        </form>
+      </td></tr>
+    {% endfor %}
+  </tbody></table>
+  {% endif %}
+
+  {% for c in group.containers %}
+  <table class="dtable containers-table"><tbody>
+    <tr class="container-row" data-instance-id="{{ c.instance_id }}">
+      <td>
+        <button type="button" class="container-toggle" aria-expanded="true" aria-controls="cnt-{{ c.instance_id }}">&#9662;</button>
+        <strong>{{ c.name }}</strong>
+        <span class="capacity-badge{% if c.capacity_cn and c.used_cn >= c.capacity_cn %} capacity-full{% endif %}">{{ c.used_cn }} / {{ c.capacity_cn if c.capacity_cn else "&#8734;" }} cn</span>
+      </td>
+      <td class="n">
+        <form method="post" action="{{ prefix }}/inventory/move-container" class="inline-form move-form">
+          <input type="hidden" name="container_id" value="{{ c.instance_id }}">
+          {{ move_dest_control(groups, group.kind, group.id, allow_containers=False) }}
+          <button type="submit">Move</button>
+        </form>
+      </td>
+    </tr>
+    {% for row in c.contents %}
+    <tr class="container-child" data-instance-id="{{ c.instance_id }}">
+      <td><span class="indent">&#8627;</span> {{ row.name }} ×{{ row.count }}</td>
+      <td class="n">
+        <form method="post" action="{{ prefix }}/inventory/move-item" class="inline-form">
+          <input type="hidden" name="item_id" value="{{ row.id }}">
+          <input type="hidden" name="src_kind" value="container">
+          <input type="hidden" name="src_id" value="{{ c.instance_id }}">
+          <input type="hidden" name="dest_kind" value="{{ group.kind }}">
+          <input type="hidden" name="dest_id" value="{{ group.id or '' }}">
+          <button type="submit">Take Out</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody></table>
+  {% endfor %}
+</div>
+{% endmacro %}
+
+{% if sheet is defined and sheet.inventory_groups is defined and coins_url_prefix is defined %}
+{# Per-stack coin display (character sheet — inventory_groups available) #}
+{% set _cg = sheet.inventory_groups | selectattr("kind", "equalto", "carried") | first | default(none) %}
+{% if _cg %}
+<div class="ov-section">
+  <h4>Coins{% if sheet.total_wealth_gp > 0 %} <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--faint)">— {{ sheet.total_wealth_gp }} gp total wealth</span>{% endif %}</h4>
+  {% if _cg.coins %}
+  <table class="dtable">
+    <thead><tr><th>Denom</th><th class="n">Qty</th><th></th></tr></thead>
+    <tbody>
+    {% for coin in _cg.coins %}
+    <tr>
+      <td>{{ coin.denom }}</td>
+      <td class="n">{{ coin.count }}</td>
+      <td class="n">
+        <form method="post" action="{{ coins_url_prefix }}/inventory/move-coins" class="inline-form">
+          <input type="hidden" name="denom" value="{{ coin.denom }}">
+          <input type="hidden" name="src_kind" value="carried">
+          <input type="hidden" name="src_id" value="">
+          <input type="hidden" name="dest_kind" value="stashed">
+          <input type="hidden" name="dest_id" value="">
+          <input type="number" name="count" value="{{ coin.count }}" min="1" max="{{ coin.count }}" style="width:3.5rem">
+          <button type="submit">Stash</button>
+        </form>
+        <form method="post" action="{{ coins_url_prefix }}/coins/convert" class="inline-form">
+          <input type="hidden" name="loc_kind" value="carried">
+          <input type="hidden" name="loc_id" value="">
+          <input type="hidden" name="frm" value="{{ coin.denom }}">
+          <select name="to" style="width:4rem">{% for d in ["pp","gp","ep","sp","cp"] %}{% if d != coin.denom %}<option value="{{ d }}">{{ d }}</option>{% endif %}{% endfor %}</select>
+          <input type="number" name="count" value="1" min="1" max="{{ coin.count }}" style="width:3.5rem">
+          <button type="submit">Convert</button>
+        </form>
+        <form method="post" action="{{ coins_url_prefix }}/coins/add" class="inline-form">
+          <input type="hidden" name="denom" value="{{ coin.denom }}">
+          <input type="hidden" name="loc_kind" value="carried">
+          <input type="hidden" name="loc_id" value="">
+          <input type="number" name="count" value="-{{ coin.count }}" style="width:4rem">
+          <button type="submit">Adj</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="hint" style="margin-bottom:4px">No carried coins.</p>
+  {% endif %}
+  <form method="post" action="{{ coins_url_prefix }}/coins/add" style="margin-top:6px" class="inline-form">
+    <select name="denom"><option value="gp" selected>gp</option><option value="sp">sp</option><option value="cp">cp</option><option value="ep">ep</option><option value="pp">pp</option></select>
+    <input type="number" name="count" value="10" min="1" style="width:4rem">
+    <input type="hidden" name="loc_kind" value="carried">
+    <input type="hidden" name="loc_id" value="">
+    <button type="submit" class="btn">Add coins</button>
+  </form>
+</div>
+{% endif %}
+{% elif show_gold_grant %}
 <div class="ov-section"><h4>Gold — {{ gold }} gp</h4>
 <form method="post" action="{{ gold_grant_url }}" class="inline-form">
     <input type="number" name="amount" value="10" step="5">
@@ -176,6 +365,46 @@
 {{ container_table("carried", "Carried") }}
 {{ inv_table(inventory_view.stashed,  target_url_prefix, "stashed",  "Stashed",  "not on person — no weight") }}
 {{ container_table("stashed", "Stashed") }}
+{% if sheet is defined and sheet.inventory_groups is defined and coins_url_prefix is defined %}
+{% set _sg = sheet.inventory_groups | selectattr("kind", "equalto", "stashed") | first | default(none) %}
+{% if _sg and _sg.coins %}
+<div class="ov-section">
+  <h4>Stashed Coins</h4>
+  <table class="dtable">
+    <thead><tr><th>Denom</th><th class="n">Qty</th><th></th></tr></thead>
+    <tbody>
+    {% for coin in _sg.coins %}
+    <tr>
+      <td>{{ coin.denom }}</td>
+      <td class="n">{{ coin.count }}</td>
+      <td class="n">
+        <form method="post" action="{{ coins_url_prefix }}/inventory/move-coins" class="inline-form">
+          <input type="hidden" name="denom" value="{{ coin.denom }}">
+          <input type="hidden" name="src_kind" value="stashed">
+          <input type="hidden" name="src_id" value="">
+          <input type="hidden" name="dest_kind" value="carried">
+          <input type="hidden" name="dest_id" value="">
+          <input type="number" name="count" value="{{ coin.count }}" min="1" max="{{ coin.count }}" style="width:3.5rem">
+          <button type="submit">Carry</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endif %}
+
+{# ── Carrier / retainer top-level inventory groups ── #}
+{% if sheet is defined and sheet.inventory_groups is defined and coins_url_prefix is defined %}
+{% for group in sheet.inventory_groups %}
+{% if group.kind not in ("carried", "stashed") %}
+{{ inv_group_panel(group, coins_url_prefix, sheet.inventory_groups) }}
+{% endif %}
+{% endfor %}
+{% endif %}
+
 {% if not inventory_view.equipped and not inventory_view.carried and not inventory_view.stashed and not inventory_view.containers %}
 <div class="ov-section"><p class="hint">No items in inventory.</p></div>
 {% endif %}

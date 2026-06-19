@@ -678,7 +678,8 @@ def test_carry_capacity_keeps_band_0(data):
     d = _with_magic(data)
     spec = _minimal_spec(race_id="human", ruleset=RuleSet(encumbrance="detailed"))
     # 1400 gp coins = 1400 cn treasure weight (coins count 1 cn each)
-    spec.gold = 1400
+    from aose.models import CoinStack
+    spec.coins = [CoinStack(denom="cp", count=1400)]
     spec.magic_items = add_free_magic_item([], "gauntlets_of_ogre_power", d)
     spec.magic_items = equip_magic(spec.magic_items, spec.magic_items[0].instance_id, d)
     assert carried_weight_cn(spec, d) == 1400          # displayed raw

@@ -108,6 +108,15 @@ content grows and maps to a future mobile swipe-card.
 | Saving throw | `.save` → `.cap` (drop-cap) + `.nm` + `.tg` | the drop-cap saves row |
 | Cast pip | `.pip` (+ `.spent`) | memorised-spell state (filled = ready, hollow = spent) |
 | Coin cell | `.coin` → `.d` + value | currency row |
+| Form control | bare `input`/`select`/`textarea` | the global zine baseline in `sheet.css` (just above the `LEGACY` banner) |
+
+**Form controls are condensed by default.** Text/number/`select` fields render in
+`--display` (Oswald — narrow, so they reclaim horizontal space) at 13px with a
+compact 26px box; `select` uses `appearance:none` + an inked CSS-data-URI caret
+(no native dropdown chrome). `textarea` stays `--body` (it holds prose notes).
+This baseline is global — it also styles the legacy wizard/settings inputs, so
+don't re-add per-page input sizing; tweak the one rule. Pair a control with an
+Oswald uppercase label (`.ctl-label`/`label.f .lab`), never a bare control.
 
 Conventions baked into the components:
 - **Everything with info is clickable** → opens a detail/management modal. Spell rows

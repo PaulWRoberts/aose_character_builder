@@ -406,16 +406,27 @@ Illusionist/Magic-user/Thief). New languages: `hephaestan`, `language_of_wolves`
   fitted to the wearer — if False, `armor_class.py` uses
   `Armor.untailored_ac_descending` instead. `stashed: list[str]` is off-person
   (no weight). Sheet renders Equipped / Carried / Stashed.
+- **StorageLocation** — `aose/models/storage.py` defines `StorageLocation(kind, id)`
+  (`LocationKind = Literal["carried","stashed","animal","vehicle","container"]`) as a
+  frozen pointer to where a value-stack (coins/gems/jewellery) or a container lives.
+  `id` is the carrier/container `instance_id`; None for person-level buckets. Moving
+  the container moves its contents for free — no per-item bookkeeping.
 - **Containers** — `Container` catalog variant (`item_type: container`,
   `capacity_cn`, `weight_multiplier`) + per-instance `ContainerInstance`
-  (`instance_id`, `catalog_id`, `state`, `contents`) on `CharacterSpec.containers`.
-  Items inside aren't in `inventory`/`stashed`; they follow the container's
-  carried/stashed state. Carried containers contribute `own_weight +
+  (`instance_id`, `catalog_id`, `location: StorageLocation`, `contents`) on
+  `CharacterSpec.containers`. Old saves with `state`/`location_id` are coerced by a
+  `model_validator`. Container's location may be carried/stashed/animal/vehicle —
+  never "container" (no nesting). Carried containers contribute `own_weight +
   int(multiplier × raw_contents)` — a Bag of Holding (×0.06) at 10 000 cn weighs
-  600 cn. Capacity uses raw weight. No nesting. Helpers in `shop.py` (`stow`/
-  `take_out`/`stash_container`/etc.). Dispatch is by `isinstance(item, Container)`,
-  so the file location of a container item is transparent to routes. UI: inline
-  collapsible rows, button/dropdown-only (drag-and-drop was removed 2026-06-02).
+  600 cn. Container contents now include coins/gems/jewellery stowed inside (counted
+  via container, not as top-level treasure). Capacity uses raw item weight. Helpers
+  in `shop.py` (`stow`/`take_out`/`stash_container`/etc.) and `storage.py`
+  (`move_container`). UI: inline collapsible rows, button/dropdown-only.
+- **Movement engine** — `aose/engine/storage.py` is the single movement vocabulary:
+  `loose_list`, `move_item`, `move_container`, `move_coins`, `_add_coins`,
+  `_take_coins`, `add_coins`, `convert_coins`, `move_valuable`. All mutate `spec` in
+  place. `StorageError(ValueError)` routes to HTTP 400. Imports only models +
+  currency — no cycle risk.
 - **Stackable gear** — `AdventuringGear.bundle_count: int = 1`. `buy()` grants
   `bundle_count` units for one price; `add_free()` always grants one. Sell removes
   1 unit, returns `int((cost_gp / bundle_count) / 2)`; refund removes a full stack,
@@ -426,7 +437,9 @@ Illusionist/Magic-user/Thief). New languages: `hephaestan`, `language_of_wolves`
   **Basic** = `_BASIC_TABLE{(armour_cls, carrying_treasure)} → move` (over-1600
   treasure → immobile; `CharacterSpec.carrying_treasure` toggle). **Detailed** =
   single-axis by total weight (bands 400/600/800/1600 → 120/90/60/30/0'); total =
-  `treasure_weight_cn` + `equipment_weight_cn`. Magic items band on
+  `treasure_weight_cn` + `equipment_weight_cn`. Encumbrance counts only **Carried**
+  coins and valuables (not stashed, not on carriers). Container weight includes
+  value-stacks (coins/gems/jewellery) stowed in them. Magic items band on
   `banding_weight_cn` (raw − `carry_capacity_bonus`) while displaying raw carried
   weight; enchanted armour weighs half. `EncumbranceTable` reshaped accordingly.
 
@@ -434,21 +447,37 @@ Illusionist/Magic-user/Thief). New languages: `hephaestan`, `language_of_wolves`
 
 ## Currency, treasure & valuables
 
-- **Multi-coin purse** — `CharacterSpec.platinum/electrum/gold/silver/copper`
-  (gp stays the shop-spendable balance). `aose/engine/currency.py` (cycle-free):
-  `DENOMINATIONS`/`RATES`/`_ATTR`, `total_value_gp`, `coin_count` (weight, 1 cn
-  each), `convert` (make-change, whole-coin enforced, raises `CurrencyError`).
-  Routes `/coins/add`, `/coins/convert`.
-- **Treasure weight** — gems 1 cn, jewellery 10 cn; carried treasure magic items
+- **Located coin stacks** — `CharacterSpec.coins: list[CoinStack]` (replaces five
+  int fields `gold/platinum/electrum/silver/copper`). Each `CoinStack(denom, count,
+  location: StorageLocation)` is at most one stack per `(denom, location)` — empty
+  stacks are pruned by the movement engine. Old saves are coerced by
+  `_migrate_legacy_int_coins`. `aose/engine/currency.py`: `DENOMINATIONS`/`RATES`,
+  `carried_coins`, `total_value_cp`, `total_value_gp` (all locations, for wealth
+  readout), `coin_count(carried_only=True)` (encumbrance weight — Carried bucket
+  only), `convert_amount` (pure: raises `CurrencyError` on non-whole result). Routes:
+  `/coins/add` (grants into a location), `/coins/convert` (per-stack conversion),
+  `/inventory/move-coins` (transfer between locations).
+- **Shop spend** — `shop.spend(spec, cost_gp)` debits **Carried** coins only,
+  lowest-denomination-first. Tries exact payment first; if unavailable, pays the
+  smallest whole-gp overshoot and returns change in gp. Raises `InsufficientFunds`
+  (HTTP 400) when total carried value < cost. `buy_item`/`sell_item`/etc. are
+  spec-mutating wrappers over the existing pure list logic.
+- **Treasure weight** — gems 1 cn, jewellery 10 cn (**Carried only** — stashed /
+  on-carrier treasure adds zero to PC encumbrance). Carried treasure magic items:
   potions 10 / wands 10 / rods 20 / staves 40 / scrolls 1, derived by category +
-  id-prefix in `treasure_item_weight` (no YAML edits).
-- **Gems & jewellery** — free-acquired, weightless for movement-mode purposes,
-  sheet-only treasure. `GemStack` (value + count + label, stacks by value+label)
-  and `JewelleryPiece` (full value + `damaged` toggle + label; damaged halves
-  value, floor). `aose/engine/valuables.py` owns add/adjust/remove/sell plus
-  `roll_jewellery_value` (3d6×100); `GEM_INCREMENTS` is a dropdown affordance, not
-  a constraint. Selling adds to `gold`; dropping refunds nothing. Never touches
-  `encumbrance.py` directly (weight comes via `treasure_weight_cn`).
+  id-prefix in `treasure_item_weight`.
+- **Gems & jewellery** — `GemStack` + `JewelleryPiece` each carry a
+  `location: StorageLocation` (default Carried). `add_gem`/`add_jewellery` accept an
+  optional `location` param. `valuables_weight_cn` counts only Carried gems/jewellery.
+  `total_value` sums all locations (for the wealth readout). `total_wealth_gp` (in
+  `valuables.py`) = `total_value_gp(spec)` + `total_value(spec)`, excluding retainers
+  (they own their own purse). Routes `/inventory/move-valuable` re-homes gem stacks
+  (merging same-value/label stacks at destination) or jewellery pieces.
+- **Top-level inventory groups** — `sheet.inventory_groups: list[TopLevelGroup]`
+  (Carried, Stashed, one per animal, one per vehicle, one per retainer) with
+  `loose`, `equipped`, `coins`, `treasure_gems`, `treasure_jewellery`, `containers`
+  sub-lists. `build_inventory_groups(spec, data)` in `aose/sheet/view.py` builds
+  this. `sheet.total_wealth_gp: int` for the wealth readout.
 
 ---
 
@@ -677,14 +706,24 @@ assembles `AnimalCard` and `VehicleCard` view models — derives ascending AC
 — and attaches resolved `InventoryRow` contents. Returns `None` when the
 character has no companions. `CharacterSheet.companions` carries this block.
 
-**Routes**: `POST /character/{id}/animal/{buy,remove,rename,hp,armor,load,unload}`
-and the parallel vehicle set (add hull, extra-animals toggle). All follow the
-standard `_load_spec_or_404` → mutate → `save_character` → 303 pattern.
+**Acquisition**: animals/vehicles share the normal shop catalog (grouped by their
+`category`), so the generic `POST /character/{id}/equipment/buy` route is the buy
+path. `equipment_buy` dispatches on item type — `Animal` → `buy_animal`,
+`Vehicle` → `buy_vehicle` — creating a roster instance instead of an inventory id
+(alongside the existing `Ammunition`/`Container` branches). Without that dispatch
+a purchased carrier would fall through to `shop_buy` and land in carried
+inventory. Dedicated `POST /character/{id}/animal/{buy,remove,rename,hp,armor,load,unload}`
+routes and the parallel vehicle set (hull, extra-animals toggle) handle play-state
+mutation. All follow the standard `_load_spec_or_404` → mutate → `save_character`
+→ 303 pattern.
 
 **Sheet UI** (`aose/web/templates/_companions.html`, included from `sheet.html`):
-one `companion-card` per animal/vehicle with inline HP/hull buttons, armour
-select, and a collapsible load details block. Print sheet includes a static
-text block in `sheet_print.html`.
+a zine `group full` ("Companions & Vehicles" inked bar) with one `companion-card`
+per animal/vehicle/retainer. Each carrier card shows derived stats with inline
+HP/hull buttons, an armour select (animals that fit owned barding), and a
+collapsible load block that mirrors the retainer Give/Take UI — a `Load` form
+populated from `inventory_view.carried` plus per-item `Unload`. Print sheet
+includes a static text block in `sheet_print.html`.
 
 ### Phase B — Retainers
 

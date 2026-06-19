@@ -30,10 +30,11 @@ def test_animal_and_vehicle_instances_round_trip():
     assert again.animals[0].armor_id is None
 
 
-def test_container_location_defaults_to_person():
-    c = ContainerInstance(instance_id="c1", catalog_id="backpack", state="carried")
-    assert c.location == "person"
-    assert c.location_id is None
+def test_container_location_defaults_to_carried():
+    from aose.models.storage import StorageLocation
+    c = ContainerInstance(instance_id="c1", catalog_id="backpack")
+    assert c.location == StorageLocation(kind="carried")
+    assert c.location.id is None
 
 
 def test_old_save_without_companions_still_loads():

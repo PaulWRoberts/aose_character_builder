@@ -17,14 +17,14 @@ def _spec(**kw):
 
 
 def test_move_container_onto_animal_sets_location():
+    from aose.models.storage import StorageLocation
     spec = _spec(
         animals=[AnimalInstance(instance_id="a1", catalog_id="mule")],
-        containers=[ContainerInstance(instance_id="c1", catalog_id="saddle_bags",
-                                      state="carried")],
+        containers=[ContainerInstance(instance_id="c1", catalog_id="saddle_bags")],
     )
     companions.move_container_to_animal(spec, "c1", "a1", DATA)
     c = spec.containers[0]
-    assert c.location == "animal" and c.location_id == "a1"
+    assert c.location == StorageLocation(kind="animal", id="a1")
 
 
 def test_carrier_container_excluded_from_pc_weight():

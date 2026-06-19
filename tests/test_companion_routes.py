@@ -8,6 +8,11 @@ from aose.characters import load_character, save_character
 from aose.models import AnimalInstance, CharacterSpec, ClassEntry, VehicleInstance
 from aose.web.app import create_app
 
+
+def _gp(spec):
+    return next((s.count for s in spec.coins
+                 if s.denom == "gp" and s.location.kind == "carried"), 0)
+
 DATA_DIR = Path(__file__).parent.parent / "data"
 
 
@@ -51,7 +56,7 @@ def test_animal_buy_deducts_gold(client):
     spec = load_character("finn", client._characters_dir)
     assert len(spec.animals) == 1
     assert spec.animals[0].catalog_id == "mule"
-    assert spec.gold < 200.0
+    assert _gp(spec) < 200
 
 
 def test_animal_buy_insufficient_gold(client):
@@ -69,7 +74,7 @@ def test_animal_remove_sell(client):
     assert r.status_code == 303
     spec = load_character("finn", client._characters_dir)
     assert spec.animals == []
-    assert spec.gold > 0.0
+    assert _gp(spec) > 0
 
 
 def test_animal_rename(client):
@@ -119,6 +124,27 @@ def test_animal_load_and_unload(client):
     assert "torch" not in spec.animals[0].contents
 
 
+# ── Shop buy dispatch (generic /equipment/buy) ─────────────────────────────
+
+def test_equipment_buy_animal_creates_instance_not_inventory(client):
+    _save_char(client, gold=200.0)
+    r = client.post("/character/finn/equipment/buy", data={"item_id": "mule"})
+    assert r.status_code == 303
+    spec = load_character("finn", client._characters_dir)
+    assert len(spec.animals) == 1, "buying an animal in the shop must create a roster instance"
+    assert "mule" not in spec.inventory, "an animal must never land in carried inventory"
+
+
+def test_equipment_buy_vehicle_creates_instance_not_inventory(client):
+    _save_char(client, gold=1000.0)
+    r = client.post("/character/finn/equipment/buy", data={"item_id": "cart"})
+    assert r.status_code == 303
+    spec = load_character("finn", client._characters_dir)
+    assert len(spec.vehicles) == 1, "buying a vehicle in the shop must create a roster instance"
+    assert spec.vehicles[0].hull_max >= 1, "vehicle instance must resolve hull_max at purchase"
+    assert "cart" not in spec.inventory, "a vehicle must never land in carried inventory"
+
+
 # ── Vehicle routes ─────────────────────────────────────────────────────────
 
 def test_vehicle_buy_deducts_gold(client):
@@ -128,7 +154,7 @@ def test_vehicle_buy_deducts_gold(client):
     spec = load_character("finn", client._characters_dir)
     assert len(spec.vehicles) == 1
     assert spec.vehicles[0].catalog_id == "cart"
-    assert spec.gold < 1000.0
+    assert _gp(spec) < 1000
 
 
 def test_vehicle_remove_sell(client):
@@ -140,7 +166,7 @@ def test_vehicle_remove_sell(client):
     assert r.status_code == 303
     spec = load_character("finn", client._characters_dir)
     assert spec.vehicles == []
-    assert spec.gold > 0.0
+    assert _gp(spec) > 0
 
 
 def test_vehicle_rename(client):

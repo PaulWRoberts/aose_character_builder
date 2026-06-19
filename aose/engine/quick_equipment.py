@@ -212,8 +212,10 @@ def roll_kit(class_id: str, data: GameData,
 
 def apply_kit(spec: CharacterSpec, kit: QuickKit) -> None:
     """Write a rolled kit onto a CharacterSpec (replaces inventory/equipped/ammo
-    and sets gold). Used by retainer generation and, later, the wizard."""
+    and sets starting gold as a carried CoinStack)."""
+    from aose.models import CoinStack
     spec.inventory = list(kit.inventory)
     spec.equipped = dict(kit.equipped)
     spec.ammo = list(kit.ammo)
-    spec.gold = kit.gold
+    if kit.gold > 0:
+        spec.coins = [CoinStack(denom="gp", count=kit.gold)]

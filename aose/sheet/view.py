@@ -23,6 +23,7 @@ from aose.engine.languages import (
 )
 from aose.engine.leveling import ClassAdvancement, all_advancement
 from aose.engine.detail import DetailCard, item_card, spell_card
+from aose.engine.shop import CoinRow, ContainerView, TopLevelGroup, _build_row, inventory_view
 from aose.sheet.companions_view import CompanionsBlock, companions_block
 from aose.engine.features import is_race_as_class, open_doors_category_bonus, selected_options
 from aose.engine.initiative import initiative_detail
@@ -444,6 +445,9 @@ class CharacterSheet(BaseModel):
     carrying_treasure: bool = False
     max_load: int = MAX_LOAD
 
+    inventory_groups: list[TopLevelGroup] = Field(default_factory=list)
+    total_wealth_gp: int = 0
+
     armor_tailorable: bool = False   # equipped body armour can be tailored (full plate)
     armor_tailored: bool = True      # and is currently fitted to this wearer
 
@@ -460,6 +464,14 @@ class CharacterSheet(BaseModel):
     proficiency_weapon_options: list = Field(default_factory=list)
     # Available talent options per group id, keyed by group_id.
     talent_options: dict = Field(default_factory=dict)
+
+
+def _coins_dict(spec) -> dict[str, int]:
+    """Aggregate all coin stacks into a {denom: total_count} dict (all locations)."""
+    totals: dict[str, int] = {"pp": 0, "gp": 0, "ep": 0, "sp": 0, "cp": 0}
+    for s in spec.coins:
+        totals[s.denom] = totals.get(s.denom, 0) + s.count
+    return totals
 
 
 def _summarize_modifier(m) -> str:
@@ -1243,6 +1255,144 @@ def _with_retainers(block, spec: CharacterSpec, data: GameData, class_options=No
     return block
 
 
+def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevelGroup]:
+    """Build the top-level inventory groups for the sheet (Carried, Stashed, each
+    carrier/retainer).  Each group contains equipped rows, loose rows, coin rows,
+    treasure rows (gems/jewellery), and container views for its location."""
+    from collections import Counter
+    from aose.models import Container as _Container
+    from aose.models.storage import StorageLocation
+
+    def _coin_rows(loc: StorageLocation) -> list[CoinRow]:
+        return [CoinRow(denom=s.denom, count=s.count)
+                for s in spec.coins if s.location == loc and s.count > 0]
+
+    def _gem_rows(loc: StorageLocation) -> list:
+        return [
+            GemRow(instance_id=g.instance_id, value=g.value, count=g.count,
+                   label=g.label, stack_value=valuables_engine.gem_stack_value(g))
+            for g in spec.gems if g.location == loc
+        ]
+
+    def _jewellery_rows(loc: StorageLocation) -> list:
+        return [
+            JewelleryRow(instance_id=j.instance_id, value=j.value, damaged=j.damaged,
+                         label=j.label, effective_value=valuables_engine.jewellery_value(j))
+            for j in spec.jewellery if j.location == loc
+        ]
+
+    def _carrier_container_views(loc: StorageLocation) -> list[ContainerView]:
+        views = []
+        for c in spec.containers:
+            if c.location != loc:
+                continue
+            catalog = data.items.get(c.catalog_id)
+            if not isinstance(catalog, _Container):
+                continue
+            rows_by_id: Counter = Counter(c.contents)
+            content_rows = sorted(
+                [_build_row(i, n, data) for i, n in rows_by_id.items()],
+                key=lambda r: r.name,
+            )
+            raw_used = sum(
+                (data.items[x].weight_cn if x in data.items else 0)
+                for x in c.contents
+            )
+            views.append(ContainerView(
+                instance_id=c.instance_id, catalog_id=c.catalog_id,
+                name=catalog.name, state=loc.kind,
+                capacity_cn=catalog.capacity_cn, used_cn=raw_used,
+                weight_multiplier=catalog.weight_multiplier,
+                own_weight_cn=catalog.weight_cn,
+                effective_weight_cn=(
+                    catalog.weight_cn + int(catalog.weight_multiplier * raw_used)
+                    if loc.kind == "carried" else 0
+                ),
+                contents=content_rows, detail=item_card(catalog),
+            ))
+        return views
+
+    # The existing inventory_view gives us equipped/loose split + carried/stashed containers.
+    inv_view = inventory_view(spec.inventory, spec.stashed, spec.equipped,
+                              spec.containers, data)
+    carried_containers = [c for c in inv_view.containers if c.state == "carried"]
+    stashed_containers = [c for c in inv_view.containers if c.state == "stashed"]
+
+    groups: list[TopLevelGroup] = []
+
+    # ── Carried ───────────────────────────────────────────────────────────────
+    carried_loc = StorageLocation(kind="carried")
+    groups.append(TopLevelGroup(
+        kind="carried", label="Carried",
+        has_equipped=bool(inv_view.equipped),
+        equipped=inv_view.equipped,
+        loose=inv_view.carried,
+        coins=_coin_rows(carried_loc),
+        treasure_gems=_gem_rows(carried_loc),
+        treasure_jewellery=_jewellery_rows(carried_loc),
+        containers=carried_containers,
+    ))
+
+    # ── Stashed ───────────────────────────────────────────────────────────────
+    stashed_loc = StorageLocation(kind="stashed")
+    groups.append(TopLevelGroup(
+        kind="stashed", label="Stashed",
+        loose=inv_view.stashed,
+        coins=_coin_rows(stashed_loc),
+        treasure_gems=_gem_rows(stashed_loc),
+        treasure_jewellery=_jewellery_rows(stashed_loc),
+        containers=stashed_containers,
+    ))
+
+    # ── Animals ───────────────────────────────────────────────────────────────
+    for animal in spec.animals:
+        animal_loc = StorageLocation(kind="animal", id=animal.instance_id)
+        catalog = data.items.get(animal.catalog_id)
+        label = animal.name or (catalog.name if catalog else animal.catalog_id)
+        count: Counter = Counter(animal.contents)
+        groups.append(TopLevelGroup(
+            kind="animal", id=animal.instance_id, label=label,
+            loose=sorted([_build_row(i, n, data) for i, n in count.items()],
+                         key=lambda r: r.name),
+            coins=_coin_rows(animal_loc),
+            treasure_gems=_gem_rows(animal_loc),
+            treasure_jewellery=_jewellery_rows(animal_loc),
+            containers=_carrier_container_views(animal_loc),
+        ))
+
+    # ── Vehicles ──────────────────────────────────────────────────────────────
+    for vehicle in spec.vehicles:
+        vehicle_loc = StorageLocation(kind="vehicle", id=vehicle.instance_id)
+        catalog = data.items.get(vehicle.catalog_id)
+        label = vehicle.name or (catalog.name if catalog else vehicle.catalog_id)
+        count = Counter(vehicle.contents)
+        groups.append(TopLevelGroup(
+            kind="vehicle", id=vehicle.instance_id, label=label,
+            loose=sorted([_build_row(i, n, data) for i, n in count.items()],
+                         key=lambda r: r.name),
+            coins=_coin_rows(vehicle_loc),
+            treasure_gems=_gem_rows(vehicle_loc),
+            treasure_jewellery=_jewellery_rows(vehicle_loc),
+            containers=_carrier_container_views(vehicle_loc),
+        ))
+
+    # ── Retainers ─────────────────────────────────────────────────────────────
+    for retainer in spec.retainers:
+        ret_carried = StorageLocation(kind="carried")
+        count = Counter(retainer.spec.inventory)
+        ret_coins = [CoinRow(denom=s.denom, count=s.count)
+                     for s in retainer.spec.coins
+                     if s.location == ret_carried and s.count > 0]
+        groups.append(TopLevelGroup(
+            kind="retainer", id=retainer.id, label=retainer.spec.name,
+            loose=sorted([_build_row(i, n, data) for i, n in count.items()],
+                         key=lambda r: r.name),
+            coins=ret_coins,
+        ))
+
+    return groups
+
+
 def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
     race = data.races[spec.race_id]
 
@@ -1455,14 +1605,13 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
         retainer_class_options=_retainer_class_options(spec, data),
         other_possessions=list(spec.other_possessions),
         notes=spec.notes,
-        coins={
-            "pp": spec.platinum, "gp": spec.gold, "ep": spec.electrum,
-            "sp": spec.silver, "cp": spec.copper,
-        },
+        coins=_coins_dict(spec),
         treasure_value_gp=currency_engine.total_value_gp(spec),
         treasure_weight_cn=treasure_weight_cn(spec, data),
         carrying_treasure=spec.carrying_treasure,
         max_load=MAX_LOAD,
+        inventory_groups=build_inventory_groups(spec, data),
+        total_wealth_gp=valuables_engine.total_wealth_gp(spec),
         enabled_optional_rules=_enabled_optional_rules(spec.ruleset),
         encumbrance_mode=spec.ruleset.encumbrance,
         encumbrance_description=ENCUMBRANCE_DESCRIPTIONS.get(

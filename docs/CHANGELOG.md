@@ -8,6 +8,9 @@ For the living architecture (how the subsystems fit together *now*), see
 
 | Date | Feature | Branch | Spec/Plan slug |
 |---|---|---|---|
+| 2026-06-19 | Inventory consolidation: located coins/treasure (CoinStack + StorageLocation), top-level inventory groups, lowest-first shop spend, storage movement engine | feat/companions-and-holdings | inventory-consolidation |
+| 2026-06-18 | Zine form controls: tightened the global `input`/`select`/`textarea` baseline — condensed Oswald data fields, compact 26px box, inked CSS caret replacing native select chrome (was 14px Bitter + fat padding, oversized & off-typeface) | feat/companions-and-holdings | — |
+| 2026-06-17 | Companions bug-fix pass: shop `equipment_buy` now dispatches Animal/Vehicle to roster instances (were landing in carried inventory → no cards rendered); carriers gain a Load form (mirrors retainer Give/Take); section retitled "Companions & Vehicles" + zine-styled | feat/companions-and-holdings | animals-and-vehicles |
 | 2026-06-17 | Retainers (Companions & Holdings Phase B): hired classed NPCs, loyalty, CHA cap, XP −50%, promote normal human, PC↔retainer transfer | feat/companions-and-holdings | 2026-06-17-retainers |
 | 2026-06-16 | Animals & vehicles (Companions & Holdings Phase A) | feat/companions-and-holdings | animals-and-vehicles |
 | 2026-06-16 | Wizard book-style detail modals + trimmed race/spell cards | main | 2026-06-16-wizard-detail-modals |

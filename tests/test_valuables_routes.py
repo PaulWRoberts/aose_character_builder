@@ -8,6 +8,11 @@ from aose.characters import load_character, save_character
 from aose.models import CharacterSpec, ClassEntry
 from aose.web.app import create_app
 
+
+def _gp(spec):
+    return next((s.count for s in spec.coins
+                 if s.denom == "gp" and s.location.kind == "carried"), 0)
+
 DATA_DIR = Path(__file__).parent.parent / "data"
 
 
@@ -62,7 +67,7 @@ def test_gem_sell_route_adds_gold(client):
     iid = spec.gems[0].instance_id
     client.post("/character/bran/gems/sell", data={"instance_id": iid})
     spec = load_character("bran", client._characters_dir)
-    assert spec.gold == 105
+    assert _gp(spec) == 105
     assert spec.gems[0].count == 1
 
 
@@ -73,7 +78,7 @@ def test_gem_sell_all_route(client):
     iid = spec.gems[0].instance_id
     client.post("/character/bran/gems/sell-all", data={"instance_id": iid})
     spec = load_character("bran", client._characters_dir)
-    assert spec.gold == 300
+    assert _gp(spec) == 300
     assert spec.gems == []
 
 
@@ -126,7 +131,7 @@ def test_jewellery_sell_damaged_halves(client):
                 data={"instance_id": iid, "damaged": "true"})
     client.post("/character/bran/jewellery/sell", data={"instance_id": iid})
     spec = load_character("bran", client._characters_dir)
-    assert spec.gold == 350
+    assert _gp(spec) == 350
     assert spec.jewellery == []
 
 
@@ -138,5 +143,5 @@ def test_jewellery_drop_no_gold(client):
     iid = spec.jewellery[0].instance_id
     client.post("/character/bran/jewellery/remove", data={"instance_id": iid})
     spec = load_character("bran", client._characters_dir)
-    assert spec.gold == 0
+    assert _gp(spec) == 0
     assert spec.jewellery == []

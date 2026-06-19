@@ -13,13 +13,15 @@ import uuid
 from collections import Counter
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from aose.data.loader import GameData
+from aose.engine.currency import RATES, DENOMINATIONS
 from aose.engine.detail import DetailCard, item_card
 from aose.engine.dice import roll
 from aose.engine.sources import content_enabled
 from aose.models import Container, ContainerInstance, Item, RuleSet
+from aose.models.storage import StorageLocation
 
 
 class ShopItem(BaseModel):
@@ -70,6 +72,25 @@ class ContainerView(BaseModel):
     effective_weight_cn: int     # own + int(multiplier * used_cn) when carried, else 0
     contents: list[InventoryRow]
     detail: DetailCard | None = None   # catalog item card for the per-container modal
+
+
+class CoinRow(BaseModel):
+    denom: str
+    count: int
+
+
+class TopLevelGroup(BaseModel):
+    """One inventory pane — Carried, Stashed, or a carrier/retainer."""
+    kind: str                             # carried | stashed | animal | vehicle | retainer
+    id: str | None = None                 # carrier/retainer instance_id; None for person buckets
+    label: str                            # display name
+    has_equipped: bool = False
+    equipped: list[InventoryRow] = Field(default_factory=list)
+    loose: list[InventoryRow] = Field(default_factory=list)
+    coins: list[CoinRow] = Field(default_factory=list)
+    treasure_gems: list = Field(default_factory=list)       # GemRow — list to avoid circular import
+    treasure_jewellery: list = Field(default_factory=list)  # JewelleryRow
+    containers: list[ContainerView] = Field(default_factory=list)
 
 
 class InventoryView(BaseModel):
@@ -223,7 +244,7 @@ def inventory_view(inventory: list[str], stashed: list[str],
 
     container_views: list[ContainerView] = []
     for c in containers:
-        if getattr(c, "location", "person") != "person":
+        if c.location.kind not in ("carried", "stashed"):
             continue   # rendered inside its carrier's card, not the loose list
         catalog = data.items.get(c.catalog_id)
         if not isinstance(catalog, Container):
@@ -235,15 +256,16 @@ def inventory_view(inventory: list[str], stashed: list[str],
             (data.items[x].weight_cn if x in data.items else 0)
             for x in c.contents
         )
+        loc_kind = c.location.kind
         effective = (
             catalog.weight_cn + int(catalog.weight_multiplier * raw_used)
-            if c.state == "carried" else 0
+            if loc_kind == "carried" else 0
         )
         container_views.append(ContainerView(
             instance_id=c.instance_id,
             catalog_id=c.catalog_id,
             name=catalog.name,
-            state=c.state,
+            state=loc_kind,
             capacity_cn=catalog.capacity_cn,
             used_cn=raw_used,
             weight_multiplier=catalog.weight_multiplier,
@@ -288,6 +310,10 @@ def inventory_rows(inventory: list[str], data: GameData,
     return sorted(merged.values(), key=lambda r: r.name)
 
 
+class InsufficientFunds(ValueError):
+    """Not enough carried coins to cover a purchase (routes map to HTTP 400)."""
+
+
 class InsufficientGold(ValueError):
     pass
 
@@ -322,10 +348,11 @@ def new_container_instance(catalog_id: str, data: GameData,
         raise UnknownItem(f"No item with id {catalog_id!r}")
     if not isinstance(item, Container):
         raise ValueError(f"{catalog_id!r} is not a container")
+    from aose.models.storage import StorageLocation
     return ContainerInstance(
         instance_id=uuid.uuid4().hex,
         catalog_id=catalog_id,
-        state=state,  # type: ignore[arg-type]
+        location=StorageLocation(kind=state),  # type: ignore[arg-type]
         contents=[],
     )
 
@@ -464,7 +491,7 @@ def take_out(inventory: list[str], stashed: list[str],
     updated = target.model_copy(update={"contents": new_contents})
     new_containers = [*containers[:idx], updated, *containers[idx + 1:]]
 
-    if target.state == "carried":
+    if target.location.kind == "carried":
         return [*inventory, item_id], stashed, new_containers
     return inventory, [*stashed, item_id], new_containers
 
@@ -484,13 +511,15 @@ def unstash_container(containers: list[ContainerInstance],
 
 def _set_container_state(containers: list[ContainerInstance],
                          instance_id: str, new_state: str) -> list[ContainerInstance]:
+    from aose.models.storage import StorageLocation
     idx = next((i for i, c in enumerate(containers) if c.instance_id == instance_id), None)
     if idx is None:
         raise UnknownContainer(f"No container with id {instance_id!r}")
     target = containers[idx]
-    if target.state == new_state:
+    new_loc = StorageLocation(kind=new_state)   # type: ignore[arg-type]
+    if target.location == new_loc:
         return list(containers)
-    updated = target.model_copy(update={"state": new_state})
+    updated = target.model_copy(update={"location": new_loc})
     return [*containers[:idx], updated, *containers[idx + 1:]]
 
 
@@ -650,3 +679,107 @@ def remove_from_stash(stashed: list[str], gold: int, item_id: str, mode: str,
     else:
         new_stashed.remove(item_id)
     return new_stashed, gold + _removal_gold(item_id, mode, data)
+
+
+# ── Coin-based spend (Task 10) ──────────────────────────────────────────────
+
+_ORDER_LOW = ["cp", "sp", "ep", "gp", "pp"]   # ascending value
+_VALS = [RATES[d] for d in _ORDER_LOW]        # [1, 10, 50, 100, 500]
+
+
+def _exact_payment(avail: dict[str, int], cost_cp: int) -> dict[str, int] | None:
+    """Largest-low-coin exact payment of ``cost_cp`` from ``avail``, or None."""
+    n = len(_ORDER_LOW)
+    maxval = [0] * (n + 1)
+    for i in range(n - 1, -1, -1):
+        maxval[i] = maxval[i + 1] + avail.get(_ORDER_LOW[i], 0) * _VALS[i]
+
+    def rec(i, remaining, chosen):
+        if remaining == 0:
+            return dict(chosen)
+        if i == n:
+            return None
+        v = _VALS[i]
+        hi = min(avail.get(_ORDER_LOW[i], 0), remaining // v)
+        for k in range(hi, -1, -1):
+            rem2 = remaining - k * v
+            if rem2 <= maxval[i + 1]:
+                chosen[_ORDER_LOW[i]] = k
+                got = rec(i + 1, rem2, chosen)
+                if got is not None:
+                    return got
+        chosen[_ORDER_LOW[i]] = 0
+        return None
+
+    return rec(0, cost_cp, {})
+
+
+def _payment_plan(avail: dict[str, int], cost_cp: int) -> tuple[dict[str, int], int]:
+    """Return (spend_by_denom, change_cp). Tries exact first, then smallest
+    whole-gp overshoot. Raises InsufficientFunds."""
+    total = sum(avail.get(d, 0) * RATES[d] for d in DENOMINATIONS)
+    if total < cost_cp:
+        raise InsufficientFunds(
+            f"need {cost_cp // 100} gp; only {total // 100} gp on hand"
+        )
+    j = 0
+    while cost_cp + 100 * j <= total:
+        sol = _exact_payment(avail, cost_cp + 100 * j)
+        if sol is not None:
+            return sol, 100 * j
+        j += 1
+    raise InsufficientFunds("cannot pay without breaking coins — convert first")
+
+
+def spend(spec, cost_gp: int) -> None:
+    """Spend ``cost_gp`` from CARRIED coins, lowest denomination first.
+    If exact payment is impossible, pays the smallest whole-gp overshoot
+    and returns the change as carried gp. Mutates ``spec.coins`` in place."""
+    from aose.engine import storage as _storage
+    carried = StorageLocation(kind="carried")
+    avail = {c.denom: c.count for c in spec.coins if c.location == carried}
+    spend_by, change_cp = _payment_plan(avail, cost_gp * 100)
+    for denom, k in spend_by.items():
+        if k:
+            _storage._take_coins(spec, denom, k, carried)
+    if change_cp:
+        _storage._add_coins(spec, "gp", change_cp // 100, carried)
+
+
+def buy_item(spec, item_id: str, data: GameData) -> None:
+    """Buy one bundle of ``item_id`` onto carried inventory, spending carried coins."""
+    if item_id not in data.items:
+        raise UnknownItem(f"No item with id {item_id!r}")
+    item = data.items[item_id]
+    spend(spec, int(item.cost_gp))
+    spec.inventory.extend([item_id] * _bundle_count(item))
+
+
+def sell_item(spec, item_id: str, mode: str, data: GameData) -> None:
+    """Remove one instance from carried inventory; credit carried gp per mode."""
+    from aose.engine import storage as _storage
+    new_inv, credit, new_eq = remove(spec.inventory, 0, item_id, mode, data, spec.equipped)
+    spec.inventory[:] = new_inv
+    spec.equipped.clear()
+    spec.equipped.update(new_eq)
+    if credit:
+        _storage._add_coins(spec, "gp", credit, StorageLocation(kind="carried"))
+
+
+def sell_container(spec, instance_id: str, mode: str, data: GameData) -> None:
+    """Remove a container instance; credit carried gp per mode."""
+    from aose.engine import storage as _storage
+    new_containers, credit = remove_container(
+        spec.containers, 0, instance_id, mode, data)
+    spec.containers[:] = new_containers
+    if credit:
+        _storage._add_coins(spec, "gp", credit, StorageLocation(kind="carried"))
+
+
+def sell_from_stash(spec, item_id: str, mode: str, data: GameData) -> None:
+    """Remove one stashed item; credit carried gp per mode."""
+    from aose.engine import storage as _storage
+    new_stash, credit = remove_from_stash(spec.stashed, 0, item_id, mode, data)
+    spec.stashed[:] = new_stash
+    if credit:
+        _storage._add_coins(spec, "gp", credit, StorageLocation(kind="carried"))
