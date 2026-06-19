@@ -311,13 +311,12 @@ carried-gp helpers.
 
 ## Decomposition
 
-Sized for sequential plans (each ends green):
+**Single implementation plan**, built bottom-up so each stage keeps tests green:
 
-- **Plan 1 — Model + movement/currency engines** (`StorageLocation`, `CoinStack`,
-  located gems/jewellery, container refactor, coercion validators, `storage.py`,
-  currency/encumbrance/wealth rework). Engine + model tests, no UI.
-- **Plan 2 — Shop spend** (`spend` algorithm + change exception; buy/sell/refund and
-  wizard wiring onto carried coins).
-- **Plan 3 — UI + routes** (top-level group macro, per-row Move/Convert, container
-  inline expansion, removal of coin tracker/money-change, wealth readout, move routes,
-  print sheet).
+1. Model + coercion validators (`StorageLocation`, `CoinStack`, located
+   gems/jewellery, container refactor).
+2. Movement + currency engines (`storage.py`, currency/encumbrance/wealth rework).
+3. Shop `spend` (algorithm + change exception; buy/sell/refund + wizard onto carried
+   coins).
+4. UI + routes (top-level group macro, per-row Move/Convert, inline containers,
+   removal of coin tracker/money-change, wealth readout, move routes, print sheet).
