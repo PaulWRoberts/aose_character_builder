@@ -5,6 +5,7 @@
    the carrier/retainer group panels and the Carried/Stashed row actions. #}
 {% macro move_dest_control(groups, cur_kind, cur_id, allow_containers=True) %}
   <select class="move-dest" style="max-width:9rem">
+    <option value="" disabled selected>Move to…</option>
     {% for g in groups %}
       {% if not (g.kind == cur_kind and (g.id or '') == (cur_id or '')) %}
       <option data-kind="{{ g.kind }}" data-id="{{ g.id or '' }}">{{ g.label }}</option>

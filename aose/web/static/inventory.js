@@ -45,7 +45,11 @@
  * data-kind / data-id for the destination top-level (or container). On submit
  * we copy those into the form's hidden `dest_kind` / `dest_id` inputs so the
  * move-* routes receive the split fields they expect. Server-rendered options;
- * this is the only client glue. */
+ * this is the only client glue.
+ *
+ * Auto-submit: when the form has no visible user inputs (i.e. only hidden
+ * inputs + the destination select), selecting a destination immediately
+ * submits. Forms with a count field (coins) are left for explicit submit. */
 (function () {
     document.addEventListener("submit", function (e) {
         const form = e.target;
@@ -57,6 +61,21 @@
         const id = form.querySelector("input.dest-id");
         if (kind) kind.value = opt.getAttribute("data-kind") || "";
         if (id) id.value = opt.getAttribute("data-id") || "";
+    });
+
+    document.addEventListener("change", function (e) {
+        const sel = e.target;
+        if (!sel.classList || !sel.classList.contains("move-dest")) return;
+        const form = sel.closest("form.move-form");
+        if (!form) return;
+        const opt = sel.options[sel.selectedIndex];
+        if (!opt || !opt.getAttribute("data-kind")) return;
+        // Skip auto-submit when the form has visible (non-hidden, non-select) inputs
+        const hasUserInput = form.querySelector(
+            "input:not([type='hidden']), textarea"
+        );
+        if (hasUserInput) return;
+        form.requestSubmit();
     });
 })();
 

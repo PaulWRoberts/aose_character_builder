@@ -217,7 +217,6 @@
           <input type="hidden" name="src_kind" value="{{ group.kind }}">
           <input type="hidden" name="src_id" value="{{ group.id or '' }}">
           {{ move_dest_control(groups, group.kind, group.id) }}
-          <button type="submit">Move</button>
         </form>
       </td></tr>
     {% endfor %}
@@ -235,7 +234,6 @@
         <form method="post" action="{{ prefix }}/inventory/move-valuable" class="inline-form move-form">
           <input type="hidden" name="instance_id" value="{{ g.instance_id }}">
           {{ move_dest_control(groups, group.kind, group.id) }}
-          <button type="submit">Move</button>
         </form>
       </td></tr>
     {% endfor %}
@@ -245,7 +243,6 @@
         <form method="post" action="{{ prefix }}/inventory/move-valuable" class="inline-form move-form">
           <input type="hidden" name="instance_id" value="{{ j.instance_id }}">
           {{ move_dest_control(groups, group.kind, group.id) }}
-          <button type="submit">Move</button>
         </form>
       </td></tr>
     {% endfor %}
@@ -264,7 +261,6 @@
         <form method="post" action="{{ prefix }}/inventory/move-container" class="inline-form move-form">
           <input type="hidden" name="container_id" value="{{ c.instance_id }}">
           {{ move_dest_control(groups, group.kind, group.id, allow_containers=False) }}
-          <button type="submit">Move</button>
         </form>
       </td>
     </tr>
