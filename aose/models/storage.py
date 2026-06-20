@@ -2,7 +2,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-LocationKind = Literal["carried", "stashed", "animal", "vehicle", "container"]
+LocationKind = Literal["carried", "stashed", "animal", "vehicle", "container", "retainer"]
 
 
 class StorageLocation(BaseModel):

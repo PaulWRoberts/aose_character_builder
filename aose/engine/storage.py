@@ -25,6 +25,13 @@ def _carrier(spec: CharacterSpec, kind: str, id_: str):
     raise StorageError(f"no {kind} with id {id_!r}")
 
 
+def _retainer(spec: CharacterSpec, id_: str):
+    for r in spec.retainers:
+        if r.id == id_:
+            return r
+    raise StorageError(f"no retainer with id {id_!r}")
+
+
 def _container(spec: CharacterSpec, id_: str):
     for c in spec.containers:
         if c.instance_id == id_:
@@ -42,6 +49,8 @@ def loose_list(spec: CharacterSpec, loc: StorageLocation) -> list[str]:
         return _container(spec, loc.id).contents
     if loc.kind in ("animal", "vehicle"):
         return _carrier(spec, loc.kind, loc.id).contents
+    if loc.kind == "retainer":
+        return _retainer(spec, loc.id).spec.inventory
     raise StorageError(f"no loose list for location {loc!r}")
 
 
