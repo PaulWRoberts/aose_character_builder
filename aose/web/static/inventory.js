@@ -77,6 +77,18 @@
         if (hasUserInput) return;
         form.requestSubmit();
     });
+
+    document.addEventListener("change", function (e) {
+        const sel = e.target;
+        if (!sel.classList || !sel.classList.contains("sell-dest")) return;
+        const form = sel.closest("form.sell-form");
+        if (!form) return;
+        const opt = sel.options[sel.selectedIndex];
+        if (!opt || !opt.value) return;
+        const modeInput = form.querySelector("input[name='mode']");
+        if (modeInput) modeInput.value = opt.value;
+        form.requestSubmit();
+    });
 })();
 
 /* Inline row-detail toggle.

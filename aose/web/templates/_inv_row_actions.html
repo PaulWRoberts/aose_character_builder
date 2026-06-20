@@ -39,17 +39,23 @@
     </form>
     {% endif %}
     {% if show_remove %}
-    <form method="post" action="{{ target_url_prefix }}/remove" class="remove-form">
+    <form method="post" action="{{ target_url_prefix }}/remove" class="remove-form inline-form">
         <input type="hidden" name="item_id" value="{{ row.id }}">
         <input type="hidden" name="from_state" value="{{ state }}">
         <button type="submit" name="mode" value="drop"
                 title="Throw away — no gold back">Drop</button>
-        <button type="submit" name="mode" value="sell"
-                title="Sell one for half its per-item price">Sell&nbsp;(+{{ row.sell_gp }}&nbsp;gp)</button>
-        {% if row.can_refund %}
-        <button type="submit" name="mode" value="refund"
-                title="Refund a full purchased stack">Refund{% if row.bundle_count > 1 %}&nbsp;stack&nbsp;of&nbsp;{{ row.bundle_count }}{% endif %}&nbsp;(+{{ row.cost_gp | int }}&nbsp;gp)</button>
-        {% endif %}
+    </form>
+    <form method="post" action="{{ target_url_prefix }}/remove" class="sell-form inline-form">
+        <input type="hidden" name="item_id" value="{{ row.id }}">
+        <input type="hidden" name="from_state" value="{{ state }}">
+        <input type="hidden" name="mode" value="">
+        <select class="sell-dest">
+            <option value="" disabled selected>Sell…</option>
+            <option value="sell">+{{ row.sell_gp }}&nbsp;gp (half price)</option>
+            {% if row.can_refund %}
+            <option value="refund">+{{ row.cost_gp | int }}&nbsp;gp (refund{% if row.bundle_count > 1 %}&nbsp;×{{ row.bundle_count }}{% endif %})</option>
+            {% endif %}
+        </select>
     </form>
     {% endif %}
 {% endmacro %}
