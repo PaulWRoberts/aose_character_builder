@@ -478,6 +478,17 @@ Illusionist/Magic-user/Thief). New languages: `hephaestan`, `language_of_wolves`
   `loose`, `equipped`, `coins`, `treasure_gems`, `treasure_jewellery`, `containers`
   sub-lists. `build_inventory_groups(spec, data)` in `aose/sheet/view.py` builds
   this. `sheet.total_wealth_gp: int` for the wealth readout.
+- **Coin rendering** — coins are line-items everywhere, not a separate tracker. The
+  `coin_table(coins, prefix, groups, cur_kind, cur_id)` macro in `_equipment_ui.html`
+  renders each stack with a full Move dropdown (`move_dest_control` → any top-level /
+  container, JS-populated `dest_kind`/`dest_id`), an in-place Convert, and an Adjust;
+  it is shared by Carried, Stashed, and every carrier/retainer group. The live sheet's
+  three columns show carried/stashed coin stacks as `<li>` rows; the section bar shows
+  a read-only `total_wealth_gp`. There is no coin-chip strip or Coin-Purse popover.
+- **Move-route robustness** — `_loc(kind, id)` in `routes.py` builds the
+  `StorageLocation` for every `/inventory/move-*` (and `/coins/add`,`/coins/convert`)
+  route, mapping a bad/empty kind to HTTP 400 (Pydantic `ValidationError` would
+  otherwise surface as 500).
 
 ---
 

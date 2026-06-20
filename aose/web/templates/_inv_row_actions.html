@@ -1,7 +1,8 @@
 {# Shared per-row inventory action buttons.  Imported `with context` so the
-   macro can read `inventory_view` (for the stow dropdown).  Used by both the
-   equipment drawer (`_equipment_ui.html`) and the sheet's per-item modals
-   (`sheet.html`).  `state` is "equipped" | "carried" | "stashed". #}
+   macro can read `inv_move_groups` and `inv_move_url` (passed by the sheet
+   route and the wizard equipment route).  Used by both the equipment drawer
+   (`_equipment_ui.html`) and the sheet's per-item modals (`sheet.html`).
+   `state` is "equipped" | "carried" | "stashed". #}
 {% from "_move_dest.html" import move_dest_control with context %}
 {% macro inv_row_actions(row, target_url_prefix, state, show_remove=True) %}
     {% if state == "equipped" %}
@@ -29,33 +30,13 @@
         <button type="submit">Unstash</button>
     </form>
     {% endif %}
-    {% set carried_bags = inventory_view.containers | selectattr("state", "equalto", "carried") | list %}
-    {% if state == "carried" and carried_bags %}
-    <form method="post" action="{{ target_url_prefix }}/stow" class="inline-form">
-        <input type="hidden" name="item_id" value="{{ row.id }}">
-        <select name="instance_id">
-            {% for c in carried_bags %}
-            <option value="{{ c.instance_id }}">{{ c.name }}</option>
-            {% endfor %}
-        </select>
-        <button type="submit">Stow</button>
-    </form>
-    {% endif %}
-    {% if state in ("equipped", "carried") %}
-    <form method="post" action="{{ target_url_prefix }}/stash" class="inline-form">
-        <input type="hidden" name="item_id" value="{{ row.id }}">
-        <button type="submit" title="Move off-person; stops contributing to encumbrance">Stash</button>
-    </form>
-    {% endif %}
-    {# Move to another top-level (animal / vehicle / retainer / the other person bucket).
-       Only on the live sheet drawer, where inventory_groups + coins_url_prefix exist. #}
-    {% if state in ("carried", "stashed") and sheet is defined and sheet.inventory_groups is defined and coins_url_prefix is defined %}
-    <form method="post" action="{{ coins_url_prefix }}/inventory/move-item" class="inline-form move-form">
+    {% if state in ("carried", "stashed") and inv_move_groups is defined %}
+    <form method="post" action="{{ inv_move_url }}" class="inline-form move-form">
         <input type="hidden" name="item_id" value="{{ row.id }}">
         <input type="hidden" name="src_kind" value="{{ state }}">
         <input type="hidden" name="src_id" value="">
-        {{ move_dest_control(sheet.inventory_groups, state, none) }}
-        <button type="submit" title="Move to a carrier, retainer, or the other person bucket">Move</button>
+        {{ move_dest_control(inv_move_groups, state, none) }}
+        <button type="submit">Move</button>
     </form>
     {% endif %}
     {% if show_remove %}

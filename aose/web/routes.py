@@ -114,6 +114,16 @@ TEMPLATES_DIR = Path(__file__).parent / "templates"
 # ---------------------------------------------------------------------------
 from aose.models import CoinStack as _CoinStack
 from aose.models.storage import StorageLocation as _SL
+from pydantic import ValidationError as _ValidationError
+
+
+def _loc(kind: str | None, id_: str | None) -> _SL:
+    """Build a StorageLocation from form fields, mapping an invalid/empty kind to
+    an HTTP 400 instead of letting Pydantic's ValidationError bubble up as a 500."""
+    try:
+        return _SL(kind=kind, id=id_)  # type: ignore[arg-type]
+    except _ValidationError:
+        raise HTTPException(400, f"invalid storage location {kind!r}")
 
 
 def _get_gold(spec) -> int:
@@ -226,6 +236,8 @@ async def character_sheet(request: Request, character_id: str):
             "gold_grant_url": f"/character/{character_id}/gold",
             "coins": sheet.coins,
             "coins_url_prefix": f"/character/{character_id}",
+            "inv_move_groups": sheet.inventory_groups,
+            "inv_move_url": f"/character/{character_id}/inventory/move-item",
             "spell_source_add_options": spell_source_add_options(game_data),
             # Equipment drawer tabs: Documents + Treasure (gated on presence)
             "spell_sources": sheet.spell_sources,
@@ -378,7 +390,7 @@ async def add_coins(request: Request, character_id: str):
         count = int(form.get("count", 0))
     except (ValueError, TypeError):
         raise HTTPException(400, "count must be an integer")
-    loc = _SL(kind=loc_kind, id=loc_id)  # type: ignore[arg-type]
+    loc = _loc(loc_kind, loc_id)
     if count > 0:
         _storage.add_coins(spec, denom, count, loc)
     elif count < 0:
@@ -406,7 +418,7 @@ async def convert_coins(request: Request, character_id: str):
         count = int(form.get("count", 0))
     except (ValueError, TypeError):
         raise HTTPException(400, "count must be an integer")
-    loc = _SL(kind=loc_kind, id=loc_id)  # type: ignore[arg-type]
+    loc = _loc(loc_kind, loc_id)
     try:
         _storage.convert_coins(spec, loc, frm, to, count)
     except (CurrencyError, _storage.StorageError) as e:
@@ -421,8 +433,8 @@ async def inventory_move_item(request: Request, character_id: str):
     from aose.engine import storage as _storage
     spec = _load_spec_or_404(request, character_id)
     form = await request.form()
-    src = _SL(kind=form.get("src_kind", "carried"), id=form.get("src_id") or None)  # type: ignore[arg-type]
-    dest = _SL(kind=form.get("dest_kind", "carried"), id=form.get("dest_id") or None)  # type: ignore[arg-type]
+    src = _loc(form.get("src_kind", "carried"), form.get("src_id") or None)
+    dest = _loc(form.get("dest_kind", "carried"), form.get("dest_id") or None)
     try:
         _storage.move_item(spec, form["item_id"], src, dest)
     except (KeyError, _storage.StorageError) as e:
@@ -437,7 +449,7 @@ async def inventory_move_container(request: Request, character_id: str):
     from aose.engine import storage as _storage
     spec = _load_spec_or_404(request, character_id)
     form = await request.form()
-    dest = _SL(kind=form.get("dest_kind", "carried"), id=form.get("dest_id") or None)  # type: ignore[arg-type]
+    dest = _loc(form.get("dest_kind", "carried"), form.get("dest_id") or None)
     try:
         _storage.move_container(spec, form["container_id"], dest)
     except (KeyError, _storage.StorageError) as e:
@@ -453,8 +465,8 @@ async def inventory_move_coins(request: Request, character_id: str):
     spec = _load_spec_or_404(request, character_id)
     form = await request.form()
     denom = form.get("denom", "")
-    src = _SL(kind=form.get("src_kind", "carried"), id=form.get("src_id") or None)  # type: ignore[arg-type]
-    dest = _SL(kind=form.get("dest_kind", "stashed"), id=form.get("dest_id") or None)  # type: ignore[arg-type]
+    src = _loc(form.get("src_kind", "carried"), form.get("src_id") or None)
+    dest = _loc(form.get("dest_kind", "stashed"), form.get("dest_id") or None)
     try:
         count = int(form.get("count", 0))
     except (ValueError, TypeError):
@@ -473,7 +485,7 @@ async def inventory_move_valuable(request: Request, character_id: str):
     from aose.engine import storage as _storage
     spec = _load_spec_or_404(request, character_id)
     form = await request.form()
-    dest = _SL(kind=form.get("dest_kind", "carried"), id=form.get("dest_id") or None)  # type: ignore[arg-type]
+    dest = _loc(form.get("dest_kind", "carried"), form.get("dest_id") or None)
     try:
         _storage.move_valuable(spec, form["instance_id"], dest)
     except (KeyError, _storage.StorageError) as e:

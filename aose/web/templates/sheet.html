@@ -345,11 +345,12 @@
 
   {# ════════ INVENTORY · CURRENCY · TREASURE (full width) ════════ #}
   <section class="group full">
-    <div class="bar">Inventory, Currency &amp; Treasure
+    <div class="bar">Inventory
       <span class="tools">
         {% if sheet.carried_weight_cn is not none %}
         <span class="meta">{{ sheet.carried_weight_cn }} / {{ sheet.max_load }} cn{% if sheet.current_weight_band %} · {{ sheet.current_weight_band }}{% endif %}</span>
         {% endif %}
+        <span class="meta">{{ sheet.total_wealth_gp }} gp wealth</span>
         {% if sheet.encumbrance_table %}
         <button class="btn tool" data-modal="modal-encumbrance">Thresholds</button>
         {% endif %}
@@ -358,16 +359,10 @@
     </div>
     <div class="gbody scroll" style="max-height:320px">
 
-      {# Coins row #}
-      <div class="coins">
-        {% for denom, label in [("pp","PP"),("gp","GP"),("ep","EP"),("sp","SP"),("cp","CP")] %}
-        <div class="coin"><div class="d">{{ label }}</div><div class="c">{{ sheet.coins[denom] }}</div></div>
-        {% endfor %}
-        <div class="treasure-chip editable" data-pop="pop-coins">
-          <div class="d">Treasure</div>
-          <div class="c">{{ sheet.treasure_value_gp|int }} gp</div>
-        </div>
-      </div>
+      {# Carried / Stashed coin stacks render as line items in their columns
+         (see below) — managed via the drawer. No separate coin tracker. #}
+      {% set _cg = sheet.inventory_groups | selectattr("kind","equalto","carried") | first | default(none) %}
+      {% set _sg = sheet.inventory_groups | selectattr("kind","equalto","stashed") | first | default(none) %}
 
       {# Three-column inventory view #}
       <div class="inv-cols">
@@ -430,6 +425,10 @@
             {% endif %}
             {% endif %}
             {% endfor %}
+            {# Carried coins — line items, like any other carried thing #}
+            {% if _cg %}{% for coin in _cg.coins %}
+            <li><span>{{ coin.count }} {{ coin.denom }}<span class="tag faint">coin</span></span><span class="q">{{ coin.count }} cn</span></li>
+            {% endfor %}{% endif %}
             {# Gems & jewellery #}
             {% for g in sheet.valuables.gems %}
             <li><span>{% if g.label %}{{ g.label }}{% else %}{{ g.value }} gp gem{% endif %} × {{ g.count }}<span class="tag faint">gem · {{ g.stack_value }} gp</span></span><span class="q">{{ g.count }} cn</span></li>
@@ -459,6 +458,10 @@
             {% for row in inventory_view.stashed %}
             <li class="clickable" data-modal="modal-item-stashed-{{ row.id }}"><span>{{ row.name }}{% if row.count > 1 %} ×{{ row.count }}{% endif %}</span><span class="q">—</span></li>
             {% endfor %}
+            {# Stashed coins — line items #}
+            {% if _sg %}{% for coin in _sg.coins %}
+            <li><span>{{ coin.count }} {{ coin.denom }}<span class="tag faint">coin</span></span><span class="q">—</span></li>
+            {% endfor %}{% endif %}
             {# Stashed containers #}
             {% for c in inventory_view.containers %}
             {% if c.state == "stashed" %}
@@ -530,7 +533,7 @@
 {# DRAWER: equipment (unified) #}
 <aside class="overlay drawer" id="drawer-equip" role="dialog" aria-label="Manage equipment">
   <div class="ov-head">
-    <h3>Inventory</h3>
+    <h3>Manage Inventory</h3>
     <span class="tag" style="margin-left:6px;background:var(--box);color:var(--ink)">{{ sheet.coins.gp }} gp</span>
     <button class="x" data-close>×</button>
   </div>
@@ -1232,44 +1235,6 @@ document.addEventListener('click', function(e){
   }
 }, true);
 </script>
-
-{# POPOVER: coins / treasure #}
-<div class="overlay popover" id="pop-coins" role="dialog" aria-label="Coins" style="max-width:270px">
-  <h4>Coin Purse</h4>
-  <table class="dtable" style="margin-bottom:8px">
-    <tbody>
-      {% for denom, label in [("pp","Platinum"),("gp","Gold"),("ep","Electrum"),("sp","Silver"),("cp","Copper")] %}
-      <tr>
-        <td>{{ label }}</td>
-        <td class="n">{{ sheet.coins[denom] }}</td>
-        <td class="n">
-          <form method="post" action="/character/{{ character_id }}/coins/add" style="display:inline-flex;gap:4px;align-items:center;">
-            <input type="hidden" name="denom" value="{{ denom }}">
-            <input type="number" name="amount" value="0" style="width:3.4em">
-            <button class="btn" type="submit">+/−</button>
-          </form>
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  <p class="hint" style="margin:8px 0 4px">Convert between denominations:</p>
-  <form method="post" action="/character/{{ character_id }}/coins/convert" style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;">
-    <input type="number" name="count" value="1" min="1" style="width:3.4em">
-    <select name="from_denom">
-      {% for d, l in [("pp","pp"),("gp","gp"),("ep","ep"),("sp","sp"),("cp","cp")] %}
-      <option value="{{ d }}">{{ l }}</option>
-      {% endfor %}
-    </select>
-    →
-    <select name="to_denom">
-      {% for d, l in [("pp","pp"),("gp","gp"),("ep","ep"),("sp","sp"),("cp","cp")] %}
-      <option value="{{ d }}" {% if d == "gp" %}selected{% endif %}>{{ l }}</option>
-      {% endfor %}
-    </select>
-    <button class="btn" type="submit">Go</button>
-  </form>
-</div>
 
 {# MODAL: delete character #}
 <div class="overlay modal" id="modal-delete" role="dialog" aria-label="Delete Character"

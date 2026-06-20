@@ -41,7 +41,7 @@
     if (type === 'pop') place(panel, trigger);
     scrim.classList.add('on');
     requestAnimationFrame(() => panel.classList.add('on'));
-    if (type !== 'pop'){ const f = panel.querySelector('input,select,textarea,button:not(.x)'); if (f) setTimeout(()=>{ try{f.focus();}catch(e){} }, 60); }
+    if (type !== 'pop'){ const f = panel.querySelector('input,select,textarea,button:not(.x)'); if (f) setTimeout(()=>{ try{f.focus({preventScroll:true});}catch(e){} }, 60); }
   }
   document.addEventListener('click', (e) => {
     const trig = e.target.closest('[data-drawer],[data-modal],[data-pop]');
@@ -63,6 +63,43 @@
       history.replaceState(null, '', location.pathname + location.search);
     }
   }
+  /* Preserve the equipment drawer across form submissions inside it.
+   * On submit: save drawer id, .ov-body scrollTop, and active tab to sessionStorage.
+   * On next load: re-open the drawer at the same tab and scroll position. */
+  document.addEventListener('submit', function(e){
+    const drawer = e.target.closest('.overlay.drawer');
+    if (!drawer) return;
+    const body = drawer.querySelector('.ov-body');
+    const tab  = drawer.querySelector('.tabs .tab.on');
+    sessionStorage.setItem('ss_drawer', drawer.id);
+    sessionStorage.setItem('ss_scroll', body ? body.scrollTop : 0);
+    sessionStorage.setItem('ss_tab',   tab ? tab.dataset.tab : '');
+  });
+  (function(){
+    const did = sessionStorage.getItem('ss_drawer'); if (!did) return;
+    const scroll = parseInt(sessionStorage.getItem('ss_scroll') || '0', 10);
+    const tabId  = sessionStorage.getItem('ss_tab') || '';
+    sessionStorage.removeItem('ss_drawer');
+    sessionStorage.removeItem('ss_scroll');
+    sessionStorage.removeItem('ss_tab');
+    open(did, 'drawer', null);
+    const panel = document.getElementById(did); if (!panel) return;
+    if (tabId){
+      const tab = panel.querySelector('.tabs .tab[data-tab="' + tabId + '"]');
+      if (tab){
+        const tabs = tab.closest('.tabs');
+        const root = tabs.closest('.equip-ui') || tabs.parentElement;
+        if (tabs && root){
+          tabs.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x === tab));
+          root.querySelectorAll('[data-pane]').forEach(p => { p.hidden = p.dataset.pane !== tabId; });
+        }
+      }
+    }
+    if (scroll > 0){
+      const body = panel.querySelector('.ov-body');
+      if (body) requestAnimationFrame(() => requestAnimationFrame(() => { body.scrollTop = scroll; }));
+    }
+  })();
   /* Equipment tab-switching lives in inventory.js (loaded by the shared
      equipment partial) so it works on the wizard page too, which has no
      overlay scrim / .ov-body. */

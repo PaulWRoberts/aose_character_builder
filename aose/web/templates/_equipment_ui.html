@@ -147,6 +147,52 @@
 {% endif %}
 {% endmacro %}
 
+{# Coin stacks at one location, each rendered like any other inventory row: a
+   denom + qty plus a full Move dropdown (any top-level / container), an in-place
+   Convert, and an Adjust (GM grant; negative removes). Shared by Carried,
+   Stashed, and every carrier/retainer group so coins behave identically
+   everywhere. `cur_kind`/`cur_id` identify the stack's current location. #}
+{% macro coin_table(coins, prefix, groups, cur_kind, cur_id) %}
+{% if coins %}
+<table class="dtable">
+  <thead><tr><th>Coins</th><th class="n">Qty</th><th></th></tr></thead>
+  <tbody>
+  {% for coin in coins %}
+  <tr>
+    <td>{{ coin.denom }}</td>
+    <td class="n">{{ coin.count }}</td>
+    <td class="n">
+      <form method="post" action="{{ prefix }}/inventory/move-coins" class="inline-form move-form">
+        <input type="hidden" name="denom" value="{{ coin.denom }}">
+        <input type="hidden" name="src_kind" value="{{ cur_kind }}">
+        <input type="hidden" name="src_id" value="{{ cur_id or '' }}">
+        <input type="number" name="count" value="{{ coin.count }}" min="1" max="{{ coin.count }}" style="width:3.5rem">
+        {{ move_dest_control(groups, cur_kind, cur_id) }}
+        <button type="submit">Move</button>
+      </form>
+      <form method="post" action="{{ prefix }}/coins/convert" class="inline-form">
+        <input type="hidden" name="loc_kind" value="{{ cur_kind }}">
+        <input type="hidden" name="loc_id" value="{{ cur_id or '' }}">
+        <input type="hidden" name="frm" value="{{ coin.denom }}">
+        <select name="to" style="width:4rem">{% for d in ["pp","gp","ep","sp","cp"] %}{% if d != coin.denom %}<option value="{{ d }}">{{ d }}</option>{% endif %}{% endfor %}</select>
+        <input type="number" name="count" value="1" min="1" max="{{ coin.count }}" style="width:3.5rem">
+        <button type="submit">Convert</button>
+      </form>
+      <form method="post" action="{{ prefix }}/coins/add" class="inline-form">
+        <input type="hidden" name="denom" value="{{ coin.denom }}">
+        <input type="hidden" name="loc_kind" value="{{ cur_kind }}">
+        <input type="hidden" name="loc_id" value="{{ cur_id or '' }}">
+        <input type="number" name="count" value="-{{ coin.count }}" style="width:4rem">
+        <button type="submit" title="Adjust count (negative removes)">Adj</button>
+      </form>
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endmacro %}
+
 {# A non-Carried/Stashed top-level group (animal / vehicle / retainer): its
    loose items, coins, treasure, and containers, each with a Move control. #}
 {% macro inv_group_panel(group, prefix, groups) %}
@@ -179,26 +225,7 @@
   </table>
   {% endif %}
 
-  {% if group.coins %}
-  <table class="dtable">
-    <thead><tr><th>Coins</th><th class="n">Qty</th><th></th></tr></thead>
-    <tbody>
-    {% for coin in group.coins %}
-    <tr><td>{{ coin.denom }}</td><td class="n">{{ coin.count }}</td>
-      <td class="n">
-        <form method="post" action="{{ prefix }}/inventory/move-coins" class="inline-form move-form">
-          <input type="hidden" name="denom" value="{{ coin.denom }}">
-          <input type="hidden" name="src_kind" value="{{ group.kind }}">
-          <input type="hidden" name="src_id" value="{{ group.id or '' }}">
-          <input type="number" name="count" value="{{ coin.count }}" min="1" max="{{ coin.count }}" style="width:3.5rem">
-          {{ move_dest_control(groups, group.kind, group.id) }}
-          <button type="submit">Move</button>
-        </form>
-      </td></tr>
-    {% endfor %}
-    </tbody>
-  </table>
-  {% endif %}
+  {{ coin_table(group.coins, prefix, groups, group.kind, group.id) }}
 
   {% if group.treasure_gems or group.treasure_jewellery %}
   <table class="dtable"><thead><tr><th>Treasure</th><th></th></tr></thead><tbody>
@@ -268,43 +295,7 @@
 <div class="ov-section">
   <h4>Coins{% if sheet.total_wealth_gp > 0 %} <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--faint)">— {{ sheet.total_wealth_gp }} gp total wealth</span>{% endif %}</h4>
   {% if _cg.coins %}
-  <table class="dtable">
-    <thead><tr><th>Denom</th><th class="n">Qty</th><th></th></tr></thead>
-    <tbody>
-    {% for coin in _cg.coins %}
-    <tr>
-      <td>{{ coin.denom }}</td>
-      <td class="n">{{ coin.count }}</td>
-      <td class="n">
-        <form method="post" action="{{ coins_url_prefix }}/inventory/move-coins" class="inline-form">
-          <input type="hidden" name="denom" value="{{ coin.denom }}">
-          <input type="hidden" name="src_kind" value="carried">
-          <input type="hidden" name="src_id" value="">
-          <input type="hidden" name="dest_kind" value="stashed">
-          <input type="hidden" name="dest_id" value="">
-          <input type="number" name="count" value="{{ coin.count }}" min="1" max="{{ coin.count }}" style="width:3.5rem">
-          <button type="submit">Stash</button>
-        </form>
-        <form method="post" action="{{ coins_url_prefix }}/coins/convert" class="inline-form">
-          <input type="hidden" name="loc_kind" value="carried">
-          <input type="hidden" name="loc_id" value="">
-          <input type="hidden" name="frm" value="{{ coin.denom }}">
-          <select name="to" style="width:4rem">{% for d in ["pp","gp","ep","sp","cp"] %}{% if d != coin.denom %}<option value="{{ d }}">{{ d }}</option>{% endif %}{% endfor %}</select>
-          <input type="number" name="count" value="1" min="1" max="{{ coin.count }}" style="width:3.5rem">
-          <button type="submit">Convert</button>
-        </form>
-        <form method="post" action="{{ coins_url_prefix }}/coins/add" class="inline-form">
-          <input type="hidden" name="denom" value="{{ coin.denom }}">
-          <input type="hidden" name="loc_kind" value="carried">
-          <input type="hidden" name="loc_id" value="">
-          <input type="number" name="count" value="-{{ coin.count }}" style="width:4rem">
-          <button type="submit">Adj</button>
-        </form>
-      </td>
-    </tr>
-    {% endfor %}
-    </tbody>
-  </table>
+  {{ coin_table(_cg.coins, coins_url_prefix, sheet.inventory_groups, "carried", none) }}
   {% else %}
   <p class="hint" style="margin-bottom:4px">No carried coins.</p>
   {% endif %}
@@ -352,28 +343,7 @@
 {% if _sg and _sg.coins %}
 <div class="ov-section">
   <h4>Stashed Coins</h4>
-  <table class="dtable">
-    <thead><tr><th>Denom</th><th class="n">Qty</th><th></th></tr></thead>
-    <tbody>
-    {% for coin in _sg.coins %}
-    <tr>
-      <td>{{ coin.denom }}</td>
-      <td class="n">{{ coin.count }}</td>
-      <td class="n">
-        <form method="post" action="{{ coins_url_prefix }}/inventory/move-coins" class="inline-form">
-          <input type="hidden" name="denom" value="{{ coin.denom }}">
-          <input type="hidden" name="src_kind" value="stashed">
-          <input type="hidden" name="src_id" value="">
-          <input type="hidden" name="dest_kind" value="carried">
-          <input type="hidden" name="dest_id" value="">
-          <input type="number" name="count" value="{{ coin.count }}" min="1" max="{{ coin.count }}" style="width:3.5rem">
-          <button type="submit">Carry</button>
-        </form>
-      </td>
-    </tr>
-    {% endfor %}
-    </tbody>
-  </table>
+  {{ coin_table(_sg.coins, coins_url_prefix, sheet.inventory_groups, "stashed", none) }}
 </div>
 {% endif %}
 {% endif %}

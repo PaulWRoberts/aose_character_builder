@@ -69,8 +69,10 @@ from aose.engine.proficiency import (
     two_weapon_eligible,
 )
 from aose.engine.shop import (
+    ContainerView,
     InsufficientGold,
     REMOVE_MODES,
+    TopLevelGroup,
     UnknownItem,
     add_free as shop_add_free,
     add_free_container,
@@ -1663,6 +1665,38 @@ def _draft_ammo(draft: dict[str, Any]) -> list[AmmoStack]:
     return [AmmoStack.model_validate(a) for a in draft.get("ammo", [])]
 
 
+def _wizard_move_groups(
+    containers: list[ContainerInstance], game_data
+) -> list[TopLevelGroup]:
+    """Minimal two-group move list (Carried + Stashed) for the wizard."""
+    from aose.models import Container as _Container
+
+    def _container_views(loc_kind: str) -> list[ContainerView]:
+        views = []
+        for c in containers:
+            if c.location.kind != loc_kind:
+                continue
+            catalog = game_data.items.get(c.catalog_id)
+            if not isinstance(catalog, _Container):
+                continue
+            views.append(ContainerView(
+                instance_id=c.instance_id, catalog_id=c.catalog_id,
+                name=catalog.name, state=loc_kind,
+                capacity_cn=catalog.capacity_cn, used_cn=0,
+                weight_multiplier=catalog.weight_multiplier,
+                own_weight_cn=catalog.weight_cn, effective_weight_cn=0,
+                contents=[],
+            ))
+        return views
+
+    return [
+        TopLevelGroup(kind="carried", label="Carried",
+                      containers=_container_views("carried")),
+        TopLevelGroup(kind="stashed", label="Stashed",
+                      containers=_container_views("stashed")),
+    ]
+
+
 def _equipment_context(draft: dict[str, Any], game_data) -> dict:
     """Build the rendering context for the equipment partial — shared between
     the wizard equipment step and the live character sheet."""
@@ -1723,6 +1757,8 @@ def _equipment_context(draft: dict[str, Any], game_data) -> dict:
         "remove_modes": REMOVE_MODES,
         "ammo_rows": ammo_rows,
         "ammo_load_options": load_options,
+        "inv_move_groups": _wizard_move_groups(containers, game_data),
+        "inv_move_url": f"/wizard/{draft_id}/equipment/move-item",
     }
 
 
@@ -1910,6 +1946,44 @@ async def equipment_stow(request: Request, draft_id: str,
     draft["inventory"] = new_inv
     draft["stashed"] = new_stashed
     draft["containers"] = [c.model_dump() for c in new_containers]
+    save_draft(draft_id, draft, _drafts_dir(request))
+    return _redirect(f"/wizard/{draft_id}/equipment")
+
+
+@router.post("/{draft_id}/equipment/move-item")
+async def post_equipment_move_item(request: Request, draft_id: str):
+    """Move an item between carried / stashed / container locations in the wizard."""
+    draft = _load(request, draft_id)
+    form = await request.form()
+    item_id = str(form.get("item_id", ""))
+    src_kind = str(form.get("src_kind", "carried"))
+    dest_kind = str(form.get("dest_kind", "carried"))
+    dest_id = form.get("dest_id") or None
+
+    containers = [
+        ContainerInstance.model_validate(c) for c in draft.get("containers", [])
+    ]
+
+    def _loc_list(kind: str, loc_id: str | None) -> list:
+        if kind == "carried":
+            return draft.setdefault("inventory", [])
+        if kind == "stashed":
+            return draft.setdefault("stashed", [])
+        if kind == "container":
+            for c in containers:
+                if c.instance_id == loc_id:
+                    return c.contents
+            raise HTTPException(400, f"container {loc_id!r} not found")
+        raise HTTPException(400, f"unsupported location: {kind!r}")
+
+    src_list = _loc_list(src_kind, form.get("src_id") or None)
+    if item_id not in src_list:
+        raise HTTPException(400, f"{item_id!r} not at {src_kind}")
+    dest_list = _loc_list(dest_kind, dest_id)
+    src_list.remove(item_id)
+    dest_list.append(item_id)
+
+    draft["containers"] = [c.model_dump() for c in containers]
     save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/equipment")
 

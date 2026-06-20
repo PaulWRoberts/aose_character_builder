@@ -147,6 +147,44 @@ def test_carried_item_offers_move_to_carrier(client):
     assert 'data-kind="animal"' in r.text   # the mule is an available destination
 
 
+def test_move_coins_invalid_dest_returns_400(client):
+    """A bad/empty dest_kind must surface as a 400, never a 500. The route builds
+    a StorageLocation from form data; an invalid kind raises Pydantic
+    ValidationError, which must be mapped to a client error."""
+    from aose.models import CoinStack
+    _save_char(client, coins=[CoinStack(denom="gp", count=10,
+                                        location=StorageLocation(kind="stashed"))])
+    r = client.post("/character/hero/inventory/move-coins", data={
+        "denom": "gp", "src_kind": "stashed", "src_id": "",
+        "dest_kind": "", "dest_id": "", "count": "4",
+    })
+    assert r.status_code == 400
+
+
+def test_stashed_coins_offer_full_move_control(client):
+    """Stashed coins must render the same full Move dropdown as items — able to
+    target any top-level (e.g. a carrier), not just a one-way 'Carry' button."""
+    from aose.models import AnimalInstance, CoinStack
+    spec = CharacterSpec(
+        name="Hero",
+        abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
+        race_id="human",
+        classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
+        alignment="neutral",
+        animals=[AnimalInstance(instance_id="a1", catalog_id="mule")],
+        coins=[CoinStack(denom="gp", count=10,
+                         location=StorageLocation(kind="stashed"))],
+    )
+    save_character("hero", spec, client._characters_dir)
+    r = client.get("/character/hero")
+    assert r.status_code == 200
+    # The stashed coin stack renders a move-coins form with a full destination
+    # dropdown (move-form + move-dest), and the legacy coin-purse popover is gone.
+    assert "/character/hero/inventory/move-coins" in r.text
+    assert "move-dest" in r.text
+    assert 'id="pop-coins"' not in r.text
+
+
 def test_convert_route_per_stack(client):
     from aose.models import CoinStack
     _save_char(client, coins=[CoinStack(denom="gp", count=3)])

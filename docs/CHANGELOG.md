@@ -8,6 +8,7 @@ For the living architecture (how the subsystems fit together *now*), see
 
 | Date | Feature | Branch | Spec/Plan slug |
 |---|---|---|---|
+| 2026-06-19 | Coin UI consolidation follow-up: coins render as line-items everywhere via a shared `coin_table` macro (full Move dropdown to any location, in-place Convert, Adjust); removed the legacy coin-chip strip + Coin Purse popover; read-only total-wealth readout; move-* routes map an invalid `StorageLocation` to 400 instead of 500 | feat/companions-and-holdings | inventory-consolidation |
 | 2026-06-19 | Inventory consolidation: located coins/treasure (CoinStack + StorageLocation), top-level inventory groups, lowest-first shop spend, storage movement engine | feat/companions-and-holdings | inventory-consolidation |
 | 2026-06-18 | Zine form controls: tightened the global `input`/`select`/`textarea` baseline — condensed Oswald data fields, compact 26px box, inked CSS caret replacing native select chrome (was 14px Bitter + fat padding, oversized & off-typeface) | feat/companions-and-holdings | — |
 | 2026-06-17 | Companions bug-fix pass: shop `equipment_buy` now dispatches Animal/Vehicle to roster instances (were landing in carried inventory → no cards rendered); carriers gain a Load form (mirrors retainer Give/Take); section retitled "Companions & Vehicles" + zine-styled | feat/companions-and-holdings | animals-and-vehicles |
