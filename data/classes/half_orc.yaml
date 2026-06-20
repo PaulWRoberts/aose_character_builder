@@ -4,6 +4,13 @@ source: ose_advanced_fantasy
 prime_requisites:
 - DEX
 - STR
+xp_bonus_tiers:
+- bonus_pct: 5
+  any_of:
+  - {DEX: 13, STR: 13}
+- bonus_pct: 10
+  any_of:
+  - {DEX: 16, STR: 16}
 max_level: 8
 hit_die: 1d6
 name_level: 8

@@ -3,6 +3,14 @@ name: Halfling
 prime_requisites:
 - DEX
 - STR
+xp_bonus_tiers:
+- bonus_pct: 5
+  any_of:
+  - {DEX: 13}
+  - {STR: 13}
+- bonus_pct: 10
+  any_of:
+  - {DEX: 13, STR: 13}
 ability_requirements:
   CON: 9
   DEX: 9

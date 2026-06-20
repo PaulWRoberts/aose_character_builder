@@ -4,6 +4,14 @@ source: carcass_crawler_4
 prime_requisites:
 - CHA
 - DEX
+xp_bonus_tiers:
+- bonus_pct: 5
+  any_of:
+  - {CHA: 13, DEX: 13}
+- bonus_pct: 10
+  any_of:
+  - {CHA: 16, DEX: 13}
+  - {CHA: 13, DEX: 16}
 ability_requirements:
   INT: 9
 max_level: 14

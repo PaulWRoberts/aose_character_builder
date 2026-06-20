@@ -66,7 +66,7 @@
       </div>
       {% for adv in sheet.advancement %}
       <div class="xp-track">
-        <div class="cls">{{ adv.name }} L{{ adv.current_level }}</div>
+        <div class="cls">{{ adv.name }} L{{ adv.current_level }}{% if adv.xp_bonus_pct %} <span class="muted small" title="Prime-requisite experience adjustment">{{ '%+d'|format(adv.xp_bonus_pct) }}% XP</span>{% endif %}</div>
         <div class="bar2">
           {% if adv.at_max %}
           <i style="width:100%"></i>

@@ -4,6 +4,13 @@ source: carcass_crawler_1
 prime_requisites:
 - DEX
 - WIS
+xp_bonus_tiers:
+- bonus_pct: 5
+  any_of:
+  - {DEX: 13, WIS: 13}
+- bonus_pct: 10
+  any_of:
+  - {DEX: 16, WIS: 16}
 max_level: 14
 hit_die: 1d6
 name_level: 9
@@ -85,6 +92,10 @@ progression:
     powers_known: 9
     saves: {death: 8, wands: 9, paralysis: 7, breath: 10, spells: 8}
 features:
+- id: prime_requisites
+  name: Prime requisites
+  text: A kineticist with at least 13 DEX and WIS gains a 5% bonus to experience. A kineticist with at least a 16 in both prime requisites receives a +10% XP bonus.
+  gained_at_level: 1
 - id: combat
   name: Combat
   text: |-

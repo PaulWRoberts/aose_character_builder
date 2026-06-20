@@ -4,6 +4,13 @@ source: ose_advanced_fantasy
 prime_requisites:
 - DEX
 - INT
+xp_bonus_tiers:
+- bonus_pct: 5
+  any_of:
+  - {DEX: 13, INT: 13}
+- bonus_pct: 10
+  any_of:
+  - {DEX: 13, INT: 16}
 ability_requirements:
   CON: 9
 max_level: 8

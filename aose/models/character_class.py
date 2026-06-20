@@ -20,6 +20,33 @@ class ClassLevelData(BaseModel):
     powers_known: int | None = None
 
 
+class XpBonusTier(BaseModel):
+    """One prime-requisite experience-bonus tier.
+
+    AOSE states a *per-class* rule for the +5%/+10% XP bonus, and multi-prime
+    classes vary widely (one ≥13 vs both ≥13 vs a specific ability ≥16, …), so
+    each class encodes its rule as data rather than deriving it from a single
+    score.
+
+    A tier is satisfied when *any* requirement set in ``any_of`` is fully met —
+    i.e. every ability in that set is at or above its listed minimum. The
+    character receives the highest ``bonus_pct`` among satisfied tiers; if none
+    match there is no adjustment. The ``any_of`` list expresses OR across sets,
+    AND within a set, which covers every stated pattern:
+
+    - "one prime ≥13" → ``any_of: [{A: 13}, {B: 13}]``
+    - "both ≥13"      → ``any_of: [{A: 13, B: 13}]``
+    - "A ≥16 and B ≥13" (specific) → ``any_of: [{A: 16, B: 13}]``
+    - "one ≥16, the other ≥13" (symmetric) →
+      ``any_of: [{A: 16, B: 13}, {A: 13, B: 16}]``
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    bonus_pct: int
+    any_of: list[dict[Ability, int]]
+
+
 class ClassFeature(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -49,6 +76,13 @@ class CharClass(BaseModel):
     name: str
     source: str = "ose_classic_fantasy"
     prime_requisites: list[Ability]
+    # Per-class prime-requisite XP-bonus rule (the +5%/+10% experience bonus).
+    # Empty → fall back to the standard single-ability XP table on the lowest
+    # prime score (correct for single-prime classes, and the only path that
+    # carries the low-score XP penalty). Multi-prime classes MUST set this — the
+    # single-ability table can't express "both ≥13". See aose/engine/leveling.py
+    # and XpBonusTier above.
+    xp_bonus_tiers: list[XpBonusTier] = Field(default_factory=list)
     ability_requirements: dict[Ability, int] = Field(default_factory=dict)
     max_level: int = 14
     hit_die: str

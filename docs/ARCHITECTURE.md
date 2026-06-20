@@ -529,9 +529,21 @@ Illusionist/Magic-user/Thief). New languages: `hephaestan`, `language_of_wolves`
   `separate_race_class` are on, each gated by ability requirements +
   `demihuman_class_restrictions`. **XP is per class** (`ClassEntry.xp`, not a
   global). `grant_xp(spec, data, amount)` (`leveling.py`) splits evenly, scales
-  each share by that class's prime-requisite multiplier (lowest score among
-  multi-prime classes), floors, clamps ≥ 0; clawbacks split evenly without the
-  multiplier. **HP** recomputes from raw rolls + effective CON: per gain-event
+  each share by that class's prime-requisite multiplier, floors, clamps ≥ 0;
+  clawbacks split evenly without the multiplier.
+- **Prime-requisite XP bonus** — `prime_req_bonus_pct(cls, abilities)`
+  (`leveling.py`) is the single source of the +5%/+10% experience adjustment
+  (`_prime_req_multiplier` = `1 + pct/100`; `ClassAdvancement.xp_bonus_pct`
+  surfaces it on the sheet's XP track). AOSE states this rule *per class*, and
+  multi-prime classes vary (one ≥13 vs both ≥13 vs a specific ability ≥16, …),
+  so it is **data-driven**: each multi-prime `CharClass` carries
+  `xp_bonus_tiers: list[XpBonusTier]`, an ordered list of `{bonus_pct, any_of}`
+  tiers where `any_of` is OR-of-AND requirement sets (`{AB: min, …}`). The
+  highest satisfied tier wins; no match → no adjustment (tiered classes carry
+  **no** low-score penalty — the book states only bonuses for them). Classes
+  with no tiers (single-prime, or none) fall back to the standard single-ability
+  XP table on the lowest prime score — the only path that still applies the
+  −10%/−20% low-score penalty. **HP** recomputes from raw rolls + effective CON: per gain-event
   `max(1, event_roll_sum / N + CON_mod)` summed as exact `Fraction`s, floored once
   (order-independent; N=1 = the old single-class formula). `hp_remainder` exposes
   the leftover. Saves/THAC0 take the best across classes.

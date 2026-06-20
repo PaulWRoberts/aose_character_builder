@@ -25,18 +25,35 @@ from aose.engine.dice import roll_hp
 from aose.models import CharacterSpec, ClassEntry
 
 
-def _prime_req_multiplier(cls, abilities: dict) -> float:
-    """The class's prime-requisite XP multiplier.
+def prime_req_bonus_pct(cls, abilities: dict) -> int:
+    """The class's prime-requisite XP *bonus* as a whole-percent integer.
 
-    Classes with a single prime requisite use that score.  For classes with
-    multiple prime requisites we use the *lowest* of them (a conservative,
-    uniform rule — the per-class multi-prime tables in the book vary, so this is
-    a deliberate simplification).  No prime requisites → no adjustment.
+    Multi-prime classes carry explicit ``xp_bonus_tiers`` (the per-class
+    +5%/+10% rule, which varies — see ``XpBonusTier``): the bonus is the highest
+    ``bonus_pct`` whose tier is satisfied, or 0 if none match (no low-score
+    penalty for tiered classes — AOSE states only bonuses for them).
+
+    Classes without tiers (single-prime, and any with no prime requisite) fall
+    back to the standard single-ability XP table on the lowest prime score,
+    which is the path that also carries the low-score penalty. Returns the
+    bonus relative to 100% (e.g. +5 for the +5% band, −10 for the −10% band).
     """
     if not cls.prime_requisites:
-        return 1.0
+        return 0
+    if cls.xp_bonus_tiers:
+        best = 0
+        for tier in cls.xp_bonus_tiers:
+            if any(all(abilities[ab] >= mn for ab, mn in req.items())
+                   for req in tier.any_of):
+                best = max(best, tier.bonus_pct)
+        return best
     score = min(abilities[ab] for ab in cls.prime_requisites)
-    return prime_requisite_xp_multiplier(score)
+    return round((prime_requisite_xp_multiplier(score) - 1.0) * 100)
+
+
+def _prime_req_multiplier(cls, abilities: dict) -> float:
+    """The class's prime-requisite XP multiplier (1.0 = no adjustment)."""
+    return 1.0 + prime_req_bonus_pct(cls, abilities) / 100.0
 
 
 def grant_xp(spec: CharacterSpec, data: GameData, amount: int) -> None:
@@ -80,6 +97,7 @@ class ClassAdvancement(BaseModel):
     current_xp: int             # the class's own XP count
     can_level: bool
     at_max: bool
+    xp_bonus_pct: int           # prime-requisite XP bonus actually applied (+5/+10/…)
 
 
 def class_advancement(spec: CharacterSpec, data: GameData,
@@ -90,6 +108,7 @@ def class_advancement(spec: CharacterSpec, data: GameData,
     current = entry.xp
     current_level_data = cls.progression.get(entry.level)
     current_threshold = current_level_data.xp_required if current_level_data else 0
+    xp_bonus_pct = prime_req_bonus_pct(cls, spec.abilities)
 
     if next_level > eff_max or next_level not in cls.progression:
         return ClassAdvancement(
@@ -102,6 +121,7 @@ def class_advancement(spec: CharacterSpec, data: GameData,
             current_xp=current,
             can_level=False,
             at_max=True,
+            xp_bonus_pct=xp_bonus_pct,
         )
 
     threshold = cls.progression[next_level].xp_required
@@ -115,6 +135,7 @@ def class_advancement(spec: CharacterSpec, data: GameData,
         current_xp=current,
         can_level=current >= threshold,
         at_max=False,
+        xp_bonus_pct=xp_bonus_pct,
     )
 
 

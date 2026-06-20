@@ -4,6 +4,14 @@ source: carcass_crawler_1
 prime_requisites:
 - DEX
 - STR
+xp_bonus_tiers:
+- bonus_pct: 5
+  any_of:
+  - {DEX: 13}
+  - {STR: 13}
+- bonus_pct: 10
+  any_of:
+  - {DEX: 16, STR: 16}
 ability_requirements:
   DEX: 9
 max_level: 8
@@ -48,6 +56,10 @@ progression:
     thac0: 14
     saves: {death: 4, wands: 5, paralysis: 6, breath: 7, spells: 8}
 features:
+- id: prime_requisites
+  name: Prime requisites
+  text: A goblin with at least 13 in one prime requisite gains a 5% bonus to experience. If both DEX and STR are 16 or higher, the goblin gets a +10% bonus.
+  gained_at_level: 1
 - id: combat
   name: Combat
   text: |-

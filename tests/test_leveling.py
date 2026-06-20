@@ -16,7 +16,8 @@ from aose.engine.leveling import (
     grant_xp,
     level_up,
 )
-from aose.models import CharacterSpec, ClassEntry, RuleSet
+from aose.engine.leveling import _prime_req_multiplier
+from aose.models import Ability, CharacterSpec, ClassEntry, RuleSet
 from aose.web.app import create_app
 
 PROJECT_ROOT = Path(__file__).parent.parent
@@ -54,6 +55,77 @@ def _spec(level=1, xp=0, hp_rolls=None, multi=False, ruleset=None, abilities=Non
 @pytest.fixture(scope="module")
 def data():
     return GameData.load(DATA_DIR)
+
+
+# ── prime-requisite XP multiplier (data-driven tiers) ───────────────────────
+
+def _abil(**overrides):
+    """A full ability dict (Ability-keyed) with neutral 12s, overridden."""
+    base = {a: 12 for a in Ability}
+    for k, v in overrides.items():
+        base[Ability[k]] = v
+    return base
+
+
+@pytest.mark.parametrize("class_id, abilities, expected", [
+    # ── single prime (fighter STR): standard table, penalties included ──
+    ("fighter", _abil(STR=18), 1.10),   # 16+ → +10%
+    ("fighter", _abil(STR=14), 1.05),   # 13–15 → +5%
+    ("fighter", _abil(STR=12), 1.00),   # 9–12 → none
+    ("fighter", _abil(STR=7), 0.90),    # 6–8 → −10% penalty (single-prime keeps it)
+    # ── Pattern A: one ≥13 → 5%, both ≥13 → 10% (halfling_reeve = the bug) ──
+    ("halfling_reeve", _abil(CON=14, WIS=18), 1.10),  # both ≥13 → +10% (was 1.05)
+    ("halfling_reeve", _abil(CON=12, WIS=18), 1.05),  # only WIS ≥13 → +5%
+    ("halfling_reeve", _abil(CON=12, WIS=12), 1.00),  # neither → none (no penalty)
+    # ── Pattern B: one ≥13 → 5%, both ≥16 → 10% (barbarian) ──
+    ("barbarian", _abil(STR=16, CON=13), 1.05),   # only one ≥16 → still +5%
+    ("barbarian", _abil(STR=16, CON=16), 1.10),   # both ≥16 → +10%
+    # ── Pattern C, specific ability needs 16 (elf: INT≥16 & STR≥13) ──
+    ("elf", _abil(INT=16, STR=13), 1.10),   # the named ability is the 16 → +10%
+    ("elf", _abil(INT=13, STR=16), 1.05),   # 16 on the wrong ability → only +5%
+    ("elf", _abil(INT=13, STR=13), 1.05),   # both ≥13 → +5%
+    ("elf", _abil(INT=12, STR=16), 1.00),   # INT below 13 → none
+    # ── Pattern C, symmetric "one ≥16, other ≥13" (half_elf) ──
+    ("half_elf", _abil(INT=16, STR=13), 1.10),
+    ("half_elf", _abil(INT=13, STR=16), 1.10),
+    ("half_elf", _abil(INT=13, STR=13), 1.05),
+    # ── Pattern D: both ≥13 → 5%, both ≥16 → 10% (half_orc) ──
+    ("half_orc", _abil(DEX=16, STR=16), 1.10),
+    ("half_orc", _abil(DEX=16, STR=13), 1.05),
+    # ── previously-unstated class, now sourced (mage: INT≥16 & WIS≥13) ──
+    ("mage", _abil(INT=16, WIS=13), 1.10),
+    ("mage", _abil(INT=13, WIS=16), 1.05),
+])
+def test_prime_req_multiplier_data_driven(data, class_id, abilities, expected):
+    cls = data.classes[class_id]
+    assert _prime_req_multiplier(cls, abilities) == pytest.approx(expected)
+
+
+def _reeve_spec(con, wis):
+    return CharacterSpec(
+        name="Reeve",
+        abilities={"STR": 10, "INT": 10, "WIS": wis, "DEX": 12, "CON": con, "CHA": 10},
+        race_id="halfling",
+        classes=[ClassEntry(class_id="halfling_reeve", level=1, xp=0, hp_rolls=[6])],
+        alignment="law",
+    )
+
+
+def test_class_advancement_exposes_prime_req_bonus(data):
+    # Both primes ≥13 → the reeve's +10% tier; the old min()-table gave +5%.
+    adv = class_advancement(_reeve_spec(con=14, wis=18), data,
+                            _reeve_spec(con=14, wis=18).classes[0])
+    assert adv.xp_bonus_pct == 10
+
+
+def test_every_multi_prime_class_has_xp_bonus_tiers(data):
+    """Any class with 2+ prime requisites must encode explicit XP tiers — the
+    single-ability table is wrong for them (it can't express 'both ≥13')."""
+    missing = [
+        c.id for c in data.classes.values()
+        if len(c.prime_requisites) > 1 and not c.xp_bonus_tiers
+    ]
+    assert missing == []
 
 
 # ── grant_xp ────────────────────────────────────────────────────────────────
@@ -369,6 +441,14 @@ def test_sheet_shows_max_level_label(client):
     r = client.get("/character/test")
     # At max level the xp-track row shows a "Max" pill instead of a button.
     assert ">Max<" in r.text
+
+
+def test_sheet_shows_prime_req_xp_bonus(client):
+    """A reeve with both primes ≥13 shows the +10% prime-requisite XP bonus."""
+    spec = _reeve_spec(con=14, wis=18)
+    save_character("reeve", spec, client._characters_dir)
+    r = client.get("/character/reeve")
+    assert "+10% XP" in r.text
 
 
 def test_grant_xp_form_present(client):

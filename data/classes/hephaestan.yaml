@@ -4,6 +4,13 @@ source: carcass_crawler_1
 prime_requisites:
 - INT
 - WIS
+xp_bonus_tiers:
+- bonus_pct: 5
+  any_of:
+  - {INT: 13, WIS: 13}
+- bonus_pct: 10
+  any_of:
+  - {INT: 16, WIS: 13}
 ability_requirements:
   CHA: 9
   CON: 9
@@ -60,6 +67,10 @@ progression:
     thac0: 12
     saves: {death: 6, wands: 7, paralysis: 8, breath: 8, spells: 8}
 features:
+- id: prime_requisites
+  name: Prime requisites
+  text: A hephaestan with at least 13 INT and WIS gains a 5% bonus to experience. A hephaestan with an INT of at least 16 and a WIS of at least 13 gains a 10% XP bonus.
+  gained_at_level: 1
 - id: combat
   name: Combat
   text: |-

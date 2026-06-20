@@ -4,6 +4,14 @@ source: carcass_crawler_4
 prime_requisites:
 - CHA
 - CON
+xp_bonus_tiers:
+- bonus_pct: 5
+  any_of:
+  - {CHA: 13}
+  - {CON: 13}
+- bonus_pct: 10
+  any_of:
+  - {CHA: 13, CON: 13}
 ability_requirements:
   CHA: 9
   CON: 9

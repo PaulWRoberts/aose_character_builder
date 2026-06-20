@@ -4,6 +4,14 @@ source: carcass_crawler_3
 prime_requisites:
 - STR
 - WIS
+xp_bonus_tiers:
+- bonus_pct: 5
+  any_of:
+  - {STR: 13}
+  - {WIS: 13}
+- bonus_pct: 10
+  any_of:
+  - {STR: 16, WIS: 16}
 max_level: 14
 hit_die: 1d6
 name_level: 9
@@ -29,6 +37,10 @@ progression:
   13: {xp_required: 720000, thac0: 12, saves: {death: 5, wands: 6, paralysis: 6, breath: 9, spells: 10}}
   14: {xp_required: 840000, thac0: 12, saves: {death: 5, wands: 6, paralysis: 6, breath: 9, spells: 10}}
 features:
+- id: prime_requisites
+  name: Prime requisites
+  text: A beast master with at least 13 in one prime requisite gets +5% to XP. If both STR and WIS are 16 or higher, the character gets a +10% bonus.
+  gained_at_level: 1
 - id: animal_companions
   name: Animal Companions
   text: |-

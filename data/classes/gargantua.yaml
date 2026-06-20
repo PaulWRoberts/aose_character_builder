@@ -4,6 +4,13 @@ source: carcass_crawler_1
 prime_requisites:
 - CON
 - STR
+xp_bonus_tiers:
+- bonus_pct: 5
+  any_of:
+  - {CON: 13, STR: 13}
+- bonus_pct: 10
+  any_of:
+  - {STR: 16, CON: 13}
 ability_requirements:
   CON: 9
   STR: 9
@@ -57,6 +64,10 @@ progression:
     thac0: 12
     saves: {death: 2, wands: 3, paralysis: 4, breath: 4, spells: 6}
 features:
+- id: prime_requisites
+  name: Prime requisites
+  text: A gargantua with at least 13 CON and STR gains a 5% bonus to experience. A gargantua with a STR of at least 16 and a CON of at least 13 receives a +10% XP bonus.
+  gained_at_level: 1
 - id: combat
   name: Combat
   text: |-

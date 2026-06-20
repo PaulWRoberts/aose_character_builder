@@ -3,6 +3,13 @@ name: Elf
 prime_requisites:
 - INT
 - STR
+xp_bonus_tiers:
+- bonus_pct: 5
+  any_of:
+  - {INT: 13, STR: 13}
+- bonus_pct: 10
+  any_of:
+  - {INT: 16, STR: 13}
 ability_requirements:
   INT: 9
 max_level: 10

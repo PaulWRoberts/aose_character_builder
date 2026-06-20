@@ -4,6 +4,13 @@ source: carcass_crawler_1
 prime_requisites:
 - INT
 - WIS
+xp_bonus_tiers:
+- bonus_pct: 5
+  any_of:
+  - {INT: 13, WIS: 13}
+- bonus_pct: 10
+  any_of:
+  - {INT: 16, WIS: 13}
 max_level: 14
 hit_die: 1d6
 name_level: 9
@@ -75,6 +82,10 @@ progression:
     thac0: 14
     saves: {death: 7, wands: 8, paralysis: 7, breath: 10, spells: 7}
 features:
+- id: prime_requisites
+  name: Prime requisites
+  text: A mage with at least 13 INT and WIS gains a 5% bonus to XP. A mage with an INT of at least 16 and a WIS of at least 13 receives a 10% XP bonus.
+  gained_at_level: 1
 - id: arcane_magic
   name: Arcane Magic
   text: |-

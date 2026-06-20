@@ -4,6 +4,13 @@ source: carcass_crawler_2
 prime_requisites:
 - DEX
 - WIS
+xp_bonus_tiers:
+- bonus_pct: 5
+  any_of:
+  - {DEX: 13, WIS: 13}
+- bonus_pct: 10
+  any_of:
+  - {DEX: 16, WIS: 13}
 ability_requirements:
   DEX: 9
   INT: 9
