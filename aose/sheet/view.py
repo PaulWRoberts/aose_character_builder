@@ -1322,10 +1322,16 @@ def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevel
 
     # ── Carried ───────────────────────────────────────────────────────────────
     carried_loc = StorageLocation(kind="carried")
+    pc_attacks = attack_profiles(spec, data)
+    pc_worn = _equipped(spec, data)
+    pc_magic = [mi for mi in _magic_items(spec, data) if mi.equipped]
     groups.append(TopLevelGroup(
         kind="carried", label="Carried",
-        has_equipped=bool(inv_view.equipped),
+        has_equipped=bool(pc_attacks or pc_worn or pc_magic),
         equipped=inv_view.equipped,
+        equipped_attacks=pc_attacks,
+        equipped_worn=pc_worn,
+        equipped_magic=pc_magic,
         loose=inv_view.carried,
         coins=_coin_rows(carried_loc),
         treasure_gems=_gem_rows(carried_loc),
@@ -1351,9 +1357,17 @@ def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevel
         label = animal.name or (catalog.name if catalog else animal.catalog_id)
         count: Counter = Counter(animal.contents)
         barding = [_build_row(animal.armor_id, 1, data)] if animal.armor_id else []
+        barding_worn = (
+            [EquippedRow(slot="barding",
+                         item_name=(data.items[animal.armor_id].name
+                                    if animal.armor_id in data.items else animal.armor_id),
+                         item_id=animal.armor_id)]
+            if animal.armor_id else []
+        )
         groups.append(TopLevelGroup(
             kind="animal", id=animal.instance_id, label=label,
-            has_equipped=bool(barding), equipped=barding,
+            has_equipped=bool(barding_worn), equipped=barding,
+            equipped_worn=barding_worn,
             loose=sorted([_build_row(i, n, data) for i, n in count.items()],
                          key=lambda r: r.name),
             coins=_coin_rows(animal_loc),
@@ -1387,9 +1401,19 @@ def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevel
                      if s.location == ret_carried and s.count > 0]
         ret_equipped = [_build_row(iid, 1, data)
                         for iid in retainer.spec.equipped.values()]
+        ret_attacks = attack_profiles(retainer.spec, data)
+        ret_worn = [
+            EquippedRow(slot=slot,
+                        item_name=(data.items[iid].name if iid in data.items else iid),
+                        item_id=iid)
+            for slot, iid in retainer.spec.equipped.items()
+            if slot != "main_hand"   # main-hand weapon shown as an attack row
+        ]
         groups.append(TopLevelGroup(
             kind="retainer", id=retainer.id, label=retainer.spec.name,
-            has_equipped=bool(ret_equipped), equipped=ret_equipped,
+            has_equipped=bool(ret_attacks or ret_worn), equipped=ret_equipped,
+            equipped_attacks=ret_attacks,
+            equipped_worn=ret_worn,
             loose=sorted([_build_row(i, n, data) for i, n in count.items()],
                          key=lambda r: r.name),
             coins=ret_coins,

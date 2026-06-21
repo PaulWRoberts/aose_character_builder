@@ -144,3 +144,47 @@ def test_wealth_total_on_sheet(data):
         coins=[CoinStack(denom="gp", count=42)],
     ))
     assert build_sheet(spec, data).total_wealth_gp == 42
+
+
+def test_carried_equipped_attacks_mirror_pc_attacks(data):
+    from aose.models import CharacterSpec, ClassEntry
+    from aose.sheet.view import build_inventory_groups
+    spec = CharacterSpec(
+        name="Hero",
+        abilities={"STR": 13, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
+        race_id="human",
+        classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
+        alignment="neutral",
+        inventory=["sword"], equipped={"main_hand": "sword"},
+    )
+    carried = next(g for g in build_inventory_groups(spec, data) if g.kind == "carried")
+    assert carried.equipped_attacks, "PC carried group should expose weapon attack rows"
+    assert any(a.name.lower().startswith("sword") for a in carried.equipped_attacks)
+
+
+def test_retainer_equipped_attacks_computed_from_npc_spec(data):
+    from aose.models import CharacterSpec, ClassEntry, Retainer
+    from aose.sheet.view import build_inventory_groups
+    npc = CharacterSpec(
+        name="Hireling",
+        abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
+        race_id="human",
+        classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[5])],
+        alignment="neutral",
+        inventory=["dagger"], equipped={"main_hand": "dagger"},
+    )
+    spec = _base_spec(retainers=[Retainer(id="r1", spec=npc, loyalty=7)])
+    retainer = next(g for g in build_inventory_groups(spec, data) if g.kind == "retainer")
+    assert retainer.equipped_attacks, "retainer should expose computed attack rows"
+    a = retainer.equipped_attacks[0]
+    assert hasattr(a, "to_hit_ascending") and hasattr(a, "damage")
+
+
+def test_animal_barding_in_equipped_worn(data):
+    from aose.models import AnimalInstance
+    from aose.sheet.view import build_inventory_groups
+    spec = _base_spec(animals=[AnimalInstance(
+        instance_id="a1", catalog_id="war_dog", armor_id="dog_armour")])
+    animal = next(g for g in build_inventory_groups(spec, data) if g.kind == "animal")
+    assert animal.equipped_worn, "animal barding should appear as a worn row"
+    assert any(getattr(r, "item_id", None) == "dog_armour" for r in animal.equipped_worn)
