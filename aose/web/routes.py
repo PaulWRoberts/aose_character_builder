@@ -1986,6 +1986,21 @@ async def retainer_take(request: Request, character_id: str, retainer_id: str,
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
+@router.post("/character/{character_id}/retainer/{retainer_id}/unequip")
+async def retainer_unequip(request: Request, character_id: str, retainer_id: str,
+                           item_id: str = Form(...)):
+    spec = _load_spec_or_404(request, character_id)
+    ret = next((r for r in spec.retainers if r.id == retainer_id), None)
+    if ret is None:
+        raise HTTPException(404, "No such retainer")
+    try:
+        ret.spec.equipped = _unequip(item_id, equipped=ret.spec.equipped)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
 @router.post("/character/{character_id}/retainer/{retainer_id}/equip")
 async def retainer_equip(request: Request, character_id: str, retainer_id: str,
                          item_id: str = Form(...),

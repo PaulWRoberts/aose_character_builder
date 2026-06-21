@@ -96,3 +96,14 @@ def test_retainer_equip_missing_item_400(client):
     resp = client.post(f"/character/{cid}/retainer/{rid}/equip",
                        data={"item_id": "nonexistent"})
     assert resp.status_code == 400
+
+
+def test_retainer_unequip_route(client):
+    cid, rid = _save_char_with_retainer(client)
+    client.post(f"/character/{cid}/retainer/{rid}/equip", data={"item_id": "dagger"})
+    resp = client.post(f"/character/{cid}/retainer/{rid}/unequip",
+                       data={"item_id": "dagger"})
+    assert resp.status_code == 303
+    spec = load_character(cid, client._characters_dir)
+    assert "dagger" not in spec.retainers[0].spec.equipped.values()
+    assert "dagger" in spec.retainers[0].spec.inventory
