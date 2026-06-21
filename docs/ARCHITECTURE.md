@@ -334,7 +334,7 @@ granting class's level. `CharacterSpec.innate_uses: dict[str, int]` tracks
 uses-spent; `spend_innate`/`restore_innate`/`reset_innate` mutate it.
 Routes `/character/{id}/innate/{spend,restore,reset}` mirror the powers routes.
 `rest_night` and `rest_full_day` call `reset_innate`. The sheet renders an
-"Innate Abilities" block (column 3, alongside Mental Powers) styled like the
+"Innate Abilities" block (full-width below the grid, alongside Spells and Mental Powers) styled like the
 spellbook: each ability is a pip row (ready/spent) that opens a dedicated
 `modal-innate-{id}` overlay carrying the Use/Restore forms (plus a spell-detail
 expander when `spell_id` is set). The actions **must** live in that standalone
@@ -476,15 +476,23 @@ Illusionist/Magic-user/Thief). New languages: `hephaestan`, `language_of_wolves`
 - **Top-level inventory groups** — `sheet.inventory_groups: list[TopLevelGroup]`
   (Carried, Stashed, one per animal, one per vehicle, one per retainer) with
   `loose`, `equipped`, `coins`, `treasure_gems`, `treasure_jewellery`, `containers`
-  sub-lists. `build_inventory_groups(spec, data)` in `aose/sheet/view.py` builds
-  this. `sheet.total_wealth_gp: int` for the wealth readout.
+  sub-lists, plus rich display lists `equipped_attacks` (AttackProfile), `equipped_worn`
+  (EquippedRow), `equipped_magic` (MagicItemView). `build_inventory_groups(spec, data)`
+  in `aose/sheet/view.py` builds this. `sheet.total_wealth_gp: int` for the wealth
+  readout. The live sheet renders `sheet.inventory_groups` as a collapsible accordion
+  in layout column 3 (one `<details class="inv-pane">` per group, Carried open by
+  default); custom items live in an "Other Possessions" pane at the bottom. Spells /
+  Mental Powers / Innate Abilities moved to a full-width `.spells-fullwidth` grid below
+  the layout. Companions cards no longer hold storage UI — all carrier/retainer
+  inventory is visible in the accordion. Container modals use `/inventory/move-container`
+  (generic Move) rather than stash/unstash.
 - **Coin rendering** — coins are line-items everywhere, not a separate tracker. The
   `coin_table(coins, prefix, groups, cur_kind, cur_id)` macro in `_equipment_ui.html`
   renders each stack with a full Move dropdown (`move_dest_control` → any top-level /
   container, JS-populated `dest_kind`/`dest_id`), an in-place Convert, and an Adjust;
-  it is shared by Carried, Stashed, and every carrier/retainer group. The live sheet's
-  three columns show carried/stashed coin stacks as `<li>` rows; the section bar shows
-  a read-only `total_wealth_gp`. There is no coin-chip strip or Coin-Purse popover.
+  it is shared by Carried, Stashed, and every carrier/retainer group. The accordion
+  pane for each group shows its coin stacks inline; the section bar shows a read-only
+  `total_wealth_gp`. There is no coin-chip strip or Coin-Purse popover.
 - **Move-route robustness** — `_loc(kind, id)` in `routes.py` builds the
   `StorageLocation` for every `/inventory/move-*` (and `/coins/add`,`/coins/convert`)
   route, mapping a bad/empty kind to HTTP 400 (Pydantic `ValidationError` would

@@ -8,6 +8,7 @@ For the living architecture (how the subsystems fit together *now*), see
 
 | Date | Feature | Branch | Spec/Plan slug |
 |---|---|---|---|
+| 2026-06-20 | Unified expandable inventory box (all top-level inventories as collapsible accordion in col 3; rich equipped display per group; nested containers; coins anywhere; Other Possessions pane; generalized Move from any location; Spells to full-width; Companions shed storage UI) | feat/unified-inventory-box | 2026-06-20-unified-inventory-box |
 | 2026-06-19 | Prime-requisite XP bonus is now data-driven per class (`CharClass.xp_bonus_tiers`): fixes multi-prime classes (e.g. halfling reeve with both primes ≥13 now gets +10%, not +5%) where the old lowest-score lookup was wrong; added missing prime-req feature text to 7 CC1/CC3 classes; `ClassAdvancement.xp_bonus_pct` shows the applied bonus on the sheet | main | — |
 | 2026-06-19 | Coin UI consolidation follow-up: coins render as line-items everywhere via a shared `coin_table` macro (full Move dropdown to any location, in-place Convert, Adjust); removed the legacy coin-chip strip + Coin Purse popover; read-only total-wealth readout; move-* routes map an invalid `StorageLocation` to 400 instead of 500 | feat/companions-and-holdings | inventory-consolidation |
 | 2026-06-19 | Inventory consolidation: located coins/treasure (CoinStack + StorageLocation), top-level inventory groups, lowest-first shop spend, storage movement engine | feat/companions-and-holdings | inventory-consolidation |
