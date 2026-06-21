@@ -801,6 +801,21 @@ also returns a non-None block when `retainer_class_options` exist (so the add
 form is visible even for PCs with no existing companions). `CharacterSheet`
 gains `race_id` and `retainer_class_options: list[dict]`.
 
-**Routes**: 9 POST routes under `/character/{id}/retainer/` — `add`, `{rid}/remove`,
+**Routes**: 11 POST routes under `/character/{id}/retainer/` — `add`, `{rid}/remove`,
 `{rid}/loyalty`, `{rid}/role`, `{rid}/xp`, `{rid}/levelup`, `{rid}/promote`,
-`{rid}/give`, `{rid}/take`.
+`{rid}/give`, `{rid}/take`, `{rid}/equip`, `{rid}/unequip`.
+
+`{rid}/equip` reuses `equip.equip` (same engine as the PC), omitting
+`allowed_weapons`/`allowed_armor` (NPCs — DM controls gear). `{rid}/unequip`
+reuses `equip.unequip`. Both redirect to the character sheet on success.
+
+**Animal barding unequip**: `POST /character/{id}/animal/{inst_id}/unequip`
+wraps `companions_engine.clear_armor`, returning the barding to the PC's
+carried inventory (same as setting `armor_id=""` via the armor select form).
+
+**Live-sheet click-to-modal**: equipped rows in retainer and animal inventory
+panes are now clickable (was only the PC's carried pane). `_inv_pane.html`
+computes `eq_modal_prefix` per group kind (`"equipped"` for carried,
+`"retainer-{id}-eq"` / `"animal-{id}-eq"` otherwise). Modals are emitted in
+`sheet.html`; retainer loose-item modals use a per-retainer URL prefix so the
+Equip action in `_inv_row_actions.html` targets the retainer's equip route.
