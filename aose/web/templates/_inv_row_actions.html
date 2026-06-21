@@ -4,7 +4,7 @@
    (`_equipment_ui.html`) and the sheet's per-item modals (`sheet.html`).
    `state` is "equipped" | "carried" | "stashed". #}
 {% from "_move_dest.html" import move_dest_control with context %}
-{% macro inv_row_actions(row, target_url_prefix, state, show_remove=True) %}
+{% macro inv_row_actions(row, target_url_prefix, state, show_remove=True, src_id="") %}
     {% if state == "equipped" %}
     <form method="post" action="{{ target_url_prefix }}/unequip" class="inline-form">
         <input type="hidden" name="item_id" value="{{ row.id }}">
@@ -30,19 +30,19 @@
         <button type="submit">Unstash</button>
     </form>
     {% endif %}
-    {% if state in ("carried", "stashed") and inv_move_groups is defined %}
+    {% if inv_move_groups is defined %}
     <form method="post" action="{{ inv_move_url }}" class="inline-form move-form">
         <input type="hidden" name="item_id" value="{{ row.id }}">
         <input type="hidden" name="src_kind" value="{{ state }}">
-        <input type="hidden" name="src_id" value="">
-        {{ move_dest_control(inv_move_groups, state, none) }}
+        <input type="hidden" name="src_id" value="{{ src_id }}">
+        {{ move_dest_control(inv_move_groups, state, src_id) }}
     </form>
     {% endif %}
     {% if show_remove %}
     <form method="post" action="{{ target_url_prefix }}/remove" class="remove-form inline-form">
         <input type="hidden" name="item_id" value="{{ row.id }}">
         <input type="hidden" name="from_state" value="{{ state }}">
-        <button type="submit" name="mode" value="drop"
+        <button type="submit" name="mode" value="drop" class="danger"
                 title="Throw away — no gold back">Drop</button>
     </form>
     <form method="post" action="{{ target_url_prefix }}/remove" class="sell-form inline-form">
