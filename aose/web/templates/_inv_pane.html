@@ -7,6 +7,11 @@
 {%- set n_items = group.loose|length + group.equipped_attacks|length
                   + group.equipped_worn|length + group.equipped_magic|length
                   + group.containers|length -%}
+{%- if group.kind == "carried" -%}{%- set eq_modal_prefix = "equipped" -%}
+{%- elif group.kind == "retainer" -%}{%- set eq_modal_prefix = "retainer-" ~ group.id ~ "-eq" -%}
+{%- elif group.kind == "animal" -%}{%- set eq_modal_prefix = "animal-" ~ group.id ~ "-eq" -%}
+{%- else -%}{%- set eq_modal_prefix = "" -%}
+{%- endif -%}
 <details class="inv-pane"{% if open %} open{% endif %} data-pane-kind="{{ group.kind }}">
   <summary class="inv-pane-head">
     <span class="inv-pane-name">{{ group.label }}</span>
@@ -22,7 +27,7 @@
     <div class="subhead">Equipped</div>
     <ul class="inv-list">
       {% for atk in group.equipped_attacks %}
-      <li{% if atk.manageable_item_id and group.kind == "carried" %} class="clickable" data-modal="modal-item-equipped-{{ atk.manageable_item_id }}"{% endif %}>
+      <li{% if atk.manageable_item_id and eq_modal_prefix %} class="clickable" data-modal="modal-item-{{ eq_modal_prefix }}-{{ atk.manageable_item_id }}"{% endif %}>
         <span>{{ atk.name }}{% if atk.count > 1 %} ×{{ atk.count }}{% endif %}
           {% if atk.specialised %}<span class="tag">spec</span>{% endif %}
           {% if not atk.proficient %}<span class="tag faint">non-prof</span>{% endif %}
@@ -33,7 +38,7 @@
       </li>
       {% endfor %}
       {% for e in group.equipped_worn %}
-      <li{% if e.item_id and group.kind == "carried" %} class="clickable" data-modal="modal-item-equipped-{{ e.item_id }}"{% endif %}>
+      <li{% if e.item_id and eq_modal_prefix %} class="clickable" data-modal="modal-item-{{ eq_modal_prefix }}-{{ e.item_id }}"{% endif %}>
         <span>{{ e.item_name }}</span><span class="st">{{ e.slot | title }}</span>
       </li>
       {% endfor %}
