@@ -344,8 +344,8 @@ def test_sheet_inventory_shows_equipped_section(client):
     actionable signal."""
     _seed(client, inventory=["sword"], equipped={"main_hand": "sword"})
     r = client.get("/character/test")
-    # New zine sheet uses <h4> headers, not inv-section-head class.
-    assert "<h4>Equipped</h4>" in r.text
+    # Accordion pane uses subhead divs; unequip form lives in the item modal.
+    assert "Equipped" in r.text
     assert 'action="/character/test/equipment/unequip"' in r.text
 
 

@@ -33,7 +33,9 @@
       </li>
       {% endfor %}
       {% for e in group.equipped_worn %}
-      <li><span>{{ e.item_name }}</span><span class="st">{{ e.slot | title }}</span></li>
+      <li{% if e.item_id and group.kind == "carried" %} class="clickable" data-modal="modal-item-equipped-{{ e.item_id }}"{% endif %}>
+        <span>{{ e.item_name }}</span><span class="st">{{ e.slot | title }}</span>
+      </li>
       {% endfor %}
       {% for mi in group.equipped_magic %}
       <li class="clickable" data-modal="modal-magic-{{ mi.instance_id }}">
