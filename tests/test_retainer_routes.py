@@ -58,3 +58,41 @@ def test_add_normal_human_retainer(client):
     assert resp.status_code == 303
     spec = load_character(cid, client._characters_dir)
     assert spec.retainers[0].spec.classes[0].class_id == "normal_human"
+
+
+def _save_char_with_retainer(client) -> tuple[str, str]:
+    """PC with one fighter retainer holding a loose dagger. Returns (cid, ret_id)."""
+    from aose.engine import retainers as retainers_engine
+    from aose.data.loader import GameData
+    data = GameData.load(DATA_DIR)
+    pc = CharacterSpec(
+        name="Boss",
+        abilities={"STR": 12, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 13},
+        race_id="human",
+        classes=[ClassEntry(class_id="fighter", level=3, hp_rolls=[8, 8, 8])],
+        alignment="neutral",
+    )
+    ret = retainers_engine.generate_retainer(
+        name="Sten", class_ids=["fighter"], level=1, race_id="human",
+        alignment="neutral", hiring_spec=pc, data=data)
+    ret.spec.equipped = {}
+    ret.spec.inventory = ["dagger"]
+    pc.retainers = [ret]
+    save_character("boss", pc, client._characters_dir)
+    return "boss", ret.id
+
+
+def test_retainer_equip_route(client):
+    cid, rid = _save_char_with_retainer(client)
+    resp = client.post(f"/character/{cid}/retainer/{rid}/equip",
+                       data={"item_id": "dagger"})
+    assert resp.status_code == 303
+    spec = load_character(cid, client._characters_dir)
+    assert spec.retainers[0].spec.equipped.get("main_hand") == "dagger"
+
+
+def test_retainer_equip_missing_item_400(client):
+    cid, rid = _save_char_with_retainer(client)
+    resp = client.post(f"/character/{cid}/retainer/{rid}/equip",
+                       data={"item_id": "nonexistent"})
+    assert resp.status_code == 400

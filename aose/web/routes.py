@@ -1984,3 +1984,26 @@ async def retainer_take(request: Request, character_id: str, retainer_id: str,
         raise HTTPException(400, str(e))
     save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/retainer/{retainer_id}/equip")
+async def retainer_equip(request: Request, character_id: str, retainer_id: str,
+                         item_id: str = Form(...),
+                         slot: str | None = Form(None)):
+    spec = _load_spec_or_404(request, character_id)
+    data = request.app.state.game_data
+    ret = next((r for r in spec.retainers if r.id == retainer_id), None)
+    if ret is None:
+        raise HTTPException(404, "No such retainer")
+    try:
+        ret.spec.equipped = _equip(
+            item_id,
+            inventory=ret.spec.inventory, equipped=ret.spec.equipped,
+            enchanted=ret.spec.enchanted, data=data,
+            slot=slot,
+            two_weapon=ret.spec.ruleset.two_weapon_fighting,
+        )
+    except (ValueError, WieldError) as e:
+        raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
