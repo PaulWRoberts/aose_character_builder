@@ -64,40 +64,6 @@
         {% endif %}
       </div>
 
-      {% if a.load_capacity %}
-      <details class="companion-load">
-        <summary>Load {{ a.load_used }} / {{ a.load_capacity }} cn</summary>
-        {% if a.contents %}
-        <ul class="contents-list">
-          {% for row in a.contents %}
-          <li>
-            <span>{{ row.name }}{% if row.count > 1 %} ×{{ row.count }}{% endif %}</span>
-            <form method="post"
-                  action="/character/{{ character_id }}/animal/{{ a.instance_id }}/unload"
-                  class="inline-form">
-              <input type="hidden" name="item_id" value="{{ row.id }}">
-              <button class="btn">Unload</button>
-            </form>
-          </li>
-          {% endfor %}
-        </ul>
-        {% else %}
-        <p class="companion-empty">Nothing loaded.</p>
-        {% endif %}
-        {% if inventory_view.carried %}
-        <form method="post"
-              action="/character/{{ character_id }}/animal/{{ a.instance_id }}/load"
-              class="inline-form load-form">
-          <label class="ctl-label">Load
-            <select name="item_id">
-              {% for row in inventory_view.carried %}<option value="{{ row.id }}">{{ row.name }}</option>{% endfor %}
-            </select>
-          </label>
-          <button class="btn solid">Load</button>
-        </form>
-        {% endif %}
-      </details>
-      {% endif %}
     </article>
     {% endfor %}
     </div>
@@ -135,38 +101,6 @@
         {% endif %}
       </div>
 
-      <details class="companion-load">
-        <summary>Cargo {{ v.cargo_used }} / {{ v.cargo_capacity }} cn</summary>
-        {% if v.contents %}
-        <ul class="contents-list">
-          {% for row in v.contents %}
-          <li>
-            <span>{{ row.name }}{% if row.count > 1 %} ×{{ row.count }}{% endif %}</span>
-            <form method="post"
-                  action="/character/{{ character_id }}/vehicle/{{ v.instance_id }}/unload"
-                  class="inline-form">
-              <input type="hidden" name="item_id" value="{{ row.id }}">
-              <button class="btn">Unload</button>
-            </form>
-          </li>
-          {% endfor %}
-        </ul>
-        {% else %}
-        <p class="companion-empty">Nothing loaded.</p>
-        {% endif %}
-        {% if inventory_view.carried %}
-        <form method="post"
-              action="/character/{{ character_id }}/vehicle/{{ v.instance_id }}/load"
-              class="inline-form load-form">
-          <label class="ctl-label">Load
-            <select name="item_id">
-              {% for row in inventory_view.carried %}<option value="{{ row.id }}">{{ row.name }}</option>{% endfor %}
-            </select>
-          </label>
-          <button class="btn solid">Load</button>
-        </form>
-        {% endif %}
-      </details>
     </article>
     {% endfor %}
     </div>
@@ -225,34 +159,6 @@
           <button class="btn">Promote</button>
         </form>
         {% endif %}
-
-        <details class="companion-load">
-          <summary>Inventory ({{ r.inventory|length }})</summary>
-          {% if r.inventory %}
-          <ul class="contents-list">
-            {% for row in r.inventory %}
-            <li><span>{{ row.name }} ×{{ row.count }}</span>
-              <form method="post" action="/character/{{ character_id }}/retainer/{{ r.id }}/take" class="inline-form">
-                <input type="hidden" name="item_id" value="{{ row.id }}">
-                <button class="btn">Take</button>
-              </form>
-            </li>
-            {% endfor %}
-          </ul>
-          {% else %}
-          <p class="companion-empty">Carrying nothing.</p>
-          {% endif %}
-          {% if inventory_view.carried %}
-          <form method="post" action="/character/{{ character_id }}/retainer/{{ r.id }}/give" class="inline-form load-form">
-            <label class="ctl-label">Give
-              <select name="item_id">
-                {% for row in inventory_view.carried %}<option value="{{ row.id }}">{{ row.name }}</option>{% endfor %}
-              </select>
-            </label>
-            <button class="btn solid">Give</button>
-          </form>
-          {% endif %}
-        </details>
 
         <form method="post" action="/character/{{ character_id }}/retainer/{{ r.id }}/remove" class="inline-form" style="margin-top:.5rem">
           <button class="btn danger">Dismiss</button>
