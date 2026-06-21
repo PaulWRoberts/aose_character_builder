@@ -29,6 +29,11 @@
         <input type="hidden" name="item_id" value="{{ row.id }}">
         <button type="submit">Unstash</button>
     </form>
+    {% elif state == "retainer" and row.equippable %}
+    <form method="post" action="{{ target_url_prefix }}/equip" class="inline-form">
+        <input type="hidden" name="item_id" value="{{ row.id }}">
+        <button type="submit">Equip</button>
+    </form>
     {% endif %}
     {% if inv_move_groups is defined %}
     <form method="post" action="{{ inv_move_url }}" class="inline-form move-form">
