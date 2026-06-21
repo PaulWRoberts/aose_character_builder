@@ -952,9 +952,28 @@
 {{ item_modal(row, "equipped", "equipped", target_url_prefix, load_options=lo, attack=atk) }}
 {% endfor %}
 
-{# MODALS: loose-item modals for animal / vehicle / retainer inventories #}
-{% for group in sheet.inventory_groups %}{% if group.kind in ("animal","vehicle","retainer") %}
+{# MODALS: loose-item modals for animal / vehicle inventories (PC-side move actions) #}
+{% for group in sheet.inventory_groups %}{% if group.kind in ("animal","vehicle") %}
 {% for row in group.loose %}{{ item_modal(row, group.kind, group.kind ~ "-" ~ group.id, target_url_prefix, src_id=group.id) }}{% endfor %}
+{% endif %}{% endfor %}
+
+{# MODALS: loose-item modals for retainer inventories — per-retainer URL prefix so
+   the Equip action targets the retainer's equip route #}
+{% for group in sheet.inventory_groups %}{% if group.kind == "retainer" %}
+{%- set ret_url = "/character/" ~ character_id ~ "/retainer/" ~ group.id -%}
+{% for row in group.loose %}{{ item_modal(row, "retainer", "retainer-" ~ group.id, ret_url, src_id=group.id) }}{% endfor %}
+{% endif %}{% endfor %}
+
+{# MODALS: equipped-item modals for retainers (Unequip → retainer unequip route) #}
+{% for group in sheet.inventory_groups %}{% if group.kind == "retainer" %}
+{%- set ret_url = "/character/" ~ character_id ~ "/retainer/" ~ group.id -%}
+{% for row in group.equipped %}{{ item_modal(row, "equipped", "retainer-" ~ group.id ~ "-eq", ret_url, src_id=group.id) }}{% endfor %}
+{% endif %}{% endfor %}
+
+{# MODALS: equipped-barding modals for animals (Unequip → animal unequip route) #}
+{% for group in sheet.inventory_groups %}{% if group.kind == "animal" %}
+{%- set animal_url = "/character/" ~ character_id ~ "/animal/" ~ group.id -%}
+{% for row in group.equipped %}{{ item_modal(row, "equipped", "animal-" ~ group.id ~ "-eq", animal_url, src_id=group.id) }}{% endfor %}
 {% endif %}{% endfor %}
 {# MODALS: item modals for every container's contents (any location) #}
 {% for group in sheet.inventory_groups %}{% for c in group.containers %}
