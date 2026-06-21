@@ -107,3 +107,34 @@ def test_retainer_unequip_route(client):
     spec = load_character(cid, client._characters_dir)
     assert "dagger" not in spec.retainers[0].spec.equipped.values()
     assert "dagger" in spec.retainers[0].spec.inventory
+
+
+def test_sheet_renders_retainer_equip_modals(client):
+    cid, rid = _save_char_with_retainer(client)
+    # equip the dagger so there is both an equipped row and (no) loose dagger
+    client.post(f"/character/{cid}/retainer/{rid}/equip", data={"item_id": "dagger"})
+    resp = client.get(f"/character/{cid}")
+    assert resp.status_code == 200
+    html = resp.text
+    # equipped-item modal id present
+    assert f"modal-item-retainer-{rid}-eq-dagger" in html
+    # unequip action targets the retainer route
+    assert f"/character/{cid}/retainer/{rid}/unequip" in html
+
+
+def test_sheet_renders_animal_barding_modal(client):
+    from aose.models import AnimalInstance
+    pc = CharacterSpec(
+        name="Boss",
+        abilities={"STR": 12, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 13},
+        race_id="human",
+        classes=[ClassEntry(class_id="fighter", level=3, hp_rolls=[8, 8, 8])],
+        alignment="neutral",
+        animals=[AnimalInstance(instance_id="a1", catalog_id="war_horse",
+                                armor_id="horse_barding")],
+    )
+    save_character("boss", pc, client._characters_dir)
+    resp = client.get("/character/boss")
+    assert resp.status_code == 200
+    assert "modal-item-animal-a1-eq-horse_barding" in resp.text
+    assert "/character/boss/animal/a1/unequip" in resp.text
