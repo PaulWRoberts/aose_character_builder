@@ -204,3 +204,14 @@ def test_vehicle_load_and_unload(client):
     spec = load_character("finn", client._characters_dir)
     assert "torch" in spec.inventory
     assert "torch" not in spec.vehicles[0].contents
+
+
+def test_animal_unequip_returns_barding_to_inventory(client):
+    animals = [AnimalInstance(instance_id="a1", catalog_id="war_horse",
+                              armor_id="horse_barding")]
+    _save_char(client, animals=animals)
+    resp = client.post("/character/finn/animal/a1/unequip")
+    assert resp.status_code == 303
+    spec = load_character("finn", client._characters_dir)
+    assert spec.animals[0].armor_id is None
+    assert "horse_barding" in spec.inventory

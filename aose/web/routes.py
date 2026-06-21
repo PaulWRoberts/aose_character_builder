@@ -1741,6 +1741,19 @@ async def animal_armor(request: Request, character_id: str, instance_id: str,
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
+@router.post("/character/{character_id}/animal/{instance_id}/unequip")
+async def animal_unequip(request: Request, character_id: str, instance_id: str):
+    spec = _load_spec_or_404(request, character_id)
+    data = request.app.state.game_data
+    try:
+        spec.inventory, spec.animals = companions_engine.clear_armor(
+            spec.inventory, spec.animals, instance_id, data)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
 @router.post("/character/{character_id}/animal/{instance_id}/load")
 async def animal_load(request: Request, character_id: str, instance_id: str,
                       item_id: str = Form(...)):
