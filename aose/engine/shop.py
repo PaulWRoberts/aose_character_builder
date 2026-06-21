@@ -86,6 +86,12 @@ class TopLevelGroup(BaseModel):
     label: str                            # display name
     has_equipped: bool = False
     equipped: list[InventoryRow] = Field(default_factory=list)
+    # Rich equipped display for the live sheet pane. PC + retainers fill
+    # equipped_attacks (AttackProfile); equipped_worn holds armour/shield rows
+    # (EquippedRow); equipped_magic holds worn magic rows (MagicItemView).
+    equipped_attacks: list = Field(default_factory=list)
+    equipped_worn: list = Field(default_factory=list)
+    equipped_magic: list = Field(default_factory=list)
     loose: list[InventoryRow] = Field(default_factory=list)
     coins: list[CoinRow] = Field(default_factory=list)
     treasure_gems: list = Field(default_factory=list)       # GemRow — list to avoid circular import
