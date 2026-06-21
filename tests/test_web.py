@@ -319,7 +319,7 @@ def test_container_modal_shows_capacity_and_stash(tmp_path):
     nxt = body.find('class="overlay', start + 10)
     modal = body[start:nxt if nxt != -1 else len(body)]
     assert "Capacity" in modal                                  # from item_card stats
-    assert "/character/bagger/equipment/stash-container" in modal
+    assert "/character/bagger/inventory/move-container" in modal  # generalized move control
 
 
 def test_ammo_modal_shows_properties_and_count_adjust(tmp_path):

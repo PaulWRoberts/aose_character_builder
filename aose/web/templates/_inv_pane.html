@@ -1,0 +1,126 @@
+{# One top-level inventory rendered as a collapsible <details> pane. Triggers
+   only — per-item / per-container modals are rendered in the overlay block of
+   sheet.html. `prefix` is the modal id-prefix for this group's loose rows
+   (e.g. "carried", "animal-<id>"). `src_id` is the group's instance id (empty
+   for person buckets). `open` opens the pane by default. #}
+{% macro inv_pane(group, prefix, src_id, open) %}
+{%- set n_items = group.loose|length + group.equipped_attacks|length
+                  + group.equipped_worn|length + group.equipped_magic|length
+                  + group.containers|length -%}
+<details class="inv-pane"{% if open %} open{% endif %} data-pane-kind="{{ group.kind }}">
+  <summary class="inv-pane-head">
+    <span class="inv-pane-name">{{ group.label }}</span>
+    <span class="tag faint">{{ group.kind }}</span>
+    <span class="inv-pane-summary">
+      {{ n_items }} item{{ '' if n_items == 1 else 's' }}
+      {%- if group.coins %} · {% for c in group.coins %}{{ c.count }}{{ c.denom }}{% if not loop.last %}/{% endif %}{% endfor %}{% endif -%}
+    </span>
+  </summary>
+  <div class="inv-pane-body">
+
+    {% if group.equipped_attacks or group.equipped_worn or group.equipped_magic %}
+    <div class="subhead">Equipped</div>
+    <ul class="inv-list">
+      {% for atk in group.equipped_attacks %}
+      <li{% if atk.manageable_item_id and group.kind == "carried" %} class="clickable" data-modal="modal-item-equipped-{{ atk.manageable_item_id }}"{% endif %}>
+        <span>{{ atk.name }}{% if atk.count > 1 %} ×{{ atk.count }}{% endif %}
+          {% if atk.specialised %}<span class="tag">spec</span>{% endif %}
+          {% if not atk.proficient %}<span class="tag faint">non-prof</span>{% endif %}
+          {% if atk.unloaded %}<span class="tag stamp">Unloaded</span>{% elif atk.loaded_ammo_name %}<span class="tag faint">{{ atk.loaded_ammo_name }}</span>{% endif %}
+          {% if atk.hand == "main" %}<span class="tag faint">primary −2</span>{% elif atk.hand == "off" %}<span class="tag faint">off-hand −4</span>{% endif %}
+        </span>
+        <span class="st">{{ "%+d"|format(atk.to_hit_ascending) }} · {{ atk.damage }} · {% if atk.range_ft %}{{ atk.range_ft[0] }}/{{ atk.range_ft[1] }}/{{ atk.range_ft[2] }}′{% else %}—{% endif %}</span>
+      </li>
+      {% endfor %}
+      {% for e in group.equipped_worn %}
+      <li><span>{{ e.item_name }}</span><span class="st">{{ e.slot | title }}</span></li>
+      {% endfor %}
+      {% for mi in group.equipped_magic %}
+      <li class="clickable" data-modal="modal-magic-{{ mi.instance_id }}">
+        <span>{{ mi.name }} <span class="tag stamp">magic</span></span>
+        <span class="st">{% for chip in mi.modifier_summary %}{{ chip }}{% if not loop.last %}, {% endif %}{% endfor %}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+
+    {% if group.loose %}
+    <div class="subhead">Items</div>
+    <ul class="inv-list">
+      {% for row in group.loose %}
+      <li class="clickable" data-modal="modal-item-{{ prefix }}-{{ row.id }}">
+        <span>{{ row.name }}{% if row.count > 1 %} ×{{ row.count }}{% endif %}</span>
+        <span class="q">{% if group.kind == "stashed" %}—{% elif row.weight_cn is defined %}{{ row.weight_cn }} cn{% endif %}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+
+    {% if group.kind == "carried" and sheet.ammo %}
+    <div class="subhead">Ammunition</div>
+    <ul class="inv-list">
+      {% for a in sheet.ammo %}
+      <li class="clickable" data-modal="modal-ammo-{{ a.instance_id }}">
+        <span>{{ a.name }}{% if a.magic %}<span class="tag stamp">magic</span>{% endif %}</span>
+        <span class="q">× {{ a.count }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+
+    {% if group.kind == "carried" and sheet.spell_sources %}
+    <div class="subhead">Spell Sources</div>
+    <ul class="inv-list">
+      {% for src in sheet.spell_sources %}
+      <li class="clickable" data-modal="modal-source-{{ src.instance_id }}">
+        <span>{{ src.name }}<span class="tag">{{ src.kind }}</span></span>
+        <span class="q">{% if src.kind == 'scroll' %}1{% endif %} cn</span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+
+    {% for c in group.containers %}
+    <details class="inv-container">
+      <summary>
+        <strong>{{ c.name }}</strong>
+        <span class="capacity-badge{% if c.capacity_cn and c.used_cn >= c.capacity_cn %} capacity-full{% endif %}">{{ c.used_cn }} / {{ c.capacity_cn if c.capacity_cn else "∞" }} cn</span>
+        <span class="inv-container-manage clickable" data-modal="modal-container-{{ c.instance_id }}" title="Manage container">⚙</span>
+      </summary>
+      <ul class="inv-list">
+        {% for row in c.contents %}
+        <li class="clickable" data-modal="modal-item-container-{{ c.instance_id }}-{{ row.id }}">
+          <span><span class="indent">↳</span> {{ row.name }}{% if row.count > 1 %} ×{{ row.count }}{% endif %}</span>
+          <span class="q">{% if row.weight_cn is defined %}{{ row.weight_cn }} cn{% endif %}</span>
+        </li>
+        {% else %}
+        <li class="muted small">empty</li>
+        {% endfor %}
+      </ul>
+    </details>
+    {% endfor %}
+
+    {% if group.coins %}
+    <div class="subhead">Coins</div>
+    <ul class="inv-list">
+      {% for c in group.coins %}
+      <li><span>{{ c.count }} {{ c.denom }}<span class="tag faint">coin</span></span><span class="q">{% if group.kind in ("stashed",) %}—{% else %}{{ c.count }} cn{% endif %}</span></li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+
+    {% if group.treasure_gems or group.treasure_jewellery %}
+    <div class="subhead">Treasure</div>
+    <ul class="inv-list">
+      {% for g in group.treasure_gems %}
+      <li><span>{% if g.label %}{{ g.label }}{% else %}{{ g.value }} gp gem{% endif %} × {{ g.count }}<span class="tag faint">gem · {{ g.stack_value }} gp</span></span><span class="q">{{ g.count }} cn</span></li>
+      {% endfor %}
+      {% for j in group.treasure_jewellery %}
+      <li><span>{% if j.label %}{{ j.label }}{% else %}jewellery{% endif %}<span class="tag faint">jewel · {{ j.effective_value }} gp</span></span><span class="q">10 cn</span></li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+
+  </div>
+</details>
+{% endmacro %}
