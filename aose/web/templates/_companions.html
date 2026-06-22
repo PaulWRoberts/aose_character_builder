@@ -18,7 +18,7 @@
 {%- endmacro %}
 
 <section class="group full companions-group">
-  <div class="bar">Companions &amp; Holdings
+  <div class="bar">Company
     <span class="meta">
       {%- set n_animals = sheet.companions.animals|length -%}
       {%- set n_vehicles = sheet.companions.vehicles|length -%}
@@ -30,10 +30,7 @@
   </div>
 
   <div class="gbody scroll" style="max-height:520px">
-    <p class="ledger-note">A ledger of who and what travels with you. Open any line for its
-      full stat block — saves, attack, movement, morale.</p>
-
-    {# ─────────────── RETAINERS ─────────────── #}
+{# ─────────────── RETAINERS ─────────────── #}
     {% if sheet.companions.retainers or sheet.retainer_class_options %}
     <div class="cgroup">
       <div class="csubbar">Retainers
@@ -41,7 +38,6 @@
         {% if n_retainers > sheet.companions.max_retainers %}
           <span class="tag stamp">over CHA limit</span>
         {% endif %}
-        <span class="csubbar-src">hired through the retainer feature</span>
       </div>
 
       {% for r in sheet.companions.retainers %}
@@ -122,7 +118,6 @@
     <div class="cgroup">
       <div class="csubbar">Animals
         <span class="ccount">{{ n_animals }}</span>
-        <span class="csubbar-src">bought from the livestock shop</span>
       </div>
 
       {% for a in sheet.companions.animals %}
@@ -181,7 +176,6 @@
     <div class="cgroup">
       <div class="csubbar">Vehicles
         <span class="ccount">{{ n_vehicles }}</span>
-        <span class="csubbar-src">bought from the vehicle shop</span>
       </div>
 
       {% for v in sheet.companions.vehicles %}
@@ -222,8 +216,7 @@
     </div>
     {% endif %}
 
-    <p class="ledger-foot">Inventory stays in the shared sheet inventory above — these rows
-      track only the creature or vehicle itself.</p>
+
   </div>
 </section>
 {% endif %}
