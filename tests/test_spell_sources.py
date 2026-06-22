@@ -97,6 +97,7 @@ def test_add_and_remove(data):
 
 # ── cast + caster-type predicates ────────────────────────────────────────────
 
+from aose.engine import spells as se
 from aose.models import CharacterSpec, ClassEntry, RuleSet
 
 
@@ -184,6 +185,49 @@ def test_can_cast_scroll_matches_caster_type(data):
     # spell books are never castable
     book = ss.new_spell_source("spellbook", "arcane", ["magic_user_sleep"], data)
     assert ss.can_cast_scroll(book, spec, data) is False
+
+
+# ── read_scroll (decipher with Read Magic) ───────────────────────────────────
+
+def _mu_with_read_magic_memorized(data):
+    e = ClassEntry(class_id="magic_user", level=1, spellbook=["magic_user_read_magic"])
+    cls = data.classes["magic_user"]
+    e = se.assign_slot(e, cls, data, level=1, spell_id="magic_user_read_magic")
+    scroll = ss.new_spell_source("scroll", "arcane", ["magic_user_sleep"], data)
+    spec = CharacterSpec(
+        name="Mu", abilities={"STR": 10, "INT": 13, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
+        race_id="human", classes=[e], alignment="neutral", ruleset=RuleSet(),
+        spell_sources=[scroll],
+    )
+    return spec, scroll.instance_id
+
+
+def test_read_scroll_burns_slot_and_unlocks(data):
+    spec, iid = _mu_with_read_magic_memorized(data)
+    assert ss.ready_read_magic_slot(spec, data) == (0, 0)
+    classes, sources = ss.read_scroll(spec, data, iid)
+    assert classes[0].slots[0].spent is True          # the Read Magic cast is burned
+    assert sources[0].unlocked is True
+
+
+def test_read_scroll_requires_memorized_read_magic(data):
+    scroll = ss.new_spell_source("scroll", "arcane", ["magic_user_sleep"], data)
+    spec = _mu_spec(sources=[scroll])                  # no Read Magic memorized
+    assert ss.ready_read_magic_slot(spec, data) is None
+    with pytest.raises(ss.SpellSourceError):
+        ss.read_scroll(spec, data, scroll.instance_id)
+
+
+def test_read_scroll_rejects_divine_and_already_unlocked(data):
+    divine = ss.new_spell_source("scroll", "divine", ["cleric_cure_light_wounds"], data)
+    spec, iid = _mu_with_read_magic_memorized(data)
+    spec.spell_sources = [*spec.spell_sources, divine]
+    with pytest.raises(ss.SpellSourceError):
+        ss.read_scroll(spec, data, divine.instance_id)         # divine needs no reading
+    classes, sources = ss.read_scroll(spec, data, iid)
+    spec.classes, spec.spell_sources = classes, sources
+    with pytest.raises(ss.SpellSourceError):
+        ss.read_scroll(spec, data, iid)                        # already unlocked
 
 
 # ── copy_spell ────────────────────────────────────────────────────────────────

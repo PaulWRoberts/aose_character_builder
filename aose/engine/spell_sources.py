@@ -17,6 +17,9 @@ from typing import Literal, Optional
 from aose.data.loader import GameData
 from aose.engine import languages as lang_engine
 from aose.engine import spells as spell_engine
+from aose.engine.spells import DEMOTED_READ_MAGIC_IDS, READ_MAGIC_CANTRIP_ID
+
+READ_MAGIC_IDS = DEMOTED_READ_MAGIC_IDS | {READ_MAGIC_CANTRIP_ID}
 from aose.engine.dice import roll
 from aose.models import (
     CharClass, CharacterSpec, ClassEntry, Spell, SpellSource, SpellSourceEntry,
@@ -168,6 +171,42 @@ def scroll_cast_block_reason(source: SpellSource, spec: CharacterSpec,
 def can_cast_scroll(source: SpellSource, spec: CharacterSpec, data: GameData) -> bool:
     """True when the scroll spell is castable now (see ``scroll_cast_block_reason``)."""
     return scroll_cast_block_reason(source, spec, data) is None
+
+
+def ready_read_magic_slot(spec: CharacterSpec, data: GameData) -> tuple[int, int] | None:
+    """(class index, slot index) of a memorized, not-yet-spent Read Magic slot in
+    any arcane class, or None. Used to decipher an arcane scroll."""
+    for ci, entry in enumerate(spec.classes):
+        cls = data.classes.get(entry.class_id)
+        if cls is None or spell_engine.caster_type_of(cls, data) != "arcane":
+            continue
+        for si, slot in enumerate(entry.slots):
+            if not slot.spent and slot.spell_id in READ_MAGIC_IDS:
+                return ci, si
+    return None
+
+
+def read_scroll(spec: CharacterSpec, data: GameData, instance_id: str
+                ) -> tuple[list[ClassEntry], list[SpellSource]]:
+    """Decipher an arcane scroll: spend a memorized Read Magic cast and mark the
+    scroll ``unlocked``.  Returns updated (classes, spell_sources); inputs are not
+    mutated.  Raises if the document is not an un-deciphered arcane scroll, or no
+    Read Magic is memorized."""
+    idx = _index(spec.spell_sources, instance_id)
+    src = spec.spell_sources[idx]
+    if src.kind != "scroll" or src.caster_type != "arcane":
+        raise SpellSourceError("only arcane scrolls are deciphered with Read Magic")
+    if src.unlocked:
+        raise SpellSourceError("this scroll is already deciphered")
+    found = ready_read_magic_slot(spec, data)
+    if found is None:
+        raise SpellSourceError("no memorized Read Magic available to read the scroll")
+    ci, si = found
+    classes = list(spec.classes)
+    classes[ci] = spell_engine.cast_slot(classes[ci], si)
+    new_src = src.model_copy(update={"unlocked": True})
+    sources = [*spec.spell_sources[:idx], new_src, *spec.spell_sources[idx + 1:]]
+    return classes, sources
 
 
 def copyable_spell_ids(source: SpellSource, entry: ClassEntry, cls: CharClass,
