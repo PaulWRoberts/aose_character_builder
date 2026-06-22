@@ -81,6 +81,10 @@
         <span class="companion-stat">Cargo {{ v.cargo_used }}/{{ v.cargo_capacity }} cn</span>
       </header>
 
+      {% if v.required_animals %}
+      <div class="companion-saves">Draft: {{ v.required_animals }}</div>
+      {% endif %}
+
       <div class="companion-controls">
         <form method="post"
               action="/character/{{ character_id }}/vehicle/{{ v.instance_id }}/hull"
@@ -96,7 +100,7 @@
               class="inline-form">
           <label class="ctl-label"><input type="checkbox" name="on" value="true"
                  {% if v.extra_animals %}checked{% endif %}
-                 onchange="this.form.submit()"> Extra animals</label>
+                 onchange="this.form.submit()"> Double draft team</label>
         </form>
         {% endif %}
       </div>

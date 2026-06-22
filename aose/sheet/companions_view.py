@@ -54,6 +54,7 @@ class VehicleCard(BaseModel):
     cargo_capacity: int
     extra_animals: bool
     has_extra: bool
+    required_animals: str | None    # display text, e.g. "1 draft horse or 2 mules"
     contents: list[InventoryRow]
     detail: DetailCard
 
@@ -142,6 +143,7 @@ def companions_block(spec: CharacterSpec, data: GameData) -> CompanionsBlock | N
             cargo_capacity=companions.vehicle_capacity(inst, data),
             extra_animals=inst.extra_animals,
             has_extra=catalog.cargo_capacity_extra_cn is not None,
+            required_animals=catalog.required_animals,
             contents=_content_rows(inst.contents, data),
             detail=item_card(catalog),
         ))

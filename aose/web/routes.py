@@ -748,7 +748,7 @@ async def equipment_add(request: Request, character_id: str,
     spec = _load_spec_or_404(request, character_id)
     game_data = request.app.state.game_data
     item = game_data.items.get(item_id)
-    from aose.models import Container
+    from aose.models import Animal, Container, Vehicle
     try:
         if isinstance(item, Ammunition):
             spec.ammo = _add_free_ammo(spec.ammo, item_id, None, game_data)
@@ -756,6 +756,10 @@ async def equipment_add(request: Request, character_id: str,
             spec.magic_items = add_free_magic_item(spec.magic_items, item_id, game_data)
         elif isinstance(item, Container):
             spec.containers = add_free_container(spec.containers, item_id, game_data)
+        elif isinstance(item, Animal):
+            spec.animals = companions_engine.add_free_animal(spec.animals, item_id, game_data)
+        elif isinstance(item, Vehicle):
+            spec.vehicles = companions_engine.add_free_vehicle(spec.vehicles, item_id, game_data)
         else:
             spec.inventory = shop_add_free(spec.inventory, item_id, game_data)
     except (UnknownItem, UnknownMagicItem, _UnknownAmmo, ValueError) as e:
