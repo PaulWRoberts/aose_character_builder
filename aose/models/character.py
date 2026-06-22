@@ -154,6 +154,8 @@ class SpellSource(BaseModel):
     kind: Literal["spellbook", "scroll"]
     caster_type: Literal["arcane", "divine"]
     name: str = ""                                # optional label
+    language: str = "Common"
+    unlocked: bool = False
     entries: list[SpellSourceEntry] = Field(default_factory=list)
 
 

@@ -203,6 +203,12 @@ def test_copy_same_spell_from_a_second_source(data):
     assert new_entry.spellbook == ["magic_user_sleep"]
 
 
+def test_spell_source_new_fields_default(data):
+    src = ss.new_spell_source("scroll", "divine", ["faerie_fire"], data)
+    assert src.language == "Common"
+    assert src.unlocked is False
+
+
 def test_copy_requires_advanced_rule(data):
     src = ss.new_spell_source("scroll", "arcane", ["magic_user_sleep"], data)
     entry = ClassEntry(class_id="magic_user", level=1)
