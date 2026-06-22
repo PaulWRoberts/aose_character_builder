@@ -326,11 +326,23 @@ class SpellbookRow(BaseModel):
     spent_slots: list[int] = []   # ClassEntry.slots indices, spent (for restore)
 
 
+class ScrollSpellRow(BaseModel):
+    scroll_instance_id: str
+    label: str                # "scroll N" or the scroll's custom name
+    spell_id: str
+    name: str
+    level: int
+    charges: int              # remaining copies of this spell on this scroll
+    castable: bool
+    block_reason: str | None  # why cast is disabled, if any
+
+
 class SpellbookLevelGroup(BaseModel):
     level: int
     cap: int             # memorizable slots at this level
     used: int            # filled slots at this level
     rows: list[SpellbookRow]
+    scroll_rows: list[ScrollSpellRow] = Field(default_factory=list)
 
 
 class SpellbookBlock(BaseModel):
@@ -855,6 +867,35 @@ def spells_view(spec: CharacterSpec, data: GameData) -> list[SpellClassView]:
     return out
 
 
+def _scroll_rows_by_level(spec: CharacterSpec, data: GameData, caster_type: str
+                          ) -> dict[int, list[ScrollSpellRow]]:
+    """Castable-by-type scrolls turned into per-level rows (one per scroll+spell)."""
+    by_level: dict[int, list[ScrollSpellRow]] = {}
+    scroll_n = 0
+    for source in spec.spell_sources:
+        if source.kind != "scroll" or source.caster_type != caster_type:
+            continue
+        scroll_n += 1
+        label = source.name or f"scroll {scroll_n}"
+        reason = spell_source_engine.scroll_cast_block_reason(source, spec, data)
+        counts: dict[str, int] = {}
+        order: list[str] = []
+        for e in source.entries:
+            if e.spell_id not in counts:
+                order.append(e.spell_id)
+            counts[e.spell_id] = counts.get(e.spell_id, 0) + 1
+        for sid in order:
+            spell = data.spells.get(sid)
+            if spell is None:
+                continue
+            by_level.setdefault(spell.level, []).append(ScrollSpellRow(
+                scroll_instance_id=source.instance_id, label=label,
+                spell_id=sid, name=spell.name, level=spell.level,
+                charges=counts[sid], castable=reason is None, block_reason=reason,
+            ))
+    return by_level
+
+
 def spellbook_view(spec: CharacterSpec, data: GameData) -> list[SpellbookBlock]:
     """One block per casting class: arcane shows the spellbook by level with
     cast-pip counts; divine shows only memorised spells (ready/spent).
@@ -934,6 +975,22 @@ def spellbook_view(spec: CharacterSpec, data: GameData) -> list[SpellbookBlock]:
             class_id=entry.class_id, class_name=cls.name,
             caster_type=ctype, levels=levels,
         ))
+    # Inject scroll rows into the first block for each caster type.
+    seen_types: set[str] = set()
+    for block in out:
+        if block.caster_type in seen_types:
+            continue
+        seen_types.add(block.caster_type)
+        by_level = _scroll_rows_by_level(spec, data, block.caster_type)
+        if not by_level:
+            continue
+        for lvl, rows in by_level.items():
+            grp = next((g for g in block.levels if g.level == lvl), None)
+            if grp is None:
+                grp = SpellbookLevelGroup(level=lvl, cap=0, used=0, rows=[])
+                block.levels.append(grp)
+            grp.scroll_rows.extend(rows)
+        block.levels.sort(key=lambda g: g.level)
     return out
 
 

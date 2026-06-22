@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from aose.data.loader import GameData
+from aose.engine import spell_sources as ss
 from aose.engine import spells as se
 from aose.models import CharacterSpec, ClassEntry
 from aose.sheet.view import spellbook_view
@@ -56,6 +57,51 @@ def test_reversed_memorisation_is_distinct_row():
     assert normal.ready == 1 and rev.ready == 1
     assert len(normal.ready_slots) == 1 and len(rev.ready_slots) == 1
     assert set(normal.ready_slots).isdisjoint(rev.ready_slots)
+
+
+CURE = "cleric_cure_light_wounds"
+
+
+def _cleric_with_scrolls():
+    e = ClassEntry(class_id="cleric", level=1, hp_rolls=[6])
+    spec = CharacterSpec(
+        name="C", abilities={"STR": 9, "INT": 10, "WIS": 16, "DEX": 12, "CON": 10, "CHA": 9},
+        race_id="human", classes=[e], alignment="neutral",
+    )
+    s3 = ss.new_spell_source("scroll", "divine", [CURE, CURE, CURE], DATA, language="Common")
+    s1 = ss.new_spell_source("scroll", "divine", [CURE], DATA, language="Common")
+    spec.spell_sources = [s3, s1]
+    return spec
+
+
+def test_scroll_rows_grouped_by_level_with_charges():
+    spec = _cleric_with_scrolls()
+    blocks = spellbook_view(spec, DATA)
+    divine = next(b for b in blocks if b.caster_type == "divine")
+    lvl1 = next(g for g in divine.levels if g.level == 1)
+    cures = [r for r in lvl1.scroll_rows if r.spell_id == CURE]
+    assert len(cures) == 2                       # one row per scroll
+    assert sorted(r.charges for r in cures) == [1, 3]
+    assert all(r.castable for r in cures)        # Common is known
+    labels = {r.label for r in cures}
+    assert labels == {"scroll 1", "scroll 2"}
+
+
+def test_arcane_scroll_row_locked_until_read():
+    e = ClassEntry(class_id="magic_user", level=1, spellbook=[])
+    spec = CharacterSpec(
+        name="M", abilities={"STR": 9, "INT": 13, "WIS": 9, "DEX": 12, "CON": 10, "CHA": 9},
+        race_id="human", classes=[e], alignment="neutral",
+    )
+    scroll = ss.new_spell_source("scroll", "arcane", ["magic_user_fire_ball"], DATA)
+    spec.spell_sources = [scroll]
+    blocks = spellbook_view(spec, DATA)
+    arcane = next(b for b in blocks if b.caster_type == "arcane")
+    # Fireball is L3 — a level this L1 caster can't normally cast; the row still appears.
+    lvl3 = next(g for g in arcane.levels if g.level == 3)
+    row = next(r for r in lvl3.scroll_rows if r.spell_id == "magic_user_fire_ball")
+    assert row.castable is False
+    assert row.block_reason == "needs Read Magic"
 
 
 def test_spellbook_view_groups_by_level_with_cast_counts():
