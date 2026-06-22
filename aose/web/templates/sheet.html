@@ -340,9 +340,29 @@
           {% endif %}
         </div>
         {% else %}
-        {% if block.caster_type == "arcane" and lvl.rows|length == 0 %}
+        {% if block.caster_type == "arcane" and lvl.rows|length == 0 and lvl.scroll_rows|length == 0 %}
         <p class="hint" style="margin:4px 0">{% if lvl.level == 0 %}No cantrips in book yet.{% else %}No level-{{ lvl.level }} spells in book yet.{% endif %}</p>
         {% endif %}
+        {% endfor %}
+        {% for sr in lvl.scroll_rows %}
+        <div class="spell scroll-spell{% if not sr.castable %} locked{% endif %}">
+          <span class="snm">{{ sr.name }} <em class="scroll-tag">{{ sr.label }}</em></span>
+          {% if sr.castable %}
+          <form method="post" action="/character/{{ character_id }}/spell-sources/cast"
+                style="display:inline">
+            <input type="hidden" name="instance_id" value="{{ sr.scroll_instance_id }}">
+            <input type="hidden" name="spell_id" value="{{ sr.spell_id }}">
+            <button class="pips btn-bare" type="submit" title="Cast from {{ sr.label }} (expends a charge)">
+              {% for _ in range(sr.charges) %}<i class="pip"></i>{% endfor %}
+            </button>
+          </form>
+          {% else %}
+          <span class="pips" title="{{ sr.block_reason }}">
+            {% for _ in range(sr.charges) %}<i class="pip locked-pip"></i>{% endfor %}
+          </span>
+          <span class="hint scroll-reason">{{ sr.block_reason }}</span>
+          {% endif %}
+        </div>
         {% endfor %}
         {% endfor %}
         <div class="cast-legend">
