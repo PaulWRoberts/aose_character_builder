@@ -34,8 +34,10 @@ def test_new_spell_source_rejects_off_type_spell(data):
 
 
 def test_new_spell_source_rejects_duplicates(data):
+    # Spell books still reject duplicates; scrolls now allow them (see
+    # test_scroll_allows_duplicate_spells).
     with pytest.raises(ss.SpellSourceError):
-        ss.new_spell_source("scroll", "arcane",
+        ss.new_spell_source("spellbook", "arcane",
                             ["magic_user_sleep", "magic_user_sleep"], data)
 
 
@@ -201,6 +203,26 @@ def test_copy_same_spell_from_a_second_source(data):
     )
     assert ok is True
     assert new_entry.spellbook == ["magic_user_sleep"]
+
+
+def test_scroll_allows_duplicate_spells(data):
+    src = ss.new_spell_source("scroll", "divine",
+                              ["cleric_cure_light_wounds"] * 3, data, language="Common")
+    assert [e.spell_id for e in src.entries] == ["cleric_cure_light_wounds"] * 3
+    assert src.language == "Common"
+
+
+def test_spellbook_still_rejects_duplicates(data):
+    with pytest.raises(ss.SpellSourceError):
+        ss.new_spell_source("spellbook", "arcane",
+                            ["magic_user_sleep", "magic_user_sleep"], data)
+
+
+def test_scroll_cap_counts_duplicates(data):
+    # 8 charges (even all-same) still exceeds the 7 cap.
+    with pytest.raises(ss.SpellSourceError):
+        ss.new_spell_source("scroll", "divine",
+                            ["cleric_cure_light_wounds"] * 8, data)
 
 
 def test_spell_source_new_fields_default(data):

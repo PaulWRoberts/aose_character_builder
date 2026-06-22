@@ -45,21 +45,23 @@ def _spell_caster_type(spell: Spell, data: GameData) -> CasterType | None:
 
 def new_spell_source(kind: Kind, caster_type: CasterType, spell_ids: list[str],
                      data: GameData, name: str = "",
-                     list_id: str | None = None) -> SpellSource:
+                     list_id: str | None = None,
+                     language: str = "Common") -> SpellSource:
     """Build a validated SpellSource.
 
     Spellbooks are coerced to ``arcane``.  Every spell must exist and match
     ``caster_type`` (or, when ``list_id`` is given, be on that exact list).
-    Duplicates within one document are rejected.  No spell-level filter — a
-    document may hold spells of any level."""
+    Scrolls may list the same spell more than once (each entry is one charge);
+    spell books may not.  ``language`` is stored for divine scrolls (default
+    Common).  No spell-level filter — a document may hold spells of any level."""
     if kind == "spellbook":
         caster_type = "arcane"
     if not spell_ids:
         raise SpellSourceError("a spell book / scroll must contain at least one spell")
     if kind == "scroll" and len(spell_ids) > MAX_SCROLL_SPELLS:
         raise SpellSourceError(f"a scroll holds at most {MAX_SCROLL_SPELLS} spells")
-    if len(set(spell_ids)) != len(spell_ids):
-        raise SpellSourceError("a document cannot list the same spell twice")
+    if kind == "spellbook" and len(set(spell_ids)) != len(spell_ids):
+        raise SpellSourceError("a spell book cannot list the same spell twice")
     for sid in spell_ids:
         spell = data.spells.get(sid)
         if spell is None:
@@ -72,15 +74,18 @@ def new_spell_source(kind: Kind, caster_type: CasterType, spell_ids: list[str],
     return SpellSource(
         instance_id=uuid.uuid4().hex,
         kind=kind, caster_type=caster_type, name=name.strip(),
+        language=language.strip() or "Common",
         entries=[SpellSourceEntry(spell_id=sid) for sid in spell_ids],
     )
 
 
 def add_spell_source(sources: list[SpellSource], kind: Kind, caster_type: CasterType,
                      spell_ids: list[str], data: GameData, name: str = "",
-                     list_id: str | None = None) -> list[SpellSource]:
+                     list_id: str | None = None,
+                     language: str = "Common") -> list[SpellSource]:
     """Add-only append (GM grant / loot); no gold."""
-    return [*sources, new_spell_source(kind, caster_type, spell_ids, data, name, list_id)]
+    return [*sources,
+            new_spell_source(kind, caster_type, spell_ids, data, name, list_id, language)]
 
 
 def _index(sources: list[SpellSource], instance_id: str) -> int:
