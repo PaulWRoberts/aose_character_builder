@@ -109,6 +109,45 @@ def _mu_spec(advanced=False, sources=None):
     )
 
 
+def _cleric_spec(sources=None, languages=None):
+    return CharacterSpec(
+        name="Cl", abilities={"STR": 10, "INT": 10, "WIS": 13, "DEX": 10, "CON": 10, "CHA": 10},
+        race_id="human", classes=[ClassEntry(class_id="cleric", level=1)],
+        alignment="neutral", ruleset=RuleSet(),
+        languages=list(languages or []),
+        spell_sources=sources or [],
+    )
+
+
+def test_arcane_scroll_blocked_until_unlocked(data):
+    scroll = ss.new_spell_source("scroll", "arcane", ["magic_user_sleep"], data)
+    spec = _mu_spec()
+    assert ss.scroll_cast_block_reason(scroll, spec, data) == "needs Read Magic"
+    assert ss.can_cast_scroll(scroll, spec, data) is False
+    scroll.unlocked = True
+    assert ss.scroll_cast_block_reason(scroll, spec, data) is None
+    assert ss.can_cast_scroll(scroll, spec, data) is True
+
+
+def test_divine_scroll_gated_by_language(data):
+    common = ss.new_spell_source("scroll", "divine", ["cleric_cure_light_wounds"], data,
+                                 language="Common")
+    exotic = ss.new_spell_source("scroll", "divine", ["cleric_cure_light_wounds"], data,
+                                 language="dragon")
+    spec = _cleric_spec()  # knows Common (native), not Dragon
+    assert ss.can_cast_scroll(common, spec, data) is True
+    assert ss.scroll_cast_block_reason(exotic, spec, data) == "can't read dragon"
+    spec_dragon = _cleric_spec(languages=["dragon"])
+    assert ss.can_cast_scroll(exotic, spec_dragon, data) is True
+
+
+def test_wrong_caster_type_blocked(data):
+    divine_scroll = ss.new_spell_source("scroll", "divine", ["cleric_cure_light_wounds"], data)
+    assert ss.scroll_cast_block_reason(divine_scroll, _mu_spec(), data) == "not a divine caster"
+    book = ss.new_spell_source("spellbook", "arcane", ["magic_user_sleep"], data)
+    assert ss.scroll_cast_block_reason(book, _mu_spec(), data) == "not a scroll"
+
+
 def test_cast_from_scroll_consumes_one(data):
     sources = ss.add_spell_source([], "scroll", "arcane",
                                   ["magic_user_magic_missile", "magic_user_sleep"], data)
@@ -137,7 +176,8 @@ def test_cast_rejects_non_scroll_and_missing(data):
 
 def test_can_cast_scroll_matches_caster_type(data):
     arcane_scroll = ss.new_spell_source("scroll", "arcane", ["magic_user_sleep"], data)
-    divine_scroll = ss.new_spell_source("scroll", "divine", ["faerie_fire"], data)
+    arcane_scroll.unlocked = True   # deciphered, so type-match is the question
+    divine_scroll = ss.new_spell_source("scroll", "divine", ["cleric_cure_light_wounds"], data)
     spec = _mu_spec()
     assert ss.can_cast_scroll(arcane_scroll, spec, data) is True
     assert ss.can_cast_scroll(divine_scroll, spec, data) is False

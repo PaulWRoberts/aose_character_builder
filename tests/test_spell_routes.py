@@ -169,6 +169,10 @@ def test_add_scroll_ignores_spellbook_list_id(client):
 def test_cast_from_scroll_route(client):
     _save_mu(client)
     src = _add_scroll(client, ["magic_user_magic_missile", "magic_user_sleep"])
+    # Arcane scrolls require deciphering (unlocked) before casting.
+    spec = load_character("mu", client._characters_dir)
+    spec.spell_sources[0] = spec.spell_sources[0].model_copy(update={"unlocked": True})
+    save_character("mu", spec, client._characters_dir)
     r = client.post("/character/mu/spell-sources/cast",
                     data={"instance_id": src.instance_id,
                           "spell_id": "magic_user_magic_missile"})
@@ -210,11 +214,15 @@ def test_copy_route_rejected_under_standard_rule(client):
 def test_sheet_renders_spell_sources_section(client):
     _save_mu(client, advanced=True)
     src = _add_scroll(client, ["magic_user_magic_missile"])
+    # Unlock the scroll so the cast form is present (arcane scrolls need Read Magic first).
+    spec = load_character("mu", client._characters_dir)
+    spec.spell_sources[0] = spec.spell_sources[0].model_copy(update={"unlocked": True})
+    save_character("mu", spec, client._characters_dir)
     r = client.get("/character/mu")
     assert r.status_code == 200
     assert "Spell Books &amp; Scrolls" in r.text or "Spell Books & Scrolls" in r.text
     assert "Magic Missile" in r.text
-    # cast action present (arcane caster, arcane scroll)
+    # cast action present (arcane caster, unlocked arcane scroll)
     assert "/spell-sources/cast" in r.text
     # copy action present (advanced rule, spell not yet known)
     assert "/spell-sources/copy" in r.text

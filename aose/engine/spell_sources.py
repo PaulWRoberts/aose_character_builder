@@ -15,6 +15,7 @@ import uuid
 from typing import Literal, Optional
 
 from aose.data.loader import GameData
+from aose.engine import languages as lang_engine
 from aose.engine import spells as spell_engine
 from aose.engine.dice import roll
 from aose.models import (
@@ -132,12 +133,41 @@ def character_caster_types(spec: CharacterSpec, data: GameData) -> set[str]:
     return out
 
 
-def can_cast_scroll(source: SpellSource, spec: CharacterSpec, data: GameData) -> bool:
-    """A scroll is castable if it is a scroll and the character has a class whose
-    caster type matches the scroll's (arcane↔arcane, divine↔divine)."""
+def _character_known_languages(spec: CharacterSpec, data: GameData) -> set[str]:
+    """Case-folded set of the character's known language tokens."""
+    race = data.races.get(spec.race_id)
+    if race is None:
+        langs = [lang_engine.alignment_language(spec.alignment, data.languages),
+                 *spec.languages]
+    else:
+        langs = lang_engine.known_languages(
+            spec.languages, race, spec.alignment, data.languages,
+            granted=lang_engine.granted_languages(spec, data),
+        )
+    return {l.casefold() for l in langs}
+
+
+def scroll_cast_block_reason(source: SpellSource, spec: CharacterSpec,
+                             data: GameData) -> str | None:
+    """None when the scroll spell is castable now; otherwise a short reason.
+
+    Arcane scrolls need a matching caster AND to have been deciphered
+    (``unlocked``).  Divine scrolls need a matching caster AND knowledge of the
+    scroll's ``language``.  Spell books are never castable."""
     if source.kind != "scroll":
-        return False
-    return source.caster_type in character_caster_types(spec, data)
+        return "not a scroll"
+    if source.caster_type not in character_caster_types(spec, data):
+        return f"not a {source.caster_type} caster"
+    if source.caster_type == "arcane":
+        return None if source.unlocked else "needs Read Magic"
+    if source.language.casefold() not in _character_known_languages(spec, data):
+        return f"can't read {source.language}"
+    return None
+
+
+def can_cast_scroll(source: SpellSource, spec: CharacterSpec, data: GameData) -> bool:
+    """True when the scroll spell is castable now (see ``scroll_cast_block_reason``)."""
+    return scroll_cast_block_reason(source, spec, data) is None
 
 
 def copyable_spell_ids(source: SpellSource, entry: ClassEntry, cls: CharClass,
