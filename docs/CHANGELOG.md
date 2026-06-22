@@ -8,6 +8,7 @@ For the living architecture (how the subsystems fit together *now*), see
 
 | Date | Feature | Branch | Spec/Plan slug |
 |---|---|---|---|
+| 2026-06-22 | Companions section redesigned as a collapsed ledger: `<details>`/`<summary>` rows (Retainers → Animals → Vehicles), at-a-glance summary (name, descriptor, loyalty red ≤ 4, HP/Hull stepper) with the full stat block hidden until expand; new `/retainer/{id}/hp` route + `companions.js` open-row persistence; old `.companion-*` card CSS removed | main | — |
 | 2026-06-21 | Animal/retainer equip-unequip + click-to-modal in inventory box | main | 2026-06-21-animal-retainer-equip |
 | 2026-06-20 | Unified expandable inventory box (all top-level inventories as collapsible accordion in col 3; rich equipped display per group; nested containers; coins anywhere; Other Possessions pane; generalized Move from any location; Spells to full-width; Companions shed storage UI) | feat/unified-inventory-box | 2026-06-20-unified-inventory-box |
 | 2026-06-19 | Prime-requisite XP bonus is now data-driven per class (`CharClass.xp_bonus_tiers`): fixes multi-prime classes (e.g. halfling reeve with both primes ≥13 now gets +10%, not +5%) where the old lowest-score lookup was wrong; added missing prime-req feature text to 7 CC1/CC3 classes; `ClassAdvancement.xp_bonus_pct` shows the applied bonus on the sheet | main | — |

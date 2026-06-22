@@ -1,176 +1,108 @@
 {% if sheet.companions %}
+{# macro: one stat cell (label over value) #}
+{% macro stat(label, value) -%}
+<div class="cstat"><div class="cstat-k">{{ label }}</div><div class="cstat-v">{{ value }}</div></div>
+{%- endmacro %}
+
+{% macro saves(s) -%}
+<div class="csaves">
+  <div class="csaves-k">Saves — D / W / P / B / S</div>
+  <div class="csaves-row">
+    <div class="csave"><span>D</span><b>{{ s.death }}</b></div>
+    <div class="csave"><span>W</span><b>{{ s.wands }}</b></div>
+    <div class="csave"><span>P</span><b>{{ s.paralysis }}</b></div>
+    <div class="csave"><span>B</span><b>{{ s.breath }}</b></div>
+    <div class="csave"><span>S</span><b>{{ s.spells }}</b></div>
+  </div>
+</div>
+{%- endmacro %}
+
 <section class="group full companions-group">
-  <div class="bar">Companions &amp; Vehicles
+  <div class="bar">Companions &amp; Holdings
     <span class="meta">
       {%- set n_animals = sheet.companions.animals|length -%}
       {%- set n_vehicles = sheet.companions.vehicles|length -%}
       {%- set n_retainers = sheet.companions.retainers|length -%}
+      {{ n_retainers }} retainer{{ '' if n_retainers == 1 else 's' }} ·
       {{ n_animals }} animal{{ '' if n_animals == 1 else 's' }} ·
-      {{ n_vehicles }} vehicle{{ '' if n_vehicles == 1 else 's' }} ·
-      {{ n_retainers }} retainer{{ '' if n_retainers == 1 else 's' }}
+      {{ n_vehicles }} vehicle{{ '' if n_vehicles == 1 else 's' }}
     </span>
   </div>
-  <div class="gbody scroll" style="max-height:420px">
 
-    {% if sheet.companions.animals %}
-    <div class="companion-grid">
-    {% for a in sheet.companions.animals %}
-    <article class="companion-card" data-kind="animal">
-      <header class="companion-head">
-        <span class="companion-name">{{ a.name }}</span>
-        <span class="companion-sub">{{ a.species }}</span>
-        <span class="companion-stat">AC {{ a.ac_descending }} [{{ a.ac_ascending }}]</span>
-        <span class="companion-stat">THAC0 {{ a.thac0 }} [{{ '%+d' % a.attack_bonus }}]</span>
-        <span class="companion-stat">HP {{ a.hp_current }}/{{ a.hp_max }}</span>
-      </header>
+  <div class="gbody scroll" style="max-height:520px">
+    <p class="ledger-note">A ledger of who and what travels with you. Open any line for its
+      full stat block — saves, attack, movement, morale.</p>
 
-      <div class="companion-saves">
-        D {{ a.saves.death }} · W {{ a.saves.wands }} · P {{ a.saves.paralysis }}
-        · B {{ a.saves.breath }} · S {{ a.saves.spells }}
-        · Move {{ a.movement }} · ML {{ a.morale }}
-      </div>
-
-      {% if a.traits %}
-      <ul class="companion-traits">
-        {% for t in a.traits %}<li>{{ t }}</li>{% endfor %}
-      </ul>
-      {% endif %}
-
-      <div class="companion-controls">
-        <form method="post"
-              action="/character/{{ character_id }}/animal/{{ a.instance_id }}/hp"
-              class="inline-form">
-          <span class="ctl-label">HP</span>
-          <button name="delta" value="-1" class="btn">−1</button>
-          <button name="delta" value="1" class="btn">+1</button>
-        </form>
-
-        {% if a.armor_options or a.armor_id %}
-        <form method="post"
-              action="/character/{{ character_id }}/animal/{{ a.instance_id }}/armor"
-              class="inline-form">
-          <label class="ctl-label">Barding
-            <select name="armor_id" onchange="this.form.submit()">
-              <option value="">— none —</option>
-              {% for aid, aname in a.armor_options %}
-                <option value="{{ aid }}"{% if a.armor_id == aid %} selected{% endif %}>{{ aname }}</option>
-              {% endfor %}
-              {% if a.armor_id and a.armor_id not in a.armor_options|map(attribute=0)|list %}
-                <option value="{{ a.armor_id }}" selected>{{ a.armor_id }} (worn)</option>
-              {% endif %}
-            </select>
-          </label>
-        </form>
-        {% endif %}
-      </div>
-
-    </article>
-    {% endfor %}
-    </div>
-    {% endif %}
-
-    {% if sheet.companions.vehicles %}
-    <div class="companion-grid">
-    {% for v in sheet.companions.vehicles %}
-    <article class="companion-card" data-kind="vehicle">
-      <header class="companion-head">
-        <span class="companion-name">{{ v.name }}</span>
-        <span class="companion-sub">{{ v.kind }}</span>
-        <span class="companion-stat">AC {{ v.ac_descending }} [{{ v.ac_ascending }}]</span>
-        <span class="companion-stat">Hull {{ v.hull_current }}/{{ v.hull_max }}</span>
-        <span class="companion-stat">Cargo {{ v.cargo_used }}/{{ v.cargo_capacity }} cn</span>
-      </header>
-
-      {% if v.required_animals %}
-      <div class="companion-saves">Draft: {{ v.required_animals }}</div>
-      {% endif %}
-
-      <div class="companion-controls">
-        <form method="post"
-              action="/character/{{ character_id }}/vehicle/{{ v.instance_id }}/hull"
-              class="inline-form">
-          <span class="ctl-label">Hull</span>
-          <button name="delta" value="-1" class="btn">−1</button>
-          <button name="delta" value="1" class="btn">+1</button>
-        </form>
-
-        {% if v.has_extra %}
-        <form method="post"
-              action="/character/{{ character_id }}/vehicle/{{ v.instance_id }}/extra-animals"
-              class="inline-form">
-          <label class="ctl-label"><input type="checkbox" name="on" value="true"
-                 {% if v.extra_animals %}checked{% endif %}
-                 onchange="this.form.submit()"> Double draft team</label>
-        </form>
-        {% endif %}
-      </div>
-
-    </article>
-    {% endfor %}
-    </div>
-    {% endif %}
-
+    {# ─────────────── RETAINERS ─────────────── #}
     {% if sheet.companions.retainers or sheet.retainer_class_options %}
-    <div class="companions-retainers">
-      <h3 class="companions-subbar">
-        Retainers
-        <span class="companion-stat">{{ sheet.companions.retainers|length }} / {{ sheet.companions.max_retainers }}</span>
-        {% if sheet.companions.retainers|length > sheet.companions.max_retainers %}
+    <div class="cgroup">
+      <div class="csubbar">Retainers
+        <span class="ccount">{{ n_retainers }} / {{ sheet.companions.max_retainers }}</span>
+        {% if n_retainers > sheet.companions.max_retainers %}
           <span class="tag stamp">over CHA limit</span>
         {% endif %}
-      </h3>
-
-      <div class="companion-grid">
-      {% for r in sheet.companions.retainers %}
-      <article class="companion-card" data-kind="retainer">
-        <header class="companion-head">
-          <span class="companion-name">{{ r.name }}</span>
-          <span class="companion-sub">{{ r.descriptor }}</span>
-          <span class="companion-stat">AC {{ r.ac_descending }} [{{ r.ac_ascending }}]</span>
-          <span class="companion-stat">HP {{ r.hp_current }}/{{ r.hp_max }}</span>
-          <span class="companion-stat">THAC0 {{ r.thac0 }}</span>
-          <span class="companion-stat">Loyalty {{ r.loyalty }}</span>
-        </header>
-        <div class="companion-saves">
-          D {{ r.saves.death }} · W {{ r.saves.wands }} · P {{ r.saves.paralysis }}
-          · B {{ r.saves.breath }} · S {{ r.saves.spells }}
-        </div>
-        {% if r.equipped %}
-        <div class="companion-gear">
-          {% for slot, nm in r.equipped.items() %}{{ slot }}: {{ nm }}{% if not loop.last %} · {% endif %}{% endfor %}
-        </div>
-        {% endif %}
-
-        <div class="companion-controls">
-          <form method="post" action="/character/{{ character_id }}/retainer/{{ r.id }}/loyalty" class="inline-form">
-            <label class="ctl-label">Loyalty <input type="number" name="value" value="{{ r.loyalty }}" style="width:3.5rem"></label>
-            <button class="btn">Set</button>
-          </form>
-
-          <form method="post" action="/character/{{ character_id }}/retainer/{{ r.id }}/role" class="inline-form">
-            <input type="text" name="role" value="{{ r.role }}" placeholder="role">
-            <button class="btn">Save</button>
-          </form>
-        </div>
-
-        {% if r.is_normal_human and sheet.retainer_class_options %}
-        <form method="post" action="/character/{{ character_id }}/retainer/{{ r.id }}/promote" class="inline-form">
-          <label class="ctl-label">Promote to
-            <select name="class_id">
-              {% for c in sheet.retainer_class_options %}{% if c.id != 'normal_human' %}<option value="{{ c.id }}">{{ c.name }}</option>{% endif %}{% endfor %}
-            </select>
-          </label>
-          <button class="btn">Promote</button>
-        </form>
-        {% endif %}
-
-        <form method="post" action="/character/{{ character_id }}/retainer/{{ r.id }}/remove" class="inline-form" style="margin-top:.5rem">
-          <button class="btn danger">Dismiss</button>
-        </form>
-      </article>
-      {% endfor %}
+        <span class="csubbar-src">hired through the retainer feature</span>
       </div>
 
+      {% for r in sheet.companions.retainers %}
+      <details class="crow" data-kind="retainer" data-id="{{ r.id }}">
+        <summary class="crow-sum">
+          <span class="crow-chev" aria-hidden="true"></span>
+          <span class="crow-name">{{ r.name }}</span>
+          <span class="crow-desc">{{ r.descriptor }}</span>
+          <span class="crow-loy">
+            <span class="crow-loy-k">Loyalty</span>
+            <span class="crow-loy-v{% if r.loyalty <= 4 %} low{% endif %}">{{ r.loyalty }}</span>
+          </span>
+          <form method="post" action="/character/{{ character_id }}/retainer/{{ r.id }}/hp"
+                class="crow-step" onclick="event.stopPropagation()">
+            <button name="delta" value="-1" class="step-btn" type="submit">−</button>
+            <span class="step-val"><i>HP</i>{{ r.hp_current }}/{{ r.hp_max }}</span>
+            <button name="delta" value="1" class="step-btn" type="submit">+</button>
+          </form>
+        </summary>
+
+        <div class="crow-body">
+          <div class="cstat-row">
+            {{ stat('AC', r.ac_descending ~ ' [' ~ r.ac_ascending ~ ']') }}
+            {{ stat('THAC0', r.thac0) }}
+            {{ saves(r.saves) }}
+          </div>
+
+          {% if r.equipped %}
+          <div class="cgear"><span class="cgear-k">Gear</span>
+            {% for slot, nm in r.equipped.items() %}{{ nm }}{% if not loop.last %} · {% endif %}{% endfor %}
+          </div>
+          {% endif %}
+
+          <div class="crow-ctl">
+            <form method="post" action="/character/{{ character_id }}/retainer/{{ r.id }}/loyalty" class="inline-form">
+              <label class="ctl-label">Loyalty <input type="number" name="value" value="{{ r.loyalty }}" style="width:3.5rem"></label>
+              <button class="btn">Set</button>
+            </form>
+            <form method="post" action="/character/{{ character_id }}/retainer/{{ r.id }}/role" class="inline-form">
+              <label class="ctl-label">Role <input type="text" name="role" value="{{ r.role }}" placeholder="role"></label>
+              <button class="btn">Save</button>
+            </form>
+            {% if r.is_normal_human and sheet.retainer_class_options %}
+            <form method="post" action="/character/{{ character_id }}/retainer/{{ r.id }}/promote" class="inline-form">
+              <label class="ctl-label">Promote
+                <select name="class_id">
+                  {% for c in sheet.retainer_class_options %}{% if c.id != 'normal_human' %}<option value="{{ c.id }}">{{ c.name }}</option>{% endif %}{% endfor %}
+                </select>
+              </label>
+              <button class="btn">Promote</button>
+            </form>
+            {% endif %}
+            <form method="post" action="/character/{{ character_id }}/retainer/{{ r.id }}/remove" class="inline-form crow-ctl-end">
+              <button class="btn danger">Dismiss</button>
+            </form>
+          </div>
+        </div>
+      </details>
+      {% endfor %}
+
+      {% if sheet.retainer_class_options %}
       <form method="post" action="/character/{{ character_id }}/retainer/add" class="retainer-add inline-form">
         <input type="text" name="name" placeholder="name" required>
         <select name="class_id">
@@ -179,11 +111,119 @@
         <input type="number" name="level" value="1" min="1" style="width:3.5rem">
         <input type="hidden" name="race_id" value="{{ sheet.race_id }}">
         <input type="hidden" name="alignment" value="neutral">
-        <button class="btn solid">Add retainer</button>
+        <button class="btn solid">+ Hire a retainer</button>
       </form>
+      {% endif %}
     </div>
     {% endif %}
 
+    {# ─────────────── ANIMALS ─────────────── #}
+    {% if sheet.companions.animals %}
+    <div class="cgroup">
+      <div class="csubbar">Animals
+        <span class="ccount">{{ n_animals }}</span>
+        <span class="csubbar-src">bought from the livestock shop</span>
+      </div>
+
+      {% for a in sheet.companions.animals %}
+      <details class="crow" data-kind="animal" data-id="{{ a.instance_id }}">
+        <summary class="crow-sum">
+          <span class="crow-chev" aria-hidden="true"></span>
+          <span class="crow-name">{{ a.name }}</span>
+          <span class="crow-desc">{{ a.species }}</span>
+          <form method="post" action="/character/{{ character_id }}/animal/{{ a.instance_id }}/hp"
+                class="crow-step crow-step-end" onclick="event.stopPropagation()">
+            <button name="delta" value="-1" class="step-btn" type="submit">−</button>
+            <span class="step-val"><i>HP</i>{{ a.hp_current }}/{{ a.hp_max }}</span>
+            <button name="delta" value="1" class="step-btn" type="submit">+</button>
+          </form>
+        </summary>
+
+        <div class="crow-body">
+          <div class="cstat-row">
+            {{ stat('AC', a.ac_descending ~ ' [' ~ a.ac_ascending ~ ']') }}
+            {{ stat('THAC0', a.thac0 ~ ' [' ~ ('%+d' % a.attack_bonus) ~ ']') }}
+            {{ stat('Move', a.movement) }}
+            {{ stat('Morale', a.morale) }}
+            {{ saves(a.saves) }}
+          </div>
+
+          {% if a.traits %}
+          <div class="cgear"><span class="cgear-k">Traits</span>{{ a.traits|join(' · ') }}</div>
+          {% endif %}
+
+          <div class="crow-ctl">
+            {% if a.armor_options or a.armor_id %}
+            <form method="post" action="/character/{{ character_id }}/animal/{{ a.instance_id }}/armor" class="inline-form">
+              <label class="ctl-label">Barding
+                <select name="armor_id" onchange="this.form.submit()">
+                  <option value="">— none —</option>
+                  {% for aid, aname in a.armor_options %}
+                    <option value="{{ aid }}"{% if a.armor_id == aid %} selected{% endif %}>{{ aname }}</option>
+                  {% endfor %}
+                  {% if a.armor_id and a.armor_id not in a.armor_options|map(attribute=0)|list %}
+                    <option value="{{ a.armor_id }}" selected>{{ a.armor_id }} (worn)</option>
+                  {% endif %}
+                </select>
+              </label>
+            </form>
+            {% endif %}
+            <span class="cload">Load {{ a.load_used }}{% if a.load_capacity %} / {{ a.load_capacity }}{% endif %} cn</span>
+          </div>
+        </div>
+      </details>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {# ─────────────── VEHICLES ─────────────── #}
+    {% if sheet.companions.vehicles %}
+    <div class="cgroup">
+      <div class="csubbar">Vehicles
+        <span class="ccount">{{ n_vehicles }}</span>
+        <span class="csubbar-src">bought from the vehicle shop</span>
+      </div>
+
+      {% for v in sheet.companions.vehicles %}
+      <details class="crow" data-kind="vehicle" data-id="{{ v.instance_id }}">
+        <summary class="crow-sum">
+          <span class="crow-chev" aria-hidden="true"></span>
+          <span class="crow-name">{{ v.name }}</span>
+          <span class="crow-desc">{{ v.kind }}</span>
+          <span class="crow-cargo">Cargo {{ v.cargo_used }}/{{ v.cargo_capacity }} cn</span>
+          <form method="post" action="/character/{{ character_id }}/vehicle/{{ v.instance_id }}/hull"
+                class="crow-step" onclick="event.stopPropagation()">
+            <button name="delta" value="-1" class="step-btn" type="submit">−</button>
+            <span class="step-val"><i>Hull</i>{{ v.hull_current }}/{{ v.hull_max }}</span>
+            <button name="delta" value="1" class="step-btn" type="submit">+</button>
+          </form>
+        </summary>
+
+        <div class="crow-body">
+          <div class="cstat-row">
+            {{ stat('AC', v.ac_descending ~ ' [' ~ v.ac_ascending ~ ']') }}
+            {{ stat('Hull', v.hull_max) }}
+            {{ stat('Cargo', v.cargo_capacity ~ ' cn') }}
+            {% if v.required_animals %}
+            <div class="cdraft"><div class="cstat-k">Draft team</div><div class="cdraft-v">{{ v.required_animals }}</div></div>
+            {% endif %}
+          </div>
+
+          {% if v.has_extra %}
+          <div class="crow-ctl">
+            <form method="post" action="/character/{{ character_id }}/vehicle/{{ v.instance_id }}/extra-animals" class="inline-form">
+              <label class="ctl-label"><input type="checkbox" name="on" value="true"{% if v.extra_animals %} checked{% endif %} onchange="this.form.submit()"> Double draft team</label>
+            </form>
+          </div>
+          {% endif %}
+        </div>
+      </details>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <p class="ledger-foot">Inventory stays in the shared sheet inventory above — these rows
+      track only the creature or vehicle itself.</p>
   </div>
 </section>
 {% endif %}

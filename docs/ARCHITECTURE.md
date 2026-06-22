@@ -749,12 +749,19 @@ mutation. All follow the standard `_load_spec_or_404` → mutate → `save_chara
 → 303 pattern.
 
 **Sheet UI** (`aose/web/templates/_companions.html`, included from `sheet.html`):
-a zine `group full` ("Companions & Vehicles" inked bar) with one `companion-card`
-per animal/vehicle/retainer. Each carrier card shows derived stats with inline
-HP/hull buttons, an armour select (animals that fit owned barding), and a
-collapsible load block that mirrors the retainer Give/Take UI — a `Load` form
-populated from `inventory_view.carried` plus per-item `Unload`. Print sheet
-includes a static text block in `sheet_print.html`.
+a zine `group full` ("Companions & Holdings" inked bar) rendered as a **collapsed
+ledger** — one `<details class="crow">` row per retainer/animal/vehicle, ordered
+Retainers → Animals → Vehicles (most-consulted first). The whole collapsed
+`<summary>` shows only at-a-glance fields (name, descriptor/species/kind, loyalty
+[red ≤ 4 via `.crow-loy-v.low`], and an HP/Hull stepper); the full stat block
+(AC, THAC0, all five saves, movement, morale, traits/gear, controls) lives in the
+`.crow-body` revealed on expand. The stepper `<form>` carries
+`onclick="event.stopPropagation()"` so +/− submits without toggling the
+disclosure. `static/companions.js` persists which rows are open across the
+full-page POST reloads via `localStorage`. Ledger CSS (`.crow*`, `.cstat*`,
+`.csave*`, `.csubbar`) lives above the `LEGACY` banner in `sheet.css`; the old
+`.companion-*` card rules were removed. Print sheet includes a static text block
+in `sheet_print.html`.
 
 ### Phase B — Retainers
 
@@ -801,9 +808,11 @@ also returns a non-None block when `retainer_class_options` exist (so the add
 form is visible even for PCs with no existing companions). `CharacterSheet`
 gains `race_id` and `retainer_class_options: list[dict]`.
 
-**Routes**: 11 POST routes under `/character/{id}/retainer/` — `add`, `{rid}/remove`,
-`{rid}/loyalty`, `{rid}/role`, `{rid}/xp`, `{rid}/levelup`, `{rid}/promote`,
-`{rid}/give`, `{rid}/take`, `{rid}/equip`, `{rid}/unequip`.
+**Routes**: 12 POST routes under `/character/{id}/retainer/` — `add`, `{rid}/remove`,
+`{rid}/hp`, `{rid}/loyalty`, `{rid}/role`, `{rid}/xp`, `{rid}/levelup`, `{rid}/promote`,
+`{rid}/give`, `{rid}/take`, `{rid}/equip`, `{rid}/unequip`. `{rid}/hp` adjusts the
+retainer spec's `damage_taken` via the `hp` engine (the ledger HP stepper); `delta`
+is signed (−1 damage, +1 heal), clamped to `[0, max_hp]`.
 
 `{rid}/equip` reuses `equip.equip` (same engine as the PC), omitting
 `allowed_weapons`/`allowed_armor` (NPCs — DM controls gear). `{rid}/unequip`

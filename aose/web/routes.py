@@ -1913,6 +1913,19 @@ async def retainer_remove(request: Request, character_id: str, retainer_id: str)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
+@router.post("/character/{character_id}/retainer/{retainer_id}/hp")
+async def retainer_hp(request: Request, character_id: str, retainer_id: str,
+                      delta: int = Form(...)):
+    spec = _load_spec_or_404(request, character_id)
+    data = request.app.state.game_data
+    for r in spec.retainers:
+        if r.id == retainer_id:
+            new_current = hp.current_hp(r.spec, data) + delta
+            r.spec.damage_taken = hp.set_current_hp(r.spec, data, new_current)
+    save_character(character_id, spec, request.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
 @router.post("/character/{character_id}/retainer/{retainer_id}/loyalty")
 async def retainer_loyalty(request: Request, character_id: str, retainer_id: str,
                            value: int = Form(...)):

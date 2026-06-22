@@ -82,6 +82,20 @@ def _save_char_with_retainer(client) -> tuple[str, str]:
     return "boss", ret.id
 
 
+def test_retainer_hp_route(client):
+    cid, rid = _save_char_with_retainer(client)
+    # take 1 point of damage
+    resp = client.post(f"/character/{cid}/retainer/{rid}/hp", data={"delta": -1})
+    assert resp.status_code == 303
+    spec = load_character(cid, client._characters_dir)
+    assert spec.retainers[0].spec.damage_taken == 1
+    # over-heal floors damage_taken at 0 (current HP never exceeds max)
+    resp = client.post(f"/character/{cid}/retainer/{rid}/hp", data={"delta": 5})
+    assert resp.status_code == 303
+    spec = load_character(cid, client._characters_dir)
+    assert spec.retainers[0].spec.damage_taken == 0
+
+
 def test_retainer_equip_route(client):
     cid, rid = _save_char_with_retainer(client)
     resp = client.post(f"/character/{cid}/retainer/{rid}/equip",
