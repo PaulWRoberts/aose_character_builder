@@ -101,19 +101,17 @@
       {% if sheet.retainer_class_options and n_retainers < sheet.companions.max_retainers %}
       <details class="retainer-add-wrap">
         <summary class="retainer-add-trigger">+ Hire a retainer…</summary>
-        <div class="retainer-add-expanded">
-          <form method="post" action="/character/{{ character_id }}/retainer/add" class="inline-form">
-            <input type="text" name="name" placeholder="name" required>
-            <select name="class_id">
-              {% for c in sheet.retainer_class_options %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}
-            </select>
-            <label class="ctl-label">Level <input type="number" name="level" value="1" min="1" style="width:3rem"></label>
-            <input type="hidden" name="race_id" value="{{ sheet.race_id }}">
-            <input type="hidden" name="alignment" value="neutral">
-            <button class="btn solid" type="submit">Hire</button>
-          </form>
+        <form method="post" action="/character/{{ character_id }}/retainer/add" class="retainer-add-expanded">
+          <input type="text" name="name" placeholder="name" required>
+          <select name="class_id">
+            {% for c in sheet.retainer_class_options %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}
+          </select>
+          <label class="ctl-label">Level <input type="number" name="level" value="1" min="1" style="width:3rem"></label>
+          <input type="hidden" name="race_id" value="{{ sheet.race_id }}">
+          <input type="hidden" name="alignment" value="neutral">
+          <button class="btn solid" type="submit">Hire</button>
           <button class="btn" type="button" onclick="this.closest('details').open=false">Cancel</button>
-        </div>
+        </form>
       </details>
       {% endif %}
     </div>
