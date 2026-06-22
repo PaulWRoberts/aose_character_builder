@@ -263,6 +263,9 @@ class SpellSourceView(BaseModel):
     kind: str                 # "spellbook" | "scroll"
     caster_type: str
     name: str                 # display label (falls back to a default)
+    language: str = ""        # divine scroll language display (blank otherwise)
+    unlocked: bool = False    # arcane scroll deciphered?
+    can_read: bool = False    # arcane scroll, not unlocked, Read Magic memorized
     arcane_class_id: str | None  # the class whose book a Copy targets, if any
     entries: list[SpellSourceEntryView]
 
@@ -274,10 +277,16 @@ class SpellSourceOptionGroup(BaseModel):
     spells: list[SpellEntryView]
 
 
+class LanguageOption(BaseModel):
+    id: str
+    name: str
+
+
 class SpellSourceAddOptions(BaseModel):
     arcane_lists: list[SpellSourceOptionGroup]   # spellbook: one group per arcane list
     arcane_spells: list[SpellEntryView]          # scroll arcane: all arcane spells
     divine_spells: list[SpellEntryView]          # scroll divine: all divine spells
+    languages: list[LanguageOption] = Field(default_factory=list)  # divine scroll language picker
 
 
 class GemRow(BaseModel):
@@ -1000,6 +1009,9 @@ def spell_sources_view(spec: CharacterSpec, data: GameData) -> list[SpellSourceV
     out: list[SpellSourceView] = []
     for source in spec.spell_sources:
         castable = spell_source_engine.can_cast_scroll(source, spec, data)
+        can_read = (source.kind == "scroll" and source.caster_type == "arcane"
+                    and not source.unlocked
+                    and spell_source_engine.ready_read_magic_slot(spec, data) is not None)
         copyable: set[str] = set()
         if advanced and arcane_entry is not None:
             copyable = spell_source_engine.copyable_spell_ids(
@@ -1021,6 +1033,10 @@ def spell_sources_view(spec: CharacterSpec, data: GameData) -> list[SpellSourceV
             kind=source.kind,
             caster_type=source.caster_type,
             name=_default_source_name(source),
+            language=(display_name(source.language, data.languages)
+                      if source.kind == "scroll" and source.caster_type == "divine" else ""),
+            unlocked=source.unlocked,
+            can_read=can_read,
             arcane_class_id=arcane_cid,
             entries=entries,
         ))
@@ -1051,10 +1067,12 @@ def spell_source_add_options(data: GameData) -> SpellSourceAddOptions:
         )
         return [_spell_entry(s) for s in spells]
 
+    langs = sorted(data.languages.names.items(), key=lambda kv: (kv[0] != "common", kv[1]))
     return SpellSourceAddOptions(
         arcane_lists=arcane_lists,
         arcane_spells=bucket(arcane_list_ids),
         divine_spells=bucket(divine_list_ids),
+        languages=[LanguageOption(id=k, name=v) for k, v in langs],
     )
 
 
