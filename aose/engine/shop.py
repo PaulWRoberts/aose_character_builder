@@ -79,6 +79,7 @@ class ContainerView(BaseModel):
     stowed_magic: list = Field(default_factory=list)       # MagicItemView
     stowed_enchanted: list = Field(default_factory=list)   # EnchantedView
     stowed_ammo: list = Field(default_factory=list)        # AmmoRow
+    stowed_spell_sources: list = Field(default_factory=list)  # SpellSourceView
 
 
 class CoinRow(BaseModel):
