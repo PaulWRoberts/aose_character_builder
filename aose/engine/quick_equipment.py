@@ -210,12 +210,22 @@ def roll_kit(class_id: str, data: GameData,
     return kit
 
 
-def apply_kit(spec: CharacterSpec, kit: QuickKit) -> None:
-    """Write a rolled kit onto a CharacterSpec (replaces inventory/equipped/ammo
-    and sets starting gold as a carried CoinStack)."""
-    from aose.models import CoinStack
-    spec.inventory = list(kit.inventory)
+def apply_kit(spec: CharacterSpec, kit: QuickKit, data: GameData) -> None:
+    """Write a rolled kit onto a CharacterSpec. Container items are promoted to
+    ContainerInstances (carried) so granted gear is never a stuck loose string."""
+    from aose.models import CoinStack, Container
+    from aose.engine.shop import new_container_instance
+    loose: list[str] = []
+    new_containers: list = []
+    for item_id in kit.inventory:
+        item = data.items.get(item_id)
+        if isinstance(item, Container):
+            new_containers.append(new_container_instance(item_id, data))
+        else:
+            loose.append(item_id)
+    spec.inventory = loose
     spec.equipped = dict(kit.equipped)
     spec.ammo = list(kit.ammo)
+    spec.containers = [*spec.containers, *new_containers]
     if kit.gold > 0:
         spec.coins = [CoinStack(denom="gp", count=kit.gold)]

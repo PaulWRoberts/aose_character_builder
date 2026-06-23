@@ -42,3 +42,20 @@ def test_class_extras_and_tables_resolve():
 
 def test_sprig_of_mistletoe_added():
     assert "sprig_of_mistletoe" in DATA.items
+
+
+def test_apply_kit_routes_containers_to_instances():
+    from aose.engine.quick_equipment import QuickKit, apply_kit
+    from aose.models import CharacterSpec, Container
+    spec = CharacterSpec(name="K",
+                         abilities={"STR": 10, "DEX": 10, "CON": 10,
+                                    "INT": 10, "WIS": 10, "CHA": 10},
+                         race_id="human",
+                         classes=[{"class_id": "fighter", "level": 1}],
+                         alignment="neutral")
+    kit = QuickKit(inventory=["backpack", "torch", "torch"])
+    apply_kit(spec, kit, DATA)
+    assert "backpack" not in spec.inventory            # promoted out of loose
+    assert spec.inventory.count("torch") == 2          # non-containers stay
+    assert [c.catalog_id for c in spec.containers] == ["backpack"]
+    assert isinstance(DATA.items["backpack"], Container)  # guard the fixture id
