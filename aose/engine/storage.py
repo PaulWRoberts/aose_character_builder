@@ -181,6 +181,14 @@ def convert_coins(spec: CharacterSpec, loc: StorageLocation,
     _add_coins(spec, to, gained, loc)
 
 
+def unload_if_loaded(spec: CharacterSpec, weapon_key: str) -> None:
+    """Drop any loaded-ammo reference keyed by ``weapon_key`` (no-op if absent).
+    Run before a weapon or its full ammo stack leaves its bucket so no weapon
+    points at a relocated/merged stack."""
+    if weapon_key in spec.loaded_ammo:
+        del spec.loaded_ammo[weapon_key]
+
+
 def move_valuable(spec: CharacterSpec, instance_id: str,
                   dest: StorageLocation) -> None:
     """Move a gem stack or jewellery piece (by instance_id) to ``dest``.
