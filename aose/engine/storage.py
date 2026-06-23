@@ -131,7 +131,28 @@ def _check_capacity(spec: CharacterSpec, dest: StorageLocation,
                 f"{getattr(catalog, 'name', dest.id)} full: "
                 f"{current}/{cap} cn, move adds {added_cn} cn")
         return
-    # animal / vehicle handled in Task 4
+    if dest.kind == "animal":
+        from aose.engine.companions import animal_capacity
+        animal = _carrier(spec, "animal", dest.id)
+        cap = animal_capacity(animal, data)   # max_load_encumbered_cn or None
+        worn = (data.items[animal.armor_id].weight_cn
+                if animal.armor_id and animal.armor_id in data.items else 0)
+        current = worn + location_load_cn(spec, dest, data)
+        if cap is None or current + added_cn > cap:
+            name = data.items[animal.catalog_id].name if animal.catalog_id in data.items else dest.id
+            raise StorageError(f"{name} cannot carry that much "
+                               f"({current}/{cap if cap is not None else 0} cn)")
+        return
+    if dest.kind == "vehicle":
+        from aose.engine.companions import vehicle_capacity
+        vehicle = _carrier(spec, "vehicle", dest.id)
+        cap = vehicle_capacity(vehicle, data)
+        current = location_load_cn(spec, dest, data)
+        if current + added_cn > cap:
+            name = data.items[vehicle.catalog_id].name if vehicle.catalog_id in data.items else dest.id
+            raise StorageError(f"{name} is over capacity ({current}/{cap} cn)")
+        return
+    raise StorageError(f"no capacity rule for destination {dest.kind!r}")
 
 
 def use_as_container(spec: CharacterSpec, owner: StorageLocation,

@@ -102,3 +102,30 @@ def test_check_capacity_allows_fitting_into_a_container():
 def test_check_capacity_never_blocks_carried_stashed_retainer():
     for kind in ("carried", "stashed"):
         storage._check_capacity(_spec(), StorageLocation(kind=kind), 99999, DATA)
+
+
+from aose.models import AnimalInstance, VehicleInstance
+
+
+def test_check_capacity_rejects_overloading_an_animal():
+    # war_dog is not a beast of burden (cap None) -> carries nothing.
+    here = StorageLocation(kind="animal", id="d1")
+    spec = _spec(animals=[AnimalInstance(instance_id="d1", catalog_id="war_dog")])
+    with pytest.raises(storage.StorageError):
+        storage._check_capacity(spec, here, 1, DATA)
+
+
+def test_check_capacity_allows_load_within_mule_cap():
+    here = StorageLocation(kind="animal", id="m1")
+    spec = _spec(animals=[AnimalInstance(instance_id="m1", catalog_id="mule")])
+    storage._check_capacity(spec, here, 100, DATA)  # mule cap is thousands; ok
+
+
+def test_check_capacity_rejects_overloading_a_vehicle():
+    here = StorageLocation(kind="vehicle", id="v1")
+    cat = DATA.items["cart"]
+    spec = _spec(vehicles=[VehicleInstance(instance_id="v1", catalog_id="cart",
+                                           hull_max=1)])
+    over = cat.cargo_capacity_cn + 1
+    with pytest.raises(storage.StorageError):
+        storage._check_capacity(spec, here, over, DATA)
