@@ -488,24 +488,30 @@ Illusionist/Magic-user/Thief). New languages: `hephaestan`, `language_of_wolves`
   (merging same-value/label stacks at destination) or jewellery pieces.
 - **Top-level inventory groups** — `sheet.inventory_groups: list[TopLevelGroup]`
   (Carried, Stashed, one per animal, one per vehicle, one per retainer) with
-  `loose`, `equipped`, `coins`, `treasure_gems`, `treasure_jewellery`, `containers`
-  sub-lists, plus rich display lists `equipped_attacks` (AttackProfile), `equipped_worn`
-  (EquippedRow), `equipped_magic` (MagicItemView). `build_inventory_groups(spec, data)`
-  in `aose/sheet/view.py` builds this. `sheet.total_wealth_gp: int` for the wealth
-  readout. The live sheet renders `sheet.inventory_groups` as a collapsible accordion
-  in layout column 3 (one `<details class="inv-pane">` per group, Carried open by
-  default); custom items live in an "Other Possessions" pane at the bottom. Spells /
-  Mental Powers / Innate Abilities moved to a full-width `.spells-fullwidth` grid below
-  the layout. Companions cards no longer hold storage UI — all carrier/retainer
-  inventory is visible in the accordion. Container modals use `/inventory/move-container`
-  (generic Move) rather than stash/unstash.
-- **Coin rendering** — coins are line-items everywhere, not a separate tracker. The
-  `coin_table(coins, prefix, groups, cur_kind, cur_id)` macro in `_equipment_ui.html`
-  renders each stack with a full Move dropdown (`move_dest_control` → any top-level /
-  container, JS-populated `dest_kind`/`dest_id`), an in-place Convert, and an Adjust;
-  it is shared by Carried, Stashed, and every carrier/retainer group. The accordion
-  pane for each group shows its coin stacks inline; the section bar shows a read-only
-  `total_wealth_gp`. There is no coin-chip strip or Coin-Purse popover.
+  `loose`, `coins`, `treasure_gems`, `treasure_jewellery`, `containers`, `magic_items`,
+  `enchanted`, `spell_sources`, `ammo` sub-lists, plus rich display lists
+  `equipped_attacks` (AttackProfile), `equipped_worn` (EquippedRow), `equipped_magic`
+  (MagicItemView). Each group carries an `OwnerCaps` descriptor (`has_equipped`,
+  `can_wield`, `can_stash`, `class_filter_equip`, `bucket_label`) that drives the
+  three-section pane layout (Equipped · Coins · Carried/Stowed) without any
+  per-owner template branches. `build_inventory_groups(spec, data)` in
+  `aose/sheet/view.py` builds this. `sheet.total_wealth_gp: int` for the wealth
+  readout. The inventory box is the single interaction hub: every owned-item action
+  (equip/unequip, stash/unstash, move, use-as-container) is performed from here;
+  `use_as_container(spec, owner, item_id, data)` in `aose/engine/storage.py` promotes
+  a loose Container string to a `ContainerInstance`. The box renders as a collapsible
+  accordion (one `<details class="inv-pane">` per group, Carried open by default).
+  Spells / Mental Powers / Innate Abilities in a full-width `.spells-fullwidth` grid
+  below. Companions cards no longer hold storage UI — all carrier/retainer inventory
+  is visible in the accordion. Container modals use `/inventory/move-container`.
+  Retainer containers are handled via `_find_container_anywhere` (searches
+  `spec.containers` then all `retainer.spec.containers`).
+- **Coin rendering** — coins are read-only line-items in the Coins subsection of each
+  inventory pane (`_inv_pane.html`). Weight appears only for Carried (stashed/carrier
+  coins contribute zero encumbrance). The add-coins form lives in the Treasure tab of
+  the acquisition drawer. Routes `/inventory/move-coins` and `/coins/convert` remain
+  for management. Pane summary bar shows a `count denom` inline tally; no coin-chip
+  strip or Coin-Purse popover.
 - **Move-route robustness** — `_loc(kind, id)` in `routes.py` builds the
   `StorageLocation` for every `/inventory/move-*` (and `/coins/add`,`/coins/convert`)
   route, mapping a bad/empty kind to HTTP 400 (Pydantic `ValidationError` would
@@ -628,9 +634,13 @@ Illusionist/Magic-user/Thief). New languages: `hephaestan`, `language_of_wolves`
   (closed-overlay `pointer-events`, variable-font self-hosting, `no-cache` static).
 - **Overlay controller** — `aose/web/static/sheet_overlays.js`: single-open
   drawer/modal/popover, dismissed by Esc/scrim/close.
-- **Tabbed equipment drawer** — `_equipment_ui.html`: Carried (always), Magic
-  (gated `magic_acquisition`), Documents (gated `spell_sources`), Treasure (gated
-  `valuables`), Shop (always). The wizard shows only Carried + Shop.
+- **Acquisition drawer** — `_equipment_ui.html` is acquisition-only: Shop (always,
+  default open), Enchant (gated `magic_acquisition`), Scribe (gated `spell_sources`),
+  Treasure (gated `valuables`; includes the Add-coins form + gem/jewellery management).
+  An "Other Possessions" add-form in the Shop footer adds custom text items to Carried.
+  All owned-item management (equip/stash/move/sell) is in the inventory box, not the
+  drawer. The wizard equipment step renders the inventory box above the drawer and a
+  "Next: Review" continue button below (only the Shop tab is available in the wizard).
 - **Print sheet** — `sheet_print.html` mirrors the live sheet; conditional AC/
   attack/save lines and situational `vs:*` bonuses appear as footnotes.
 - **`build_sheet(spec, data) -> CharacterSheet`** (`aose/sheet/view.py`) assembles
