@@ -519,3 +519,24 @@ def test_enchanted_on_mule_does_not_count_toward_carried(data):
     carried_on_mule = carried_weight_cn(spec, data)
     spec.enchanted[0].location = StorageLocation(kind="carried")
     assert carried_weight_cn(spec, data) > carried_on_mule
+
+
+def test_carried_container_weight_uses_location_load_cn(data):
+    from aose.engine import storage
+    from aose.engine.encumbrance import equipment_weight_cn
+    from aose.models import ContainerInstance, CoinStack
+    from aose.models.storage import StorageLocation
+    here = StorageLocation(kind="container", id="c1")
+    spec = CharacterSpec(
+        name="E", abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
+        race_id="human", classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
+        alignment="neutral",
+        containers=[ContainerInstance(instance_id="c1", catalog_id="backpack",
+                                      location=StorageLocation(kind="carried"),
+                                      contents=["sword"])],
+        coins=[CoinStack(denom="gp", count=10, location=here)],
+    )
+    raw = storage.location_load_cn(spec, here, data)
+    cat = data.items["backpack"]
+    expected_contribution = cat.weight_cn + int(cat.weight_multiplier * raw)
+    assert equipment_weight_cn(spec, data) >= expected_contribution
