@@ -305,13 +305,19 @@ is a data field, not a constant.
   time button only (not stored).
 - **Spell books & scrolls** — owned documents as a per-instance `SpellSource`
   (`kind` spellbook|scroll, `caster_type`, `language`, `unlocked`, `entries` each
-  with a `copy_failed` flag) on `CharacterSpec.spell_sources`.
-  `aose/engine/spell_sources.py`: create/add/remove, `cast_from_scroll` (expends
-  one charge; empties → dropped; gated by `scroll_cast_block_reason`), `copy_spell`
-  (Advanced rule; rolls 1d100 vs `copy_chance_for_int(effective INT)`; **failure is
-  recorded on the source entry, never the character** — same spell stays copyable
-  from another source). Sheet-only, Add-only. Protection scrolls live as `MagicItem`
-  catalog data in `data/equipment/scrolls.yaml`.
+  with a `copy_failed` flag, `location: StorageLocation` default Carried) on
+  `CharacterSpec.spell_sources`. `aose/engine/spell_sources.py`: create/add/remove,
+  `cast_from_scroll` (expends one charge; empties → dropped; gated by
+  `scroll_cast_block_reason`), `copy_spell` (Advanced rule; rolls 1d100 vs
+  `copy_chance_for_int(effective INT)`; **failure is recorded on the source entry,
+  never the character** — same spell stays copyable from another source).
+  **Cast/decipher/copy are all gated on the document being Carried** by the PC
+  (`location.kind == "carried"`); a stashed or carrier-stored scroll shows the
+  block reason and cannot be used. Movement uses `move_thing(spec, "source", ...)`.
+  Spell sources bucket by location in `inventory_groups` (`group.spell_sources`);
+  container-stowed sources appear in `ContainerView.stowed_spell_sources`. Modals
+  show Move ▾ + Drop for every source. Sheet-only, Add-only. Protection scrolls live
+  as `MagicItem` catalog data in `data/equipment/scrolls.yaml`.
   - **Arcane scrolls** carry `unlocked: bool` (default False). Must be deciphered by
     casting Read Magic — `ready_read_magic_slot` finds a memorized unspent slot,
     `read_scroll` burns it and sets `unlocked=True`. Casting a spell from a sealed
@@ -432,14 +438,26 @@ Illusionist/Magic-user/Thief). New languages: `hephaestan`, `language_of_wolves`
   never "container" (no nesting). Carried containers contribute `own_weight +
   int(multiplier × raw_contents)` — a Bag of Holding (×0.06) at 10 000 cn weighs
   600 cn. Container contents now include coins/gems/jewellery stowed inside (counted
-  via container, not as top-level treasure). Capacity uses raw item weight. Helpers
-  in `shop.py` (`stow`/`take_out`/`stash_container`/etc.) and `storage.py`
-  (`move_container`). UI: inline collapsible rows, button/dropdown-only.
-- **Movement engine** — `aose/engine/storage.py` is the single movement vocabulary:
-  `loose_list`, `move_item`, `move_container`, `move_coins`, `_add_coins`,
-  `_take_coins`, `add_coins`, `convert_coins`, `move_valuable`. All mutate `spec` in
-  place. `StorageError(ValueError)` routes to HTTP 400. Imports only models +
-  currency — no cycle risk.
+  via container, not as top-level treasure). Capacity uses raw item weight.
+  `move_container(spec, id, dest)` in `storage.py`. UI: inline collapsible rows,
+  button/dropdown-only.
+- **Movement engine** — `aose/engine/storage.py` is the single movement vocabulary
+  and the single front door for all owned-thing movement. Public API:
+  `move_thing(spec, category, ref_id, dest, *, count=None, src=None, data=None)` —
+  dispatches on `category` (`item`, `container`, `coin`, `gem`, `jewellery`, `magic`,
+  `enchanted`, `ammo`, `source`). Also: `move_container`, `move_coins`, `add_coins`,
+  `convert_coins`, `move_valuable`. All mutate `spec` in place. `StorageError(ValueError)`
+  routes to HTTP 400. `_check_capacity(spec, dest, added_cn, data)` is the single
+  capacity gate: validates container/animal/vehicle load; skips when `dest.kind` is
+  `carried`/`stashed`/`retainer` or when `data is None`. `location_load_cn(spec, loc,
+  data)` is the shared carrier-load helper used by both `_check_capacity` and the
+  encumbrance container loop. The old per-category helpers in `shop.py`
+  (`stash`/`unstash`/`stow`/`take_out`/`stash_container`/`unstash_container`) and
+  the companions load/unload helpers (`load_onto_animal` etc.) are deleted; every
+  move goes through `move_thing`. HTTP front door: `POST /inventory/move` (character
+  sheet) and `POST /wizard/{id}/inventory/move` (wizard). Imports only models +
+  currency — no cycle risk. `encumbrance` ↔ `storage` cross-imports stay
+  function-local to avoid cycles.
 - **Stackable gear** — `AdventuringGear.bundle_count: int = 1`. `buy()` grants
   `bundle_count` units for one price; `add_free()` always grants one. Sell removes
   1 unit, returns `int((cost_gp / bundle_count) / 2)`; refund removes a full stack,
@@ -451,8 +469,9 @@ Illusionist/Magic-user/Thief). New languages: `hephaestan`, `language_of_wolves`
   treasure → immobile; `CharacterSpec.carrying_treasure` toggle). **Detailed** =
   single-axis by total weight (bands 400/600/800/1600 → 120/90/60/30/0'); total =
   `treasure_weight_cn` + `equipment_weight_cn`. Encumbrance counts only **Carried**
-  coins and valuables (not stashed, not on carriers). Container weight includes
-  value-stacks (coins/gems/jewellery) stowed in them. Magic items band on
+  coins and valuables (not stashed, not on carriers). Container weight calculated via
+  `location_load_cn(spec, carried_loc, data)` from `storage.py` — same helper used
+  by `_check_capacity`, so container load is a single definition. Magic items band on
   `banding_weight_cn` (raw − `carry_capacity_bonus`) while displaying raw carried
   weight; enchanted armour weighs half. `EncumbranceTable` reshaped accordingly.
 
@@ -496,8 +515,8 @@ Illusionist/Magic-user/Thief). New languages: `hephaestan`, `language_of_wolves`
   (MagicItemView). `magic_items`/`enchanted`/`ammo` are **location-bucketed**: each
   group contains only the instances whose `StorageLocation` matches that group's owner.
   Container views (`ContainerView`) additionally carry `stowed_magic`, `stowed_enchanted`,
-  `stowed_ammo`, `stowed_coins`, `stowed_gems`, `stowed_jewellery` sub-lists for pointer
-  types stored inside that container. Each group carries an `OwnerCaps` descriptor
+  `stowed_ammo`, `stowed_coins`, `stowed_gems`, `stowed_jewellery`, `stowed_spell_sources`
+  sub-lists for pointer types stored inside that container. Each group carries an `OwnerCaps` descriptor
   (`has_equipped`, `can_wield`, `can_stash`, `class_filter_equip`, `bucket_label`) that
   drives the three-section pane layout (Equipped · Coins · Carried/Stowed) without any
   per-owner template branches. `build_inventory_groups(spec, data)` in

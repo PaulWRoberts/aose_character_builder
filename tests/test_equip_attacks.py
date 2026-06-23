@@ -481,10 +481,10 @@ def test_sheet_carried_and_stashed_items_are_clickable(tmp_path, data):
     assert 'id="modal-item-carried-rope_50ft"' in body
     assert 'data-modal="modal-item-stashed-torch"' in body
     assert 'id="modal-item-stashed-torch"' in body
-    # Carried item modal offers Move (to any destination); stashed offers Unstash.
+    # Both carried and stashed modals use act_move → /inventory/move with src_kind set.
     # (Drop/Sell/Refund are drawer-only — see test_sheet_item_modal_shows_properties_and_no_destructive_actions.)
     assert "/character/packrat/inventory/move" in body
-    assert "/character/packrat/equipment/unstash" in body
+    assert 'value="stashed"' in body  # act_move src_kind for the stashed-item move-form
 
 
 def test_sheet_equipped_items_are_clickable(tmp_path, data):

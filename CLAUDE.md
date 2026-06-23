@@ -77,11 +77,13 @@ back-navigation links (or a 🔒 when a roll has locked an earlier step).
 - Off-hand weapon requires `two_weapon_fighting` rule + `two_weapon_eligible` + passes
   `off_hand_eligible`; total hand cost (via `hand_cost`) ≤ 2
 - Equipped items live *inside* `inventory` — weight is counted once
-- `stashed`, `containers`, `spell_sources`, gems/jewellery each have their own shapes
+- `stashed`, `containers`, gems/jewellery each have their own shapes
   — see `docs/ARCHITECTURE.md`
 - `magic_items: list[MagicItemInstance]` / `enchanted: list[EnchantedInstance]` /
-  `ammo: list[AmmoStack]` — each instance carries `location: StorageLocation` (default
-  Carried); movement goes through `storage.move_thing` + `POST /inventory/move`
+  `ammo: list[AmmoStack]` / `spell_sources: list[SpellSource]` — each instance carries
+  `location: StorageLocation` (default Carried); movement goes through
+  `storage.move_thing` + `POST /inventory/move`. Cast/decipher/copy on spell sources
+  require `location.kind == "carried"`.
 - `coins`: `list[CoinStack]` — each `CoinStack(denom, count, location: StorageLocation)`
   is at most one stack per `(denom, location)`; replaces five int fields
   `gold/platinum/electrum/silver/copper`. `StorageLocation(kind, id)` where
