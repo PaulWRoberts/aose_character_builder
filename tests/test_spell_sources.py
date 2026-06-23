@@ -325,6 +325,41 @@ def test_copy_requires_advanced_rule(data):
                       spell_id="magic_user_sleep", rng=_FixedRng(1))
 
 
+def test_scroll_not_carried_is_not_castable(data):
+    from aose.models import SpellSource, SpellSourceEntry
+    from aose.models.storage import StorageLocation
+    scroll = SpellSource(instance_id="s1", kind="scroll", caster_type="arcane",
+                         unlocked=True, location=StorageLocation(kind="stashed"),
+                         entries=[SpellSourceEntry(spell_id="magic_user_magic_missile")])
+    spec = _mu_spec()
+    assert ss.can_cast_scroll(scroll, spec, data) is False
+    assert "person" in ss.scroll_cast_block_reason(scroll, spec, data)
+
+
+def test_scroll_carried_and_unlocked_is_castable(data):
+    from aose.models import SpellSource, SpellSourceEntry
+    scroll = SpellSource(instance_id="s1", kind="scroll", caster_type="arcane",
+                         unlocked=True,  # default location is carried
+                         entries=[SpellSourceEntry(spell_id="magic_user_magic_missile")])
+    spec = _mu_spec()
+    assert ss.can_cast_scroll(scroll, spec, data) is True
+
+
+def test_spell_source_defaults_to_carried():
+    from aose.models import SpellSource
+    from aose.models.storage import StorageLocation
+    s = SpellSource(instance_id="s1", kind="scroll", caster_type="arcane")
+    assert s.location == StorageLocation(kind="carried")
+
+
+def test_spell_source_accepts_explicit_location():
+    from aose.models import SpellSource
+    from aose.models.storage import StorageLocation
+    loc = StorageLocation(kind="stashed")
+    s = SpellSource(instance_id="s1", kind="scroll", caster_type="arcane", location=loc)
+    assert s.location.kind == "stashed"
+
+
 def test_copy_rejects_divine_source_and_known_and_uncastable(data):
     cls = data.classes["magic_user"]
     rs = RuleSet(advanced_spell_books=True)

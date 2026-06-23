@@ -315,6 +315,37 @@ def test_container_view_shows_stowed_coins_and_magic(tmp_path):
 
 # ── Task 14: shared macros — magic Move control + no bare buttons ─────────────
 
+# ── Task 11: spell sources bucket by location ─────────────────────────────────
+
+def test_spell_source_buckets_under_its_location():
+    from pathlib import Path
+    from aose.data.loader import GameData
+    from aose.sheet.view import build_inventory_groups
+    from aose.models import SpellSource, SpellSourceEntry
+    data = GameData.load(Path("data"))
+    stashed_loc = StorageLocation(kind="stashed")
+    scroll = SpellSource(
+        instance_id="sc1", kind="scroll", caster_type="arcane",
+        entries=[SpellSourceEntry(spell_id="magic_missile")],
+        location=stashed_loc,
+    )
+    spec = CharacterSpec(
+        name="Mage",
+        abilities={"STR": 10, "INT": 16, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
+        race_id="human",
+        classes=[ClassEntry(class_id="magic_user", level=1, hp_rolls=[4])],
+        alignment="neutral",
+        spell_sources=[scroll],
+    )
+    groups = build_inventory_groups(spec, data)
+    carried = next(g for g in groups if g.kind == "carried")
+    stashed = next(g for g in groups if g.kind == "stashed")
+    carried_ids = {sv.instance_id for sv in carried.spell_sources}
+    stashed_ids = {sv.instance_id for sv in stashed.spell_sources}
+    assert "sc1" not in carried_ids, "stashed scroll leaked into carried group"
+    assert "sc1" in stashed_ids, "stashed scroll missing from stashed group"
+
+
 def test_magic_modal_has_move_control(tmp_path):
     from aose.characters import save_character
     from aose.models import CharacterSpec, ClassEntry, MagicItemInstance
@@ -338,6 +369,24 @@ def test_no_bare_button_in_inventory_action_rows(tmp_path):
     body = TestClient(app, follow_redirects=False).get("/character/tc-bare").text
     assert '<button type="submit">Unequip</button>' not in body
     assert '<button type="submit">Equip</button>' not in body
+
+
+def test_wielded_weapon_not_in_equipped_worn():
+    from pathlib import Path
+    from aose.data.loader import GameData
+    from aose.sheet.view import build_inventory_groups
+    data = GameData.load(Path("data"))
+    spec = CharacterSpec(
+        name="W", abilities={"STR": 12, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
+        race_id="human", classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
+        alignment="neutral", inventory=["sword"], equipped={"main_hand": "sword"},
+    )
+    groups = build_inventory_groups(spec, data)
+    pc = next(g for g in groups if g.kind == "carried")
+    worn_slots = {e.slot for e in pc.equipped_worn}
+    assert "main_hand" not in worn_slots and "off_hand" not in worn_slots
+    # the weapon still appears as an attack profile
+    assert any(a.name.lower().startswith("sword") for a in pc.equipped_attacks)
 
 
 def test_magic_on_carrier_buckets_under_carrier():

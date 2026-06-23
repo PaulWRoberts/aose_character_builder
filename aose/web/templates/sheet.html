@@ -1019,10 +1019,28 @@
         <button type="submit" class="btn btn-inline">Equip</button>
       </form>
       {{ act_move(_char_url ~ "/inventory/move", {"category": ("enchanted" if is_ench else "magic"), "id": mi.instance_id}, move_targets, gkind, gid) }}
-      <form method="post" action="{{ target_url_prefix }}/{{ 'equipment/remove-enchanted' if is_ench else 'equipment/remove-magic' }}" class="inline-form">
+      {% if is_ench %}
+      <form method="post" action="{{ target_url_prefix }}/equipment/remove-enchanted" class="inline-form">
         <input type="hidden" name="instance_id" value="{{ mi.instance_id }}">
-        <button type="submit" class="btn btn-inline danger">Remove</button>
+        <button type="submit" class="btn btn-inline danger">Drop</button>
       </form>
+      {% else %}
+      <form method="post" action="{{ target_url_prefix }}/equipment/remove-magic" class="inline-form">
+        <input type="hidden" name="instance_id" value="{{ mi.instance_id }}">
+        <button type="submit" name="mode" value="drop" class="btn btn-inline danger">Drop</button>
+      </form>
+      {% if mi.cost_gp > 0 %}
+      <form method="post" action="{{ target_url_prefix }}/equipment/remove-magic" class="sell-form inline-form">
+        <input type="hidden" name="instance_id" value="{{ mi.instance_id }}">
+        <input type="hidden" name="mode" value="">
+        <select class="sell-dest">
+          <option value="" disabled selected>Sell…</option>
+          <option value="sell">half price</option>
+          <option value="refund">+{{ mi.cost_gp }}&nbsp;gp (refund)</option>
+        </select>
+      </form>
+      {% endif %}
+      {% endif %}
       {% endif %}
     </div>
   </div>
@@ -1039,10 +1057,28 @@
     {% if mi.description %}<div class="prose">{{ mi.description | markdown | safe }}</div>{% endif %}
     <div class="row-actions">
       {{ act_move(_char_url ~ "/inventory/move", {"category": ("enchanted" if is_ench else "magic"), "id": mi.instance_id}, move_targets, "container", c.instance_id) }}
-      <form method="post" action="{{ target_url_prefix }}/{{ 'equipment/remove-enchanted' if is_ench else 'equipment/remove-magic' }}" class="inline-form">
+      {% if is_ench %}
+      <form method="post" action="{{ target_url_prefix }}/equipment/remove-enchanted" class="inline-form">
         <input type="hidden" name="instance_id" value="{{ mi.instance_id }}">
-        <button type="submit" class="btn btn-inline danger">Remove</button>
+        <button type="submit" class="btn btn-inline danger">Drop</button>
       </form>
+      {% else %}
+      <form method="post" action="{{ target_url_prefix }}/equipment/remove-magic" class="inline-form">
+        <input type="hidden" name="instance_id" value="{{ mi.instance_id }}">
+        <button type="submit" name="mode" value="drop" class="btn btn-inline danger">Drop</button>
+      </form>
+      {% if mi.cost_gp > 0 %}
+      <form method="post" action="{{ target_url_prefix }}/equipment/remove-magic" class="sell-form inline-form">
+        <input type="hidden" name="instance_id" value="{{ mi.instance_id }}">
+        <input type="hidden" name="mode" value="">
+        <select class="sell-dest">
+          <option value="" disabled selected>Sell…</option>
+          <option value="sell">half price</option>
+          <option value="refund">+{{ mi.cost_gp }}&nbsp;gp (refund)</option>
+        </select>
+      </form>
+      {% endif %}
+      {% endif %}
     </div>
   </div>
 </div>
@@ -1101,8 +1137,9 @@
 {% endfor %}
 {% endfor %}
 
-{# MODALS: spell book / scroll contents (cast + copy inline) #}
-{% for src in sheet.spell_sources %}
+{# MODALS: spell book / scroll contents (cast + copy + Move + Drop inline).
+   Iterate per group so we have location context for the Move destination control. #}
+{% macro _source_modal_body(src, loc_kind, loc_id) %}
 <div class="overlay modal" id="modal-source-{{ src.instance_id }}" role="dialog" aria-label="{{ src.name }}">
   <div class="ov-head"><h3>{{ src.name }}</h3><button class="x" data-close>×</button></div>
   <div class="ov-body">
@@ -1145,8 +1182,22 @@
       {% endfor %}
     </ul>
     {% endif %}
+    <div class="row-actions" style="margin-top:8px">
+      {{ act_move(_char_url ~ "/inventory/move", {"category": "source", "id": src.instance_id}, move_targets, loc_kind, loc_id) }}
+      <form method="post" action="/character/{{ character_id }}/spell-sources/remove" class="inline-form">
+        <input type="hidden" name="instance_id" value="{{ src.instance_id }}">
+        <button type="submit" class="btn btn-inline danger">Drop</button>
+      </form>
+    </div>
   </div>
 </div>
+{% endmacro %}
+{% for group in sheet.inventory_groups %}
+{%- set gkind = group.kind -%}{%- set gid = group.id or "" -%}
+{% for src in group.spell_sources %}{{ _source_modal_body(src, gkind, gid) }}{% endfor %}
+{% for c in group.containers %}
+{% for src in c.stowed_spell_sources %}{{ _source_modal_body(src, "container", c.instance_id) }}{% endfor %}
+{% endfor %}
 {% endfor %}
 
 {# MODAL: energy drain #}

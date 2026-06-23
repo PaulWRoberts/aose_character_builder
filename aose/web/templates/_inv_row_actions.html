@@ -23,17 +23,6 @@
     {% endif %}
     {% elif state == "carried" and row.equippable and not row.class_allowed %}
     <span class="muted small" title="Your class cannot use this item">Not usable</span>
-    {% elif state == "stashed" %}
-    <form method="post" action="{{ target_url_prefix }}/unstash" class="inline-form">
-        <input type="hidden" name="item_id" value="{{ row.id }}">
-        <button type="submit" class="btn btn-inline">Unstash</button>
-    </form>
-    {% elif state == "container" %}
-    <form method="post" action="{{ target_url_prefix }}/take-out" class="inline-form">
-        <input type="hidden" name="item_id" value="{{ row.id }}">
-        <input type="hidden" name="instance_id" value="{{ src_id }}">
-        <button type="submit" class="btn btn-inline">Take out</button>
-    </form>
     {% elif state == "retainer" and row.equippable %}
     <form method="post" action="{{ target_url_prefix }}/equip" class="inline-form">
         <input type="hidden" name="item_id" value="{{ row.id }}">

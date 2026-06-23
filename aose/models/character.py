@@ -159,6 +159,7 @@ class SpellSource(BaseModel):
     name: str = ""                                # optional label
     language: str = "Common"
     unlocked: bool = False
+    location: StorageLocation = Field(default_factory=lambda: StorageLocation(kind="carried"))
     entries: list[SpellSourceEntry] = Field(default_factory=list)
 
 

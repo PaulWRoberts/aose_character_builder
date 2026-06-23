@@ -209,3 +209,73 @@ def test_move_targets_lists_inventories_and_containers():
     assert ("stashed", None) in kinds
     assert ("animal", "mule1") in kinds
     assert ("container", "c1") in kinds
+
+
+# ── Task 5 (plan): move_item auto-unequip ────────────────────────────────────
+
+def test_moving_last_copy_of_equipped_item_unequips_it():
+    spec = _spec(inventory=["sword"], equipped={"main_hand": "sword"})
+    storage.move_item(spec, "sword", CARRIED, STASHED)
+    assert "main_hand" not in spec.equipped
+    assert spec.stashed == ["sword"]
+
+
+def test_moving_one_of_two_copies_keeps_the_equipped_one():
+    spec = _spec(inventory=["sword", "sword"], equipped={"main_hand": "sword"})
+    storage.move_item(spec, "sword", CARRIED, STASHED)
+    assert spec.equipped.get("main_hand") == "sword"   # a carried copy remains
+
+
+# ── Task 6 (plan): move_spell_source + source category ───────────────────────
+
+from aose.models import SpellSource, SpellSourceEntry, Retainer
+
+
+def _scroll(iid="s1", loc=None):
+    return SpellSource(instance_id=iid, kind="scroll", caster_type="arcane",
+                       entries=[SpellSourceEntry(spell_id="magic_user_magic_missile")],
+                       location=loc or CARRIED)
+
+
+def test_move_spell_source_repoints_location_same_world():
+    spec = _spec(spell_sources=[_scroll()])
+    storage.move_thing(spec, "source", "s1", STASHED, data=DATA)
+    assert spec.spell_sources[0].location == STASHED
+
+
+def test_move_spell_source_to_container():
+    spec = _spec(
+        spell_sources=[_scroll()],
+        containers=[ContainerInstance(instance_id="c1", catalog_id="backpack",
+                                      location=CARRIED)],
+    )
+    dest = StorageLocation(kind="container", id="c1")
+    storage.move_thing(spec, "source", "s1", dest, data=DATA)
+    assert spec.spell_sources[0].location == dest
+
+
+# ── Task 7 (plan): capacity gate on all move categories ──────────────────────
+
+import pytest
+
+
+def test_move_thing_item_into_full_container_rejected():
+    spec = _spec(
+        inventory=["sword"],
+        containers=[ContainerInstance(instance_id="p1", catalog_id="belt_pouch",
+                                      location=CARRIED)],   # cap 50; sword 60
+    )
+    dest = StorageLocation(kind="container", id="p1")
+    with pytest.raises(storage.StorageError):
+        storage.move_thing(spec, "item", "sword", dest, src=CARRIED, data=DATA)
+    assert spec.inventory == ["sword"]   # unchanged on rejection
+
+
+def test_move_thing_coins_onto_retainer_never_blocked():
+    ret_spec = _spec(name="Hench")
+    spec = _spec(coins=[CoinStack(denom="gp", count=500, location=CARRIED)],
+                 retainers=[Retainer(id="r1", spec=ret_spec, loyalty=7, role="torchbearer")])
+    dest = StorageLocation(kind="retainer", id="r1")
+    storage.move_thing(spec, "coin", "gp", dest, count=500, src=CARRIED, data=DATA)
+    # accepted; coins now on the retainer
+    assert any(c.location == dest and c.count == 500 for c in spec.coins)

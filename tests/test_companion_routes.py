@@ -111,13 +111,19 @@ def test_animal_load_and_unload(client):
     _save_char(client, inventory=["torch"], animals=[
         AnimalInstance(instance_id="a1", catalog_id="mule"),
     ])
-    r = client.post("/character/finn/animal/a1/load", data={"item_id": "torch"})
+    r = client.post("/character/finn/inventory/move", data={
+        "category": "item", "item_id": "torch",
+        "src_kind": "carried", "dest_kind": "animal", "dest_id": "a1",
+    })
     assert r.status_code == 303
     spec = load_character("finn", client._characters_dir)
     assert "torch" not in spec.inventory
     assert "torch" in spec.animals[0].contents
 
-    r = client.post("/character/finn/animal/a1/unload", data={"item_id": "torch"})
+    r = client.post("/character/finn/inventory/move", data={
+        "category": "item", "item_id": "torch",
+        "src_kind": "animal", "src_id": "a1", "dest_kind": "carried",
+    })
     assert r.status_code == 303
     spec = load_character("finn", client._characters_dir)
     assert "torch" in spec.inventory
@@ -193,13 +199,19 @@ def test_vehicle_load_and_unload(client):
     _save_char(client, inventory=["torch"], vehicles=[
         VehicleInstance(instance_id="v1", catalog_id="cart", hull_max=4),
     ])
-    r = client.post("/character/finn/vehicle/v1/load", data={"item_id": "torch"})
+    r = client.post("/character/finn/inventory/move", data={
+        "category": "item", "item_id": "torch",
+        "src_kind": "carried", "dest_kind": "vehicle", "dest_id": "v1",
+    })
     assert r.status_code == 303
     spec = load_character("finn", client._characters_dir)
     assert "torch" not in spec.inventory
     assert "torch" in spec.vehicles[0].contents
 
-    r = client.post("/character/finn/vehicle/v1/unload", data={"item_id": "torch"})
+    r = client.post("/character/finn/inventory/move", data={
+        "category": "item", "item_id": "torch",
+        "src_kind": "vehicle", "src_id": "v1", "dest_kind": "carried",
+    })
     assert r.status_code == 303
     spec = load_character("finn", client._characters_dir)
     assert "torch" in spec.inventory

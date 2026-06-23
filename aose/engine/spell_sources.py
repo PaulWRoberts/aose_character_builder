@@ -157,6 +157,8 @@ def scroll_cast_block_reason(source: SpellSource, spec: CharacterSpec,
     Arcane scrolls need a matching caster AND to have been deciphered
     (``unlocked``).  Divine scrolls need a matching caster AND knowledge of the
     scroll's ``language``.  Spell books are never castable."""
+    if source.location.kind != "carried":
+        return "not on your person"
     if source.kind != "scroll":
         return "not a scroll"
     if source.caster_type not in character_caster_types(spec, data):
@@ -194,6 +196,8 @@ def read_scroll(spec: CharacterSpec, data: GameData, instance_id: str
     Read Magic is memorized."""
     idx = _index(spec.spell_sources, instance_id)
     src = spec.spell_sources[idx]
+    if src.location.kind != "carried":
+        raise SpellSourceError("you must be carrying the scroll to read it")
     if src.kind != "scroll" or src.caster_type != "arcane":
         raise SpellSourceError("only arcane scrolls are deciphered with Read Magic")
     if src.unlocked:
@@ -215,6 +219,8 @@ def copyable_spell_ids(source: SpellSource, entry: ClassEntry, cls: CharClass,
     arcane source, spell arcane-learnable for this class (on-list, accessible
     level — including level-0 cantrips when the rule is on — not already known),
     and not already marked ``copy_failed`` on this source."""
+    if source.location.kind != "carried":
+        return set()
     if source.caster_type != "arcane":
         return set()
     learnable = {s.id for s in spell_engine.learnable_spells(entry, cls, data, ruleset)}

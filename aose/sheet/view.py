@@ -193,6 +193,7 @@ class MagicItemView(BaseModel):
     charges_max: int | None
     note: str
     modifier_summary: list[str]
+    cost_gp: int = 0
 
 
 class AmmoRow(BaseModel):
@@ -578,6 +579,7 @@ def magic_items_view(
             charges_max=inst.charges_max,
             note=inst.note,
             modifier_summary=summary,
+            cost_gp=int(catalog.cost_gp) if catalog else 0,
         ))
 
     # Plain-inventory magic items (deduped by catalog_id; V1 has no count field)
@@ -600,6 +602,7 @@ def magic_items_view(
             charges_max=None,
             note="",
             modifier_summary=_magic_bonus_summary(item),
+            cost_gp=int(item.cost_gp),
         ))
 
     return views
@@ -715,9 +718,16 @@ def _class_features(spec: CharacterSpec, data: GameData) -> list[SheetFeature]:
     return out
 
 
+_WEAPON_SLOTS = {"main_hand", "off_hand"}
+
+
 def _equipped(spec: CharacterSpec, data: GameData) -> list[EquippedRow]:
+    """Worn items (armour / shield / barding) only. Weapon slots render as
+    attack profiles, not as worn rows — including them double-renders the weapon."""
     rows: list[EquippedRow] = []
     for slot, item_id in spec.equipped.items():
+        if slot in _WEAPON_SLOTS:
+            continue
         name = data.items[item_id].name if item_id in data.items else item_id
         rows.append(EquippedRow(slot=slot, item_name=name, item_id=item_id))
     return rows
@@ -1051,12 +1061,16 @@ def _default_source_name(source) -> str:
     return f"{kind} ({n} spell{'s' if n != 1 else ''})"
 
 
-def spell_sources_view(spec: CharacterSpec, data: GameData) -> list[SpellSourceView]:
+def spell_sources_view(spec: CharacterSpec, data: GameData,
+                       location=None) -> list[SpellSourceView]:
     """One row per owned spell book / scroll, with per-spell cast/copy flags.
 
     ``can_cast`` (scrolls): the character has a class matching the scroll's caster
     type.  ``can_copy`` (advanced rule only): arcane caster, arcane source, spell
-    castable-level + on-list + not known + not failed on this source."""
+    castable-level + on-list + not known + not failed on this source.
+
+    When ``location`` is given, only sources at that ``StorageLocation`` are
+    returned.  Omit to return all sources (retainer/wizard sheet use case)."""
     arcane_cid = _first_arcane_class_id(spec, data)
     arcane_entry = None
     arcane_cls = None
@@ -1067,6 +1081,8 @@ def spell_sources_view(spec: CharacterSpec, data: GameData) -> list[SpellSourceV
     advanced = spec.ruleset.advanced_spell_books
     out: list[SpellSourceView] = []
     for source in spec.spell_sources:
+        if location is not None and source.location != location:
+            continue
         castable = spell_source_engine.can_cast_scroll(source, spec, data)
         can_read = (source.kind == "scroll" and source.caster_type == "arcane"
                     and not source.unlocked
@@ -1407,6 +1423,7 @@ def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevel
                 stowed_enchanted=enchanted_items_view(
                     [inst for inst in spec.enchanted if inst.location == here], data),
                 stowed_ammo=stowed_ammo_rows,
+                stowed_spell_sources=spell_sources_view(spec, data, here),
             ))
         return views
 
@@ -1432,7 +1449,7 @@ def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevel
     pc_magic_unequipped = [mi for mi in all_carried_magic if not mi.equipped]
     pc_enchanted = enchanted_items_view(
         [inst for inst in spec.enchanted if inst.location == carried_loc], data)
-    pc_spell_sources = spell_sources_view(spec, data)
+    pc_spell_sources = spell_sources_view(spec, data, carried_loc)
     pc_ammo = [_ammo_by_iid[s.instance_id]
                for s in spec.ammo if s.location == carried_loc
                and s.instance_id in _ammo_by_iid]
@@ -1474,6 +1491,7 @@ def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevel
         ammo=[_ammo_by_iid[s.instance_id]
               for s in spec.ammo if s.location == stashed_loc
               and s.instance_id in _ammo_by_iid],
+        spell_sources=spell_sources_view(spec, data, stashed_loc),
     ))
 
     # ── Animals ───────────────────────────────────────────────────────────────
@@ -1509,6 +1527,7 @@ def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevel
             ammo=[_ammo_by_iid[s.instance_id]
                   for s in spec.ammo if s.location == animal_loc
                   and s.instance_id in _ammo_by_iid],
+            spell_sources=spell_sources_view(spec, data, animal_loc),
         ))
 
     # ── Vehicles ──────────────────────────────────────────────────────────────
@@ -1534,6 +1553,7 @@ def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevel
             ammo=[_ammo_by_iid[s.instance_id]
                   for s in spec.ammo if s.location == vehicle_loc
                   and s.instance_id in _ammo_by_iid],
+            spell_sources=spell_sources_view(spec, data, vehicle_loc),
         ))
 
     # ── Retainers ─────────────────────────────────────────────────────────────
@@ -1581,6 +1601,7 @@ def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevel
             ammo=[ret_ammo_by_iid[s.instance_id]
                   for s in retainer.spec.ammo if s.location == ret_carried
                   and s.instance_id in ret_ammo_by_iid],
+            spell_sources=spell_sources_view(retainer.spec, data, ret_carried),
         ))
 
     return groups

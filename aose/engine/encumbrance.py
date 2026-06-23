@@ -175,30 +175,10 @@ def equipment_weight_cn(spec: CharacterSpec, data: GameData) -> int:
         catalog = data.items.get(c.catalog_id)
         if not isinstance(catalog, _Container):
             continue
-        total += catalog.weight_cn
-        raw = sum(
-            (data.items[x].weight_cn if x in data.items else 0)
-            for x in c.contents
-        )
-        # coins (1cn) + gems (1cn) + jewellery (10cn) stowed in this container
         here = StorageLocation(kind="container", id=c.instance_id)
-        raw += sum(s.count for s in spec.coins if s.location == here)
-        raw += sum(g.count for g in spec.gems if g.location == here)
-        raw += 10 * sum(1 for j in spec.jewellery if j.location == here)
-        # magic/enchanted/ammo stowed in this container
-        for mi in spec.magic_items:
-            if mi.location == here:
-                item = data.items.get(mi.catalog_id)
-                if item is not None:
-                    raw += treasure_item_weight(item) or item.weight_cn
-        for inst in spec.enchanted:
-            if inst.location == here:
-                resolved = resolve_instance(inst, data)
-                if isinstance(resolved, Armor):
-                    raw += int(resolved.weight_cn * resolved.weight_multiplier)
-                elif isinstance(resolved, Weapon):
-                    raw += resolved.weight_cn
-        total += int(catalog.weight_multiplier * raw)
+        from aose.engine.storage import location_load_cn
+        raw = location_load_cn(spec, here, data)
+        total += catalog.weight_cn + int(catalog.weight_multiplier * raw)
 
     if has_gear:
         total += 80
