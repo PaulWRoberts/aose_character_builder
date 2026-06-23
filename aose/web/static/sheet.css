@@ -284,9 +284,11 @@ table.t tbody tr + tr td{ border-top:1px solid var(--hair); }
 .btn{ font-family:var(--display); font-weight:600; font-size:10px; letter-spacing:.07em; text-transform:uppercase; padding:4px 9px; border:1.5px solid var(--ink); background:var(--box); color:var(--ink); cursor:pointer; line-height:1; }
 .btn:hover{ background:var(--ink); color:#f7f5ed; }
 .btn.solid{ background:var(--ink); color:#f7f5ed; } .btn.solid:hover{ background:var(--ink-2); }
-.btn.tool{ padding:3px 7px; font-size:9px; border-color:#f7f5ed; color:#f7f5ed; background:transparent; }
-.btn.tool:hover{ background:#f7f5ed; color:var(--ink); }
-.btn.tool.dark{ border-color:var(--ink); color:var(--ink); background:var(--box); } .btn.tool.dark:hover{ background:var(--ink); color:#f7f5ed; }
+.btn.btn-inline{ font-size:9px; padding:3px 6px; }
+.btn.btn-tool,.btn.tool{ padding:3px 7px; font-size:9px; border-color:#f7f5ed; color:#f7f5ed; background:transparent; }
+.btn.btn-tool:hover,.btn.tool:hover{ background:#f7f5ed; color:var(--ink); }
+.btn.btn-tool.dark,.btn.tool.dark{ border-color:var(--ink); color:var(--ink); background:var(--box); } .btn.btn-tool.dark:hover,.btn.tool.dark:hover{ background:var(--ink); color:#f7f5ed; }
+.btn.btn-cta{ font-size:11px; padding:6px 14px; }
 .btn.danger{ border-color:var(--stamp); color:var(--stamp); } .btn.danger:hover{ background:var(--stamp); color:#f7f5ed; }
 .btn.link{ border:none; background:none; text-transform:none; letter-spacing:0; font-family:var(--body); font-size:13px; color:var(--stamp); padding:2px 4px; text-decoration:underline; text-underline-offset:2px; }
 .btn.link:hover{ color:var(--stamp-dk); background:none; }
@@ -313,6 +315,8 @@ textarea{
 }
 .inline-form{ display:inline-flex; gap:6px; align-items:center; margin:0 0 8px; }
 .row-actions{ display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+.act-num{ width:4rem; }
+.act-select{ max-width:9rem; }
 
 /* ── overlays ──────────────────────────────────────────────── */
 .scrim{ position:fixed; inset:0; z-index:40; background:rgba(24,22,15,.42); opacity:0; visibility:hidden; transition:opacity .16s; }
@@ -894,4 +898,3 @@ input:focus-visible, select:focus-visible, textarea:focus-visible{
 .retainer-add-trigger:hover{ color:var(--ink); }
 .retainer-add-expanded{ display:flex; flex-wrap:wrap; gap:8px; align-items:center;
   padding:.4rem .5rem .5rem; }
-.inline-form{ display:inline-flex; gap:.25rem; align-items:center; }

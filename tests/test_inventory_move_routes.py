@@ -50,8 +50,9 @@ def _load(client):
 
 def test_move_item_carried_to_stashed(client):
     _save_char(client, inventory=["torch"])
-    r = client.post("/character/hero/inventory/move-item", data={
-        "item_id": "torch", "src_kind": "carried", "src_id": "",
+    r = client.post("/character/hero/inventory/move", data={
+        "category": "item", "item_id": "torch",
+        "src_kind": "carried", "src_id": "",
         "dest_kind": "stashed", "dest_id": "",
     })
     assert r.status_code == 303
@@ -63,8 +64,9 @@ def test_move_item_carried_to_stashed(client):
 def test_move_item_into_container(client):
     c = ContainerInstance(instance_id="c1", catalog_id="backpack")
     _save_char(client, inventory=["torch"], containers=[c])
-    r = client.post("/character/hero/inventory/move-item", data={
-        "item_id": "torch", "src_kind": "carried", "src_id": "",
+    r = client.post("/character/hero/inventory/move", data={
+        "category": "item", "item_id": "torch",
+        "src_kind": "carried", "src_id": "",
         "dest_kind": "container", "dest_id": "c1",
     })
     assert r.status_code == 303
@@ -75,8 +77,9 @@ def test_move_item_into_container(client):
 
 def test_move_item_missing_raises_400(client):
     _save_char(client, inventory=["torch"])
-    r = client.post("/character/hero/inventory/move-item", data={
-        "item_id": "rope", "src_kind": "carried", "src_id": "",
+    r = client.post("/character/hero/inventory/move", data={
+        "category": "item", "item_id": "rope",
+        "src_kind": "carried", "src_id": "",
         "dest_kind": "stashed", "dest_id": "",
     })
     assert r.status_code == 400
@@ -85,8 +88,9 @@ def test_move_item_missing_raises_400(client):
 def test_move_container_to_stashed(client):
     c = ContainerInstance(instance_id="c1", catalog_id="backpack")
     _save_char(client, containers=[c])
-    r = client.post("/character/hero/inventory/move-container", data={
-        "container_id": "c1", "dest_kind": "stashed", "dest_id": "",
+    r = client.post("/character/hero/inventory/move", data={
+        "category": "container", "item_id": "c1",
+        "dest_kind": "stashed", "dest_id": "",
     })
     assert r.status_code == 303
     spec = _load(client)
@@ -96,8 +100,9 @@ def test_move_container_to_stashed(client):
 def test_move_coins_route(client):
     from aose.models import CoinStack
     _save_char(client, coins=[CoinStack(denom="gp", count=10)])
-    r = client.post("/character/hero/inventory/move-coins", data={
-        "denom": "gp", "src_kind": "carried", "src_id": "",
+    r = client.post("/character/hero/inventory/move", data={
+        "category": "coin", "denom": "gp",
+        "src_kind": "carried", "src_id": "",
         "dest_kind": "stashed", "dest_id": "", "count": "4",
     })
     assert r.status_code == 303
@@ -143,7 +148,7 @@ def test_carried_item_offers_move_to_carrier(client):
     save_character("hero", spec, client._characters_dir)
     r = client.get("/character/hero")
     assert r.status_code == 200
-    assert "/character/hero/inventory/move-item" in r.text
+    assert "/character/hero/inventory/move" in r.text
     assert 'data-kind="animal"' in r.text   # the mule is an available destination
 
 
@@ -154,8 +159,9 @@ def test_move_coins_invalid_dest_returns_400(client):
     from aose.models import CoinStack
     _save_char(client, coins=[CoinStack(denom="gp", count=10,
                                         location=StorageLocation(kind="stashed"))])
-    r = client.post("/character/hero/inventory/move-coins", data={
-        "denom": "gp", "src_kind": "stashed", "src_id": "",
+    r = client.post("/character/hero/inventory/move", data={
+        "category": "coin", "denom": "gp",
+        "src_kind": "stashed", "src_id": "",
         "dest_kind": "", "dest_id": "", "count": "4",
     })
     assert r.status_code == 400
@@ -206,3 +212,26 @@ def test_use_as_container_promotes_loose_item(client):
     spec = _load(client)
     assert "backpack" not in spec.inventory
     assert any(c.catalog_id == "backpack" for c in spec.containers)
+
+
+def test_single_move_route_moves_item_to_container(client):
+    from aose.models import ContainerInstance
+    from aose.models.storage import StorageLocation
+    _save_char(client, inventory=["torch", "backpack"],
+               containers=[ContainerInstance(instance_id="c1", catalog_id="backpack",
+                                             location=StorageLocation(kind="carried"))])
+    r = client.post("/character/hero/inventory/move", data={
+        "category": "item", "item_id": "torch",
+        "src_kind": "carried", "src_id": "",
+        "dest_kind": "container", "dest_id": "c1",
+    })
+    assert r.status_code == 303
+    spec = _load(client)
+    assert "torch" in spec.containers[0].contents
+
+
+def test_old_typed_move_routes_are_gone(client):
+    _save_char(client, inventory=["torch"])
+    r = client.post("/character/hero/inventory/move-item", data={
+        "item_id": "torch", "src_kind": "carried", "dest_kind": "stashed"})
+    assert r.status_code == 404

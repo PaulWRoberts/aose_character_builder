@@ -72,6 +72,13 @@ class ContainerView(BaseModel):
     effective_weight_cn: int     # own + int(multiplier * used_cn) when carried, else 0
     contents: list[InventoryRow]
     detail: DetailCard | None = None   # catalog item card for the per-container modal
+    # Pointer-type items stowed in this container (location=container/<instance_id>)
+    stowed_coins: list = Field(default_factory=list)       # CoinRow
+    stowed_gems: list = Field(default_factory=list)        # GemRow
+    stowed_jewellery: list = Field(default_factory=list)   # JewelleryRow
+    stowed_magic: list = Field(default_factory=list)       # MagicItemView
+    stowed_enchanted: list = Field(default_factory=list)   # EnchantedView
+    stowed_ammo: list = Field(default_factory=list)        # AmmoRow
 
 
 class CoinRow(BaseModel):

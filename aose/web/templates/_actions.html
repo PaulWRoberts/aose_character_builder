@@ -1,0 +1,40 @@
+{# Shared action-control macros — the single source of truth for inventory action UI.
+   Import `with context` so move_targets and inv_move_url are reachable via context. #}
+{% from "_move_dest.html" import move_dest_control with context %}
+
+{# A single-button POST form.  hidden is a dict of hidden input k→v.
+   variant: "default"|"solid"|"danger"   size: "modal"|"inline"|"tool"|"cta" #}
+{% macro act_button(label, url, hidden={}, variant="default", size="modal", attrs="") %}
+<form method="post" action="{{ url }}" class="inline-form">
+  {% for k, v in hidden.items() %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
+  <button type="submit" class="btn{% if size == 'inline' %} btn-inline{% elif size == 'tool' %} btn-tool{% elif size == 'cta' %} btn-cta{% endif %}{% if variant == 'solid' %} solid{% elif variant == 'danger' %} danger{% endif %}" {{ attrs }}>{{ label }}</button>
+</form>
+{% endmacro %}
+
+{# Move form.  ref={category, id}.  count shows a count input for coin/gem/ammo.
+   Coin/gem/ammo also get an explicit Move button; other categories auto-submit on
+   select change (inventory.js). #}
+{% macro act_move(url, ref, move_targets, cur_kind, cur_id, count=none) %}
+<form method="post" action="{{ url }}" class="inline-form move-form">
+  <input type="hidden" name="category" value="{{ ref.category }}">
+  {% if ref.category == 'coin' %}<input type="hidden" name="denom" value="{{ ref.id }}">
+  {% elif ref.category == 'item' %}<input type="hidden" name="item_id" value="{{ ref.id }}">
+  {% else %}<input type="hidden" name="instance_id" value="{{ ref.id }}">{% endif %}
+  <input type="hidden" name="src_kind" value="{{ cur_kind }}">
+  <input type="hidden" name="src_id" value="{{ cur_id or '' }}">
+  {% if ref.category in ('coin', 'gem', 'ammo') and count is not none %}
+  <input type="number" name="count" value="{{ count }}" min="1" class="act-num">
+  {% endif %}
+  {{ move_dest_control(move_targets, ref, cur_kind, cur_id) }}
+  {% if ref.category in ('coin', 'gem', 'ammo') %}<button class="btn btn-inline" type="submit">Move</button>{% endif %}
+</form>
+{% endmacro %}
+
+{# +/− stepper — one form, two submit buttons that carry the delta as their value. #}
+{% macro act_stepper(url, hidden={}, field="delta") %}
+<form method="post" action="{{ url }}" class="inline-form">
+  {% for k, v in hidden.items() %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
+  <button class="btn btn-inline" type="submit" name="{{ field }}" value="1">+</button>
+  <button class="btn btn-inline" type="submit" name="{{ field }}" value="-1">−</button>
+</form>
+{% endmacro %}

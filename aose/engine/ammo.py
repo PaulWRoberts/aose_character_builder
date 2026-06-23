@@ -11,6 +11,7 @@ import uuid
 from aose.data.loader import GameData
 from aose.engine.enchant import is_compatible
 from aose.models import Ammunition, AmmoStack, ConditionalBonus, Weapon
+from aose.models.storage import StorageLocation
 
 
 class UnknownAmmo(ValueError):
@@ -46,15 +47,16 @@ def _find(stacks: list[AmmoStack], instance_id: str) -> int:
 
 
 def _combine(stacks: list[AmmoStack], base_id: str, enchantment_id: str | None,
-             count: int) -> list[AmmoStack]:
-    """Add ``count`` to an existing (base_id, enchantment_id) stack, or append a
-    fresh one."""
+             count: int, location: StorageLocation | None = None) -> list[AmmoStack]:
+    """Add ``count`` to an existing (base_id, enchantment_id, location) stack, or
+    append a fresh one at ``location`` (default carried)."""
+    loc = location or StorageLocation(kind="carried")
     for i, s in enumerate(stacks):
-        if s.base_id == base_id and s.enchantment_id == enchantment_id:
+        if s.base_id == base_id and s.enchantment_id == enchantment_id and s.location == loc:
             merged = s.model_copy(update={"count": s.count + count})
             return [*stacks[:i], merged, *stacks[i + 1:]]
     fresh = AmmoStack(instance_id=uuid.uuid4().hex, base_id=base_id,
-                      enchantment_id=enchantment_id, count=count)
+                      enchantment_id=enchantment_id, count=count, location=loc)
     return [*stacks, fresh]
 
 

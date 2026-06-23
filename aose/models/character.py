@@ -21,6 +21,7 @@ class MagicItemInstance(BaseModel):
 
     instance_id: str                         # uuid4 hex
     catalog_id: str                          # references a MagicItem
+    location: StorageLocation = Field(default_factory=lambda: StorageLocation(kind="carried"))
     equipped: bool = False
     charges_max: int | None = None
     charges_remaining: int | None = None
@@ -41,6 +42,7 @@ class EnchantedInstance(BaseModel):
     instance_id: str                  # uuid4 hex
     base_id: str                      # references a Weapon or Armor
     enchantment_id: str               # references an Enchantment
+    location: StorageLocation = Field(default_factory=lambda: StorageLocation(kind="carried"))
     equipped: bool = False
     charges_max: int | None = None
     charges_remaining: int | None = None
@@ -60,6 +62,7 @@ class AmmoStack(BaseModel):
     base_id: str                           # references an Ammunition item
     enchantment_id: str | None = None      # references an Enchantment (kind ammunition)
     count: int = 0
+    location: StorageLocation = Field(default_factory=lambda: StorageLocation(kind="carried"))
 
 
 class ContainerInstance(BaseModel):

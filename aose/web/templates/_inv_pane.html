@@ -2,7 +2,7 @@
    Three subsections driven by caps: Equipped · Coins · <bucket_label>.
    `prefix` is the modal id-prefix for loose rows. `src_id` is the group's
    instance id (empty for person buckets). `open` opens the pane by default. #}
-{% macro inv_pane(group, prefix, src_id, open) %}
+{% macro inv_pane(group, prefix, src_id, open, manage_treasure=True) %}
 {%- set caps = group.caps -%}
 {%- set n_items = group.loose|length + group.equipped_attacks|length
                   + group.equipped_worn|length + group.equipped_magic|length
@@ -57,7 +57,8 @@
     <div class="subhead">Coins</div>
     <ul class="inv-list">
       {% for c in group.coins %}
-      <li><span>{{ c.count }} {{ c.denom }}<span class="tag faint">coin</span></span><span class="q">{% if group.kind in ("stashed",) %}—{% else %}{{ c.count }} cn{% endif %}</span></li>
+      {%- set coin_clickable = manage_treasure and group.kind != "retainer" -%}
+      <li{% if coin_clickable %} class="clickable" data-modal="modal-coin-{{ group.kind }}-{{ group.id or '' }}-{{ c.denom }}"{% endif %}><span>{{ c.count }} {{ c.denom }}<span class="tag faint">coin</span></span><span class="q">{% if group.kind in ("stashed",) %}—{% else %}{{ c.count }} cn{% endif %}</span></li>
       {% endfor %}
     </ul>
     {% endif %}
@@ -91,6 +92,36 @@
       <li class="clickable" data-modal="modal-item-container-{{ c.instance_id }}-{{ row.id }}">
         <span><span class="indent">↳</span> {{ row.name }}{% if row.count > 1 %} ×{{ row.count }}{% endif %}</span>
         <span class="q">{% if row.weight_cn is defined %}{{ row.weight_cn }} cn{% endif %}</span>
+      </li>
+      {% endfor %}
+      {% for row in c.stowed_coins %}
+      <li class="clickable" data-modal="modal-coin-container-{{ c.instance_id }}-{{ row.denom }}"><span><span class="indent">↳</span> {{ row.count }} {{ row.denom }}</span></li>
+      {% endfor %}
+      {% for row in c.stowed_gems %}
+      <li class="clickable" data-modal="modal-gem-{{ row.instance_id }}">
+        <span><span class="indent">↳</span> {{ row.label or "Gem" }}{% if row.count > 1 %} ×{{ row.count }}{% endif %}</span>
+        <span class="st muted">{{ row.stack_value }} gp</span>
+      </li>
+      {% endfor %}
+      {% for row in c.stowed_jewellery %}
+      <li class="clickable" data-modal="modal-jewel-{{ row.instance_id }}">
+        <span><span class="indent">↳</span> {{ row.label or "Jewellery" }}</span>
+        <span class="st muted">{{ row.effective_value }} gp</span>
+      </li>
+      {% endfor %}
+      {% for mi in c.stowed_magic %}
+      <li class="clickable" data-modal="modal-magic-{{ mi.instance_id }}">
+        <span><span class="indent">↳</span> {{ mi.name }} <span class="tag stamp">magic</span></span>
+      </li>
+      {% endfor %}
+      {% for mi in c.stowed_enchanted %}
+      <li class="clickable" data-modal="modal-magic-{{ mi.instance_id }}">
+        <span><span class="indent">↳</span> {{ mi.name }} <span class="tag stamp">enchanted</span></span>
+      </li>
+      {% endfor %}
+      {% for a in c.stowed_ammo %}
+      <li class="clickable" data-modal="modal-ammo-{{ a.instance_id }}">
+        <span><span class="indent">↳</span> {{ a.name }} ×{{ a.count }}</span>
       </li>
       {% endfor %}
       {% endfor %}
@@ -127,12 +158,12 @@
       </li>
       {% endfor %}
 
-      {# Treasure — gems + jewellery #}
+      {# Treasure — gems + jewellery (clickable → per-stack modal) #}
       {% for g in group.treasure_gems %}
-      <li><span>{% if g.label %}{{ g.label }}{% else %}{{ g.value }} gp gem{% endif %} × {{ g.count }}<span class="tag faint">gem · {{ g.stack_value }} gp</span></span><span class="q">{{ g.count }} cn</span></li>
+      <li{% if manage_treasure %} class="clickable" data-modal="modal-gem-{{ g.instance_id }}"{% endif %}><span>{% if g.label %}{{ g.label }}{% else %}{{ g.value }} gp gem{% endif %} × {{ g.count }}<span class="tag faint">gem · {{ g.stack_value }} gp</span></span><span class="q">{{ g.count }} cn</span></li>
       {% endfor %}
       {% for j in group.treasure_jewellery %}
-      <li><span>{% if j.label %}{{ j.label }}{% else %}jewellery{% endif %}<span class="tag faint">jewel · {{ j.effective_value }} gp</span></span><span class="q">10 cn</span></li>
+      <li{% if manage_treasure %} class="clickable" data-modal="modal-jewel-{{ j.instance_id }}"{% endif %}><span>{% if j.label %}{{ j.label }}{% else %}jewellery{% endif %}<span class="tag faint">jewel · {{ j.effective_value }} gp</span></span><span class="q">10 cn</span></li>
       {% endfor %}
 
     </ul>

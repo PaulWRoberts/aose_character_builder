@@ -489,3 +489,28 @@ def test_spec_verification_spotchecks():
     assert len(stacks) == 1 and stacks[0].count == 40 and gold == 90
     # a launcher accepts its ammo
     assert accepts(d.items["crossbow"], d.items["crossbow_bolt"])
+
+
+# ── Location-aware _combine tests (Task 2) ───────────────────────────────────
+
+from aose.engine import ammo as ammo_engine
+from aose.models.storage import StorageLocation
+
+CARRIED = StorageLocation(kind="carried")
+MULE = StorageLocation(kind="animal", id="mule1")
+
+
+def test_combine_does_not_merge_across_locations():
+    stacks = [AmmoStack(instance_id="a1", base_id="arrow", count=5, location=MULE)]
+    out = ammo_engine._combine(stacks, "arrow", None, 20, location=CARRIED)
+    # The mule stack is untouched; a new carried stack is appended.
+    assert len(out) == 2
+    mule = next(s for s in out if s.location == MULE)
+    carried = next(s for s in out if s.location == CARRIED)
+    assert mule.count == 5 and carried.count == 20
+
+
+def test_combine_merges_same_location():
+    stacks = [AmmoStack(instance_id="a1", base_id="arrow", count=5, location=CARRIED)]
+    out = ammo_engine._combine(stacks, "arrow", None, 20, location=CARRIED)
+    assert len(out) == 1 and out[0].count == 25

@@ -8,6 +8,8 @@ DAG, so no cycle risk.
 """
 from __future__ import annotations
 
+import uuid
+
 from aose.engine.currency import RATES, CurrencyError, convert_amount
 from aose.models import CharacterSpec, CoinStack, GemStack, JewelleryPiece
 from aose.models.storage import StorageLocation
@@ -181,26 +183,174 @@ def convert_coins(spec: CharacterSpec, loc: StorageLocation,
     _add_coins(spec, to, gained, loc)
 
 
+def move_ammo(spec: CharacterSpec, instance_id: str,
+              dest: StorageLocation, count: int) -> None:
+    """Split ``count`` off the ammo stack and merge it into the matching
+    (base_id, enchantment_id, dest) stack. Moving the *entire* stack first
+    unloads it from any weapon that has it loaded."""
+    from aose.engine import ammo as _ammo
+    if dest.kind in ("animal", "vehicle"):
+        _carrier(spec, dest.kind, dest.id)
+    if dest.kind == "container":
+        _container(spec, dest.id)
+    src = next((s for s in spec.ammo if s.instance_id == instance_id), None)
+    if src is None:
+        raise StorageError(f"no ammo stack {instance_id!r}")
+    if count <= 0 or count > src.count:
+        raise StorageError(f"cannot move {count} of {src.count} ammo")
+    if count == src.count:
+        for key, iid in list(spec.loaded_ammo.items()):
+            if iid == instance_id:
+                unload_if_loaded(spec, key)
+    # Capture base/enchantment before mutating
+    base_id = src.base_id
+    enchantment_id = src.enchantment_id
+    src.count -= count
+    if src.count == 0:
+        spec.ammo.remove(src)
+    spec.ammo = _ammo._combine(spec.ammo, base_id, enchantment_id,
+                               count, location=dest)
+
+
+def unload_if_loaded(spec: CharacterSpec, weapon_key: str) -> None:
+    """Drop any loaded-ammo reference keyed by ``weapon_key`` (no-op if absent).
+    Run before a weapon or its full ammo stack leaves its bucket so no weapon
+    points at a relocated/merged stack."""
+    if weapon_key in spec.loaded_ammo:
+        del spec.loaded_ammo[weapon_key]
+
+
 def move_valuable(spec: CharacterSpec, instance_id: str,
-                  dest: StorageLocation) -> None:
+                  dest: StorageLocation, count: int | None = None) -> None:
     """Move a gem stack or jewellery piece (by instance_id) to ``dest``.
-    Gems merge into a same-(value,label,dest) stack if one exists.
-    Container existence is validated; carrier existence is the route's concern."""
+    For a gem, ``count`` splits N off the source and merges into the matching
+    (value, label, dest) stack; ``count=None`` moves the whole stack.
+    Jewellery is per-piece; ``count`` is ignored."""
     if dest.kind == "container":
         _container(spec, dest.id)
     for i, g in enumerate(spec.gems):
         if g.instance_id == instance_id:
+            n = g.count if count is None else count
+            if n <= 0 or n > g.count:
+                raise StorageError(f"cannot move {n} of {g.count} gems")
             target = next((o for o in spec.gems
                            if o is not g and o.value == g.value
                            and o.label == g.label and o.location == dest), None)
             if target is not None:
-                target.count += g.count
-                spec.gems.pop(i)
+                target.count += n
             else:
-                g.location = dest
+                spec.gems.append(GemStack(instance_id=uuid.uuid4().hex,
+                                          value=g.value, count=n, label=g.label,
+                                          location=dest))
+            g.count -= n
+            if g.count == 0:
+                spec.gems.remove(g)
             return
     for j in spec.jewellery:
         if j.instance_id == instance_id:
             j.location = dest
             return
     raise StorageError(f"no gem/jewellery with id {instance_id!r}")
+
+
+def _world_lists(world_spec: CharacterSpec, kind: str) -> list:
+    return world_spec.magic_items if kind == "magic" else world_spec.enchanted
+
+
+def _find_instance(spec: CharacterSpec, kind: str, instance_id: str):
+    """Locate a magic/enchanted instance in the PC world or any retainer world.
+    Returns (owner_spec, list, inst)."""
+    for x in _world_lists(spec, kind):
+        if x.instance_id == instance_id:
+            return spec, _world_lists(spec, kind), x
+    for r in spec.retainers:
+        for x in _world_lists(r.spec, kind):
+            if x.instance_id == instance_id:
+                return r.spec, _world_lists(r.spec, kind), x
+    raise StorageError(f"no {kind} instance {instance_id!r}")
+
+
+def move_instance(spec: CharacterSpec, kind: str, instance_id: str,
+                  dest: StorageLocation) -> None:
+    """Move a magic or enchanted instance to ``dest`` from anywhere (PC or a
+    retainer world). Auto-unequips first (clears the instance ``equipped`` flag
+    and any owning-spec equipped slot pointing at it). A move that crosses
+    worlds (PC↔retainer) is a list-to-list move; within a world it re-points
+    the instance ``location``."""
+    if kind not in ("magic", "enchanted"):
+        raise StorageError(f"move_instance: bad kind {kind!r}")
+    if dest.kind in ("animal", "vehicle"):
+        _carrier(spec, dest.kind, dest.id)
+    if dest.kind == "container":
+        _container(spec, dest.id)
+    owner_spec, src_list, inst = _find_instance(spec, kind, instance_id)
+    # Auto-unequip on the owning spec.
+    catalog_id = getattr(inst, "catalog_id", None) or getattr(inst, "base_id", None)
+    inst.equipped = False
+    for slot, iid in list(owner_spec.equipped.items()):
+        if iid == catalog_id:
+            del owner_spec.equipped[slot]
+            unload_if_loaded(owner_spec, catalog_id)
+    dest_world = _retainer(spec, dest.id).spec if dest.kind == "retainer" else spec
+    if dest_world is owner_spec:
+        inst.location = dest                       # same world → re-point
+    else:
+        src_list.remove(inst)                       # cross world → list-to-list
+        new_loc = (StorageLocation(kind="carried")
+                   if dest.kind == "retainer" else dest)
+        _world_lists(dest_world, kind).append(inst.model_copy(update={"location": new_loc}))
+
+
+def move_thing(spec: CharacterSpec, category: str, ref_id: str,
+               dest: StorageLocation, *, count: int | None = None,
+               src: StorageLocation | None = None, data=None) -> None:
+    """Single movement front door. ``category`` selects the substrate.
+    ``count`` applies to coins/gems/ammo; ``src`` is required for loose items
+    (which list to pull from). ``data`` is used by item moves' validation."""
+    if category == "item":
+        if src is None:
+            raise StorageError("item move requires src")
+        unload_if_loaded(spec, ref_id)            # a loaded weapon unloads first
+        move_item(spec, ref_id, src, dest)
+    elif category == "container":
+        move_container(spec, ref_id, dest)
+    elif category == "coin":
+        move_coins(spec, ref_id, src or StorageLocation(kind="carried"), dest,
+                   count if count is not None else 0)
+    elif category in ("gem", "jewellery"):
+        move_valuable(spec, ref_id, dest, count=count)
+    elif category == "ammo":
+        move_ammo(spec, ref_id, dest, count if count is not None else 0)
+    elif category in ("magic", "enchanted"):
+        move_instance(spec, category, ref_id, dest)
+    else:
+        raise StorageError(f"unknown move category {category!r}")
+
+
+def move_targets(spec: CharacterSpec, data) -> list[dict]:
+    """Every top-level inventory + every container (PC and retainer) as
+    {kind, id, label} dicts, for the shared Move control."""
+    out: list[dict] = [
+        {"kind": "carried", "id": None, "label": spec.name or "Carried"},
+        {"kind": "stashed", "id": None, "label": "Stashed"},
+    ]
+    for a in spec.animals:
+        cat = data.items.get(a.catalog_id)
+        out.append({"kind": "animal", "id": a.instance_id,
+                    "label": a.name or (cat.name if cat else a.catalog_id)})
+    for v in spec.vehicles:
+        cat = data.items.get(v.catalog_id)
+        out.append({"kind": "vehicle", "id": v.instance_id,
+                    "label": v.name or (cat.name if cat else v.catalog_id)})
+    for r in spec.retainers:
+        out.append({"kind": "retainer", "id": r.id, "label": r.spec.name})
+    for c in spec.containers:
+        cat = data.items.get(c.catalog_id)
+        out.append({"kind": "container", "id": c.instance_id,
+                    "label": (cat.name if cat else c.catalog_id)})
+    for r in spec.retainers:
+        for c in r.spec.containers:
+            cat = data.items.get(c.catalog_id)
+            out.append({"kind": "container", "id": c.instance_id,
+                        "label": f"{r.spec.name} ▸ {cat.name if cat else c.catalog_id}"})
+    return out

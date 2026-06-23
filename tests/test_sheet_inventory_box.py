@@ -203,3 +203,164 @@ def test_inventory_box_retainer_item_modal_exists(tmp_path):
     body = TestClient(app, follow_redirects=False).get("/character/tc-inv4").text
     # Retainer loose-item modal exists (dagger carried by retainer r1)
     assert 'id="modal-item-retainer-r1-dagger"' in body
+
+
+def _treasure_spec():
+    from aose.models import GemStack, JewelleryPiece
+    return CharacterSpec(
+        name="Croesus",
+        abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
+        race_id="human", classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
+        alignment="neutral",
+        inventory=["torch", "sword"], equipped={"main_hand": "sword"},
+        coins=[CoinStack(denom="gp", count=12,
+                         location=StorageLocation(kind="carried"))],
+        gems=[GemStack(instance_id="g1", value=100, count=2, label="ruby",
+                       location=StorageLocation(kind="carried"))],
+        jewellery=[JewelleryPiece(instance_id="j1", value=800, label="necklace",
+                                  location=StorageLocation(kind="carried"))],
+    )
+
+
+def test_coin_row_clickable_and_modal_with_actions(tmp_path):
+    from aose.characters import save_character
+    app = _make_app(tmp_path)
+    save_character("tc-coin", _treasure_spec(), tmp_path / "characters")
+    body = TestClient(app, follow_redirects=False).get("/character/tc-coin").text
+    # Carried gp stack is clickable and opens a coin modal
+    assert 'data-modal="modal-coin-carried--gp"' in body
+    assert 'id="modal-coin-carried--gp"' in body
+    # Modal carries convert, move, and drop actions
+    assert "/coins/convert" in body
+    assert "/inventory/move" in body
+    assert "/coins/add" in body
+
+
+def test_gem_row_clickable_and_modal_with_actions(tmp_path):
+    from aose.characters import save_character
+    app = _make_app(tmp_path)
+    save_character("tc-gem", _treasure_spec(), tmp_path / "characters")
+    body = TestClient(app, follow_redirects=False).get("/character/tc-gem").text
+    assert 'data-modal="modal-gem-g1"' in body
+    assert 'id="modal-gem-g1"' in body
+    for action in ("/gems/sell", "/gems/sell-all", "/gems/adjust",
+                   "/gems/remove", "/inventory/move"):
+        assert action in body, action
+
+
+def test_jewellery_row_clickable_and_modal_with_actions(tmp_path):
+    from aose.characters import save_character
+    app = _make_app(tmp_path)
+    save_character("tc-jewel", _treasure_spec(), tmp_path / "characters")
+    body = TestClient(app, follow_redirects=False).get("/character/tc-jewel").text
+    assert 'data-modal="modal-jewel-j1"' in body
+    assert 'id="modal-jewel-j1"' in body
+    for action in ("/jewellery/toggle-damaged", "/jewellery/sell",
+                   "/jewellery/remove", "/inventory/move"):
+        assert action in body, action
+
+
+def test_carried_item_modal_has_sell_and_drop(tmp_path):
+    from aose.characters import save_character
+    app = _make_app(tmp_path)
+    save_character("tc-sell", _treasure_spec(), tmp_path / "characters")
+    body = TestClient(app, follow_redirects=False).get("/character/tc-sell").text
+    # The carried torch modal exposes Sell (half/refund) and Drop
+    assert 'id="modal-item-carried-torch"' in body
+    assert "half price" in body
+    assert "Sell…" in body
+
+
+def test_drawer_treasure_tab_keeps_add_forms_only(tmp_path):
+    from aose.characters import save_character
+    app = _make_app(tmp_path)
+    save_character("tc-drawer", _treasure_spec(), tmp_path / "characters")
+    body = TestClient(app, follow_redirects=False).get("/character/tc-drawer").text
+    # The Treasure tab keeps acquisition forms…
+    assert "/gems/add" in body
+    assert "/jewellery/add" in body
+    # …but no longer renders the management table ("sell one" was table-only)
+    assert "sell one" not in body
+
+
+# ── Task 9: stowed pointer-types render inside container block ───────────────
+
+def test_container_view_shows_stowed_coins_and_magic(tmp_path):
+    from aose.characters import save_character
+    from aose.models import (CharacterSpec, ClassEntry, CoinStack, ContainerInstance,
+                             MagicItemInstance)
+    from aose.models.storage import StorageLocation
+    cont_loc = StorageLocation(kind="container", id="c1")
+    spec = CharacterSpec(
+        name="Bagman",
+        abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
+        race_id="human", classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
+        alignment="neutral",
+        inventory=["backpack"],
+        containers=[ContainerInstance(instance_id="c1", catalog_id="backpack",
+                                      location=StorageLocation(kind="carried"))],
+        coins=[CoinStack(denom="gp", count=7, location=cont_loc)],
+        magic_items=[MagicItemInstance(instance_id="m1",
+                                       catalog_id="ring_protection_plus_1",
+                                       location=cont_loc)],
+    )
+    app = _make_app(tmp_path)
+    save_character("tc-stow", spec, tmp_path / "characters")
+    body = TestClient(app, follow_redirects=False).get("/character/tc-stow").text
+    assert "7 gp" in body            # stowed coins render inside the container block
+    assert 'id="modal-magic-m1"' in body
+
+
+# ── Task 10: magic/enchanted/ammo bucket by storage location ─────────────────
+
+# ── Task 14: shared macros — magic Move control + no bare buttons ─────────────
+
+def test_magic_modal_has_move_control(tmp_path):
+    from aose.characters import save_character
+    from aose.models import CharacterSpec, ClassEntry, MagicItemInstance
+    spec = CharacterSpec(
+        name="Wiz", abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
+        race_id="human", classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
+        alignment="neutral",
+        magic_items=[MagicItemInstance(instance_id="m1", catalog_id="ring_protection_plus_1")],
+    )
+    app = _make_app(tmp_path)
+    save_character("tc-mm", spec, tmp_path / "characters")
+    body = TestClient(app, follow_redirects=False).get("/character/tc-mm").text
+    assert "/inventory/move" in body
+    assert 'value="magic"' in body
+
+
+def test_no_bare_button_in_inventory_action_rows(tmp_path):
+    from aose.characters import save_character
+    save_character("tc-bare", _treasure_spec(), tmp_path / "characters")
+    app = _make_app(tmp_path)
+    body = TestClient(app, follow_redirects=False).get("/character/tc-bare").text
+    assert '<button type="submit">Unequip</button>' not in body
+    assert '<button type="submit">Equip</button>' not in body
+
+
+def test_magic_on_carrier_buckets_under_carrier():
+    from pathlib import Path
+    from aose.data.loader import GameData
+    from aose.sheet.view import build_inventory_groups
+    from aose.models import (CharacterSpec, ClassEntry, AnimalInstance,
+                             MagicItemInstance)
+    from aose.models.storage import StorageLocation
+    data = GameData.load(Path("data"))
+    mule = StorageLocation(kind="animal", id="mule1")
+    spec = CharacterSpec(
+        name="Packer",
+        abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
+        race_id="human", classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
+        alignment="neutral",
+        animals=[AnimalInstance(instance_id="mule1", catalog_id="mule")],
+        magic_items=[MagicItemInstance(instance_id="m1",
+                                       catalog_id="ring_protection_plus_1",
+                                       location=mule)],
+    )
+    groups = build_inventory_groups(spec, data)
+    carried = next(g for g in groups if g.kind == "carried")
+    animal = next(g for g in groups if g.kind == "animal")
+    assert all(mi.instance_id != "m1" for mi in carried.magic_items)   # not in PC
+    assert any(mi.instance_id == "m1" for mi in animal.magic_items)    # under mule
