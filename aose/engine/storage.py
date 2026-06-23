@@ -183,6 +183,35 @@ def convert_coins(spec: CharacterSpec, loc: StorageLocation,
     _add_coins(spec, to, gained, loc)
 
 
+def move_ammo(spec: CharacterSpec, instance_id: str,
+              dest: StorageLocation, count: int) -> None:
+    """Split ``count`` off the ammo stack and merge it into the matching
+    (base_id, enchantment_id, dest) stack. Moving the *entire* stack first
+    unloads it from any weapon that has it loaded."""
+    from aose.engine import ammo as _ammo
+    if dest.kind in ("animal", "vehicle"):
+        _carrier(spec, dest.kind, dest.id)
+    if dest.kind == "container":
+        _container(spec, dest.id)
+    src = next((s for s in spec.ammo if s.instance_id == instance_id), None)
+    if src is None:
+        raise StorageError(f"no ammo stack {instance_id!r}")
+    if count <= 0 or count > src.count:
+        raise StorageError(f"cannot move {count} of {src.count} ammo")
+    if count == src.count:
+        for key, iid in list(spec.loaded_ammo.items()):
+            if iid == instance_id:
+                unload_if_loaded(spec, key)
+    # Capture base/enchantment before mutating
+    base_id = src.base_id
+    enchantment_id = src.enchantment_id
+    src.count -= count
+    if src.count == 0:
+        spec.ammo.remove(src)
+    spec.ammo = _ammo._combine(spec.ammo, base_id, enchantment_id,
+                               count, location=dest)
+
+
 def unload_if_loaded(spec: CharacterSpec, weapon_key: str) -> None:
     """Drop any loaded-ammo reference keyed by ``weapon_key`` (no-op if absent).
     Run before a weapon or its full ammo stack leaves its bucket so no weapon

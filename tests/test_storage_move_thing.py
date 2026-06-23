@@ -70,3 +70,49 @@ def test_gem_full_move_without_count_moves_whole_stack():
     storage.move_valuable(spec, "g1", STASHED)   # count=None → whole stack
     assert all(g.location == STASHED for g in spec.gems)
     assert len(spec.gems) == 1 and spec.gems[0].count == 4
+
+
+# ── Task 5: move_ammo ────────────────────────────────────────────────────────
+
+from aose.models import AnimalInstance
+
+MULE = StorageLocation(kind="animal", id="mule1")
+
+
+def _spec_with_mule(**kw):
+    kw.setdefault("animals", [AnimalInstance(instance_id="mule1", catalog_id="mule")])
+    return _spec(**kw)
+
+
+def test_ammo_partial_move_keeps_loaded_remainder():
+    spec = _spec_with_mule(
+        inventory=["short_bow"], equipped={"main_hand": "short_bow"},
+        ammo=[AmmoStack(instance_id="a1", base_id="arrow", count=20, location=CARRIED)],
+        loaded_ammo={"short_bow": "a1"},
+    )
+    storage.move_ammo(spec, "a1", MULE, count=5)
+    assert spec.loaded_ammo.get("short_bow") == "a1"        # still loaded
+    carried = [s for s in spec.ammo if s.location == CARRIED]
+    mule = [s for s in spec.ammo if s.location == MULE]
+    assert carried[0].count == 15 and mule[0].count == 5
+
+
+def test_ammo_full_move_unloads_then_relocates():
+    spec = _spec_with_mule(
+        inventory=["short_bow"], equipped={"main_hand": "short_bow"},
+        ammo=[AmmoStack(instance_id="a1", base_id="arrow", count=20, location=CARRIED)],
+        loaded_ammo={"short_bow": "a1"},
+    )
+    storage.move_ammo(spec, "a1", MULE, count=20)
+    assert "short_bow" not in spec.loaded_ammo               # unloaded
+    assert all(s.location == MULE for s in spec.ammo)
+
+
+def test_ammo_full_move_merges_into_destination_stack():
+    spec = _spec_with_mule(ammo=[
+        AmmoStack(instance_id="a1", base_id="arrow", count=20, location=CARRIED),
+        AmmoStack(instance_id="a2", base_id="arrow", count=3, location=MULE),
+    ])
+    storage.move_ammo(spec, "a1", MULE, count=20)
+    mule = [s for s in spec.ammo if s.location == MULE]
+    assert len(mule) == 1 and mule[0].count == 23            # merged, no fragment
