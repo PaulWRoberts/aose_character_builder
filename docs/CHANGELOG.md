@@ -8,6 +8,7 @@ For the living architecture (how the subsystems fit together *now*), see
 
 | Date | Feature | Branch | Spec/Plan slug |
 |---|---|---|---|
+| 2026-06-22 | Cast spells from scrolls in the spell list (Read Magic unlock for arcane, language gate for divine, duplicate charges, inline cast/decipher buttons in Documents tab) | feat/scroll-casting-spell-list | 2026-06-22-scroll-casting-in-spell-list |
 | 2026-06-22 | Companions section redesigned as a collapsed ledger: `<details>`/`<summary>` rows (Retainers → Animals → Vehicles), at-a-glance summary (name, descriptor, loyalty red ≤ 4, HP/Hull stepper) with the full stat block hidden until expand; new `/retainer/{id}/hp` route + `companions.js` open-row persistence; old `.companion-*` card CSS removed | main | — |
 | 2026-06-21 | Animal/retainer equip-unequip + click-to-modal in inventory box | main | 2026-06-21-animal-retainer-equip |
 | 2026-06-20 | Unified expandable inventory box (all top-level inventories as collapsible accordion in col 3; rich equipped display per group; nested containers; coins anywhere; Other Possessions pane; generalized Move from any location; Spells to full-width; Companions shed storage UI) | feat/unified-inventory-box | 2026-06-20-unified-inventory-box |
