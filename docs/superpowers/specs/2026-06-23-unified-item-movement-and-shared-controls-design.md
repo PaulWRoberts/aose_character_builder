@@ -54,9 +54,11 @@ everywhere. Everything carried is an item; items move freely.
   still count by multiplicity. Unification is behind one move front-door + one
   destination list, not one physical representation.
 - **No nesting.** A container still cannot go inside another container.
-- **Controls refactor is scoped to inventory/treasure modals + the conflicting
-  CSS.** Other sheet action buttons (level-up, rest, energy-drain, spell
-  management, companions) keep their current markup this pass.
+- **The shared action *macros* are inventory-scoped.** Other sheet action buttons
+  (level-up, rest, energy-drain, spell management, companions) are **not** rewritten
+  onto the macros this pass — but they **do** adopt the sheet-wide button-size
+  standard (via context/size classes), so sizing is consistent everywhere even
+  where markup is untouched.
 - **No spell-source relocation.** Spell books/scrolls stay PC-bucket; they have
   their own read/cast/copy lifecycle and are out of scope for movement here.
 - No migrations (app is not deployed); `location` defaults to carried, so old
@@ -69,9 +71,16 @@ everywhere. Everything carried is an item; items move freely.
    type is left unable to reach every inventory and container.
 2. **Equipped move:** moving an equipped magic item / enchanted piece (or a
    slot-resident weapon/armour) **auto-unequips first**, then relocates. One click.
-3. **Controls blast radius:** only the inventory/treasure modals are migrated onto
-   the shared macros; the conflicting CSS is deduped globally (it affects those
-   modals). Unrelated sheet buttons are left alone.
+3. **Controls — two layers, two radii.** (a) The shared *action macros* are
+   adopted only by the inventory/treasure modals (the rest of the sheet keeps its
+   markup). (b) A **sheet-wide button-size standard**, keyed to *use context*
+   (inline · modal · toolbar · primary/CTA), is applied across the whole live
+   sheet — every button conforms to a context size, replacing the current ad-hoc
+   mix of three interchangeable `.btn` sizes, bare `<button>`s, and inline width
+   styles.
+4. **One move route.** A single `POST /character/{id}/inventory/move` fronts
+   `move_thing`; the eight deprecated typed move routes (PC + wizard) are deleted,
+   not kept for back-compat (app is not deployed).
 
 ## Architecture
 
@@ -148,19 +157,51 @@ One macro set, the single source of truth for an action control:
 | `act_stepper(url, ref, field="delta")` | **+ / −** adjust pair |
 | `act_select(url, label, options, hidden={})` | generic dropdown-action (e.g. coin Convert) |
 
-`ref` is `{category, id, src_kind, src_id}` so one Move form serves every type.
-`inv_row_actions` and the coin/gem/jewellery/magic/enchanted/ammo/catalog/container
-modals are refactored onto these. **CSS dedupe** (`sheet.css`): collapse the two
-`.inline-form` rules into one, give action `.btn`s a single size, standardise
-input/select widths via classes (drop inline `style="width:…"`), and remove the
-bare-`<button>` action fall-through.
+`ref` is `{category, id, src_kind, src_id}` so one Move form serves every type, and
+every macro posts to the single `/inventory/move` route. `inv_row_actions` and the
+coin/gem/jewellery/magic/enchanted/ammo/catalog/container modals are refactored onto
+these macros.
 
-### Move-destination control (`_move_dest.html`)
+### Sheet-wide button-size standard (`sheet.css`)
 
-Generalised to drive off `move_targets` and accept a `ref` category, replacing the
-ad-hoc per-type Move forms. The `allow_containers` / `allow_retainers` flags become
-unnecessary (every type now allows both) and are removed; the only exclusion is the
-current location and — for a container being moved — other containers (no nesting).
+Size is decided by **use context**, not by ad-hoc per-button classes. One scale,
+driven by CSS variables on a base `.btn`, with the *variant* (solid / danger /
+link) orthogonal to *size*:
+
+| context | class | use | rough metrics |
+|---|---|---|---|
+| **inline** | `.btn.btn-inline` | controls living in a list row / `.inline-form` (equip, move, ±, take-out) | ~9px, tight padding |
+| **modal** | `.btn` (default) | action buttons in a modal `.row-actions` / `.ov-section` | ~10px, standard padding |
+| **toolbar** | `.btn.btn-tool` | buttons on dark group bars (Rest, Thresholds, Manage) — supersedes today's `.btn.tool` | ~9px, light-on-dark |
+| **primary/CTA** | `.btn.btn-cta` | wizard "Next", Roll, confirm — supersedes `.solid` sizing | ~11px, roomy |
+
+Rules of the standard:
+- The two conflicting `.inline-form` definitions collapse into one.
+- The bare-`<button>` action fall-through is removed; an action button is always a
+  `.btn` with a size class. Legacy `button`/`.button` recolouring stays only for
+  genuinely unstyled controls.
+- Input/`select` widths in action controls come from classes
+  (`.act-num`, `.act-select`), not inline `style="width:…"`.
+- The size classes are applied **sheet-wide** (inventory modals via the macros;
+  other areas via their existing markup + the class), so every button matches its
+  context even where the markup is otherwise untouched. Existing `.btn.tool` /
+  `.solid` call-sites are renamed/aliased to the new context classes.
+
+### Move route + destination control (`routes.py`, `_move_dest.html`)
+
+- **Single route:** `POST /character/{id}/inventory/move` reads `category`, the
+  relevant id field (`item_id` for catalog items, `instance_id` otherwise,
+  `denom`+`count` for coins), and `dest_kind`/`dest_id` (+ `src_kind`/`src_id` for
+  loose items), and calls `storage.move_thing`. `_loc` maps bad kinds to HTTP 400
+  as today.
+- **Deleted (deprecated):** `/inventory/move-item`, `/inventory/move-coins`,
+  `/inventory/move-valuable`, `/inventory/move-container` and the matching wizard
+  routes. Every call site (templates + tests) moves to the single route. The Sell /
+  Convert / Adjust / charge routes are **not** move routes and are untouched.
+- **`move_dest_control`** drives off `move_targets` and emits the unified `ref`;
+  the `allow_containers` / `allow_retainers` flags are removed (every type allows
+  both). The only exclusions are the current location and — for a container being
+  moved — other containers (no nesting).
 
 ## Data flow
 
@@ -180,11 +221,9 @@ spec ─► build_inventory_groups(spec, data)
           → storage.move_thing(spec, category, id, dest)
 ```
 
-A single `/inventory/move` route may front `move_thing` (category in the form), or
-the existing typed routes (`move-item`, `move-coins`, `move-valuable`,
-`move-container`) are kept and a `move-instance` route is added for
-magic/enchanted/ammo — chosen at plan time to minimise churn. Either way the
-template side calls one `act_move` macro.
+The single `/inventory/move` route fronts `move_thing` (category in the form); the
+four deprecated typed move routes (and their wizard twins) are deleted. The template
+side calls one `act_move` macro everywhere.
 
 ## Phasing (cohesive spec → phased plan)
 
@@ -192,14 +231,19 @@ template side calls one `act_move` macro.
    `move_thing` dispatch; `move_targets`; encumbrance per-location filter.
 2. **View:** bucket magic/enchanted/ammo by location; `ContainerView` stowed
    sub-lists; render stowed contents in `_inv_pane.html` container blocks.
-3. **Shared controls:** `_actions.html` macros; refactor `inv_row_actions` +
-   every inventory/treasure modal onto them; generalise `_move_dest.html`.
-4. **CSS dedupe:** one `.inline-form`, one action-button size, width classes,
-   kill bare-button fall-through.
-5. **Routes + wiring:** `move`/`move-instance` route(s); wizard parity (treasure
-   still `manage_treasure=False` mid-creation — no carriers exist).
+3. **Single move route:** add `move_thing` + `move_targets`; add
+   `POST /inventory/move`; delete the four typed move routes (PC + wizard); migrate
+   every template call site and update `tests/test_inventory_move_routes.py`.
+4. **Shared action macros:** `_actions.html`; refactor `inv_row_actions` + every
+   inventory/treasure modal onto them; generalise `_move_dest.html` onto
+   `move_targets` + the unified `ref`.
+5. **Button-size standard (sheet-wide):** add the size scale + context classes;
+   collapse the duplicate `.inline-form`; remove the bare-button fall-through; move
+   action input/select widths to classes; re-point existing `.tool`/`.solid`
+   call-sites to the new context classes.
 6. **Docs + verification:** update `ARCHITECTURE.md` (inventory/treasure/encumbrance
-   sections, in place), `CHANGELOG.md` row; verify print parity.
+   + a new controls note, in place), `CHANGELOG.md` row; verify print parity and the
+   wizard path.
 
 ## Testing
 
@@ -212,8 +256,11 @@ template side calls one `act_move` macro.
   container's view; magic on a carrier buckets under the carrier; nothing
   double-renders in the PC carried group.
 - **Web:** every inventory/treasure modal exposes a Move ▾ targeting the full
-  destination list; modals render uniform control classes (no bare `<button>` in
-  action rows; one `.inline-form`); the drawer stays acquisition-only.
+  destination list and posting to the single `/inventory/move`; that route moves an
+  item, a coin partial, a gem, and a magic instance to a container; the deprecated
+  typed move routes are gone (404); modals render uniform control classes (no bare
+  `<button>` in action rows; one `.inline-form`; size class per context); the drawer
+  stays acquisition-only.
 - **Regression:** full suite green; PC equipped/attack display unchanged; settings
   page renders no "pending" badge; print sheet still lists all groups.
 
@@ -228,9 +275,13 @@ template side calls one `act_move` macro.
 - **Retainer world boundary.** Moving an instance to a retainer is a list-to-list
   move into `retainer.spec.*` with `location` reset to carried (the retainer's own
   world); moving back is the reverse. Mirrors `move_container`'s retainer handling.
-- **Route surface.** Folding eight typed move routes into one `move_thing` route
-  is tempting but higher-risk; the plan may keep typed routes and add only
-  `move-instance`. Decide at plan time; the template only ever calls `act_move`.
-- **CSS dedupe blast radius.** The two `.inline-form` rules and shared `.btn`
-  sizing are used outside inventory too; dedupe must be verified to not shift
-  unrelated buttons (scope changes to additive classes where ambiguous).
+- **Single-route churn.** Folding the typed move routes into one is the chosen
+  (cleaner) path but touches every move call site at once: PC + wizard templates,
+  `test_inventory_move_routes.py`, and any helper that posted to a typed route. The
+  migration must be exhaustive — a missed call site 404s. Mitigate by grepping all
+  `move-item|move-coins|move-valuable|move-container` references before deleting.
+- **Sheet-wide sizing blast radius.** The size standard touches buttons outside
+  inventory (`.tool`, `.solid`, bare `button` on dark bars). Re-pointing call-sites
+  must be verified visually per context (inline / modal / toolbar / CTA) so no
+  button shrinks or grows unexpectedly; prefer aliasing old classes to the new size
+  vars over deleting them outright where a call-site can't be hand-checked.
