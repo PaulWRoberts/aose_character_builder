@@ -65,6 +65,26 @@ def loose_list(spec: CharacterSpec, loc: StorageLocation) -> list[str]:
     raise StorageError(f"no loose list for location {loc!r}")
 
 
+def use_as_container(spec: CharacterSpec, owner: StorageLocation,
+                     item_id: str, data) -> None:
+    """Promote one loose copy of a Container item at ``owner`` into a real
+    ContainerInstance at that owner. No nesting (owner may not be a container)."""
+    from aose.engine.shop import new_container_instance
+    from aose.models import Container
+    if owner.kind == "container":
+        raise StorageError("take the item out of the container first")
+    item = data.items.get(item_id)
+    if not isinstance(item, Container):
+        raise StorageError(f"{item_id!r} is not a container")
+    loose = loose_list(spec, owner)
+    if item_id not in loose:
+        raise StorageError(f"{item_id!r} not at {owner.kind}")
+    coll = containers_collection(spec, owner)
+    loc = StorageLocation(kind="carried") if owner.kind == "retainer" else owner
+    loose.remove(item_id)
+    coll.append(new_container_instance(item_id, data, location=loc))
+
+
 def move_item(spec: CharacterSpec, item_id: str,
               src: StorageLocation, dest: StorageLocation) -> None:
     """Move one copy of ``item_id`` from ``src``'s loose list to ``dest``'s."""
