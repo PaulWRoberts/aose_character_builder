@@ -251,3 +251,51 @@ def move_valuable(spec: CharacterSpec, instance_id: str,
             j.location = dest
             return
     raise StorageError(f"no gem/jewellery with id {instance_id!r}")
+
+
+def _world_lists(world_spec: CharacterSpec, kind: str) -> list:
+    return world_spec.magic_items if kind == "magic" else world_spec.enchanted
+
+
+def _find_instance(spec: CharacterSpec, kind: str, instance_id: str):
+    """Locate a magic/enchanted instance in the PC world or any retainer world.
+    Returns (owner_spec, list, inst)."""
+    for x in _world_lists(spec, kind):
+        if x.instance_id == instance_id:
+            return spec, _world_lists(spec, kind), x
+    for r in spec.retainers:
+        for x in _world_lists(r.spec, kind):
+            if x.instance_id == instance_id:
+                return r.spec, _world_lists(r.spec, kind), x
+    raise StorageError(f"no {kind} instance {instance_id!r}")
+
+
+def move_instance(spec: CharacterSpec, kind: str, instance_id: str,
+                  dest: StorageLocation) -> None:
+    """Move a magic or enchanted instance to ``dest`` from anywhere (PC or a
+    retainer world). Auto-unequips first (clears the instance ``equipped`` flag
+    and any owning-spec equipped slot pointing at it). A move that crosses
+    worlds (PC↔retainer) is a list-to-list move; within a world it re-points
+    the instance ``location``."""
+    if kind not in ("magic", "enchanted"):
+        raise StorageError(f"move_instance: bad kind {kind!r}")
+    if dest.kind in ("animal", "vehicle"):
+        _carrier(spec, dest.kind, dest.id)
+    if dest.kind == "container":
+        _container(spec, dest.id)
+    owner_spec, src_list, inst = _find_instance(spec, kind, instance_id)
+    # Auto-unequip on the owning spec.
+    catalog_id = getattr(inst, "catalog_id", None) or getattr(inst, "base_id", None)
+    inst.equipped = False
+    for slot, iid in list(owner_spec.equipped.items()):
+        if iid == catalog_id:
+            del owner_spec.equipped[slot]
+            unload_if_loaded(owner_spec, catalog_id)
+    dest_world = _retainer(spec, dest.id).spec if dest.kind == "retainer" else spec
+    if dest_world is owner_spec:
+        inst.location = dest                       # same world → re-point
+    else:
+        src_list.remove(inst)                       # cross world → list-to-list
+        new_loc = (StorageLocation(kind="carried")
+                   if dest.kind == "retainer" else dest)
+        _world_lists(dest_world, kind).append(inst.model_copy(update={"location": new_loc}))

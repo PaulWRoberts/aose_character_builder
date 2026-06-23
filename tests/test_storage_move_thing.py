@@ -116,3 +116,51 @@ def test_ammo_full_move_merges_into_destination_stack():
     storage.move_ammo(spec, "a1", MULE, count=20)
     mule = [s for s in spec.ammo if s.location == MULE]
     assert len(mule) == 1 and mule[0].count == 23            # merged, no fragment
+
+
+# ── Task 6: move_instance ────────────────────────────────────────────────────
+
+from aose.models import ContainerInstance, EnchantedInstance, MagicItemInstance, Retainer
+
+
+def test_magic_move_to_container_repoints_location():
+    spec = _spec(
+        inventory=["backpack"],
+        containers=[ContainerInstance(instance_id="c1", catalog_id="backpack",
+                                      location=CARRIED)],
+        magic_items=[MagicItemInstance(instance_id="m1",
+                                       catalog_id="ring_protection_plus_1",
+                                       equipped=True)],
+    )
+    dest = StorageLocation(kind="container", id="c1")
+    storage.move_instance(spec, "magic", "m1", dest)
+    m = spec.magic_items[0]
+    assert m.location == dest and m.equipped is False          # auto-unequipped
+
+
+def test_enchanted_move_to_retainer_is_list_to_list():
+    npc = _spec(name="Hench")
+    spec = _spec(
+        enchanted=[EnchantedInstance(instance_id="e1", base_id="sword",
+                                     enchantment_id="generic_plus_1", equipped=False)],
+        retainers=[Retainer(id="r1", spec=npc, loyalty=7)],
+    )
+    dest = StorageLocation(kind="retainer", id="r1")
+    storage.move_instance(spec, "enchanted", "e1", dest)
+    assert spec.enchanted == []                                 # left PC world
+    moved = spec.retainers[0].spec.enchanted
+    assert len(moved) == 1 and moved[0].location == CARRIED     # reset in retainer world
+
+
+def test_magic_move_clears_equipped_slot_for_weapon():
+    # A magic item whose catalog_id matches an equipped slot key should
+    # have that slot cleared when moved away.
+    spec = _spec(
+        inventory=["ring_protection_plus_1"],
+        equipped={"main_hand": "ring_protection_plus_1"},
+        magic_items=[MagicItemInstance(instance_id="m1",
+                                       catalog_id="ring_protection_plus_1",
+                                       equipped=True)],
+    )
+    storage.move_instance(spec, "magic", "m1", STASHED)
+    assert spec.equipped.get("main_hand") != "ring_protection_plus_1"
