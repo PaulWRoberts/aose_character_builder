@@ -41,6 +41,11 @@ from aose.models import Armor, CharacterSpec
 MAX_LOAD = 1600
 TREASURE_CATEGORIES = {"magic_potions", "magic_rods_staves_wands", "scrolls"}
 
+
+def _is_carried(obj) -> bool:
+    loc = getattr(obj, "location", None)
+    return loc is None or loc.kind == "carried"
+
 ArmorMovementClass = Literal["none", "leather", "metal"]
 
 # AOSE detailed encumbrance bands (coin weights → movement).
@@ -103,6 +108,8 @@ def treasure_weight_cn(spec: CharacterSpec, data: GameData) -> int:
 
     total = currency.coin_count(spec, carried_only=True) + valuables.valuables_weight_cn(spec)
     for mi in spec.magic_items:
+        if not _is_carried(mi):
+            continue
         item = data.items.get(mi.catalog_id)
         if item is not None:
             total += treasure_item_weight(item)
@@ -142,6 +149,8 @@ def equipment_weight_cn(spec: CharacterSpec, data: GameData) -> int:
             total += item.weight_cn  # poison, ammunition (0 cn), etc.
 
     for inst in spec.enchanted:
+        if not _is_carried(inst):
+            continue
         resolved = resolve_instance(inst, data)
         if isinstance(resolved, Armor):
             total += int(resolved.weight_cn * resolved.weight_multiplier)
@@ -149,6 +158,8 @@ def equipment_weight_cn(spec: CharacterSpec, data: GameData) -> int:
             total += resolved.weight_cn
 
     for mi in spec.magic_items:
+        if not _is_carried(mi):
+            continue
         item = data.items.get(mi.catalog_id)
         if item is not None and item.category not in TREASURE_CATEGORIES:
             total += item.weight_cn
@@ -174,6 +185,19 @@ def equipment_weight_cn(spec: CharacterSpec, data: GameData) -> int:
         raw += sum(s.count for s in spec.coins if s.location == here)
         raw += sum(g.count for g in spec.gems if g.location == here)
         raw += 10 * sum(1 for j in spec.jewellery if j.location == here)
+        # magic/enchanted/ammo stowed in this container
+        for mi in spec.magic_items:
+            if mi.location == here:
+                item = data.items.get(mi.catalog_id)
+                if item is not None:
+                    raw += treasure_item_weight(item) or item.weight_cn
+        for inst in spec.enchanted:
+            if inst.location == here:
+                resolved = resolve_instance(inst, data)
+                if isinstance(resolved, Armor):
+                    raw += int(resolved.weight_cn * resolved.weight_multiplier)
+                elif isinstance(resolved, Weapon):
+                    raw += resolved.weight_cn
         total += int(catalog.weight_multiplier * raw)
 
     if has_gear:

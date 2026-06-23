@@ -479,3 +479,43 @@ def test_sheet_exposes_purse_and_treasure(data):
     assert sheet.treasure_weight_cn == 5 + 30 + 2
     assert sheet.carrying_treasure is False
     assert sheet.max_load == 1600
+
+
+# ── Task 8: location-aware magic/enchanted/ammo weight ───────────────────────
+
+def test_magic_on_a_mule_does_not_count_toward_carried(data):
+    from aose.models import AnimalInstance, MagicItemInstance
+    from aose.models.storage import StorageLocation
+    mule_loc = StorageLocation(kind="animal", id="mule1")
+    spec = CharacterSpec(
+        name="X",
+        abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
+        race_id="human", classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
+        alignment="neutral",
+        animals=[AnimalInstance(instance_id="mule1", catalog_id="mule")],
+        magic_items=[MagicItemInstance(instance_id="m1", catalog_id="rod_lordly_might",
+                     location=mule_loc)],
+    )
+    carried_on_mule = carried_weight_cn(spec, data)
+    # Moving the same magic item to carried should increase carried weight.
+    spec.magic_items[0].location = StorageLocation(kind="carried")
+    assert carried_weight_cn(spec, data) > carried_on_mule
+
+
+def test_enchanted_on_mule_does_not_count_toward_carried(data):
+    from aose.models import AnimalInstance, EnchantedInstance
+    from aose.models.storage import StorageLocation
+    mule_loc = StorageLocation(kind="animal", id="mule1")
+    spec = CharacterSpec(
+        name="X",
+        abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
+        race_id="human", classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
+        alignment="neutral",
+        animals=[AnimalInstance(instance_id="mule1", catalog_id="mule")],
+        enchanted=[EnchantedInstance(instance_id="e1", base_id="sword",
+                                     enchantment_id="generic_plus_1",
+                                     location=mule_loc)],
+    )
+    carried_on_mule = carried_weight_cn(spec, data)
+    spec.enchanted[0].location = StorageLocation(kind="carried")
+    assert carried_weight_cn(spec, data) > carried_on_mule
