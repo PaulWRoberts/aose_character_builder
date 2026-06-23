@@ -345,21 +345,13 @@
         {% endif %}
         {% endfor %}
         {% for sr in lvl.scroll_rows %}
-        <div class="spell scroll-spell{% if not sr.castable %} locked{% endif %}">
+        <div class="spell scroll-spell{% if not sr.castable %} locked{% endif %}"
+             data-modal="modal-scroll-{{ sr.scroll_instance_id }}-{{ sr.spell_id }}">
           <span class="snm">{{ sr.name }} <em class="scroll-tag">{{ sr.label }}</em></span>
-          {% if sr.castable %}
-          <form method="post" action="/character/{{ character_id }}/spell-sources/cast"
-                style="display:inline">
-            <input type="hidden" name="instance_id" value="{{ sr.scroll_instance_id }}">
-            <input type="hidden" name="spell_id" value="{{ sr.spell_id }}">
-            <button class="pips btn-bare" type="submit" title="Cast from {{ sr.label }} (expends a charge)">
-              {% for _ in range(sr.charges) %}<i class="pip"></i>{% endfor %}
-            </button>
-          </form>
-          {% else %}
-          <span class="pips" title="{{ sr.block_reason }}">
-            {% for _ in range(sr.charges) %}<i class="pip locked-pip"></i>{% endfor %}
+          <span class="pips" title="{{ sr.block_reason or (sr.charges|string + ' charge' + ('s' if sr.charges != 1 else '') + ' — click to cast') }}">
+            {% for _ in range(sr.charges) %}<i class="pip{% if not sr.castable %} locked-pip{% endif %}"></i>{% endfor %}
           </span>
+          {% if not sr.castable %}
           <span class="hint scroll-reason">{{ sr.block_reason }}</span>
           {% endif %}
         </div>
@@ -928,6 +920,32 @@
     {% else %}
     <p class="hint" style="margin:0">Memorise this spell from the
       <button class="btn" data-drawer="drawer-spells" style="font-size:10px;padding:3px 7px;">Manage Spells</button> drawer.</p>
+    {% endif %}
+  </div>
+</div>
+{% endfor %}
+{% endfor %}
+{% endfor %}
+{% endif %}
+
+{# MODALS: scroll spell descriptions #}
+{% if sheet.spellbook %}
+{% for block in sheet.spellbook %}
+{% for lvl in block.levels %}
+{% for sr in lvl.scroll_rows %}
+<div class="overlay modal" id="modal-scroll-{{ sr.scroll_instance_id }}-{{ sr.spell_id }}"
+     role="dialog" aria-label="{{ sr.name }}">
+  <div class="ov-head"><h3>{{ sr.name }} <span style="font-weight:400;font-size:.75em;color:var(--faint)">{{ sr.label }}</span></h3><button class="x" data-close>×</button></div>
+  <div class="ov-body">
+    <div class="prose">{{ sr.description | markdown | safe }}</div>
+    {% if sr.castable %}
+    <div class="row-actions">
+      <form method="post" action="/character/{{ character_id }}/spell-sources/cast" style="display:inline">
+        <input type="hidden" name="instance_id" value="{{ sr.scroll_instance_id }}">
+        <input type="hidden" name="spell_id" value="{{ sr.spell_id }}">
+        <button class="btn solid" type="submit" data-close>Cast (expends a charge)</button>
+      </form>
+    </div>
     {% endif %}
   </div>
 </div>

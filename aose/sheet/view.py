@@ -335,6 +335,7 @@ class ScrollSpellRow(BaseModel):
     charges: int              # remaining copies of this spell on this scroll
     castable: bool
     block_reason: str | None  # why cast is disabled, if any
+    description: str = ""
 
 
 class SpellbookLevelGroup(BaseModel):
@@ -892,6 +893,7 @@ def _scroll_rows_by_level(spec: CharacterSpec, data: GameData, caster_type: str
                 scroll_instance_id=source.instance_id, label=label,
                 spell_id=sid, name=spell.name, level=spell.level,
                 charges=counts[sid], castable=reason is None, block_reason=reason,
+                description=spell.description,
             ))
     return by_level
 
