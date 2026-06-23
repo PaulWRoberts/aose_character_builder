@@ -79,8 +79,21 @@ everywhere. Everything carried is an item; items move freely.
    mix of three interchangeable `.btn` sizes, bare `<button>`s, and inline width
    styles.
 4. **One move route.** A single `POST /character/{id}/inventory/move` fronts
-   `move_thing`; the eight deprecated typed move routes (PC + wizard) are deleted,
-   not kept for back-compat (app is not deployed).
+   `move_thing`; the deprecated typed move routes
+   (`move-item`/`move-coins`/`move-valuable`/`move-container`) and their wizard
+   equivalents are deleted, not kept for back-compat (app is not deployed). The exact
+   wizard route set is enumerated by grep at plan time.
+5. **Stack-aware moves merge, never fragment.** The stacking types — coins, gems,
+   ammunition — move by a *count* (split off N of M) and **merge into the matching
+   stack at the destination** (one stack per identity+location). A partial move
+   leaves a stack behind at the source and adds to (or creates) exactly one stack at
+   the destination — never a second fragment of the same identity in one location.
+   (Jewellery is per-piece, not stacked: a piece moves whole.)
+6. **Moving unloads, like equipping.** Two unload triggers mirror the
+   auto-unequip rule: (a) moving an **entire** ammo stack first **unloads** it from
+   any weapon that has it loaded (a partial move leaves the loaded remainder at the
+   source, so no unload); (b) moving a **weapon that has ammo loaded** **unloads its
+   ammo before** the weapon leaves its bucket.
 
 ## Architecture
 
@@ -96,20 +109,36 @@ hence two representations. This is fine: they unify behind one front door.
 
 ### Engine — one movement front door (`storage.py`)
 
-- **`move_thing(spec, category, ref_id, dest, *, data=None)`** — the single
-  dispatch entry point. `category ∈ {item, container, coin, gem, jewellery,
-  magic, enchanted, ammo}`.
-  - `item` → `move_item` (loose-list → loose-list; already supports container,
-    carrier, and retainer locations).
+- **`move_thing(spec, category, ref_id, dest, *, count=None, data=None)`** — the
+  single dispatch entry point. `category ∈ {item, container, coin, gem, jewellery,
+  magic, enchanted, ammo}`. `count` applies only to the stacking types.
+  - `item` → `move_item` (loose-list → loose-list; moves one copy; already supports
+    container, carrier, and retainer locations).
   - `container` → `move_container` (already; rejects container dest — no nesting).
-  - `coin` → `move_coins` (already; container/retainer dest now exercised).
-  - `gem` / `jewellery` → `move_valuable` (already; container/retainer dest now
-    exercised).
-  - `magic` / `enchanted` / `ammo` → **new** `move_instance(spec, kind, id, dest)`:
-    auto-unequip if equipped, then either re-point `.location` (same owner-world)
-    or list-to-list move into `retainer.spec.*` for a retainer dest. Equipped state
-    is cleared on any cross-bucket move (a thing in a backpack / on a mule is not
-    worn).
+  - `coin` → `move_coins(..., count)` (already split-and-merges via
+    `_take_coins`/`_add_coins`, keyed by `(denom, location)`).
+  - `gem` → `move_valuable` **extended to take `count`**: split N off the source
+    `GemStack`, merge into the same-`(value, label, dest)` stack if present else
+    create one; decrement/prune the source. Jewellery stays whole-piece.
+  - `jewellery` → `move_valuable` (whole piece; re-point `location`).
+  - `magic` / `enchanted` → **new** `move_instance`: auto-unequip first (clear the
+    `equipped` bool *and* any `CharacterSpec.equipped` slot referencing it), then
+    re-point `.location` (same owner-world) or list-to-list into `retainer.spec.*`
+    for a retainer dest.
+  - `ammo` → **new** `move_ammo(spec, instance_id, dest, count)`: split N off the
+    source `AmmoStack`; **if N == the full stack, unload it first** from any weapon
+    in `spec.loaded_ammo` that references this instance; merge into the
+    same-`(base_id, enchantment_id, location)` stack at the destination else create
+    one; prune an emptied source.
+- **Unload-on-move for weapons:** `move_item` (and `move_instance` for an
+  enchanted/magic weapon) first calls a shared `unload_if_loaded(spec, weapon_key)`
+  helper that drops the `spec.loaded_ammo` entry (and any unloaded flag) before the
+  weapon leaves its bucket. Shared with the ammo full-stack-move unload so both
+  paths converge on one helper.
+- **Merge invariant:** every stack-aware destination path ends with **one** stack
+  per identity+location (coins by `denom`, gems by `value`+`label`, ammo by
+  `base_id`+`enchantment_id`). No path may leave two stacks of the same identity in
+  one location.
 - **`move_targets(spec)`** — yields the canonical destination set: every
   top-level inventory + every container (PC and retainer), each as
   `(kind, id, label)`, for the shared Move control. Callers exclude the current
@@ -123,7 +152,10 @@ hence two representations. This is fine: they unify behind one front door.
 Add `location: StorageLocation = carried` to `MagicItemInstance`,
 `EnchantedInstance`, and `AmmoStack`. Equipped magic/enchanted imply carried
 (enforced by `move_instance`, not the model — keeps the model dumb). No
-validators needed beyond the default (old saves coerce to carried).
+validators needed beyond the default (old saves coerce to carried). `AmmoStack`'s
+combine identity becomes `(base_id, enchantment_id, location)` — same kind of ammo
+at *different* locations are distinct stacks; same kind at the same location must be
+a single stack (the merge invariant).
 
 ### View (`aose/sheet/view.py`, `shop.py`)
 
@@ -152,7 +184,7 @@ One macro set, the single source of truth for an action control:
 | macro | renders |
 |---|---|
 | `act_button(label, url, hidden={}, variant="default")` | a POST form + one consistently-styled `.btn` (variants: default / solid / danger) |
-| `act_move(url, ref, cur_kind, cur_id)` | the universal **Move ▾** select over `move_targets`, minus current; auto-submit on change |
+| `act_move(url, ref, cur_kind, cur_id, count=none)` | the universal **Move ▾** select over `move_targets`, minus current. For stacking types (coin/gem/ammo) it also renders a count input (defaulting to the full stack) and an explicit Move button; for non-stacking types it auto-submits on change |
 | `act_sell(url, ref, row)` | **Sell ▾** (half price / refund) |
 | `act_stepper(url, ref, field="delta")` | **+ / −** adjust pair |
 | `act_select(url, label, options, hidden={})` | generic dropdown-action (e.g. coin Convert) |
@@ -190,10 +222,10 @@ Rules of the standard:
 ### Move route + destination control (`routes.py`, `_move_dest.html`)
 
 - **Single route:** `POST /character/{id}/inventory/move` reads `category`, the
-  relevant id field (`item_id` for catalog items, `instance_id` otherwise,
-  `denom`+`count` for coins), and `dest_kind`/`dest_id` (+ `src_kind`/`src_id` for
-  loose items), and calls `storage.move_thing`. `_loc` maps bad kinds to HTTP 400
-  as today.
+  relevant id field (`item_id` for catalog items, `instance_id` for instances/gems/
+  ammo, `denom` for coins), an optional `count` (stacking types), and
+  `dest_kind`/`dest_id` (+ `src_kind`/`src_id` for loose items), and calls
+  `storage.move_thing`. `_loc` maps bad kinds to HTTP 400 as today.
 - **Deleted (deprecated):** `/inventory/move-item`, `/inventory/move-coins`,
   `/inventory/move-valuable`, `/inventory/move-container` and the matching wizard
   routes. Every call site (templates + tests) moves to the single route. The Sell /
@@ -232,8 +264,9 @@ side calls one `act_move` macro everywhere.
 2. **View:** bucket magic/enchanted/ammo by location; `ContainerView` stowed
    sub-lists; render stowed contents in `_inv_pane.html` container blocks.
 3. **Single move route:** add `move_thing` + `move_targets`; add
-   `POST /inventory/move`; delete the four typed move routes (PC + wizard); migrate
-   every template call site and update `tests/test_inventory_move_routes.py`.
+   `POST /inventory/move`; delete the typed move routes (PC + wizard, enumerated by
+   grep); migrate every template call site and update
+   `tests/test_inventory_move_routes.py`.
 4. **Shared action macros:** `_actions.html`; refactor `inv_row_actions` + every
    inventory/treasure modal onto them; generalise `_move_dest.html` onto
    `move_targets` + the unified `ref`.
@@ -252,6 +285,12 @@ side calls one `act_move` macro everywhere.
   auto-unequips on move; `move_targets` lists every inventory + container minus
   current; encumbrance counts a carried magic ring but not one on a mule, and
   counts treasure/magic stowed in a carried container.
+- **Stacking / merge:** partial coin/gem/ammo moves split the source and **merge
+  into an existing destination stack** (assert exactly one stack of that identity at
+  the destination, none fragmented); moving a full gem/ammo stack prunes the source;
+  moving the **full** loaded ammo stack unloads it from its weapon first, while a
+  **partial** move of a loaded stack leaves the weapon loaded; moving a **loaded
+  weapon** unloads its ammo before the weapon relocates.
 - **View:** a magic item / coin / gem placed in a container renders inside that
   container's view; magic on a carrier buckets under the carrier; nothing
   double-renders in the PC carried group.
@@ -275,6 +314,12 @@ side calls one `act_move` macro everywhere.
 - **Retainer world boundary.** Moving an instance to a retainer is a list-to-list
   move into `retainer.spec.*` with `location` reset to carried (the retainer's own
   world); moving back is the reverse. Mirrors `move_container`'s retainer handling.
+- **Loaded-ammo reference integrity.** `spec.loaded_ammo` maps a weapon key to an
+  `AmmoStack.instance_id`. Both a full-stack ammo move (the instance is consumed by a
+  merge at the destination, changing/removing its id) and a loaded-weapon move would
+  leave a dangling reference; the shared `unload_if_loaded` helper must run *before*
+  either move so no weapon points at a relocated/merged stack. Partial ammo moves
+  keep the source instance (and its id), so the load reference stays valid.
 - **Single-route churn.** Folding the typed move routes into one is the chosen
   (cleaner) path but touches every move call site at once: PC + wizard templates,
   `test_inventory_move_routes.py`, and any helper that posted to a typed route. The
