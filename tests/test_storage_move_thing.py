@@ -252,3 +252,30 @@ def test_move_spell_source_to_container():
     dest = StorageLocation(kind="container", id="c1")
     storage.move_thing(spec, "source", "s1", dest, data=DATA)
     assert spec.spell_sources[0].location == dest
+
+
+# ── Task 7 (plan): capacity gate on all move categories ──────────────────────
+
+import pytest
+
+
+def test_move_thing_item_into_full_container_rejected():
+    spec = _spec(
+        inventory=["sword"],
+        containers=[ContainerInstance(instance_id="p1", catalog_id="belt_pouch",
+                                      location=CARRIED)],   # cap 50; sword 60
+    )
+    dest = StorageLocation(kind="container", id="p1")
+    with pytest.raises(storage.StorageError):
+        storage.move_thing(spec, "item", "sword", dest, src=CARRIED, data=DATA)
+    assert spec.inventory == ["sword"]   # unchanged on rejection
+
+
+def test_move_thing_coins_onto_retainer_never_blocked():
+    ret_spec = _spec(name="Hench")
+    spec = _spec(coins=[CoinStack(denom="gp", count=500, location=CARRIED)],
+                 retainers=[Retainer(id="r1", spec=ret_spec, loyalty=7, role="torchbearer")])
+    dest = StorageLocation(kind="retainer", id="r1")
+    storage.move_thing(spec, "coin", "gp", dest, count=500, src=CARRIED, data=DATA)
+    # accepted; coins now on the retainer
+    assert any(c.location == dest and c.count == 500 for c in spec.coins)

@@ -213,7 +213,7 @@ def _find_container_anywhere(spec: CharacterSpec, container_id: str):
 
 
 def move_container(spec: CharacterSpec, container_id: str,
-                   dest: StorageLocation) -> None:
+                   dest: StorageLocation, data=None) -> None:
     """Re-home a container. ``dest`` may not be a container (no nesting).
     A retainer dest moves the instance between containers lists; all
     other moves only update the instance ``location``."""
@@ -223,6 +223,9 @@ def move_container(spec: CharacterSpec, container_id: str,
     c = src_coll[idx]
     if dest.kind in ("animal", "vehicle"):
         _carrier(spec, dest.kind, dest.id)            # validate existence
+    cat = data.items.get(c.catalog_id) if data is not None else None
+    added = cat.weight_cn if cat is not None else 0
+    _check_capacity(spec, dest, added, data)
     dest_coll = containers_collection(spec, dest)
     new_loc = StorageLocation(kind="carried") if dest.kind == "retainer" else dest
     if dest_coll is src_coll:
@@ -260,9 +263,11 @@ def _take_coins(spec: CharacterSpec, denom: str, count: int, loc: StorageLocatio
 
 
 def move_coins(spec: CharacterSpec, denom: str,
-               src: StorageLocation, dest: StorageLocation, count: int) -> None:
+               src: StorageLocation, dest: StorageLocation, count: int,
+               data=None) -> None:
     if count <= 0:
         raise StorageError("move count must be positive")
+    _check_capacity(spec, dest, count, data)
     _take_coins(spec, denom, count, src)
     _add_coins(spec, denom, count, dest)
 
@@ -285,7 +290,7 @@ def convert_coins(spec: CharacterSpec, loc: StorageLocation,
 
 
 def move_ammo(spec: CharacterSpec, instance_id: str,
-              dest: StorageLocation, count: int) -> None:
+              dest: StorageLocation, count: int, data=None) -> None:
     """Split ``count`` off the ammo stack and merge it into the matching
     (base_id, enchantment_id, dest) stack. Moving the *entire* stack first
     unloads it from any weapon that has it loaded."""
@@ -299,6 +304,8 @@ def move_ammo(spec: CharacterSpec, instance_id: str,
         raise StorageError(f"no ammo stack {instance_id!r}")
     if count <= 0 or count > src.count:
         raise StorageError(f"cannot move {count} of {src.count} ammo")
+    if data is not None:
+        _check_capacity(spec, dest, 0, data)  # ammo is 0 cn
     if count == src.count:
         for key, iid in list(spec.loaded_ammo.items()):
             if iid == instance_id:
@@ -322,18 +329,20 @@ def unload_if_loaded(spec: CharacterSpec, weapon_key: str) -> None:
 
 
 def move_valuable(spec: CharacterSpec, instance_id: str,
-                  dest: StorageLocation, count: int | None = None) -> None:
+                  dest: StorageLocation, count: int | None = None,
+                  data=None) -> None:
     """Move a gem stack or jewellery piece (by instance_id) to ``dest``.
     For a gem, ``count`` splits N off the source and merges into the matching
     (value, label, dest) stack; ``count=None`` moves the whole stack.
     Jewellery is per-piece; ``count`` is ignored."""
     if dest.kind == "container":
         _container(spec, dest.id)
-    for i, g in enumerate(spec.gems):
+    for g in spec.gems:
         if g.instance_id == instance_id:
             n = g.count if count is None else count
             if n <= 0 or n > g.count:
                 raise StorageError(f"cannot move {n} of {g.count} gems")
+            _check_capacity(spec, dest, n, data)
             target = next((o for o in spec.gems
                            if o is not g and o.value == g.value
                            and o.label == g.label and o.location == dest), None)
@@ -349,9 +358,25 @@ def move_valuable(spec: CharacterSpec, instance_id: str,
             return
     for j in spec.jewellery:
         if j.instance_id == instance_id:
+            _check_capacity(spec, dest, 10, data)
             j.location = dest
             return
     raise StorageError(f"no gem/jewellery with id {instance_id!r}")
+
+
+def _instance_weight(inst, kind: str, data) -> int:
+    from aose.engine.encumbrance import treasure_item_weight
+    from aose.engine.enchant import resolve_instance
+    from aose.models import Armor, Weapon
+    if kind == "magic":
+        item = data.items.get(getattr(inst, "catalog_id", None))
+        return (treasure_item_weight(item) or item.weight_cn) if item else 0
+    resolved = resolve_instance(inst, data)
+    if isinstance(resolved, Armor):
+        return int(resolved.weight_cn * resolved.weight_multiplier)
+    if isinstance(resolved, Weapon):
+        return resolved.weight_cn
+    return 0
 
 
 def _world_lists(world_spec: CharacterSpec, kind: str) -> list:
@@ -372,7 +397,7 @@ def _find_instance(spec: CharacterSpec, kind: str, instance_id: str):
 
 
 def move_instance(spec: CharacterSpec, kind: str, instance_id: str,
-                  dest: StorageLocation) -> None:
+                  dest: StorageLocation, data=None) -> None:
     """Move a magic or enchanted instance to ``dest`` from anywhere (PC or a
     retainer world). Auto-unequips first (clears the instance ``equipped`` flag
     and any owning-spec equipped slot pointing at it). A move that crosses
@@ -385,6 +410,9 @@ def move_instance(spec: CharacterSpec, kind: str, instance_id: str,
     if dest.kind == "container":
         _container(spec, dest.id)
     owner_spec, src_list, inst = _find_instance(spec, kind, instance_id)
+    if data is not None:
+        added = _instance_weight(inst, kind, data)
+        _check_capacity(spec, dest, added, data)
     # Auto-unequip on the owning spec.
     catalog_id = getattr(inst, "catalog_id", None) or getattr(inst, "base_id", None)
     inst.equipped = False
@@ -446,18 +474,18 @@ def move_thing(spec: CharacterSpec, category: str, ref_id: str,
         if src is None:
             raise StorageError("item move requires src")
         unload_if_loaded(spec, ref_id)            # a loaded weapon unloads first
-        move_item(spec, ref_id, src, dest)
+        move_item(spec, ref_id, src, dest, data)
     elif category == "container":
-        move_container(spec, ref_id, dest)
+        move_container(spec, ref_id, dest, data)
     elif category == "coin":
         move_coins(spec, ref_id, src or StorageLocation(kind="carried"), dest,
-                   count if count is not None else 0)
+                   count if count is not None else 0, data)
     elif category in ("gem", "jewellery"):
-        move_valuable(spec, ref_id, dest, count=count)
+        move_valuable(spec, ref_id, dest, count=count, data=data)
     elif category == "ammo":
-        move_ammo(spec, ref_id, dest, count if count is not None else 0)
+        move_ammo(spec, ref_id, dest, count if count is not None else 0, data)
     elif category in ("magic", "enchanted"):
-        move_instance(spec, category, ref_id, dest)
+        move_instance(spec, category, ref_id, dest, data)
     elif category == "source":
         move_spell_source(spec, ref_id, dest, data)
     else:
