@@ -188,35 +188,6 @@ def animal_load_cn(animal: AnimalInstance, data: GameData) -> int:
     return worn + _items_weight(animal.contents, data)
 
 
-def load_onto_animal(inventory: list[str], animals: list[AnimalInstance],
-                     instance_id: str, item_id: str, data: GameData
-                     ) -> tuple[list[str], list[AnimalInstance]]:
-    idx = _find_animal(animals, instance_id)
-    animal = animals[idx]
-    if item_id not in inventory:
-        raise ValueError(f"{item_id!r} is not in inventory")
-    cap = animal_capacity(animal, data)
-    add = data.items[item_id].weight_cn if item_id in data.items else 0
-    if cap is None or animal_load_cn(animal, data) + add > cap:
-        raise AnimalOverloaded(
-            f"{data.items[animal.catalog_id].name} cannot carry that much")
-    new_inv = list(inventory); new_inv.remove(item_id)
-    updated = animal.model_copy(update={"contents": [*animal.contents, item_id]})
-    return new_inv, [*animals[:idx], updated, *animals[idx + 1:]]
-
-
-def unload_from_animal(inventory: list[str], animals: list[AnimalInstance],
-                       instance_id: str, item_id: str, data: GameData
-                       ) -> tuple[list[str], list[AnimalInstance]]:
-    idx = _find_animal(animals, instance_id)
-    animal = animals[idx]
-    if item_id not in animal.contents:
-        raise ValueError(f"{item_id!r} not loaded on this animal")
-    new_contents = list(animal.contents); new_contents.remove(item_id)
-    updated = animal.model_copy(update={"contents": new_contents})
-    return [*inventory, item_id], [*animals[:idx], updated, *animals[idx + 1:]]
-
-
 def _find_vehicle(vehicles, instance_id):
     idx = next((i for i, v in enumerate(vehicles)
                 if v.instance_id == instance_id), None)
@@ -234,34 +205,6 @@ def vehicle_capacity(vehicle: VehicleInstance, data: GameData) -> int:
 
 def vehicle_load_cn(vehicle: VehicleInstance, data: GameData) -> int:
     return _items_weight(vehicle.contents, data)
-
-
-def load_onto_vehicle(inventory: list[str], vehicles: list[VehicleInstance],
-                      instance_id: str, item_id: str, data: GameData
-                      ) -> tuple[list[str], list[VehicleInstance]]:
-    idx = _find_vehicle(vehicles, instance_id)
-    vehicle = vehicles[idx]
-    if item_id not in inventory:
-        raise ValueError(f"{item_id!r} is not in inventory")
-    add = data.items[item_id].weight_cn if item_id in data.items else 0
-    if vehicle_load_cn(vehicle, data) + add > vehicle_capacity(vehicle, data):
-        raise VehicleOverloaded(
-            f"{data.items[vehicle.catalog_id].name} is over capacity")
-    new_inv = list(inventory); new_inv.remove(item_id)
-    updated = vehicle.model_copy(update={"contents": [*vehicle.contents, item_id]})
-    return new_inv, [*vehicles[:idx], updated, *vehicles[idx + 1:]]
-
-
-def unload_from_vehicle(inventory: list[str], vehicles: list[VehicleInstance],
-                        instance_id: str, item_id: str, data: GameData
-                        ) -> tuple[list[str], list[VehicleInstance]]:
-    idx = _find_vehicle(vehicles, instance_id)
-    vehicle = vehicles[idx]
-    if item_id not in vehicle.contents:
-        raise ValueError(f"{item_id!r} not loaded on this vehicle")
-    new_contents = list(vehicle.contents); new_contents.remove(item_id)
-    updated = vehicle.model_copy(update={"contents": new_contents})
-    return [*inventory, item_id], [*vehicles[:idx], updated, *vehicles[idx + 1:]]
 
 
 # ── Container-on-carrier ───────────────────────────────────────────────────

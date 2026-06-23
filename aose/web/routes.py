@@ -95,7 +95,6 @@ from aose.engine.valuables import ValuableError
 from aose.engine import possessions as possessions_engine
 from aose.engine.possessions import PossessionError
 from aose.engine import companions as companions_engine
-from aose.engine.companions import AnimalOverloaded, VehicleOverloaded
 from aose.engine.sources import content_enabled
 from aose.engine.innate import (
     InnateError, reset_innate, restore_innate, spend_innate,
@@ -1742,34 +1741,6 @@ async def animal_unequip(request: Request, character_id: str, instance_id: str):
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
-@router.post("/character/{character_id}/animal/{instance_id}/load")
-async def animal_load(request: Request, character_id: str, instance_id: str,
-                      item_id: str = Form(...)):
-    spec = _load_spec_or_404(request, character_id)
-    data = request.app.state.game_data
-    try:
-        spec.inventory, spec.animals = companions_engine.load_onto_animal(
-            spec.inventory, spec.animals, instance_id, item_id, data)
-    except ValueError as e:
-        raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.state.characters_dir)
-    return RedirectResponse(f"/character/{character_id}", status_code=303)
-
-
-@router.post("/character/{character_id}/animal/{instance_id}/unload")
-async def animal_unload(request: Request, character_id: str, instance_id: str,
-                        item_id: str = Form(...)):
-    spec = _load_spec_or_404(request, character_id)
-    data = request.app.state.game_data
-    try:
-        spec.inventory, spec.animals = companions_engine.unload_from_animal(
-            spec.inventory, spec.animals, instance_id, item_id, data)
-    except ValueError as e:
-        raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.state.characters_dir)
-    return RedirectResponse(f"/character/{character_id}", status_code=303)
-
-
 # ── Companions & Holdings: vehicles ────────────────────────────────────────
 
 @router.post("/character/{character_id}/vehicle/buy")
@@ -1831,34 +1802,6 @@ async def vehicle_extra_animals(request: Request, character_id: str,
     for i, v in enumerate(spec.vehicles):
         if v.instance_id == instance_id:
             spec.vehicles[i] = v.model_copy(update={"extra_animals": on})
-    save_character(character_id, spec, request.state.characters_dir)
-    return RedirectResponse(f"/character/{character_id}", status_code=303)
-
-
-@router.post("/character/{character_id}/vehicle/{instance_id}/load")
-async def vehicle_load(request: Request, character_id: str, instance_id: str,
-                       item_id: str = Form(...)):
-    spec = _load_spec_or_404(request, character_id)
-    data = request.app.state.game_data
-    try:
-        spec.inventory, spec.vehicles = companions_engine.load_onto_vehicle(
-            spec.inventory, spec.vehicles, instance_id, item_id, data)
-    except ValueError as e:
-        raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.state.characters_dir)
-    return RedirectResponse(f"/character/{character_id}", status_code=303)
-
-
-@router.post("/character/{character_id}/vehicle/{instance_id}/unload")
-async def vehicle_unload(request: Request, character_id: str, instance_id: str,
-                         item_id: str = Form(...)):
-    spec = _load_spec_or_404(request, character_id)
-    data = request.app.state.game_data
-    try:
-        spec.inventory, spec.vehicles = companions_engine.unload_from_vehicle(
-            spec.inventory, spec.vehicles, instance_id, item_id, data)
-    except ValueError as e:
-        raise HTTPException(400, str(e))
     save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
