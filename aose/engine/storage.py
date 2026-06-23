@@ -299,3 +299,58 @@ def move_instance(spec: CharacterSpec, kind: str, instance_id: str,
         new_loc = (StorageLocation(kind="carried")
                    if dest.kind == "retainer" else dest)
         _world_lists(dest_world, kind).append(inst.model_copy(update={"location": new_loc}))
+
+
+def move_thing(spec: CharacterSpec, category: str, ref_id: str,
+               dest: StorageLocation, *, count: int | None = None,
+               src: StorageLocation | None = None, data=None) -> None:
+    """Single movement front door. ``category`` selects the substrate.
+    ``count`` applies to coins/gems/ammo; ``src`` is required for loose items
+    (which list to pull from). ``data`` is used by item moves' validation."""
+    if category == "item":
+        if src is None:
+            raise StorageError("item move requires src")
+        unload_if_loaded(spec, ref_id)            # a loaded weapon unloads first
+        move_item(spec, ref_id, src, dest)
+    elif category == "container":
+        move_container(spec, ref_id, dest)
+    elif category == "coin":
+        move_coins(spec, ref_id, src or StorageLocation(kind="carried"), dest,
+                   count if count is not None else 0)
+    elif category in ("gem", "jewellery"):
+        move_valuable(spec, ref_id, dest, count=count)
+    elif category == "ammo":
+        move_ammo(spec, ref_id, dest, count if count is not None else 0)
+    elif category in ("magic", "enchanted"):
+        move_instance(spec, category, ref_id, dest)
+    else:
+        raise StorageError(f"unknown move category {category!r}")
+
+
+def move_targets(spec: CharacterSpec, data) -> list[dict]:
+    """Every top-level inventory + every container (PC and retainer) as
+    {kind, id, label} dicts, for the shared Move control."""
+    out: list[dict] = [
+        {"kind": "carried", "id": None, "label": spec.name or "Carried"},
+        {"kind": "stashed", "id": None, "label": "Stashed"},
+    ]
+    for a in spec.animals:
+        cat = data.items.get(a.catalog_id)
+        out.append({"kind": "animal", "id": a.instance_id,
+                    "label": a.name or (cat.name if cat else a.catalog_id)})
+    for v in spec.vehicles:
+        cat = data.items.get(v.catalog_id)
+        out.append({"kind": "vehicle", "id": v.instance_id,
+                    "label": v.name or (cat.name if cat else v.catalog_id)})
+    for r in spec.retainers:
+        out.append({"kind": "retainer", "id": r.id, "label": r.spec.name})
+    for c in spec.containers:
+        cat = data.items.get(c.catalog_id)
+        out.append({"kind": "container", "id": c.instance_id,
+                    "label": (cat.name if cat else c.catalog_id)})
+    for r in spec.retainers:
+        for c in r.spec.containers:
+            cat = data.items.get(c.catalog_id)
+            out.append({"kind": "container", "id": c.instance_id,
+                        "label": f"{r.spec.name} ▸ {cat.name if cat else c.catalog_id}"})
+    return out

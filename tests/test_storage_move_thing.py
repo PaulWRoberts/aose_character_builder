@@ -164,3 +164,48 @@ def test_magic_move_clears_equipped_slot_for_weapon():
     )
     storage.move_instance(spec, "magic", "m1", STASHED)
     assert spec.equipped.get("main_hand") != "ring_protection_plus_1"
+
+
+# ── Task 7: move_thing dispatcher + move_targets ─────────────────────────────
+
+from aose.models import CoinStack
+
+
+def test_move_thing_dispatches_each_category():
+    spec = _spec_with_mule(
+        inventory=["torch", "backpack"],
+        containers=[ContainerInstance(instance_id="c1", catalog_id="backpack",
+                                      location=CARRIED)],
+        coins=[CoinStack(denom="gp", count=10, location=CARRIED)],
+        gems=[GemStack(instance_id="g1", value=50, count=2, label="", location=CARRIED)],
+        ammo=[AmmoStack(instance_id="a1", base_id="arrow", count=20, location=CARRIED)],
+        magic_items=[MagicItemInstance(instance_id="m1",
+                                       catalog_id="ring_protection_plus_1")],
+    )
+    cont = StorageLocation(kind="container", id="c1")
+    storage.move_thing(spec, "item", "torch", cont,
+                       src=CARRIED, data=DATA)
+    storage.move_thing(spec, "coin", "gp", MULE, count=4, data=DATA)
+    storage.move_thing(spec, "gem", "g1", MULE, count=1, data=DATA)
+    storage.move_thing(spec, "ammo", "a1", MULE, count=20, data=DATA)
+    storage.move_thing(spec, "magic", "m1", MULE, data=DATA)
+    # torch moved into container c1
+    assert "torch" in spec.containers[0].contents
+    # coins split: 6 carried, 4 on mule
+    assert sum(c.count for c in spec.coins if c.location == CARRIED) == 6
+    assert sum(c.count for c in spec.coins if c.location == MULE) == 4
+    assert any(s.location == MULE for s in spec.ammo)
+    assert spec.magic_items[0].location == MULE
+
+
+def test_move_targets_lists_inventories_and_containers():
+    spec = _spec_with_mule(
+        containers=[ContainerInstance(instance_id="c1", catalog_id="backpack",
+                                      location=CARRIED)],
+    )
+    targets = storage.move_targets(spec, DATA)
+    kinds = {(t["kind"], t.get("id")) for t in targets}
+    assert ("carried", None) in kinds
+    assert ("stashed", None) in kinds
+    assert ("animal", "mule1") in kinds
+    assert ("container", "c1") in kinds
