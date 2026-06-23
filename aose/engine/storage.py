@@ -39,6 +39,17 @@ def _container(spec: CharacterSpec, id_: str):
     raise StorageError(f"no container with id {id_!r}")
 
 
+def containers_collection(spec: CharacterSpec, owner: StorageLocation) -> list:
+    """The ContainerInstance list that owns containers *at* ``owner``.
+
+    Retainers keep self-contained storage (``retainer.spec.containers``); every
+    other owner shares ``spec.containers`` (each entry's own ``location`` selects
+    the bucket)."""
+    if owner.kind == "retainer":
+        return _retainer(spec, owner.id).spec.containers
+    return spec.containers
+
+
 def loose_list(spec: CharacterSpec, loc: StorageLocation) -> list[str]:
     """Return the actual ``list[str]`` that holds loose item ids at ``loc``."""
     if loc.kind == "carried":

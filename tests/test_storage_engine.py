@@ -171,3 +171,30 @@ def test_move_valuable_unknown_raises():
     spec = _spec()
     with pytest.raises(storage.StorageError):
         storage.move_valuable(spec, "missing", StorageLocation(kind="stashed"))
+
+
+# ── containers_collection ─────────────────────────────────────────────────────
+
+def _spec_with_retainer():
+    from aose.models import CharacterSpec, Retainer
+    _cls = [{"class_id": "fighter", "level": 1}]
+    npc = CharacterSpec(name="Hench",
+                        abilities={"STR": 10, "DEX": 10, "CON": 10,
+                                   "INT": 10, "WIS": 10, "CHA": 10},
+                        race_id="human", classes=_cls, alignment="neutral")
+    pc = CharacterSpec(name="Boss",
+                       abilities={"STR": 10, "DEX": 10, "CON": 10,
+                                  "INT": 10, "WIS": 10, "CHA": 10},
+                       race_id="human", classes=_cls, alignment="neutral")
+    pc.retainers.append(Retainer(id="ret1", spec=npc, loyalty=7, role=""))
+    return pc
+
+
+def test_containers_collection_resolves_retainer_vs_spec():
+    from aose.engine.storage import containers_collection
+    spec = _spec_with_retainer()
+    pc = containers_collection(spec, StorageLocation(kind="carried"))
+    assert pc is spec.containers
+    rid = spec.retainers[0].id
+    ret = containers_collection(spec, StorageLocation(kind="retainer", id=rid))
+    assert ret is spec.retainers[0].spec.containers
