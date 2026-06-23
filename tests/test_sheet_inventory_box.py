@@ -203,3 +203,81 @@ def test_inventory_box_retainer_item_modal_exists(tmp_path):
     body = TestClient(app, follow_redirects=False).get("/character/tc-inv4").text
     # Retainer loose-item modal exists (dagger carried by retainer r1)
     assert 'id="modal-item-retainer-r1-dagger"' in body
+
+
+def _treasure_spec():
+    from aose.models import GemStack, JewelleryPiece
+    return CharacterSpec(
+        name="Croesus",
+        abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
+        race_id="human", classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
+        alignment="neutral",
+        inventory=["torch", "sword"], equipped={"main_hand": "sword"},
+        coins=[CoinStack(denom="gp", count=12,
+                         location=StorageLocation(kind="carried"))],
+        gems=[GemStack(instance_id="g1", value=100, count=2, label="ruby",
+                       location=StorageLocation(kind="carried"))],
+        jewellery=[JewelleryPiece(instance_id="j1", value=800, label="necklace",
+                                  location=StorageLocation(kind="carried"))],
+    )
+
+
+def test_coin_row_clickable_and_modal_with_actions(tmp_path):
+    from aose.characters import save_character
+    app = _make_app(tmp_path)
+    save_character("tc-coin", _treasure_spec(), tmp_path / "characters")
+    body = TestClient(app, follow_redirects=False).get("/character/tc-coin").text
+    # Carried gp stack is clickable and opens a coin modal
+    assert 'data-modal="modal-coin-carried--gp"' in body
+    assert 'id="modal-coin-carried--gp"' in body
+    # Modal carries convert, move, and drop actions
+    assert "/coins/convert" in body
+    assert "/inventory/move-coins" in body
+    assert "/coins/add" in body
+
+
+def test_gem_row_clickable_and_modal_with_actions(tmp_path):
+    from aose.characters import save_character
+    app = _make_app(tmp_path)
+    save_character("tc-gem", _treasure_spec(), tmp_path / "characters")
+    body = TestClient(app, follow_redirects=False).get("/character/tc-gem").text
+    assert 'data-modal="modal-gem-g1"' in body
+    assert 'id="modal-gem-g1"' in body
+    for action in ("/gems/sell", "/gems/sell-all", "/gems/adjust",
+                   "/gems/remove", "/inventory/move-valuable"):
+        assert action in body, action
+
+
+def test_jewellery_row_clickable_and_modal_with_actions(tmp_path):
+    from aose.characters import save_character
+    app = _make_app(tmp_path)
+    save_character("tc-jewel", _treasure_spec(), tmp_path / "characters")
+    body = TestClient(app, follow_redirects=False).get("/character/tc-jewel").text
+    assert 'data-modal="modal-jewel-j1"' in body
+    assert 'id="modal-jewel-j1"' in body
+    for action in ("/jewellery/toggle-damaged", "/jewellery/sell",
+                   "/jewellery/remove", "/inventory/move-valuable"):
+        assert action in body, action
+
+
+def test_carried_item_modal_has_sell_and_drop(tmp_path):
+    from aose.characters import save_character
+    app = _make_app(tmp_path)
+    save_character("tc-sell", _treasure_spec(), tmp_path / "characters")
+    body = TestClient(app, follow_redirects=False).get("/character/tc-sell").text
+    # The carried torch modal exposes Sell (half/refund) and Drop
+    assert 'id="modal-item-carried-torch"' in body
+    assert "half price" in body
+    assert "Sell…" in body
+
+
+def test_drawer_treasure_tab_keeps_add_forms_only(tmp_path):
+    from aose.characters import save_character
+    app = _make_app(tmp_path)
+    save_character("tc-drawer", _treasure_spec(), tmp_path / "characters")
+    body = TestClient(app, follow_redirects=False).get("/character/tc-drawer").text
+    # The Treasure tab keeps acquisition forms…
+    assert "/gems/add" in body
+    assert "/jewellery/add" in body
+    # …but no longer renders the management table ("sell one" was table-only)
+    assert "sell one" not in body

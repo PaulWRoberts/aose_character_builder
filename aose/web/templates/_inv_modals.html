@@ -36,7 +36,11 @@
       </form>
     </div>
     {% endif %}
-    <div class="row-actions">{{ inv_row_actions(row, url_prefix, state, show_remove=False, src_id=src_id) }}</div>
+    {# Sell ▾ / Drop are shown for the person buckets (carried / stashed), whose
+       rows carry the sell_gp / cost_gp / can_refund fields and whose /remove
+       route understands the from_state.  Carrier & retainer loose rows keep
+       Move + their gated equip only. #}
+    <div class="row-actions">{{ inv_row_actions(row, url_prefix, state, show_remove=(state in ("carried", "stashed")), src_id=src_id) }}</div>
   </div>
 </div>
 {% endmacro %}
@@ -74,6 +78,127 @@
       {% else %}
       <span class="muted small">Empty the container before selling or dropping.</span>
       {% endif %}
+    </div>
+  </div>
+</div>
+{% endmacro %}
+
+{# Per-coin-stack modal — Convert ▾ · Move ▾ · Adjust / Drop.  Keyed by
+   (owner_kind, owner_id, denom).  `group` provides the source location; treasure
+   moves stay between top-level carrier inventories (no container / retainer dest:
+   neither has a render path for loose coin stacks). #}
+{% macro coin_modal(c, group, url_prefix, move_groups) %}
+{%- set lk = group.kind -%}{%- set lid = group.id or "" -%}
+<div class="overlay modal" id="modal-coin-{{ lk }}-{{ lid }}-{{ c.denom }}" role="dialog" aria-label="{{ c.count }} {{ c.denom }}">
+  <div class="ov-head"><h3>{{ c.count }} {{ c.denom }}</h3><button class="x" data-close>×</button></div>
+  <div class="ov-body">
+    <div class="ov-section">
+      <h4>Convert</h4>
+      <form method="post" action="{{ url_prefix }}/coins/convert" class="inline-form">
+        <input type="hidden" name="loc_kind" value="{{ lk }}">
+        <input type="hidden" name="loc_id" value="{{ lid }}">
+        <input type="hidden" name="frm" value="{{ c.denom }}">
+        <input type="number" name="count" value="{{ c.count }}" min="1" style="width:4rem"> {{ c.denom }} →
+        <select name="to">
+          {% for d in ["pp", "gp", "ep", "sp", "cp"] %}{% if d != c.denom %}<option value="{{ d }}">{{ d }}</option>{% endif %}{% endfor %}
+        </select>
+        <button class="btn" type="submit">Convert</button>
+      </form>
+    </div>
+    <div class="ov-section">
+      <h4>Move</h4>
+      <form method="post" action="{{ url_prefix }}/inventory/move-coins" class="inline-form move-form">
+        <input type="hidden" name="denom" value="{{ c.denom }}">
+        <input type="hidden" name="src_kind" value="{{ lk }}">
+        <input type="hidden" name="src_id" value="{{ lid }}">
+        <input type="number" name="count" value="{{ c.count }}" min="1" style="width:4rem">
+        {{ move_dest_control(move_groups, lk, lid, allow_containers=False, allow_retainers=False) }}
+        <button class="btn" type="submit">Move</button>
+      </form>
+    </div>
+    <div class="ov-section">
+      <h4>Adjust</h4>
+      <form method="post" action="{{ url_prefix }}/coins/add" class="inline-form">
+        <input type="hidden" name="denom" value="{{ c.denom }}">
+        <input type="hidden" name="loc_kind" value="{{ lk }}">
+        <input type="hidden" name="loc_id" value="{{ lid }}">
+        <input type="number" name="count" value="-1" style="width:4.5rem" title="Use a negative number to remove">
+        <button class="btn" type="submit">Apply</button>
+      </form>
+      <form method="post" action="{{ url_prefix }}/coins/add" class="inline-form">
+        <input type="hidden" name="denom" value="{{ c.denom }}">
+        <input type="hidden" name="loc_kind" value="{{ lk }}">
+        <input type="hidden" name="loc_id" value="{{ lid }}">
+        <input type="hidden" name="count" value="-{{ c.count }}">
+        <button class="btn danger" type="submit">Drop all</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endmacro %}
+
+{# Per-gem-stack modal — Sell one · Sell all · ±1 · Move ▾ · Drop. #}
+{% macro gem_modal(g, group, url_prefix, move_groups) %}
+<div class="overlay modal" id="modal-gem-{{ g.instance_id }}" role="dialog" aria-label="{{ g.label or (g.value ~ ' gp gem') }}">
+  <div class="ov-head"><h3>{{ g.label if g.label else g.value ~ " gp gem" }}</h3><button class="x" data-close>×</button></div>
+  <div class="ov-body">
+    <p style="margin:0 0 8px"><span class="tag stamp">{{ g.count }} × {{ g.value }} gp</span> <span class="muted small">= {{ g.stack_value }} gp</span></p>
+    <div class="row-actions">
+      <form method="post" action="{{ url_prefix }}/gems/sell" class="inline-form">
+        <input type="hidden" name="instance_id" value="{{ g.instance_id }}">
+        <button class="btn" type="submit">Sell one</button>
+      </form>
+      <form method="post" action="{{ url_prefix }}/gems/sell-all" class="inline-form">
+        <input type="hidden" name="instance_id" value="{{ g.instance_id }}">
+        <button class="btn" type="submit">Sell all</button>
+      </form>
+      <form method="post" action="{{ url_prefix }}/gems/adjust" class="inline-form">
+        <input type="hidden" name="instance_id" value="{{ g.instance_id }}">
+        <input type="hidden" name="delta" value="1">
+        <button class="btn tool dark" type="submit">+1</button>
+      </form>
+      <form method="post" action="{{ url_prefix }}/gems/adjust" class="inline-form">
+        <input type="hidden" name="instance_id" value="{{ g.instance_id }}">
+        <input type="hidden" name="delta" value="-1">
+        <button class="btn tool dark" type="submit">−1</button>
+      </form>
+      <form method="post" action="{{ url_prefix }}/inventory/move-valuable" class="inline-form move-form">
+        <input type="hidden" name="instance_id" value="{{ g.instance_id }}">
+        {{ move_dest_control(move_groups, group.kind, group.id or "", allow_containers=False, allow_retainers=False) }}
+      </form>
+      <form method="post" action="{{ url_prefix }}/gems/remove" class="inline-form">
+        <input type="hidden" name="instance_id" value="{{ g.instance_id }}">
+        <button class="btn danger" type="submit">Drop</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endmacro %}
+
+{# Per-jewellery modal — Mark damaged/intact · Sell · Move ▾ · Drop. #}
+{% macro jewellery_modal(j, group, url_prefix, move_groups) %}
+<div class="overlay modal" id="modal-jewel-{{ j.instance_id }}" role="dialog" aria-label="{{ j.label or 'jewellery' }}">
+  <div class="ov-head"><h3>{{ j.label if j.label else "Jewellery" }}</h3><button class="x" data-close>×</button></div>
+  <div class="ov-body">
+    <p style="margin:0 0 8px"><span class="tag stamp">{{ j.effective_value }} gp</span>{% if j.damaged %} <span class="tag stamp">damaged</span>{% endif %}</p>
+    <div class="row-actions">
+      <form method="post" action="{{ url_prefix }}/jewellery/toggle-damaged" class="inline-form">
+        <input type="hidden" name="instance_id" value="{{ j.instance_id }}">
+        <input type="hidden" name="damaged" value="{{ 'false' if j.damaged else 'true' }}">
+        <button class="btn" type="submit">{{ 'Mark intact' if j.damaged else 'Mark damaged' }}</button>
+      </form>
+      <form method="post" action="{{ url_prefix }}/jewellery/sell" class="inline-form">
+        <input type="hidden" name="instance_id" value="{{ j.instance_id }}">
+        <button class="btn" type="submit">Sell</button>
+      </form>
+      <form method="post" action="{{ url_prefix }}/inventory/move-valuable" class="inline-form move-form">
+        <input type="hidden" name="instance_id" value="{{ j.instance_id }}">
+        {{ move_dest_control(move_groups, group.kind, group.id or "", allow_containers=False, allow_retainers=False) }}
+      </form>
+      <form method="post" action="{{ url_prefix }}/jewellery/remove" class="inline-form">
+        <input type="hidden" name="instance_id" value="{{ j.instance_id }}">
+        <button class="btn danger" type="submit">Drop</button>
+      </form>
     </div>
   </div>
 </div>

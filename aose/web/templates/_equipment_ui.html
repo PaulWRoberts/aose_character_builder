@@ -254,46 +254,7 @@
 </div>
 {% endif %}
 
-<div class="ov-section"><h4>Gems <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--faint)">— stowable in containers</span></h4>
-{% if valuables.gems %}
-<table class="dtable">
-  <thead><tr><th>Value</th><th class="n">Count</th><th></th></tr></thead>
-  <tbody>
-  {% for g in valuables.gems %}
-  <tr>
-    <td>{{ g.value }} gp{% if g.label %} · {{ g.label }}{% endif %}</td>
-    <td class="n">{{ g.count }}</td>
-    <td class="n">
-      <form method="post" action="{{ coins_url_prefix }}/gems/sell" style="display:inline">
-        <input type="hidden" name="instance_id" value="{{ g.instance_id }}">
-        <button class="btn link" type="submit">sell one</button>
-      </form>
-      <form method="post" action="{{ coins_url_prefix }}/gems/sell-all" style="display:inline">
-        <input type="hidden" name="instance_id" value="{{ g.instance_id }}">
-        <button class="btn link" type="submit">sell all</button>
-      </form>
-      <form method="post" action="{{ coins_url_prefix }}/gems/adjust" style="display:inline">
-        <input type="hidden" name="instance_id" value="{{ g.instance_id }}">
-        <input type="hidden" name="delta" value="1">
-        <button class="btn tool dark" type="submit">+1</button>
-      </form>
-      <form method="post" action="{{ coins_url_prefix }}/gems/adjust" style="display:inline">
-        <input type="hidden" name="instance_id" value="{{ g.instance_id }}">
-        <input type="hidden" name="delta" value="-1">
-        <button class="btn tool dark" type="submit">−1</button>
-      </form>
-      <form method="post" action="{{ coins_url_prefix }}/gems/remove" style="display:inline">
-        <input type="hidden" name="instance_id" value="{{ g.instance_id }}">
-        <button class="btn link" type="submit">drop</button>
-      </form>
-    </td>
-  </tr>
-  {% endfor %}
-  </tbody>
-</table>
-{% else %}
-<p class="hint">No gems.</p>
-{% endif %}
+<div class="ov-section"><h4>Gems <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--faint)">— manage existing stacks from the inventory box</span></h4>
 <form method="post" action="{{ coins_url_prefix }}/gems/add" style="margin-top:8px">
   <label class="f"><span class="lab">Value</span>
     <select name="value">
@@ -311,35 +272,7 @@
 </form>
 </div>
 
-<div class="ov-section"><h4>Jewellery</h4>
-{% if valuables.jewellery %}
-<table class="dtable">
-  <tbody>
-  {% for j in valuables.jewellery %}
-  <tr>
-    <td>{% if j.label %}{{ j.label }}{% else %}jewellery{% endif %} · {{ j.effective_value }} gp{% if j.damaged %} <span class="tag stamp">damaged</span>{% endif %}</td>
-    <td class="n">
-      <form method="post" action="{{ coins_url_prefix }}/jewellery/toggle-damaged" style="display:inline">
-        <input type="hidden" name="instance_id" value="{{ j.instance_id }}">
-        <input type="hidden" name="damaged" value="{{ 'false' if j.damaged else 'true' }}">
-        <button class="btn link" type="submit">{{ 'mark intact' if j.damaged else 'mark damaged' }}</button>
-      </form>
-      <form method="post" action="{{ coins_url_prefix }}/jewellery/sell" style="display:inline">
-        <input type="hidden" name="instance_id" value="{{ j.instance_id }}">
-        <button class="btn link" type="submit">sell</button>
-      </form>
-      <form method="post" action="{{ coins_url_prefix }}/jewellery/remove" style="display:inline">
-        <input type="hidden" name="instance_id" value="{{ j.instance_id }}">
-        <button class="btn link" type="submit">drop</button>
-      </form>
-    </td>
-  </tr>
-  {% endfor %}
-  </tbody>
-</table>
-{% else %}
-<p class="hint">No jewellery.</p>
-{% endif %}
+<div class="ov-section"><h4>Jewellery <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--faint)">— manage existing pieces from the inventory box</span></h4>
 <form method="post" action="{{ coins_url_prefix }}/jewellery/add" style="margin-top:8px">
   <label class="f"><span class="lab">Value</span>
     <select name="mode">

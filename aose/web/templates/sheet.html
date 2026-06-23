@@ -5,7 +5,7 @@
 {% from "_detail_card.html" import detail_card with context %}
 {% from "_inv_pane.html" import inv_pane with context %}
 {% from "_move_dest.html" import move_dest_control with context %}
-{% from "_inv_modals.html" import item_modal, container_modal with context %}
+{% from "_inv_modals.html" import item_modal, container_modal, coin_modal, gem_modal, jewellery_modal with context %}
 
 <div class="sheet-actions no-print">
     <a href="/character/{{ character_id }}/print" target="_blank" class="button primary">Print / Save PDF</a>
@@ -1029,6 +1029,15 @@
 {% for group in sheet.inventory_groups %}{% for c in group.containers %}
 {{ container_modal(c, group, _char_url, sheet.inventory_groups) }}
 {% endfor %}{% endfor %}
+
+{# MODALS: coins / gems / jewellery per PC-managed inventory (carried · stashed ·
+   each animal/vehicle).  Retainer treasure stays display-only — its stacks live
+   in retainer.spec and have no PC-scoped management route. #}
+{% for group in sheet.inventory_groups %}{% if group.kind != "retainer" %}
+{% for c in group.coins %}{{ coin_modal(c, group, _char_url, sheet.inventory_groups) }}{% endfor %}
+{% for g in group.treasure_gems %}{{ gem_modal(g, group, _char_url, sheet.inventory_groups) }}{% endfor %}
+{% for j in group.treasure_jewellery %}{{ jewellery_modal(j, group, _char_url, sheet.inventory_groups) }}{% endfor %}
+{% endif %}{% endfor %}
 
 {# MODALS: per-ammo (properties + count adjust) #}
 {% for a in sheet.ammo %}

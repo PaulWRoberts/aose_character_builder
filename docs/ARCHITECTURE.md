@@ -505,13 +505,27 @@ Illusionist/Magic-user/Thief). New languages: `hephaestan`, `language_of_wolves`
   below. Companions cards no longer hold storage UI — all carrier/retainer inventory
   is visible in the accordion. Container modals use `/inventory/move-container`.
   Retainer containers are handled via `_find_container_anywhere` (searches
-  `spec.containers` then all `retainer.spec.containers`).
-- **Coin rendering** — coins are read-only line-items in the Coins subsection of each
-  inventory pane (`_inv_pane.html`). Weight appears only for Carried (stashed/carrier
-  coins contribute zero encumbrance). The add-coins form lives in the Treasure tab of
-  the acquisition drawer. Routes `/inventory/move-coins` and `/coins/convert` remain
-  for management. Pane summary bar shows a `count denom` inline tally; no coin-chip
-  strip or Coin-Purse popover.
+  `spec.containers` then all `retainer.spec.containers`). Per-item modals
+  (`item_modal` in `_inv_modals.html`) expose **Sell ▾ + Drop** for the person
+  buckets (carried/stashed) on top of the gated equip/move actions; carrier &
+  retainer loose rows keep Move + their gated equip only.
+- **Coin / gem / jewellery modals** — coin stacks, gem stacks, and jewellery pieces
+  in the box are **clickable → per-stack modals** (`coin_modal` / `gem_modal` /
+  `jewellery_modal` in `_inv_modals.html`), rendered per non-retainer group in
+  `sheet.html`. Coin modal: Convert ▾ (`/coins/convert`), Move ▾
+  (`/inventory/move-coins`), Adjust / Drop-all (`/coins/add`, signed). Gem modal:
+  Sell one / Sell all (`/gems/sell`, `/gems/sell-all`), ±1 (`/gems/adjust`), Move ▾
+  (`/inventory/move-valuable`), Drop (`/gems/remove`). Jewellery modal: Mark
+  damaged/intact (`/jewellery/toggle-damaged`), Sell (`/jewellery/sell`), Move ▾,
+  Drop (`/jewellery/remove`). **Treasure Move destinations are restricted to
+  top-level carrier inventories** (`move_dest_control(..., allow_containers=False,
+  allow_retainers=False)`): the view has no render path for loose coin/gem/jewellery
+  stacks located inside a container or a retainer, so those destinations would orphan
+  them. Coin weight still appears only for Carried; the pane summary bar shows a
+  `count denom` inline tally. The wizard box passes `manage_treasure=False` to
+  `inv_pane` (no draft-scoped treasure routes), so its treasure rows stay
+  non-clickable. Retainer treasure stays display-only (lives in `retainer.spec`, no
+  PC-scoped route).
 - **Move-route robustness** — `_loc(kind, id)` in `routes.py` builds the
   `StorageLocation` for every `/inventory/move-*` (and `/coins/add`,`/coins/convert`)
   route, mapping a bad/empty kind to HTTP 400 (Pydantic `ValidationError` would
@@ -636,7 +650,8 @@ Illusionist/Magic-user/Thief). New languages: `hephaestan`, `language_of_wolves`
   drawer/modal/popover, dismissed by Esc/scrim/close.
 - **Acquisition drawer** — `_equipment_ui.html` is acquisition-only: Shop (always,
   default open), Enchant (gated `magic_acquisition`), Scribe (gated `spell_sources`),
-  Treasure (gated `valuables`; includes the Add-coins form + gem/jewellery management).
+  Treasure (gated `valuables`; **acquisition only** — Add-coins / Add-gem / Add-jewellery
+  forms; management of existing stacks moved to the box's per-stack modals).
   An "Other Possessions" add-form in the Shop footer adds custom text items to Carried.
   All owned-item management (equip/stash/move/sell) is in the inventory box, not the
   drawer. The wizard equipment step renders the inventory box above the drawer and a

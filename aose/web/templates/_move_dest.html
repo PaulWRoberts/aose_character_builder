@@ -3,11 +3,11 @@
    location. A submit handler in inventory.js copies the chosen option's
    data-kind/data-id into the form's hidden dest_kind/dest_id inputs. Shared by
    the carrier/retainer group panels and the Carried/Stashed row actions. #}
-{% macro move_dest_control(groups, cur_kind, cur_id, allow_containers=True) %}
+{% macro move_dest_control(groups, cur_kind, cur_id, allow_containers=True, allow_retainers=True) %}
   <select class="move-dest" style="max-width:9rem">
     <option value="" disabled selected>Move to…</option>
     {% for g in groups %}
-      {% if not (g.kind == cur_kind and (g.id or '') == (cur_id or '')) %}
+      {% if not (g.kind == cur_kind and (g.id or '') == (cur_id or '')) and (allow_retainers or g.kind != "retainer") %}
       <option data-kind="{{ g.kind }}" data-id="{{ g.id or '' }}">{{ g.label }}</option>
       {% endif %}
       {% if allow_containers %}{% for c in g.containers %}
