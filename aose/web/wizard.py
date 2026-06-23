@@ -1761,7 +1761,7 @@ def _equipment_context(draft: dict[str, Any], game_data) -> dict:
         "remove_modes": REMOVE_MODES,
         "ammo_load_options": load_options,
         "inv_move_groups": _wizard_move_groups(containers, game_data),
-        "inv_move_url": f"/wizard/{draft_id}/equipment/move-item",
+        "inv_move_url": f"/wizard/{draft_id}/inventory/move",
         "inventory_groups": inventory_groups,
     }
 
@@ -1954,40 +1954,47 @@ async def equipment_stow(request: Request, draft_id: str,
     return _redirect(f"/wizard/{draft_id}/equipment")
 
 
-@router.post("/{draft_id}/equipment/move-item")
-async def post_equipment_move_item(request: Request, draft_id: str):
-    """Move an item between carried / stashed / container locations in the wizard."""
+@router.post("/{draft_id}/inventory/move")
+async def wiz_inventory_move(request: Request, draft_id: str):
+    """Single movement front door for every owned thing in the wizard."""
+    from aose.engine import storage as _storage
+    from aose.models.storage import StorageLocation
+    from pydantic import ValidationError as _ValidationError
     draft = _load(request, draft_id)
     form = await request.form()
-    item_id = str(form.get("item_id", ""))
-    src_kind = str(form.get("src_kind", "carried"))
-    dest_kind = str(form.get("dest_kind", "carried"))
-    dest_id = form.get("dest_id") or None
-
-    containers = [
-        ContainerInstance.model_validate(c) for c in draft.get("containers", [])
-    ]
-
-    def _loc_list(kind: str, loc_id: str | None) -> list:
-        if kind == "carried":
-            return draft.setdefault("inventory", [])
-        if kind == "stashed":
-            return draft.setdefault("stashed", [])
-        if kind == "container":
-            for c in containers:
-                if c.instance_id == loc_id:
-                    return c.contents
-            raise HTTPException(400, f"container {loc_id!r} not found")
-        raise HTTPException(400, f"unsupported location: {kind!r}")
-
-    src_list = _loc_list(src_kind, form.get("src_id") or None)
-    if item_id not in src_list:
-        raise HTTPException(400, f"{item_id!r} not at {src_kind}")
-    dest_list = _loc_list(dest_kind, dest_id)
-    src_list.remove(item_id)
-    dest_list.append(item_id)
-
-    draft["containers"] = [c.model_dump() for c in containers]
+    category = form.get("category", "")
+    ref_id = (form.get("item_id") or form.get("instance_id")
+              or form.get("denom") or "")
+    try:
+        dest = StorageLocation(kind=form.get("dest_kind", "carried"),
+                               id=form.get("dest_id") or None)
+        src = (StorageLocation(kind=form.get("src_kind"),
+                               id=form.get("src_id") or None)
+               if form.get("src_kind") else None)
+    except _ValidationError as exc:
+        raise HTTPException(400, str(exc))
+    raw = form.get("count")
+    count = int(raw) if raw not in (None, "") else None
+    spec = _draft_to_spec(draft, request.app.state.game_data)
+    try:
+        _storage.move_thing(spec, category, ref_id, dest,
+                            count=count, src=src,
+                            data=request.app.state.game_data)
+    except (KeyError, _storage.StorageError) as e:
+        raise HTTPException(400, str(e))
+    draft.update({
+        "inventory": spec.inventory,
+        "stashed": spec.stashed,
+        "containers": [c.model_dump() for c in spec.containers],
+        "coins": [s.model_dump() for s in spec.coins],
+        "gems": [g.model_dump() for g in spec.gems],
+        "jewellery": [j.model_dump() for j in spec.jewellery],
+        "ammo": [a.model_dump() for a in spec.ammo],
+        "loaded_ammo": spec.loaded_ammo,
+        "magic_items": [m.model_dump() for m in spec.magic_items],
+        "enchanted": [e.model_dump() for e in spec.enchanted],
+        "equipped": spec.equipped,
+    })
     save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/equipment")
 
@@ -2081,27 +2088,6 @@ async def wiz_use_as_container(request: Request, draft_id: str):
         raise HTTPException(400, str(e))
     draft["inventory"] = list(spec.inventory)
     draft["stashed"] = list(spec.stashed)
-    draft["containers"] = [c.model_dump() for c in spec.containers]
-    save_draft(draft_id, draft, _drafts_dir(request))
-    return _redirect(f"/wizard/{draft_id}/equipment")
-
-
-@router.post("/{draft_id}/inventory/move-container")
-async def wiz_move_container(request: Request, draft_id: str):
-    """Shared container-move URL used by the container_modal macro."""
-    from aose.engine import storage as _storage
-    from aose.models.storage import StorageLocation
-    draft = _load(request, draft_id)
-    form = await request.form()
-    container_id = form.get("container_id", "")
-    dest_kind = form.get("dest_kind", "carried")
-    dest_id = form.get("dest_id") or None
-    spec = _draft_to_spec(draft, request.app.state.game_data)
-    try:
-        dest = StorageLocation(kind=dest_kind, id=dest_id)
-        _storage.move_container(spec, container_id, dest)
-    except (ValueError, _storage.StorageError) as e:
-        raise HTTPException(400, str(e))
     draft["containers"] = [c.model_dump() for c in spec.containers]
     save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/equipment")

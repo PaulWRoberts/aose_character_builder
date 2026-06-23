@@ -861,6 +861,33 @@ def test_wizard_remove_container_drop_clears_contents(tmp_path):
     assert draft["inventory"] == []
 
 
+def test_wizard_single_move_route_moves_item(tmp_path):
+    client = _make_client(tmp_path)
+    draft_id = _walk_to_equipment(client)
+    client.post(f"/wizard/{draft_id}/equipment/add", data={"item_id": "torch"})
+    client.post(f"/wizard/{draft_id}/equipment/add", data={"item_id": "backpack"})
+    draft = load_draft(draft_id, client._drafts_dir)
+    instance_id = draft["containers"][0]["instance_id"]
+    r = client.post(f"/wizard/{draft_id}/inventory/move", data={
+        "category": "item", "item_id": "torch",
+        "src_kind": "carried", "src_id": "",
+        "dest_kind": "container", "dest_id": instance_id,
+    })
+    assert r.status_code == 303
+    draft = load_draft(draft_id, client._drafts_dir)
+    assert "torch" not in draft["inventory"]
+    assert "torch" in draft["containers"][0]["contents"]
+
+
+def test_wizard_old_move_item_route_is_gone(tmp_path):
+    client = _make_client(tmp_path)
+    draft_id = _walk_to_equipment(client)
+    client.post(f"/wizard/{draft_id}/equipment/add", data={"item_id": "torch"})
+    r = client.post(f"/wizard/{draft_id}/equipment/move-item", data={
+        "item_id": "torch", "src_kind": "carried", "dest_kind": "stashed"})
+    assert r.status_code == 404
+
+
 def test_sheet_renders_container_row_with_capacity_badge(tmp_path):
     client = _make_client(tmp_path)
     _seed_character(client)
