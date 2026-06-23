@@ -84,12 +84,6 @@ from aose.engine.shop import (
     remove_from_stash as shop_remove_from_stash,
     roll_starting_gold,
     shop_categories,
-    stash as shop_stash,
-    stash_container as shop_stash_container,
-    stow as shop_stow,
-    take_out as shop_take_out,
-    unstash as shop_unstash,
-    unstash_container as shop_unstash_container,
 )
 from aose.models import (
     Ability,
@@ -1868,66 +1862,6 @@ async def post_equipment_unequip(request: Request, draft_id: str, item_id: str =
     return _redirect(f"/wizard/{draft_id}/equipment")
 
 
-@router.post("/{draft_id}/equipment/stash")
-async def post_equipment_stash(request: Request, draft_id: str, item_id: str = Form(...)):
-    draft = _load(request, draft_id)
-    data = request.app.state.game_data
-    try:
-        new_inv, new_stashed, new_eq = shop_stash(
-            draft.get("inventory", []),
-            draft.get("stashed", []),
-            draft.get("equipped", {}),
-            item_id, data,
-        )
-    except ValueError as e:
-        raise HTTPException(400, str(e))
-    draft["inventory"] = new_inv
-    draft["stashed"] = new_stashed
-    draft["equipped"] = new_eq
-    save_draft(draft_id, draft, _drafts_dir(request))
-    return _redirect(f"/wizard/{draft_id}/equipment")
-
-
-@router.post("/{draft_id}/equipment/unstash")
-async def post_equipment_unstash(request: Request, draft_id: str, item_id: str = Form(...)):
-    draft = _load(request, draft_id)
-    data = request.app.state.game_data
-    try:
-        new_inv, new_stashed = shop_unstash(
-            draft.get("inventory", []), draft.get("stashed", []), item_id, data,
-        )
-    except ValueError as e:
-        raise HTTPException(400, str(e))
-    draft["inventory"] = new_inv
-    draft["stashed"] = new_stashed
-    save_draft(draft_id, draft, _drafts_dir(request))
-    return _redirect(f"/wizard/{draft_id}/equipment")
-
-
-@router.post("/{draft_id}/equipment/stow")
-async def equipment_stow(request: Request, draft_id: str,
-                         instance_id: str = Form(...),
-                         item_id: str = Form(...)):
-    draft = _load(request, draft_id)
-    containers = [ContainerInstance.model_validate(c)
-                  for c in draft.get("containers", [])]
-    try:
-        new_inv, new_stashed, new_containers = shop_stow(
-            draft.get("inventory", []),
-            draft.get("stashed", []),
-            containers,
-            draft.get("equipped", {}),
-            instance_id, item_id, request.app.state.game_data,
-        )
-    except ValueError as e:
-        raise HTTPException(400, str(e))
-    draft["inventory"] = new_inv
-    draft["stashed"] = new_stashed
-    draft["containers"] = [c.model_dump() for c in new_containers]
-    save_draft(draft_id, draft, _drafts_dir(request))
-    return _redirect(f"/wizard/{draft_id}/equipment")
-
-
 @router.post("/{draft_id}/inventory/move")
 async def wiz_inventory_move(request: Request, draft_id: str):
     """Single movement front door for every owned thing in the wizard."""
@@ -1967,60 +1901,9 @@ async def wiz_inventory_move(request: Request, draft_id: str):
         "loaded_ammo": spec.loaded_ammo,
         "magic_items": [m.model_dump() for m in spec.magic_items],
         "enchanted": [e.model_dump() for e in spec.enchanted],
+        "spell_sources": [s.model_dump() for s in spec.spell_sources],
         "equipped": spec.equipped,
     })
-    save_draft(draft_id, draft, _drafts_dir(request))
-    return _redirect(f"/wizard/{draft_id}/equipment")
-
-
-@router.post("/{draft_id}/equipment/take-out")
-async def equipment_take_out(request: Request, draft_id: str,
-                             instance_id: str = Form(...),
-                             item_id: str = Form(...)):
-    draft = _load(request, draft_id)
-    containers = [ContainerInstance.model_validate(c)
-                  for c in draft.get("containers", [])]
-    try:
-        new_inv, new_stashed, new_containers = shop_take_out(
-            draft.get("inventory", []),
-            draft.get("stashed", []),
-            containers, instance_id, item_id,
-        )
-    except ValueError as e:
-        raise HTTPException(400, str(e))
-    draft["inventory"] = new_inv
-    draft["stashed"] = new_stashed
-    draft["containers"] = [c.model_dump() for c in new_containers]
-    save_draft(draft_id, draft, _drafts_dir(request))
-    return _redirect(f"/wizard/{draft_id}/equipment")
-
-
-@router.post("/{draft_id}/equipment/stash-container")
-async def equipment_stash_container(request: Request, draft_id: str,
-                                    instance_id: str = Form(...)):
-    draft = _load(request, draft_id)
-    containers = [ContainerInstance.model_validate(c)
-                  for c in draft.get("containers", [])]
-    try:
-        new_containers = shop_stash_container(containers, instance_id)
-    except ValueError as e:
-        raise HTTPException(400, str(e))
-    draft["containers"] = [c.model_dump() for c in new_containers]
-    save_draft(draft_id, draft, _drafts_dir(request))
-    return _redirect(f"/wizard/{draft_id}/equipment")
-
-
-@router.post("/{draft_id}/equipment/unstash-container")
-async def equipment_unstash_container(request: Request, draft_id: str,
-                                      instance_id: str = Form(...)):
-    draft = _load(request, draft_id)
-    containers = [ContainerInstance.model_validate(c)
-                  for c in draft.get("containers", [])]
-    try:
-        new_containers = shop_unstash_container(containers, instance_id)
-    except ValueError as e:
-        raise HTTPException(400, str(e))
-    draft["containers"] = [c.model_dump() for c in new_containers]
     save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/equipment")
 
