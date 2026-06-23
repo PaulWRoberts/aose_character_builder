@@ -67,6 +67,49 @@ def loose_list(spec: CharacterSpec, loc: StorageLocation) -> list[str]:
     raise StorageError(f"no loose list for location {loc!r}")
 
 
+def location_load_cn(spec: CharacterSpec, loc: StorageLocation, data) -> int:
+    """Raw encumbrance weight of every substrate stored *at* ``loc``.
+
+    Loose items by ``weight_cn``; coins 1 cn each; gems 1 cn each; jewellery
+    10 cn each; ammunition 0 cn; magic items by treasure-weight-or-own-weight;
+    enchanted by resolved weight; scroll spell sources 1 cn (spellbooks 0).
+    Does NOT include an animal's worn barding (that is added by the capacity
+    check). This is the single definition of "current load here", shared with
+    the encumbrance container loop.
+    """
+    from aose.engine.encumbrance import treasure_item_weight
+    from aose.engine.enchant import resolve_instance
+    from aose.models import Armor, Weapon
+
+    try:
+        loose = loose_list(spec, loc)
+    except StorageError:
+        loose = []
+    total = 0
+    for item_id in loose:
+        item = data.items.get(item_id)
+        if item is not None:
+            total += item.weight_cn
+    total += sum(s.count for s in spec.coins if s.location == loc)
+    total += sum(g.count for g in spec.gems if g.location == loc)
+    total += 10 * sum(1 for j in spec.jewellery if j.location == loc)
+    for mi in spec.magic_items:
+        if mi.location == loc:
+            item = data.items.get(mi.catalog_id)
+            if item is not None:
+                total += treasure_item_weight(item) or item.weight_cn
+    for inst in spec.enchanted:
+        if inst.location == loc:
+            resolved = resolve_instance(inst, data)
+            if isinstance(resolved, Armor):
+                total += int(resolved.weight_cn * resolved.weight_multiplier)
+            elif isinstance(resolved, Weapon):
+                total += resolved.weight_cn
+    total += sum(1 for s in spec.spell_sources
+                 if s.location == loc and s.kind == "scroll")
+    return total
+
+
 def use_as_container(spec: CharacterSpec, owner: StorageLocation,
                      item_id: str, data) -> None:
     """Promote one loose copy of a Container item at ``owner`` into a real
