@@ -122,6 +122,8 @@ def _check_capacity(spec: CharacterSpec, dest: StorageLocation,
     """
     if dest.kind in ("carried", "stashed", "retainer"):
         return
+    if data is None:
+        return
     if dest.kind == "container":
         catalog = data.items.get(_container(spec, dest.id).catalog_id)
         cap = getattr(catalog, "capacity_cn", None)
@@ -221,7 +223,7 @@ def move_container(spec: CharacterSpec, container_id: str,
         raise StorageError("a container cannot go inside another container")
     src_coll, idx = _find_container_anywhere(spec, container_id)
     c = src_coll[idx]
-    if dest.kind in ("animal", "vehicle"):
+    if dest.kind in ("animal", "vehicle") and data is not None:
         _carrier(spec, dest.kind, dest.id)            # validate existence
     cat = data.items.get(c.catalog_id) if data is not None else None
     added = cat.weight_cn if cat is not None else 0
