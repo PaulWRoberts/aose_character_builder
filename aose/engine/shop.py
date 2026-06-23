@@ -79,11 +79,21 @@ class CoinRow(BaseModel):
     count: int
 
 
+class OwnerCaps(BaseModel):
+    """Per-inventory capabilities; templates gate on these (no per-owner branches)."""
+    has_equipped: bool = False    # show Equipped subsection + label is "Carried"
+    can_wield: bool = False       # inline/modal Equip on loose rows
+    can_stash: bool = False       # offer Stash/Unstash
+    class_filter_equip: bool = True  # PC filters by class; retainers do not
+    bucket_label: str = "Carried"    # "Carried" or "Stowed"
+
+
 class TopLevelGroup(BaseModel):
     """One inventory pane — Carried, Stashed, or a carrier/retainer."""
     kind: str                             # carried | stashed | animal | vehicle | retainer
     id: str | None = None                 # carrier/retainer instance_id; None for person buckets
     label: str                            # display name
+    caps: OwnerCaps = Field(default_factory=OwnerCaps)
     has_equipped: bool = False
     equipped: list[InventoryRow] = Field(default_factory=list)
     # Rich equipped display for the live sheet pane. PC + retainers fill
@@ -97,6 +107,10 @@ class TopLevelGroup(BaseModel):
     treasure_gems: list = Field(default_factory=list)       # GemRow — list to avoid circular import
     treasure_jewellery: list = Field(default_factory=list)  # JewelleryRow
     containers: list[ContainerView] = Field(default_factory=list)
+    magic_items: list = Field(default_factory=list)         # MagicItemView (unequipped)
+    enchanted: list = Field(default_factory=list)           # MagicItemView (enchanted)
+    spell_sources: list = Field(default_factory=list)       # SpellSourceView
+    ammo: list = Field(default_factory=list)                # AmmoView
 
 
 class InventoryView(BaseModel):

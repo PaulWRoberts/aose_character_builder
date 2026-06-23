@@ -89,6 +89,16 @@ def test_inventory_box_container_content_modal_exists(tmp_path):
     assert 'id="modal-item-container-c1-torch"' in body
 
 
+def test_toplevelgroup_has_caps_and_extra_collections():
+    from aose.engine.shop import TopLevelGroup, OwnerCaps
+    g = TopLevelGroup(kind="vehicle", label="Cart",
+                      caps=OwnerCaps(has_equipped=False, can_wield=False,
+                                     can_stash=False, bucket_label="Stowed"))
+    assert g.caps.bucket_label == "Stowed"
+    assert g.magic_items == [] and g.enchanted == []
+    assert g.spell_sources == [] and g.ammo == []
+
+
 def test_inventory_box_retainer_item_modal_exists(tmp_path):
     from aose.characters import save_character
     app = _make_app(tmp_path)
