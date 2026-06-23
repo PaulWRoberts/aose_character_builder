@@ -37,3 +37,36 @@ def test_unload_if_loaded_is_noop_when_not_loaded():
     spec = _spec(inventory=["sword"], loaded_ammo={})
     storage.unload_if_loaded(spec, "sword")  # must not raise
     assert spec.loaded_ammo == {}
+
+
+# ── Task 4: move_valuable with count (gem split/merge) ──────────────────────
+
+from aose.models import GemStack
+
+
+def test_gem_partial_move_splits_and_merges():
+    spec = _spec(gems=[GemStack(instance_id="g1", value=100, count=5, label="ruby",
+                                location=CARRIED)])
+    storage.move_valuable(spec, "g1", STASHED, count=2)
+    carried = [g for g in spec.gems if g.location == CARRIED]
+    stashed = [g for g in spec.gems if g.location == STASHED]
+    assert carried[0].count == 3
+    assert len(stashed) == 1 and stashed[0].count == 2 and stashed[0].value == 100
+
+
+def test_gem_partial_move_merges_into_existing_destination_stack():
+    spec = _spec(gems=[
+        GemStack(instance_id="g1", value=100, count=5, label="ruby", location=CARRIED),
+        GemStack(instance_id="g2", value=100, count=1, label="ruby", location=STASHED),
+    ])
+    storage.move_valuable(spec, "g1", STASHED, count=2)
+    stashed = [g for g in spec.gems if g.location == STASHED]
+    assert len(stashed) == 1 and stashed[0].count == 3   # merged, not fragmented
+
+
+def test_gem_full_move_without_count_moves_whole_stack():
+    spec = _spec(gems=[GemStack(instance_id="g1", value=50, count=4, label="opal",
+                                location=CARRIED)])
+    storage.move_valuable(spec, "g1", STASHED)   # count=None → whole stack
+    assert all(g.location == STASHED for g in spec.gems)
+    assert len(spec.gems) == 1 and spec.gems[0].count == 4

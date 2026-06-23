@@ -8,6 +8,8 @@ DAG, so no cycle risk.
 """
 from __future__ import annotations
 
+import uuid
+
 from aose.engine.currency import RATES, CurrencyError, convert_amount
 from aose.models import CharacterSpec, CoinStack, GemStack, JewelleryPiece
 from aose.models.storage import StorageLocation
@@ -190,22 +192,30 @@ def unload_if_loaded(spec: CharacterSpec, weapon_key: str) -> None:
 
 
 def move_valuable(spec: CharacterSpec, instance_id: str,
-                  dest: StorageLocation) -> None:
+                  dest: StorageLocation, count: int | None = None) -> None:
     """Move a gem stack or jewellery piece (by instance_id) to ``dest``.
-    Gems merge into a same-(value,label,dest) stack if one exists.
-    Container existence is validated; carrier existence is the route's concern."""
+    For a gem, ``count`` splits N off the source and merges into the matching
+    (value, label, dest) stack; ``count=None`` moves the whole stack.
+    Jewellery is per-piece; ``count`` is ignored."""
     if dest.kind == "container":
         _container(spec, dest.id)
     for i, g in enumerate(spec.gems):
         if g.instance_id == instance_id:
+            n = g.count if count is None else count
+            if n <= 0 or n > g.count:
+                raise StorageError(f"cannot move {n} of {g.count} gems")
             target = next((o for o in spec.gems
                            if o is not g and o.value == g.value
                            and o.label == g.label and o.location == dest), None)
             if target is not None:
-                target.count += g.count
-                spec.gems.pop(i)
+                target.count += n
             else:
-                g.location = dest
+                spec.gems.append(GemStack(instance_id=uuid.uuid4().hex,
+                                          value=g.value, count=n, label=g.label,
+                                          location=dest))
+            g.count -= n
+            if g.count == 0:
+                spec.gems.remove(g)
             return
     for j in spec.jewellery:
         if j.instance_id == instance_id:
