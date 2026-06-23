@@ -43,6 +43,7 @@
     {% endif %}
     {% if inv_move_groups is defined %}
     <form method="post" action="{{ inv_move_url }}" class="inline-form move-form">
+        <input type="hidden" name="category" value="item">
         <input type="hidden" name="item_id" value="{{ row.id }}">
         <input type="hidden" name="src_kind" value="{{ state }}">
         <input type="hidden" name="src_id" value="{{ src_id }}">

@@ -232,7 +232,7 @@ def test_coin_row_clickable_and_modal_with_actions(tmp_path):
     assert 'id="modal-coin-carried--gp"' in body
     # Modal carries convert, move, and drop actions
     assert "/coins/convert" in body
-    assert "/inventory/move-coins" in body
+    assert "/inventory/move" in body
     assert "/coins/add" in body
 
 
@@ -244,7 +244,7 @@ def test_gem_row_clickable_and_modal_with_actions(tmp_path):
     assert 'data-modal="modal-gem-g1"' in body
     assert 'id="modal-gem-g1"' in body
     for action in ("/gems/sell", "/gems/sell-all", "/gems/adjust",
-                   "/gems/remove", "/inventory/move-valuable"):
+                   "/gems/remove", "/inventory/move"):
         assert action in body, action
 
 
@@ -256,7 +256,7 @@ def test_jewellery_row_clickable_and_modal_with_actions(tmp_path):
     assert 'data-modal="modal-jewel-j1"' in body
     assert 'id="modal-jewel-j1"' in body
     for action in ("/jewellery/toggle-damaged", "/jewellery/sell",
-                   "/jewellery/remove", "/inventory/move-valuable"):
+                   "/jewellery/remove", "/inventory/move"):
         assert action in body, action
 
 

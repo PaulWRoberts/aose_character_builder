@@ -875,7 +875,7 @@ def test_sheet_renders_container_row_with_capacity_badge(tmp_path):
     # Move control appears on loose carried items (covers stow-to-container as a destination)
     client.post("/character/test/equipment/add", data={"item_id": "torch"})
     r = client.get("/character/test")
-    assert 'action="/character/test/inventory/move-item"' in r.text
+    assert 'action="/character/test/inventory/move"' in r.text
 
 
 def test_sheet_renders_container_contents_after_stow(tmp_path):

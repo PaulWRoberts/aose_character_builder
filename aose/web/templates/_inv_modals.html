@@ -57,8 +57,9 @@
     </p>
     {% if c.detail %}{{ detail_card(c.detail) }}{% endif %}
     <div class="row-actions">
-      <form method="post" action="{{ url_prefix }}/inventory/move-container" class="inline-form move-form">
-        <input type="hidden" name="container_id" value="{{ c.instance_id }}">
+      <form method="post" action="{{ url_prefix }}/inventory/move" class="inline-form move-form">
+        <input type="hidden" name="category" value="container">
+        <input type="hidden" name="item_id" value="{{ c.instance_id }}">
         {{ move_dest_control(move_groups, group.kind, group.id or "", allow_containers=False) }}
       </form>
       {% if not c.contents %}
@@ -107,7 +108,8 @@
     </div>
     <div class="ov-section">
       <h4>Move</h4>
-      <form method="post" action="{{ url_prefix }}/inventory/move-coins" class="inline-form move-form">
+      <form method="post" action="{{ url_prefix }}/inventory/move" class="inline-form move-form">
+        <input type="hidden" name="category" value="coin">
         <input type="hidden" name="denom" value="{{ c.denom }}">
         <input type="hidden" name="src_kind" value="{{ lk }}">
         <input type="hidden" name="src_id" value="{{ lid }}">
@@ -162,7 +164,8 @@
         <input type="hidden" name="delta" value="-1">
         <button class="btn tool dark" type="submit">−1</button>
       </form>
-      <form method="post" action="{{ url_prefix }}/inventory/move-valuable" class="inline-form move-form">
+      <form method="post" action="{{ url_prefix }}/inventory/move" class="inline-form move-form">
+        <input type="hidden" name="category" value="gem">
         <input type="hidden" name="instance_id" value="{{ g.instance_id }}">
         {{ move_dest_control(move_groups, group.kind, group.id or "", allow_containers=False, allow_retainers=False) }}
       </form>
@@ -191,7 +194,8 @@
         <input type="hidden" name="instance_id" value="{{ j.instance_id }}">
         <button class="btn" type="submit">Sell</button>
       </form>
-      <form method="post" action="{{ url_prefix }}/inventory/move-valuable" class="inline-form move-form">
+      <form method="post" action="{{ url_prefix }}/inventory/move" class="inline-form move-form">
+        <input type="hidden" name="category" value="jewellery">
         <input type="hidden" name="instance_id" value="{{ j.instance_id }}">
         {{ move_dest_control(move_groups, group.kind, group.id or "", allow_containers=False, allow_retainers=False) }}
       </form>

@@ -232,7 +232,7 @@ async def character_sheet(request: Request, character_id: str):
             "coins": sheet.coins,
             "coins_url_prefix": f"/character/{character_id}",
             "inv_move_groups": sheet.inventory_groups,
-            "inv_move_url": f"/character/{character_id}/inventory/move-item",
+            "inv_move_url": f"/character/{character_id}/inventory/move",
             "spell_source_add_options": spell_source_add_options(game_data),
             # Equipment drawer tabs: Documents + Treasure (gated on presence)
             "spell_sources": sheet.spell_sources,
@@ -437,67 +437,24 @@ async def inventory_use_as_container(request: Request, character_id: str):
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
-@router.post("/character/{character_id}/inventory/move-item")
-async def inventory_move_item(request: Request, character_id: str):
-    """Move one copy of an item from src location to dest location."""
+@router.post("/character/{character_id}/inventory/move")
+async def inventory_move(request: Request, character_id: str):
+    """Single movement front door for every owned thing."""
     from aose.engine import storage as _storage
     spec = _load_spec_or_404(request, character_id)
     form = await request.form()
-    src = _loc(form.get("src_kind", "carried"), form.get("src_id") or None)
+    category = form.get("category", "")
+    ref_id = (form.get("item_id") or form.get("instance_id")
+              or form.get("denom") or "")
     dest = _loc(form.get("dest_kind", "carried"), form.get("dest_id") or None)
+    src = (_loc(form.get("src_kind"), form.get("src_id") or None)
+           if form.get("src_kind") else None)
+    raw = form.get("count")
+    count = int(raw) if raw not in (None, "") else None
     try:
-        _storage.move_item(spec, form["item_id"], src, dest)
-    except (KeyError, _storage.StorageError) as e:
-        raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.state.characters_dir)
-    return RedirectResponse(f"/character/{character_id}", status_code=303)
-
-
-@router.post("/character/{character_id}/inventory/move-container")
-async def inventory_move_container(request: Request, character_id: str):
-    """Re-home a container instance to a new location."""
-    from aose.engine import storage as _storage
-    spec = _load_spec_or_404(request, character_id)
-    form = await request.form()
-    dest = _loc(form.get("dest_kind", "carried"), form.get("dest_id") or None)
-    try:
-        _storage.move_container(spec, form["container_id"], dest)
-    except (KeyError, _storage.StorageError) as e:
-        raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.state.characters_dir)
-    return RedirectResponse(f"/character/{character_id}", status_code=303)
-
-
-@router.post("/character/{character_id}/inventory/move-coins")
-async def inventory_move_coins(request: Request, character_id: str):
-    """Move some coins of one denomination from src to dest."""
-    from aose.engine import storage as _storage
-    spec = _load_spec_or_404(request, character_id)
-    form = await request.form()
-    denom = form.get("denom", "")
-    src = _loc(form.get("src_kind", "carried"), form.get("src_id") or None)
-    dest = _loc(form.get("dest_kind", "stashed"), form.get("dest_id") or None)
-    try:
-        count = int(form.get("count", 0))
-    except (ValueError, TypeError):
-        raise HTTPException(400, "count must be an integer")
-    try:
-        _storage.move_coins(spec, denom, src, dest, count)
-    except _storage.StorageError as e:
-        raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.state.characters_dir)
-    return RedirectResponse(f"/character/{character_id}", status_code=303)
-
-
-@router.post("/character/{character_id}/inventory/move-valuable")
-async def inventory_move_valuable(request: Request, character_id: str):
-    """Move a gem stack or jewellery piece to a new location."""
-    from aose.engine import storage as _storage
-    spec = _load_spec_or_404(request, character_id)
-    form = await request.form()
-    dest = _loc(form.get("dest_kind", "carried"), form.get("dest_id") or None)
-    try:
-        _storage.move_valuable(spec, form["instance_id"], dest)
+        _storage.move_thing(spec, category, ref_id, dest,
+                            count=count, src=src,
+                            data=request.app.state.game_data)
     except (KeyError, _storage.StorageError) as e:
         raise HTTPException(400, str(e))
     save_character(character_id, spec, request.state.characters_dir)
