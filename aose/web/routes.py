@@ -427,6 +427,21 @@ async def convert_coins(request: Request, character_id: str):
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
+@router.post("/character/{character_id}/inventory/use-as-container")
+async def inventory_use_as_container(request: Request, character_id: str):
+    """Promote a loose Container item in the inventory to a ContainerInstance."""
+    from aose.engine import storage as _storage
+    spec = _load_spec_or_404(request, character_id)
+    form = await request.form()
+    owner = _loc(form.get("owner_kind", "carried"), form.get("owner_id") or None)
+    try:
+        _storage.use_as_container(spec, owner, form["item_id"], request.app.state.game_data)
+    except (KeyError, _storage.StorageError) as e:
+        raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
 @router.post("/character/{character_id}/inventory/move-item")
 async def inventory_move_item(request: Request, character_id: str):
     """Move one copy of an item from src location to dest location."""

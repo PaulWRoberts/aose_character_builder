@@ -124,8 +124,8 @@ def test_animal_group_renders_on_sheet(client):
     save_character("hero", spec, client._characters_dir)
     r = client.get("/character/hero")
     assert r.status_code == 200
-    # Structural marker unique to the inventory-group rendering.
-    assert 'data-inv-group="animal:a1"' in r.text
+    # The animal pane is rendered by _inv_pane.html in the inventory box.
+    assert 'data-pane-kind="animal"' in r.text
 
 
 def test_carried_item_offers_move_to_carrier(client):
@@ -161,9 +161,9 @@ def test_move_coins_invalid_dest_returns_400(client):
     assert r.status_code == 400
 
 
-def test_stashed_coins_offer_full_move_control(client):
-    """Stashed coins must render the same full Move dropdown as items — able to
-    target any top-level (e.g. a carrier), not just a one-way 'Carry' button."""
+def test_stashed_coins_appear_in_inventory_box(client):
+    """Stashed coins must appear in the stashed inventory pane in the box.
+    The legacy coin-purse popover must be absent."""
     from aose.models import AnimalInstance, CoinStack
     spec = CharacterSpec(
         name="Hero",
@@ -178,10 +178,9 @@ def test_stashed_coins_offer_full_move_control(client):
     save_character("hero", spec, client._characters_dir)
     r = client.get("/character/hero")
     assert r.status_code == 200
-    # The stashed coin stack renders a move-coins form with a full destination
-    # dropdown (move-form + move-dest), and the legacy coin-purse popover is gone.
-    assert "/character/hero/inventory/move-coins" in r.text
-    assert "move-dest" in r.text
+    # Stashed pane present and contains the coin display.
+    assert 'data-pane-kind="stashed"' in r.text
+    assert "10 gp" in r.text
     assert 'id="pop-coins"' not in r.text
 
 
@@ -196,3 +195,14 @@ def test_convert_route_per_stack(client):
     by = {s.denom: s.count for s in spec.coins}
     assert by["gp"] == 1
     assert by["sp"] == 20
+
+
+def test_use_as_container_promotes_loose_item(client):
+    _save_char(client, inventory=["backpack"])
+    r = client.post("/character/hero/inventory/use-as-container", data={
+        "owner_kind": "carried", "owner_id": "", "item_id": "backpack",
+    })
+    assert r.status_code == 303
+    spec = _load(client)
+    assert "backpack" not in spec.inventory
+    assert any(c.catalog_id == "backpack" for c in spec.containers)
