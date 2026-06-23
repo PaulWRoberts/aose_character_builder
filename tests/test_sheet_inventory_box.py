@@ -309,3 +309,31 @@ def test_container_view_shows_stowed_coins_and_magic(tmp_path):
     body = TestClient(app, follow_redirects=False).get("/character/tc-stow").text
     assert "7 gp" in body            # stowed coins render inside the container block
     assert 'id="modal-magic-m1"' in body
+
+
+# ── Task 10: magic/enchanted/ammo bucket by storage location ─────────────────
+
+def test_magic_on_carrier_buckets_under_carrier():
+    from pathlib import Path
+    from aose.data.loader import GameData
+    from aose.sheet.view import build_inventory_groups
+    from aose.models import (CharacterSpec, ClassEntry, AnimalInstance,
+                             MagicItemInstance)
+    from aose.models.storage import StorageLocation
+    data = GameData.load(Path("data"))
+    mule = StorageLocation(kind="animal", id="mule1")
+    spec = CharacterSpec(
+        name="Packer",
+        abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
+        race_id="human", classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
+        alignment="neutral",
+        animals=[AnimalInstance(instance_id="mule1", catalog_id="mule")],
+        magic_items=[MagicItemInstance(instance_id="m1",
+                                       catalog_id="ring_protection_plus_1",
+                                       location=mule)],
+    )
+    groups = build_inventory_groups(spec, data)
+    carried = next(g for g in groups if g.kind == "carried")
+    animal = next(g for g in groups if g.kind == "animal")
+    assert all(mi.instance_id != "m1" for mi in carried.magic_items)   # not in PC
+    assert any(mi.instance_id == "m1" for mi in animal.magic_items)    # under mule

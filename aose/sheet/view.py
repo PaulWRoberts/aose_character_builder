@@ -1425,12 +1425,20 @@ def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevel
     carried_loc = StorageLocation(kind="carried")
     pc_attacks = attack_profiles(spec, data)
     pc_worn = _equipped(spec, data)
-    all_magic = _magic_items(spec, data)
-    pc_magic_equipped = [mi for mi in all_magic if mi.equipped]
-    pc_magic_unequipped = [mi for mi in all_magic if not mi.equipped]
-    pc_enchanted = enchanted_items_view(spec.enchanted, data)
+    # Build ammo index once; bucket per location below
+    all_ammo_rows, _ = ammo_view(spec, data)
+    _ammo_by_iid = {r.instance_id: r for r in all_ammo_rows}
+    # Carried: instances at carried_loc; plain-inventory magic items are implicitly carried
+    carried_magic_insts = [mi for mi in spec.magic_items if mi.location == carried_loc]
+    all_carried_magic = magic_items_view(carried_magic_insts, spec.inventory, data)
+    pc_magic_equipped = [mi for mi in all_carried_magic if mi.equipped]
+    pc_magic_unequipped = [mi for mi in all_carried_magic if not mi.equipped]
+    pc_enchanted = enchanted_items_view(
+        [inst for inst in spec.enchanted if inst.location == carried_loc], data)
     pc_spell_sources = spell_sources_view(spec, data)
-    pc_ammo, _ = ammo_view(spec, data)
+    pc_ammo = [_ammo_by_iid[s.instance_id]
+               for s in spec.ammo if s.location == carried_loc
+               and s.instance_id in _ammo_by_iid]
     groups.append(TopLevelGroup(
         kind="carried", label=spec.name,
         caps=OwnerCaps(has_equipped=True, can_wield=True, can_stash=True,
@@ -1462,6 +1470,13 @@ def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevel
         treasure_gems=_gem_rows(stashed_loc),
         treasure_jewellery=_jewellery_rows(stashed_loc),
         containers=stashed_containers,
+        magic_items=magic_items_view(
+            [mi for mi in spec.magic_items if mi.location == stashed_loc], [], data),
+        enchanted=enchanted_items_view(
+            [inst for inst in spec.enchanted if inst.location == stashed_loc], data),
+        ammo=[_ammo_by_iid[s.instance_id]
+              for s in spec.ammo if s.location == stashed_loc
+              and s.instance_id in _ammo_by_iid],
     ))
 
     # ── Animals ───────────────────────────────────────────────────────────────
@@ -1490,6 +1505,13 @@ def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevel
             treasure_gems=_gem_rows(animal_loc),
             treasure_jewellery=_jewellery_rows(animal_loc),
             containers=_carrier_container_views(animal_loc),
+            magic_items=magic_items_view(
+                [mi for mi in spec.magic_items if mi.location == animal_loc], [], data),
+            enchanted=enchanted_items_view(
+                [inst for inst in spec.enchanted if inst.location == animal_loc], data),
+            ammo=[_ammo_by_iid[s.instance_id]
+                  for s in spec.ammo if s.location == animal_loc
+                  and s.instance_id in _ammo_by_iid],
         ))
 
     # ── Vehicles ──────────────────────────────────────────────────────────────
@@ -1508,6 +1530,13 @@ def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevel
             treasure_gems=_gem_rows(vehicle_loc),
             treasure_jewellery=_jewellery_rows(vehicle_loc),
             containers=_carrier_container_views(vehicle_loc),
+            magic_items=magic_items_view(
+                [mi for mi in spec.magic_items if mi.location == vehicle_loc], [], data),
+            enchanted=enchanted_items_view(
+                [inst for inst in spec.enchanted if inst.location == vehicle_loc], data),
+            ammo=[_ammo_by_iid[s.instance_id]
+                  for s in spec.ammo if s.location == vehicle_loc
+                  and s.instance_id in _ammo_by_iid],
         ))
 
     # ── Retainers ─────────────────────────────────────────────────────────────
@@ -1532,6 +1561,8 @@ def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevel
             _container_views_from(retainer.spec.containers, ret_carried) +
             _container_views_from(retainer.spec.containers, ret_stashed)
         )
+        ret_all_ammo, _ = ammo_view(retainer.spec, data)
+        ret_ammo_by_iid = {r.instance_id: r for r in ret_all_ammo}
         groups.append(TopLevelGroup(
             kind="retainer", id=retainer.id, label=retainer.spec.name,
             caps=OwnerCaps(has_equipped=bool(ret_attacks or ret_worn),
@@ -1544,6 +1575,15 @@ def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevel
                          key=lambda r: r.name),
             coins=ret_coins,
             containers=ret_containers,
+            magic_items=magic_items_view(
+                [mi for mi in retainer.spec.magic_items if mi.location == ret_carried],
+                retainer.spec.inventory, data),
+            enchanted=enchanted_items_view(
+                [inst for inst in retainer.spec.enchanted if inst.location == ret_carried],
+                data),
+            ammo=[ret_ammo_by_iid[s.instance_id]
+                  for s in retainer.spec.ammo if s.location == ret_carried
+                  and s.instance_id in ret_ammo_by_iid],
         ))
 
     return groups
