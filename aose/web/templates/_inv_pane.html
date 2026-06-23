@@ -94,6 +94,36 @@
         <span class="q">{% if row.weight_cn is defined %}{{ row.weight_cn }} cn{% endif %}</span>
       </li>
       {% endfor %}
+      {% for row in c.stowed_coins %}
+      <li><span><span class="indent">↳</span> {{ row.count }} {{ row.denom }}</span></li>
+      {% endfor %}
+      {% for row in c.stowed_gems %}
+      <li class="clickable" data-modal="modal-gem-{{ row.instance_id }}">
+        <span><span class="indent">↳</span> {{ row.label or "Gem" }}{% if row.count > 1 %} ×{{ row.count }}{% endif %}</span>
+        <span class="st muted">{{ row.stack_value }} gp</span>
+      </li>
+      {% endfor %}
+      {% for row in c.stowed_jewellery %}
+      <li class="clickable" data-modal="modal-jewel-{{ row.instance_id }}">
+        <span><span class="indent">↳</span> {{ row.label or "Jewellery" }}</span>
+        <span class="st muted">{{ row.effective_value }} gp</span>
+      </li>
+      {% endfor %}
+      {% for mi in c.stowed_magic %}
+      <li class="clickable" data-modal="modal-magic-{{ mi.instance_id }}">
+        <span><span class="indent">↳</span> {{ mi.name }} <span class="tag stamp">magic</span></span>
+      </li>
+      {% endfor %}
+      {% for mi in c.stowed_enchanted %}
+      <li class="clickable" data-modal="modal-magic-{{ mi.instance_id }}">
+        <span><span class="indent">↳</span> {{ mi.name }} <span class="tag stamp">enchanted</span></span>
+      </li>
+      {% endfor %}
+      {% for a in c.stowed_ammo %}
+      <li class="clickable" data-modal="modal-ammo-{{ a.instance_id }}">
+        <span><span class="indent">↳</span> {{ a.name }} ×{{ a.count }}</span>
+      </li>
+      {% endfor %}
       {% endfor %}
 
       {# Unequipped magic items #}

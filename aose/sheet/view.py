@@ -1360,6 +1360,7 @@ def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevel
 
     def _container_views_from(source: list, loc: StorageLocation) -> list[ContainerView]:
         """Build ContainerView list from ``source`` (spec.containers or retainer.spec.containers)."""
+        from aose.engine.ammo import resolve_ammo
         views = []
         for c in source:
             if c.location != loc:
@@ -1367,6 +1368,7 @@ def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevel
             catalog = data.items.get(c.catalog_id)
             if not isinstance(catalog, _Container):
                 continue
+            here = StorageLocation(kind="container", id=c.instance_id)
             rows_by_id: Counter = Counter(c.contents)
             content_rows = sorted(
                 [_build_row(i, n, data) for i, n in rows_by_id.items()],
@@ -1376,6 +1378,16 @@ def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevel
                 (data.items[x].weight_cn if x in data.items else 0)
                 for x in c.contents
             )
+            stowed_ammo_rows = []
+            for s in spec.ammo:
+                if s.location == here:
+                    v = resolve_ammo(s, data)
+                    base = data.items.get(s.base_id)
+                    stowed_ammo_rows.append(AmmoRow(
+                        instance_id=s.instance_id, name=v["name"],
+                        count=s.count, magic=s.enchantment_id is not None,
+                        detail=item_card(base) if base is not None else None,
+                    ))
             views.append(ContainerView(
                 instance_id=c.instance_id, catalog_id=c.catalog_id,
                 name=catalog.name, state=loc.kind,
@@ -1387,6 +1399,14 @@ def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevel
                     if loc.kind == "carried" else 0
                 ),
                 contents=content_rows, detail=item_card(catalog),
+                stowed_coins=_coin_rows(here),
+                stowed_gems=_gem_rows(here),
+                stowed_jewellery=_jewellery_rows(here),
+                stowed_magic=magic_items_view(
+                    [mi for mi in spec.magic_items if mi.location == here], [], data),
+                stowed_enchanted=enchanted_items_view(
+                    [inst for inst in spec.enchanted if inst.location == here], data),
+                stowed_ammo=stowed_ammo_rows,
             ))
         return views
 
