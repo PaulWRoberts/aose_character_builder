@@ -776,9 +776,9 @@ def sell_item(spec, item_id: str, mode: str, data: GameData) -> None:
 def sell_container(spec, instance_id: str, mode: str, data: GameData) -> None:
     """Remove a container instance; credit carried gp per mode."""
     from aose.engine import storage as _storage
-    new_containers, credit = remove_container(
-        spec.containers, 0, instance_id, mode, data)
-    spec.containers[:] = new_containers
+    src_coll, _ = _storage._find_container_anywhere(spec, instance_id)
+    new_containers, credit = remove_container(src_coll, 0, instance_id, mode, data)
+    src_coll[:] = new_containers
     if credit:
         _storage._add_coins(spec, "gp", credit, StorageLocation(kind="carried"))
 

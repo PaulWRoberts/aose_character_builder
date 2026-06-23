@@ -96,15 +96,37 @@ def move_item(spec: CharacterSpec, item_id: str,
     dest_list.append(item_id)
 
 
+def _find_container_anywhere(spec: CharacterSpec, container_id: str):
+    """Return (collection_list, index) for a container in spec.containers or any
+    retainer.spec.containers."""
+    for i, c in enumerate(spec.containers):
+        if c.instance_id == container_id:
+            return spec.containers, i
+    for r in spec.retainers:
+        for i, c in enumerate(r.spec.containers):
+            if c.instance_id == container_id:
+                return r.spec.containers, i
+    raise StorageError(f"no container with id {container_id!r}")
+
+
 def move_container(spec: CharacterSpec, container_id: str,
                    dest: StorageLocation) -> None:
-    """Re-home a container. ``dest`` may not be a container (no nesting)."""
+    """Re-home a container. ``dest`` may not be a container (no nesting).
+    A retainer dest moves the instance between containers lists; all
+    other moves only update the instance ``location``."""
     if dest.kind == "container":
         raise StorageError("a container cannot go inside another container")
-    c = _container(spec, container_id)
+    src_coll, idx = _find_container_anywhere(spec, container_id)
+    c = src_coll[idx]
     if dest.kind in ("animal", "vehicle"):
-        _carrier(spec, dest.kind, dest.id)   # validate existence
-    c.location = dest
+        _carrier(spec, dest.kind, dest.id)            # validate existence
+    dest_coll = containers_collection(spec, dest)
+    new_loc = StorageLocation(kind="carried") if dest.kind == "retainer" else dest
+    if dest_coll is src_coll:
+        c.location = new_loc
+    else:
+        src_coll.pop(idx)
+        dest_coll.append(c.model_copy(update={"location": new_loc}))
 
 
 def _find_coin(spec: CharacterSpec, denom: str, loc: StorageLocation) -> CoinStack | None:
