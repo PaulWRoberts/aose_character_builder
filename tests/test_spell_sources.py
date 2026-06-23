@@ -325,6 +325,21 @@ def test_copy_requires_advanced_rule(data):
                       spell_id="magic_user_sleep", rng=_FixedRng(1))
 
 
+def test_spell_source_defaults_to_carried():
+    from aose.models import SpellSource
+    from aose.models.storage import StorageLocation
+    s = SpellSource(instance_id="s1", kind="scroll", caster_type="arcane")
+    assert s.location == StorageLocation(kind="carried")
+
+
+def test_spell_source_accepts_explicit_location():
+    from aose.models import SpellSource
+    from aose.models.storage import StorageLocation
+    loc = StorageLocation(kind="stashed")
+    s = SpellSource(instance_id="s1", kind="scroll", caster_type="arcane", location=loc)
+    assert s.location.kind == "stashed"
+
+
 def test_copy_rejects_divine_source_and_known_and_uncastable(data):
     cls = data.classes["magic_user"]
     rs = RuleSet(advanced_spell_books=True)
