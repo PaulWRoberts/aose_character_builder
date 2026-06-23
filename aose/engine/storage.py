@@ -110,6 +110,30 @@ def location_load_cn(spec: CharacterSpec, loc: StorageLocation, data) -> int:
     return total
 
 
+def _check_capacity(spec: CharacterSpec, dest: StorageLocation,
+                    added_cn: int, data) -> None:
+    """Reject a move that would push a capacity-bound destination over its cap.
+
+    Hard caps: container (capacity_cn), animal (max_load_encumbered_cn, incl.
+    worn barding), vehicle (cargo_capacity_cn). carried / stashed / retainer have
+    no hard cap (PC + retainer suffer encumbrance instead; stashed is weightless).
+    A ``None`` cap means unlimited — except an animal that is not a beast of
+    burden (cap None) carries nothing, so any positive load is rejected.
+    """
+    if dest.kind in ("carried", "stashed", "retainer"):
+        return
+    if dest.kind == "container":
+        catalog = data.items.get(_container(spec, dest.id).catalog_id)
+        cap = getattr(catalog, "capacity_cn", None)
+        current = location_load_cn(spec, dest, data)
+        if cap is not None and current + added_cn > cap:
+            raise StorageError(
+                f"{getattr(catalog, 'name', dest.id)} full: "
+                f"{current}/{cap} cn, move adds {added_cn} cn")
+        return
+    # animal / vehicle handled in Task 4
+
+
 def use_as_container(spec: CharacterSpec, owner: StorageLocation,
                      item_id: str, data) -> None:
     """Promote one loose copy of a Container item at ``owner`` into a real

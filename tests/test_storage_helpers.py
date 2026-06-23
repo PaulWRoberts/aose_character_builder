@@ -73,3 +73,32 @@ def test_location_load_cn_sums_loose_and_coins_at_a_container():
 def test_location_load_cn_is_zero_for_empty_location():
     loc = StorageLocation(kind="animal", id="zzz")
     assert storage.location_load_cn(_spec(), loc, DATA) == 0
+
+
+# ── _check_capacity ───────────────────────────────────────────────────────────
+
+import pytest
+
+
+def test_check_capacity_rejects_overfilling_a_container():
+    # belt_pouch capacity_cn == 50; a sword (60 cn) does not fit.
+    here = StorageLocation(kind="container", id="p1")
+    spec = _spec(containers=[ContainerInstance(
+        instance_id="p1", catalog_id="belt_pouch",
+        location=StorageLocation(kind="carried"))])
+    added = DATA.items["sword"].weight_cn
+    with pytest.raises(storage.StorageError):
+        storage._check_capacity(spec, here, added, DATA)
+
+
+def test_check_capacity_allows_fitting_into_a_container():
+    here = StorageLocation(kind="container", id="p1")
+    spec = _spec(containers=[ContainerInstance(
+        instance_id="p1", catalog_id="belt_pouch",
+        location=StorageLocation(kind="carried"))])
+    storage._check_capacity(spec, here, 10, DATA)  # 10 <= 50, must not raise
+
+
+def test_check_capacity_never_blocks_carried_stashed_retainer():
+    for kind in ("carried", "stashed"):
+        storage._check_capacity(_spec(), StorageLocation(kind=kind), 99999, DATA)
