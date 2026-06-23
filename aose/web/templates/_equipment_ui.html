@@ -593,8 +593,21 @@
       <td>
         <strong>{{ src.name }}</strong>
         <span class="tag faint">{{ src.caster_type }} · {{ src.entries | length }} spell{{ 's' if src.entries | length != 1 }}</span>
+        {% if src.kind == "scroll" and src.caster_type == "divine" %}
+        <span class="tag faint">{{ src.language }}</span>
+        {% endif %}
+        {% if src.kind == "scroll" and src.caster_type == "arcane" %}
+          {% if src.unlocked %}<span class="tag">deciphered</span>
+          {% else %}<span class="tag stamp">sealed</span>{% endif %}
+        {% endif %}
       </td>
       <td class="n">
+        {% if src.kind == "scroll" and src.caster_type == "arcane" and not src.unlocked %}
+        <form method="post" action="{{ coins_url_prefix }}/spell-sources/read" style="display:inline">
+          <input type="hidden" name="instance_id" value="{{ src.instance_id }}">
+          <button class="btn link" type="submit"{% if not src.can_read %} disabled title="Memorize Read Magic first"{% endif %}>read</button>
+        </form>
+        {% endif %}
         <form method="post" action="{{ coins_url_prefix }}/spell-sources/remove" style="display:inline">
           <input type="hidden" name="instance_id" value="{{ src.instance_id }}">
           <button class="btn link" type="submit">remove</button>
@@ -661,26 +674,33 @@
       {% endfor %}
     </select>
   </label>
-  <label class="f"><span class="lab">Name (optional)</span>
-    <input type="text" name="name" placeholder="e.g. Rival's grimoire">
-  </label>
-  <label class="f"><span class="lab">Spells (choose one or more)<span id="ss-spell-cap" class="hint" style="font-weight:400;text-transform:none;letter-spacing:0"> — a scroll holds up to 7</span></span>
-    <select name="spell_ids" id="ss-spells" multiple size="8">
-      {% for grp in spell_source_add_options.arcane_lists %}
-      {% for s in grp.spells %}
-      <option value="{{ s.id }}" data-caster="arcane" data-list="{{ grp.list_id }}">
-          {{ s.name }} (L{{ s.level }})
-      </option>
-      {% endfor %}
-      {% endfor %}
-      {% for s in spell_source_add_options.divine_spells %}
-      <option value="{{ s.id }}" data-caster="divine" data-list="">
-          {{ s.name }} (L{{ s.level }})
-      </option>
+  <label id="ss-language-label" class="f" style="display:none"><span class="lab">Language</span>
+    <select name="language" id="ss-language">
+      {% for l in spell_source_add_options.languages %}
+      <option value="{{ l.id }}">{{ l.name }}</option>
       {% endfor %}
     </select>
   </label>
-  <button class="btn solid" type="submit">Add to inventory</button>
+  <label class="f"><span class="lab">Name (optional)</span>
+    <input type="text" name="name" placeholder="e.g. Rival's grimoire">
+  </label>
+  <div class="f"><span class="lab">Add spells<span id="ss-spell-cap" class="hint" style="font-weight:400;text-transform:none;letter-spacing:0"> — a scroll holds up to 7 charges</span></span>
+    <div class="inline-form">
+      <select id="ss-spell-pick">
+        {% for grp in spell_source_add_options.arcane_lists %}{% for s in grp.spells %}
+        <option value="{{ s.id }}" data-caster="arcane" data-list="{{ grp.list_id }}" data-label="{{ s.name }} (L{{ s.level }})">{{ s.name }} (L{{ s.level }})</option>
+        {% endfor %}{% endfor %}
+        {% for s in spell_source_add_options.divine_spells %}
+        <option value="{{ s.id }}" data-caster="divine" data-list="" data-label="{{ s.name }} (L{{ s.level }})">{{ s.name }} (L{{ s.level }})</option>
+        {% endfor %}
+      </select>
+      <input type="number" id="ss-spell-qty" value="1" min="1" max="7" style="width:56px">
+      <button type="button" class="btn" id="ss-add-spell">Add</button>
+    </div>
+  </div>
+  <ul id="ss-staged" style="list-style:none;padding:0;margin:6px 0"></ul>
+  <div id="ss-hidden"></div>
+  <button class="btn solid" type="submit" id="ss-submit" disabled>Add to inventory</button>
 </form>
 <script src="/static/spell_source_add.js" defer></script>
 </div>

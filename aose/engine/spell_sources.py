@@ -15,7 +15,11 @@ import uuid
 from typing import Literal, Optional
 
 from aose.data.loader import GameData
+from aose.engine import languages as lang_engine
 from aose.engine import spells as spell_engine
+from aose.engine.spells import DEMOTED_READ_MAGIC_IDS, READ_MAGIC_CANTRIP_ID
+
+READ_MAGIC_IDS = DEMOTED_READ_MAGIC_IDS | {READ_MAGIC_CANTRIP_ID}
 from aose.engine.dice import roll
 from aose.models import (
     CharClass, CharacterSpec, ClassEntry, Spell, SpellSource, SpellSourceEntry,
@@ -45,21 +49,23 @@ def _spell_caster_type(spell: Spell, data: GameData) -> CasterType | None:
 
 def new_spell_source(kind: Kind, caster_type: CasterType, spell_ids: list[str],
                      data: GameData, name: str = "",
-                     list_id: str | None = None) -> SpellSource:
+                     list_id: str | None = None,
+                     language: str = "Common") -> SpellSource:
     """Build a validated SpellSource.
 
     Spellbooks are coerced to ``arcane``.  Every spell must exist and match
     ``caster_type`` (or, when ``list_id`` is given, be on that exact list).
-    Duplicates within one document are rejected.  No spell-level filter — a
-    document may hold spells of any level."""
+    Scrolls may list the same spell more than once (each entry is one charge);
+    spell books may not.  ``language`` is stored for divine scrolls (default
+    Common).  No spell-level filter — a document may hold spells of any level."""
     if kind == "spellbook":
         caster_type = "arcane"
     if not spell_ids:
         raise SpellSourceError("a spell book / scroll must contain at least one spell")
     if kind == "scroll" and len(spell_ids) > MAX_SCROLL_SPELLS:
         raise SpellSourceError(f"a scroll holds at most {MAX_SCROLL_SPELLS} spells")
-    if len(set(spell_ids)) != len(spell_ids):
-        raise SpellSourceError("a document cannot list the same spell twice")
+    if kind == "spellbook" and len(set(spell_ids)) != len(spell_ids):
+        raise SpellSourceError("a spell book cannot list the same spell twice")
     for sid in spell_ids:
         spell = data.spells.get(sid)
         if spell is None:
@@ -72,15 +78,18 @@ def new_spell_source(kind: Kind, caster_type: CasterType, spell_ids: list[str],
     return SpellSource(
         instance_id=uuid.uuid4().hex,
         kind=kind, caster_type=caster_type, name=name.strip(),
+        language=language.strip() or "Common",
         entries=[SpellSourceEntry(spell_id=sid) for sid in spell_ids],
     )
 
 
 def add_spell_source(sources: list[SpellSource], kind: Kind, caster_type: CasterType,
                      spell_ids: list[str], data: GameData, name: str = "",
-                     list_id: str | None = None) -> list[SpellSource]:
+                     list_id: str | None = None,
+                     language: str = "Common") -> list[SpellSource]:
     """Add-only append (GM grant / loot); no gold."""
-    return [*sources, new_spell_source(kind, caster_type, spell_ids, data, name, list_id)]
+    return [*sources,
+            new_spell_source(kind, caster_type, spell_ids, data, name, list_id, language)]
 
 
 def _index(sources: list[SpellSource], instance_id: str) -> int:
@@ -127,12 +136,77 @@ def character_caster_types(spec: CharacterSpec, data: GameData) -> set[str]:
     return out
 
 
-def can_cast_scroll(source: SpellSource, spec: CharacterSpec, data: GameData) -> bool:
-    """A scroll is castable if it is a scroll and the character has a class whose
-    caster type matches the scroll's (arcane↔arcane, divine↔divine)."""
+def _character_known_languages(spec: CharacterSpec, data: GameData) -> set[str]:
+    """Case-folded set of the character's known language tokens."""
+    race = data.races.get(spec.race_id)
+    if race is None:
+        langs = [lang_engine.alignment_language(spec.alignment, data.languages),
+                 *spec.languages]
+    else:
+        langs = lang_engine.known_languages(
+            spec.languages, race, spec.alignment, data.languages,
+            granted=lang_engine.granted_languages(spec, data),
+        )
+    return {l.casefold() for l in langs}
+
+
+def scroll_cast_block_reason(source: SpellSource, spec: CharacterSpec,
+                             data: GameData) -> str | None:
+    """None when the scroll spell is castable now; otherwise a short reason.
+
+    Arcane scrolls need a matching caster AND to have been deciphered
+    (``unlocked``).  Divine scrolls need a matching caster AND knowledge of the
+    scroll's ``language``.  Spell books are never castable."""
     if source.kind != "scroll":
-        return False
-    return source.caster_type in character_caster_types(spec, data)
+        return "not a scroll"
+    if source.caster_type not in character_caster_types(spec, data):
+        return f"not a {source.caster_type} caster"
+    if source.caster_type == "arcane":
+        return None if source.unlocked else "needs Read Magic"
+    if source.language.casefold() not in _character_known_languages(spec, data):
+        return f"can't read {source.language}"
+    return None
+
+
+def can_cast_scroll(source: SpellSource, spec: CharacterSpec, data: GameData) -> bool:
+    """True when the scroll spell is castable now (see ``scroll_cast_block_reason``)."""
+    return scroll_cast_block_reason(source, spec, data) is None
+
+
+def ready_read_magic_slot(spec: CharacterSpec, data: GameData) -> tuple[int, int] | None:
+    """(class index, slot index) of a memorized, not-yet-spent Read Magic slot in
+    any arcane class, or None. Used to decipher an arcane scroll."""
+    for ci, entry in enumerate(spec.classes):
+        cls = data.classes.get(entry.class_id)
+        if cls is None or spell_engine.caster_type_of(cls, data) != "arcane":
+            continue
+        for si, slot in enumerate(entry.slots):
+            if not slot.spent and slot.spell_id in READ_MAGIC_IDS:
+                return ci, si
+    return None
+
+
+def read_scroll(spec: CharacterSpec, data: GameData, instance_id: str
+                ) -> tuple[list[ClassEntry], list[SpellSource]]:
+    """Decipher an arcane scroll: spend a memorized Read Magic cast and mark the
+    scroll ``unlocked``.  Returns updated (classes, spell_sources); inputs are not
+    mutated.  Raises if the document is not an un-deciphered arcane scroll, or no
+    Read Magic is memorized."""
+    idx = _index(spec.spell_sources, instance_id)
+    src = spec.spell_sources[idx]
+    if src.kind != "scroll" or src.caster_type != "arcane":
+        raise SpellSourceError("only arcane scrolls are deciphered with Read Magic")
+    if src.unlocked:
+        raise SpellSourceError("this scroll is already deciphered")
+    found = ready_read_magic_slot(spec, data)
+    if found is None:
+        raise SpellSourceError("no memorized Read Magic available to read the scroll")
+    ci, si = found
+    classes = list(spec.classes)
+    classes[ci] = spell_engine.cast_slot(classes[ci], si)
+    new_src = src.model_copy(update={"unlocked": True})
+    sources = [*spec.spell_sources[:idx], new_src, *spec.spell_sources[idx + 1:]]
+    return classes, sources
 
 
 def copyable_spell_ids(source: SpellSource, entry: ClassEntry, cls: CharClass,

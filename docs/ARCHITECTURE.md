@@ -304,14 +304,27 @@ is a data field, not a constant.
 - **Arcane reversed** is fixed at memorize time; **divine reversed** is a cast-
   time button only (not stored).
 - **Spell books & scrolls** — owned documents as a per-instance `SpellSource`
-  (`kind` spellbook|scroll, `caster_type`, `entries` each with a `copy_failed`
-  flag) on `CharacterSpec.spell_sources`. `aose/engine/spell_sources.py`:
-  create/add/remove, `cast_from_scroll` (expends one; empties → dropped; gated by
-  caster-type match), `copy_spell` (Advanced rule; rolls 1d100 vs
-  `copy_chance_for_int(effective INT)`; **failure is recorded on the source
-  entry, never the character** — same spell stays copyable from another source).
-  Sheet-only, Add-only. Protection scrolls live as `MagicItem` catalog data in
-  `data/equipment/scrolls.yaml`.
+  (`kind` spellbook|scroll, `caster_type`, `language`, `unlocked`, `entries` each
+  with a `copy_failed` flag) on `CharacterSpec.spell_sources`.
+  `aose/engine/spell_sources.py`: create/add/remove, `cast_from_scroll` (expends
+  one charge; empties → dropped; gated by `scroll_cast_block_reason`), `copy_spell`
+  (Advanced rule; rolls 1d100 vs `copy_chance_for_int(effective INT)`; **failure is
+  recorded on the source entry, never the character** — same spell stays copyable
+  from another source). Sheet-only, Add-only. Protection scrolls live as `MagicItem`
+  catalog data in `data/equipment/scrolls.yaml`.
+  - **Arcane scrolls** carry `unlocked: bool` (default False). Must be deciphered by
+    casting Read Magic — `ready_read_magic_slot` finds a memorized unspent slot,
+    `read_scroll` burns it and sets `unlocked=True`. Casting a spell from a sealed
+    arcane scroll is blocked; `scroll_cast_block_reason` returns "needs Read Magic".
+  - **Divine scrolls** carry `language: str` (default "Common"). Casting requires
+    the character to know the scroll's language (case-insensitive, via
+    `known_languages`). `scroll_cast_block_reason` returns "unknown language: X".
+  - **Duplicate charges** — scrolls may list the same `spell_id` more than once
+    (each entry = one charge); spellbooks still reject duplicates.
+  - **Scroll rows in the spell list** — `spellbook_view` injects `ScrollSpellRow`
+    objects into `SpellbookLevelGroup.scroll_rows` via `_scroll_rows_by_level`,
+    grouping by caster type. Each row carries `charges`, `castable`, `block_reason`.
+    The template renders locked pips with the block reason for non-castable rows.
 - **Rest** (`/rest/night`, `/rest/full-day`) calls `reset_powers` + slot restore;
   full-day adds 1d3 healing; rest blocked when dead.
 

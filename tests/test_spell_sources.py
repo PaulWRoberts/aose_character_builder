@@ -34,8 +34,10 @@ def test_new_spell_source_rejects_off_type_spell(data):
 
 
 def test_new_spell_source_rejects_duplicates(data):
+    # Spell books still reject duplicates; scrolls now allow them (see
+    # test_scroll_allows_duplicate_spells).
     with pytest.raises(ss.SpellSourceError):
-        ss.new_spell_source("scroll", "arcane",
+        ss.new_spell_source("spellbook", "arcane",
                             ["magic_user_sleep", "magic_user_sleep"], data)
 
 
@@ -95,6 +97,7 @@ def test_add_and_remove(data):
 
 # ── cast + caster-type predicates ────────────────────────────────────────────
 
+from aose.engine import spells as se
 from aose.models import CharacterSpec, ClassEntry, RuleSet
 
 
@@ -105,6 +108,45 @@ def _mu_spec(advanced=False, sources=None):
         alignment="neutral", ruleset=RuleSet(advanced_spell_books=advanced),
         spell_sources=sources or [],
     )
+
+
+def _cleric_spec(sources=None, languages=None):
+    return CharacterSpec(
+        name="Cl", abilities={"STR": 10, "INT": 10, "WIS": 13, "DEX": 10, "CON": 10, "CHA": 10},
+        race_id="human", classes=[ClassEntry(class_id="cleric", level=1)],
+        alignment="neutral", ruleset=RuleSet(),
+        languages=list(languages or []),
+        spell_sources=sources or [],
+    )
+
+
+def test_arcane_scroll_blocked_until_unlocked(data):
+    scroll = ss.new_spell_source("scroll", "arcane", ["magic_user_sleep"], data)
+    spec = _mu_spec()
+    assert ss.scroll_cast_block_reason(scroll, spec, data) == "needs Read Magic"
+    assert ss.can_cast_scroll(scroll, spec, data) is False
+    scroll.unlocked = True
+    assert ss.scroll_cast_block_reason(scroll, spec, data) is None
+    assert ss.can_cast_scroll(scroll, spec, data) is True
+
+
+def test_divine_scroll_gated_by_language(data):
+    common = ss.new_spell_source("scroll", "divine", ["cleric_cure_light_wounds"], data,
+                                 language="Common")
+    exotic = ss.new_spell_source("scroll", "divine", ["cleric_cure_light_wounds"], data,
+                                 language="dragon")
+    spec = _cleric_spec()  # knows Common (native), not Dragon
+    assert ss.can_cast_scroll(common, spec, data) is True
+    assert ss.scroll_cast_block_reason(exotic, spec, data) == "can't read dragon"
+    spec_dragon = _cleric_spec(languages=["dragon"])
+    assert ss.can_cast_scroll(exotic, spec_dragon, data) is True
+
+
+def test_wrong_caster_type_blocked(data):
+    divine_scroll = ss.new_spell_source("scroll", "divine", ["cleric_cure_light_wounds"], data)
+    assert ss.scroll_cast_block_reason(divine_scroll, _mu_spec(), data) == "not a divine caster"
+    book = ss.new_spell_source("spellbook", "arcane", ["magic_user_sleep"], data)
+    assert ss.scroll_cast_block_reason(book, _mu_spec(), data) == "not a scroll"
 
 
 def test_cast_from_scroll_consumes_one(data):
@@ -135,13 +177,57 @@ def test_cast_rejects_non_scroll_and_missing(data):
 
 def test_can_cast_scroll_matches_caster_type(data):
     arcane_scroll = ss.new_spell_source("scroll", "arcane", ["magic_user_sleep"], data)
-    divine_scroll = ss.new_spell_source("scroll", "divine", ["faerie_fire"], data)
+    arcane_scroll.unlocked = True   # deciphered, so type-match is the question
+    divine_scroll = ss.new_spell_source("scroll", "divine", ["cleric_cure_light_wounds"], data)
     spec = _mu_spec()
     assert ss.can_cast_scroll(arcane_scroll, spec, data) is True
     assert ss.can_cast_scroll(divine_scroll, spec, data) is False
     # spell books are never castable
     book = ss.new_spell_source("spellbook", "arcane", ["magic_user_sleep"], data)
     assert ss.can_cast_scroll(book, spec, data) is False
+
+
+# ── read_scroll (decipher with Read Magic) ───────────────────────────────────
+
+def _mu_with_read_magic_memorized(data):
+    e = ClassEntry(class_id="magic_user", level=1, spellbook=["magic_user_read_magic"])
+    cls = data.classes["magic_user"]
+    e = se.assign_slot(e, cls, data, level=1, spell_id="magic_user_read_magic")
+    scroll = ss.new_spell_source("scroll", "arcane", ["magic_user_sleep"], data)
+    spec = CharacterSpec(
+        name="Mu", abilities={"STR": 10, "INT": 13, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
+        race_id="human", classes=[e], alignment="neutral", ruleset=RuleSet(),
+        spell_sources=[scroll],
+    )
+    return spec, scroll.instance_id
+
+
+def test_read_scroll_burns_slot_and_unlocks(data):
+    spec, iid = _mu_with_read_magic_memorized(data)
+    assert ss.ready_read_magic_slot(spec, data) == (0, 0)
+    classes, sources = ss.read_scroll(spec, data, iid)
+    assert classes[0].slots[0].spent is True          # the Read Magic cast is burned
+    assert sources[0].unlocked is True
+
+
+def test_read_scroll_requires_memorized_read_magic(data):
+    scroll = ss.new_spell_source("scroll", "arcane", ["magic_user_sleep"], data)
+    spec = _mu_spec(sources=[scroll])                  # no Read Magic memorized
+    assert ss.ready_read_magic_slot(spec, data) is None
+    with pytest.raises(ss.SpellSourceError):
+        ss.read_scroll(spec, data, scroll.instance_id)
+
+
+def test_read_scroll_rejects_divine_and_already_unlocked(data):
+    divine = ss.new_spell_source("scroll", "divine", ["cleric_cure_light_wounds"], data)
+    spec, iid = _mu_with_read_magic_memorized(data)
+    spec.spell_sources = [*spec.spell_sources, divine]
+    with pytest.raises(ss.SpellSourceError):
+        ss.read_scroll(spec, data, divine.instance_id)         # divine needs no reading
+    classes, sources = ss.read_scroll(spec, data, iid)
+    spec.classes, spec.spell_sources = classes, sources
+    with pytest.raises(ss.SpellSourceError):
+        ss.read_scroll(spec, data, iid)                        # already unlocked
 
 
 # ── copy_spell ────────────────────────────────────────────────────────────────
@@ -201,6 +287,32 @@ def test_copy_same_spell_from_a_second_source(data):
     )
     assert ok is True
     assert new_entry.spellbook == ["magic_user_sleep"]
+
+
+def test_scroll_allows_duplicate_spells(data):
+    src = ss.new_spell_source("scroll", "divine",
+                              ["cleric_cure_light_wounds"] * 3, data, language="Common")
+    assert [e.spell_id for e in src.entries] == ["cleric_cure_light_wounds"] * 3
+    assert src.language == "Common"
+
+
+def test_spellbook_still_rejects_duplicates(data):
+    with pytest.raises(ss.SpellSourceError):
+        ss.new_spell_source("spellbook", "arcane",
+                            ["magic_user_sleep", "magic_user_sleep"], data)
+
+
+def test_scroll_cap_counts_duplicates(data):
+    # 8 charges (even all-same) still exceeds the 7 cap.
+    with pytest.raises(ss.SpellSourceError):
+        ss.new_spell_source("scroll", "divine",
+                            ["cleric_cure_light_wounds"] * 8, data)
+
+
+def test_spell_source_new_fields_default(data):
+    src = ss.new_spell_source("scroll", "divine", ["faerie_fire"], data)
+    assert src.language == "Common"
+    assert src.unlocked is False
 
 
 def test_copy_requires_advanced_rule(data):

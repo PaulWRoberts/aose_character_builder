@@ -169,6 +169,10 @@ def test_add_scroll_ignores_spellbook_list_id(client):
 def test_cast_from_scroll_route(client):
     _save_mu(client)
     src = _add_scroll(client, ["magic_user_magic_missile", "magic_user_sleep"])
+    # Arcane scrolls require deciphering (unlocked) before casting.
+    spec = load_character("mu", client._characters_dir)
+    spec.spell_sources[0] = spec.spell_sources[0].model_copy(update={"unlocked": True})
+    save_character("mu", spec, client._characters_dir)
     r = client.post("/character/mu/spell-sources/cast",
                     data={"instance_id": src.instance_id,
                           "spell_id": "magic_user_magic_missile"})
@@ -207,14 +211,68 @@ def test_copy_route_rejected_under_standard_rule(client):
     assert r.status_code == 400
 
 
+def _save_mu_with_read_magic(client):
+    """Magic-user with Read Magic memorized + one arcane scroll."""
+    from aose.engine import spells as se
+    from aose.engine import spell_sources as ss
+    spec = CharacterSpec(
+        name="Mu", abilities={"STR": 10, "INT": 13, "WIS": 10,
+                              "DEX": 10, "CON": 10, "CHA": 10},
+        race_id="human",
+        classes=[ClassEntry(class_id="magic_user", level=1, hp_rolls=[3],
+                            spellbook=["magic_user_read_magic"])],
+        alignment="neutral", ruleset=RuleSet(),
+    )
+    from aose.data.loader import GameData
+    from pathlib import Path
+    data = GameData.load(Path(__file__).parent.parent / "data")
+    entry = spec.classes[0]
+    entry = se.assign_slot(entry, data.classes["magic_user"], data,
+                           level=1, spell_id="magic_user_read_magic")
+    scroll = ss.new_spell_source("scroll", "arcane", ["magic_user_sleep"], data)
+    spec.classes = [entry]
+    spec.spell_sources = [scroll]
+    save_character("mu", spec, client._characters_dir)
+    return scroll.instance_id
+
+
+def test_read_route_unlocks_scroll(client):
+    iid = _save_mu_with_read_magic(client)
+    resp = client.post("/character/mu/spell-sources/read",
+                       data={"instance_id": iid})
+    assert resp.status_code == 303
+    spec = load_character("mu", client._characters_dir)
+    assert spec.spell_sources[0].unlocked is True
+    assert spec.classes[0].slots[0].spent is True
+
+
+def test_read_route_rejects_divine_scroll(client):
+    from aose.engine import spell_sources as ss
+    from aose.data.loader import GameData
+    from pathlib import Path
+    data = GameData.load(Path(__file__).parent.parent / "data")
+    _save_mu(client)
+    divine = ss.new_spell_source("scroll", "divine", ["faerie_fire"], data)
+    spec = load_character("mu", client._characters_dir)
+    spec.spell_sources = [divine]
+    save_character("mu", spec, client._characters_dir)
+    resp = client.post("/character/mu/spell-sources/read",
+                       data={"instance_id": divine.instance_id})
+    assert resp.status_code == 400
+
+
 def test_sheet_renders_spell_sources_section(client):
     _save_mu(client, advanced=True)
     src = _add_scroll(client, ["magic_user_magic_missile"])
+    # Unlock the scroll so the cast form is present (arcane scrolls need Read Magic first).
+    spec = load_character("mu", client._characters_dir)
+    spec.spell_sources[0] = spec.spell_sources[0].model_copy(update={"unlocked": True})
+    save_character("mu", spec, client._characters_dir)
     r = client.get("/character/mu")
     assert r.status_code == 200
     assert "Spell Books &amp; Scrolls" in r.text or "Spell Books & Scrolls" in r.text
     assert "Magic Missile" in r.text
-    # cast action present (arcane caster, arcane scroll)
+    # cast action present (arcane caster, unlocked arcane scroll)
     assert "/spell-sources/cast" in r.text
     # copy action present (advanced rule, spell not yet known)
     assert "/spell-sources/copy" in r.text

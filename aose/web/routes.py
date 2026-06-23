@@ -1318,11 +1318,12 @@ async def sheet_spell_source_add(request: Request, character_id: str):
     # scroll spans a whole magic type (arcane/divine), so its hidden list <select>
     # value must be ignored; honouring it wrongly rejects off-list spells.
     list_id = (form.get("list_id", "") or None) if kind == "spellbook" else None
+    language = form.get("language", "Common")
     spell_ids = form.getlist("spell_ids")
     try:
         spec.spell_sources = spell_source_engine.add_spell_source(
             spec.spell_sources, kind, caster_type, spell_ids, data,
-            name=name, list_id=list_id,
+            name=name, list_id=list_id, language=language,
         )
     except (SpellSourceError, ValueError) as e:
         raise HTTPException(400, str(e))
@@ -1380,6 +1381,21 @@ async def sheet_spell_source_copy(request: Request, character_id: str,
     except SpellSourceError as e:
         raise HTTPException(400, str(e))
     spec.classes[idx] = entry
+    spec.spell_sources = sources
+    save_character(character_id, spec, request.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/spell-sources/read")
+async def sheet_spell_source_read(request: Request, character_id: str,
+                                  instance_id: str = Form(...)):
+    spec = _load_spec_or_404(request, character_id)
+    data = request.app.state.game_data
+    try:
+        classes, sources = spell_source_engine.read_scroll(spec, data, instance_id)
+    except SpellSourceError as e:
+        raise HTTPException(400, str(e))
+    spec.classes = classes
     spec.spell_sources = sources
     save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)

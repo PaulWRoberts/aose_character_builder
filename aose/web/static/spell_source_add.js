@@ -1,6 +1,6 @@
-// Progressive enhancement for the Add-spell-document form: show only the spell
-// <option>s that match the chosen kind / caster type / list. The server
-// re-validates, so this is purely a usability filter.
+// Add-spell-document form: pick spells (with quantities) into a staged list,
+// emit one hidden `spell_ids` input per charge, and toggle list/language fields
+// by kind/caster. The server re-validates everything.
 (function () {
   var form = document.getElementById("spell-source-add-form");
   if (!form) return;
@@ -8,45 +8,93 @@
   var caster = document.getElementById("ss-caster-type");
   var list = document.getElementById("ss-list");
   var listLabel = document.getElementById("ss-list-label");
-  var spells = document.getElementById("ss-spells");
-
-  // AOSE Magic Scrolls table tops out at 7 spells per scroll; books are uncapped.
-  var MAX_SCROLL_SPELLS = 7;
+  var langLabel = document.getElementById("ss-language-label");
+  var pick = document.getElementById("ss-spell-pick");
+  var qty = document.getElementById("ss-spell-qty");
+  var addBtn = document.getElementById("ss-add-spell");
+  var staged = document.getElementById("ss-staged");
+  var hidden = document.getElementById("ss-hidden");
+  var submit = document.getElementById("ss-submit");
   var cap = document.getElementById("ss-spell-cap");
+  var MAX_SCROLL_SPELLS = 7;
 
-  function refresh() {
-    var isBook = kind.value === "spellbook";
-    // Spell books are always arcane and pick from a single list.
-    caster.disabled = isBook;
-    if (isBook) caster.value = "arcane";
-    listLabel.style.display = isBook ? "" : "none";
-    // A scroll spans a whole magic type, so the list select is irrelevant —
-    // disable it so its value isn't submitted (the server ignores it too).
-    list.disabled = !isBook;
-    var wantCaster = isBook ? "arcane" : caster.value;
-    var wantList = isBook ? list.value : null;
-    Array.prototype.forEach.call(spells.options, function (opt) {
-      var ok = opt.getAttribute("data-caster") === wantCaster;
-      if (ok && wantList !== null) ok = opt.getAttribute("data-list") === wantList;
+  // staged: array of { id, label, n }
+  var items = [];
+
+  function isBook() { return kind.value === "spellbook"; }
+  function wantCaster() { return isBook() ? "arcane" : caster.value; }
+  function wantList() { return isBook() ? list.value : null; }
+
+  function totalCharges() {
+    return items.reduce(function (t, it) { return t + it.n; }, 0);
+  }
+
+  function refreshControls() {
+    caster.disabled = isBook();
+    if (isBook()) caster.value = "arcane";
+    listLabel.style.display = isBook() ? "" : "none";
+    list.disabled = !isBook();
+    langLabel.style.display = (!isBook() && caster.value === "divine") ? "" : "none";
+    cap.style.display = isBook() ? "none" : "";
+    // Filter the pick list to matching spells.
+    Array.prototype.forEach.call(pick.options, function (opt) {
+      var ok = opt.getAttribute("data-caster") === wantCaster();
+      if (ok && wantList() !== null) ok = opt.getAttribute("data-list") === wantList();
       opt.hidden = !ok;
-      if (!ok) opt.selected = false;
     });
-    if (cap) cap.style.display = isBook ? "none" : "";
-    enforceCap();
+    var firstVisible = Array.prototype.filter.call(pick.options, function (o) { return !o.hidden; })[0];
+    if (firstVisible) pick.value = firstVisible.value;
   }
 
-  // For scrolls, drop selections beyond the 7-spell cap (oldest kept).
-  function enforceCap() {
-    if (kind.value === "spellbook") return;
-    var selected = Array.prototype.filter.call(spells.options, function (o) {
-      return o.selected && !o.hidden;
+  function renderStaged() {
+    staged.innerHTML = "";
+    hidden.innerHTML = "";
+    items.forEach(function (it, idx) {
+      var li = document.createElement("li");
+      li.textContent = it.label + (it.n > 1 ? "  ×" + it.n : "") + "  ";
+      var rm = document.createElement("button");
+      rm.type = "button";
+      rm.className = "btn link";
+      rm.textContent = "remove";
+      rm.addEventListener("click", function () { items.splice(idx, 1); renderStaged(); });
+      li.appendChild(rm);
+      staged.appendChild(li);
+      for (var i = 0; i < it.n; i++) {
+        var inp = document.createElement("input");
+        inp.type = "hidden"; inp.name = "spell_ids"; inp.value = it.id;
+        hidden.appendChild(inp);
+      }
     });
-    for (var i = MAX_SCROLL_SPELLS; i < selected.length; i++) selected[i].selected = false;
+    submit.disabled = items.length === 0;
   }
 
-  kind.addEventListener("change", refresh);
-  caster.addEventListener("change", refresh);
-  list.addEventListener("change", refresh);
-  spells.addEventListener("change", enforceCap);
-  refresh();
+  addBtn.addEventListener("click", function () {
+    var opt = pick.options[pick.selectedIndex];
+    if (!opt || opt.hidden) return;
+    var id = opt.value;
+    var label = opt.getAttribute("data-label") || opt.textContent.trim();
+    var n = Math.max(1, parseInt(qty.value, 10) || 1);
+    // Spell books: one of each (no duplicates).
+    if (isBook()) {
+      if (items.some(function (it) { return it.id === id; })) return;
+      n = 1;
+    } else {
+      var existing = items.filter(function (it) { return it.id === id; })[0];
+      var room = MAX_SCROLL_SPELLS - totalCharges();
+      if (room <= 0) return;
+      n = Math.min(n, room);
+      if (existing) { existing.n += n; renderStaged(); return; }
+    }
+    items.push({ id: id, label: label, n: n });
+    renderStaged();
+  });
+
+  // Changing kind/caster/list invalidates the staged picks (different pool).
+  function resetStaged() { items = []; renderStaged(); refreshControls(); }
+  kind.addEventListener("change", resetStaged);
+  caster.addEventListener("change", resetStaged);
+  list.addEventListener("change", resetStaged);
+
+  refreshControls();
+  renderStaged();
 })();

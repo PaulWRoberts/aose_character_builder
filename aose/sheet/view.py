@@ -263,6 +263,9 @@ class SpellSourceView(BaseModel):
     kind: str                 # "spellbook" | "scroll"
     caster_type: str
     name: str                 # display label (falls back to a default)
+    language: str = ""        # divine scroll language display (blank otherwise)
+    unlocked: bool = False    # arcane scroll deciphered?
+    can_read: bool = False    # arcane scroll, not unlocked, Read Magic memorized
     arcane_class_id: str | None  # the class whose book a Copy targets, if any
     entries: list[SpellSourceEntryView]
 
@@ -274,10 +277,16 @@ class SpellSourceOptionGroup(BaseModel):
     spells: list[SpellEntryView]
 
 
+class LanguageOption(BaseModel):
+    id: str
+    name: str
+
+
 class SpellSourceAddOptions(BaseModel):
     arcane_lists: list[SpellSourceOptionGroup]   # spellbook: one group per arcane list
     arcane_spells: list[SpellEntryView]          # scroll arcane: all arcane spells
     divine_spells: list[SpellEntryView]          # scroll divine: all divine spells
+    languages: list[LanguageOption] = Field(default_factory=list)  # divine scroll language picker
 
 
 class GemRow(BaseModel):
@@ -317,11 +326,23 @@ class SpellbookRow(BaseModel):
     spent_slots: list[int] = []   # ClassEntry.slots indices, spent (for restore)
 
 
+class ScrollSpellRow(BaseModel):
+    scroll_instance_id: str
+    label: str                # "scroll N" or the scroll's custom name
+    spell_id: str
+    name: str
+    level: int
+    charges: int              # remaining copies of this spell on this scroll
+    castable: bool
+    block_reason: str | None  # why cast is disabled, if any
+
+
 class SpellbookLevelGroup(BaseModel):
     level: int
     cap: int             # memorizable slots at this level
     used: int            # filled slots at this level
     rows: list[SpellbookRow]
+    scroll_rows: list[ScrollSpellRow] = Field(default_factory=list)
 
 
 class SpellbookBlock(BaseModel):
@@ -846,6 +867,35 @@ def spells_view(spec: CharacterSpec, data: GameData) -> list[SpellClassView]:
     return out
 
 
+def _scroll_rows_by_level(spec: CharacterSpec, data: GameData, caster_type: str
+                          ) -> dict[int, list[ScrollSpellRow]]:
+    """Castable-by-type scrolls turned into per-level rows (one per scroll+spell)."""
+    by_level: dict[int, list[ScrollSpellRow]] = {}
+    scroll_n = 0
+    for source in spec.spell_sources:
+        if source.kind != "scroll" or source.caster_type != caster_type:
+            continue
+        scroll_n += 1
+        label = source.name or f"scroll {scroll_n}"
+        reason = spell_source_engine.scroll_cast_block_reason(source, spec, data)
+        counts: dict[str, int] = {}
+        order: list[str] = []
+        for e in source.entries:
+            if e.spell_id not in counts:
+                order.append(e.spell_id)
+            counts[e.spell_id] = counts.get(e.spell_id, 0) + 1
+        for sid in order:
+            spell = data.spells.get(sid)
+            if spell is None:
+                continue
+            by_level.setdefault(spell.level, []).append(ScrollSpellRow(
+                scroll_instance_id=source.instance_id, label=label,
+                spell_id=sid, name=spell.name, level=spell.level,
+                charges=counts[sid], castable=reason is None, block_reason=reason,
+            ))
+    return by_level
+
+
 def spellbook_view(spec: CharacterSpec, data: GameData) -> list[SpellbookBlock]:
     """One block per casting class: arcane shows the spellbook by level with
     cast-pip counts; divine shows only memorised spells (ready/spent).
@@ -925,6 +975,22 @@ def spellbook_view(spec: CharacterSpec, data: GameData) -> list[SpellbookBlock]:
             class_id=entry.class_id, class_name=cls.name,
             caster_type=ctype, levels=levels,
         ))
+    # Inject scroll rows into the first block for each caster type.
+    seen_types: set[str] = set()
+    for block in out:
+        if block.caster_type in seen_types:
+            continue
+        seen_types.add(block.caster_type)
+        by_level = _scroll_rows_by_level(spec, data, block.caster_type)
+        if not by_level:
+            continue
+        for lvl, rows in by_level.items():
+            grp = next((g for g in block.levels if g.level == lvl), None)
+            if grp is None:
+                grp = SpellbookLevelGroup(level=lvl, cap=0, used=0, rows=[])
+                block.levels.append(grp)
+            grp.scroll_rows.extend(rows)
+        block.levels.sort(key=lambda g: g.level)
     return out
 
 
@@ -1000,6 +1066,9 @@ def spell_sources_view(spec: CharacterSpec, data: GameData) -> list[SpellSourceV
     out: list[SpellSourceView] = []
     for source in spec.spell_sources:
         castable = spell_source_engine.can_cast_scroll(source, spec, data)
+        can_read = (source.kind == "scroll" and source.caster_type == "arcane"
+                    and not source.unlocked
+                    and spell_source_engine.ready_read_magic_slot(spec, data) is not None)
         copyable: set[str] = set()
         if advanced and arcane_entry is not None:
             copyable = spell_source_engine.copyable_spell_ids(
@@ -1021,6 +1090,10 @@ def spell_sources_view(spec: CharacterSpec, data: GameData) -> list[SpellSourceV
             kind=source.kind,
             caster_type=source.caster_type,
             name=_default_source_name(source),
+            language=(display_name(source.language, data.languages)
+                      if source.kind == "scroll" and source.caster_type == "divine" else ""),
+            unlocked=source.unlocked,
+            can_read=can_read,
             arcane_class_id=arcane_cid,
             entries=entries,
         ))
@@ -1051,10 +1124,12 @@ def spell_source_add_options(data: GameData) -> SpellSourceAddOptions:
         )
         return [_spell_entry(s) for s in spells]
 
+    langs = sorted(data.languages.names.items(), key=lambda kv: (kv[0] != "common", kv[1]))
     return SpellSourceAddOptions(
         arcane_lists=arcane_lists,
         arcane_spells=bucket(arcane_list_ids),
         divine_spells=bucket(divine_list_ids),
+        languages=[LanguageOption(id=k, name=v) for k, v in langs],
     )
 
 
