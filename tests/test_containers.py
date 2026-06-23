@@ -127,6 +127,15 @@ def test_new_container_instance_validates_catalog_type():
     assert len(inst.instance_id) >= 16  # uuid4 hex length
 
 
+def test_new_container_instance_accepts_full_location():
+    from aose.models.storage import StorageLocation
+    fake = _fake_container_data()
+    loc = StorageLocation(kind="animal", id="abc123")
+    inst = new_container_instance("backpack", fake, location=loc)
+    assert inst.location == loc
+    assert inst.catalog_id == "backpack"
+
+
 def test_new_container_instance_rejects_non_container():
     fake = _fake_container_data()
     with pytest.raises(ValueError, match="not a container"):

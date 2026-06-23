@@ -341,24 +341,25 @@ class UnknownContainer(ValueError):
 
 
 def new_container_instance(catalog_id: str, data: GameData,
-                           state: str = "carried") -> ContainerInstance:
+                           state: str = "carried",
+                           location: "StorageLocation | None" = None) -> ContainerInstance:
     """Create a fresh ContainerInstance for the given catalog item.
 
-    Validates that ``catalog_id`` is a Container in ``data.items``.  Returns a
-    ContainerInstance with a uuid4-hex ``instance_id``.  Raises ``UnknownItem``
-    if the id isn't in ``data.items`` and ``ValueError`` if the item exists
-    but isn't a Container.
+    Validates that ``catalog_id`` is a Container. ``location`` (preferred) places
+    it at any non-container location; the legacy ``state`` kwarg still works for
+    person buckets.
     """
     item = data.items.get(catalog_id)
     if item is None:
         raise UnknownItem(f"No item with id {catalog_id!r}")
     if not isinstance(item, Container):
         raise ValueError(f"{catalog_id!r} is not a container")
-    from aose.models.storage import StorageLocation
+    if location is None:
+        location = StorageLocation(kind=state)  # type: ignore[arg-type]
     return ContainerInstance(
         instance_id=uuid.uuid4().hex,
         catalog_id=catalog_id,
-        location=StorageLocation(kind=state),  # type: ignore[arg-type]
+        location=location,
         contents=[],
     )
 
