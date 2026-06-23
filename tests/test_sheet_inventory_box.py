@@ -173,6 +173,29 @@ def test_retainer_group_caps_and_containers():
     assert ret.caps.class_filter_equip is False
 
 
+def test_attack_rows_have_expected_fields():
+    """Characterization: attack_profiles returns AttackProfile with required fields."""
+    from pathlib import Path
+    from aose.data.loader import GameData
+    from aose.engine.attacks import attack_profiles
+    data = GameData.load(Path("data"))
+    spec = CharacterSpec(
+        name="Swordsman",
+        abilities={"STR": 13, "DEX": 10, "CON": 10, "INT": 10, "WIS": 10, "CHA": 10},
+        race_id="human",
+        classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
+        alignment="neutral",
+        inventory=["sword"], equipped={"main_hand": "sword"},
+    )
+    profiles = attack_profiles(spec, data)
+    sword_profiles = [p for p in profiles if p.weapon_id == "sword"]
+    assert sword_profiles, "expected sword attack profile"
+    p = sword_profiles[0]
+    assert hasattr(p, "to_hit_ascending")
+    assert hasattr(p, "damage")
+    assert hasattr(p, "range_ft")
+
+
 def test_inventory_box_retainer_item_modal_exists(tmp_path):
     from aose.characters import save_character
     app = _make_app(tmp_path)
