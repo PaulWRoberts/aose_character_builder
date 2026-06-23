@@ -176,14 +176,27 @@ def use_as_container(spec: CharacterSpec, owner: StorageLocation,
 
 
 def move_item(spec: CharacterSpec, item_id: str,
-              src: StorageLocation, dest: StorageLocation) -> None:
-    """Move one copy of ``item_id`` from ``src``'s loose list to ``dest``'s."""
+              src: StorageLocation, dest: StorageLocation,
+              data=None) -> None:
+    """Move one copy of ``item_id`` from ``src``'s loose list to ``dest``'s.
+    If the moved copy was the last carried copy occupying an equipped slot,
+    free that slot (and unload any ammo keyed to it)."""
     src_list = loose_list(spec, src)
     if item_id not in src_list:
         raise StorageError(f"{item_id!r} not at {src.kind}")
     dest_list = loose_list(spec, dest)
+    if data is not None:
+        item = data.items.get(item_id)
+        added = item.weight_cn if item is not None else 0
+        _check_capacity(spec, dest, added, data)
     src_list.remove(item_id)
     dest_list.append(item_id)
+    # If no carried copy remains, free any equipped slot pointing at it.
+    if src.kind == "carried" and spec.inventory.count(item_id) == 0:
+        for slot, iid in list(spec.equipped.items()):
+            if iid == item_id:
+                del spec.equipped[slot]
+                unload_if_loaded(spec, item_id)
 
 
 def _find_container_anywhere(spec: CharacterSpec, container_id: str):

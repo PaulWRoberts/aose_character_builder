@@ -209,3 +209,18 @@ def test_move_targets_lists_inventories_and_containers():
     assert ("stashed", None) in kinds
     assert ("animal", "mule1") in kinds
     assert ("container", "c1") in kinds
+
+
+# ── Task 5 (plan): move_item auto-unequip ────────────────────────────────────
+
+def test_moving_last_copy_of_equipped_item_unequips_it():
+    spec = _spec(inventory=["sword"], equipped={"main_hand": "sword"})
+    storage.move_item(spec, "sword", CARRIED, STASHED)
+    assert "main_hand" not in spec.equipped
+    assert spec.stashed == ["sword"]
+
+
+def test_moving_one_of_two_copies_keeps_the_equipped_one():
+    spec = _spec(inventory=["sword", "sword"], equipped={"main_hand": "sword"})
+    storage.move_item(spec, "sword", CARRIED, STASHED)
+    assert spec.equipped.get("main_hand") == "sword"   # a carried copy remains
