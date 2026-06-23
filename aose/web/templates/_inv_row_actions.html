@@ -1,25 +1,24 @@
-{# Shared per-row inventory action buttons.  Imported `with context` so the
-   macro can read `inv_move_groups` and `inv_move_url` (passed by the sheet
-   route and the wizard equipment route).  Used by both the equipment drawer
-   (`_equipment_ui.html`) and the sheet's per-item modals (`sheet.html`).
-   `state` is "equipped" | "carried" | "stashed". #}
-{% from "_move_dest.html" import move_dest_control with context %}
+{# Shared per-row inventory action buttons.  Imported `with context` so the macro
+   can read `move_targets` and `inv_move_url` from the sheet/wizard context.
+   Used by both the equipment drawer (`_equipment_ui.html`) and item modals.
+   `state` is "equipped" | "carried" | "stashed" | "container" | "retainer" | carrier kind. #}
+{% from "_actions.html" import act_move with context %}
 {% macro inv_row_actions(row, target_url_prefix, state, show_remove=True, src_id="") %}
     {% if state == "equipped" %}
     <form method="post" action="{{ target_url_prefix }}/unequip" class="inline-form">
         <input type="hidden" name="item_id" value="{{ row.id }}">
-        <button type="submit">Unequip</button>
+        <button type="submit" class="btn btn-inline">Unequip</button>
     </form>
     {% elif state == "carried" and row.equippable and row.class_allowed %}
     <form method="post" action="{{ target_url_prefix }}/equip" class="inline-form">
         <input type="hidden" name="item_id" value="{{ row.id }}">
-        <button type="submit">Equip</button>
+        <button type="submit" class="btn btn-inline">Equip</button>
     </form>
     {% if row.can_off_hand %}
     <form method="post" action="{{ target_url_prefix }}/equip" class="inline-form">
         <input type="hidden" name="item_id" value="{{ row.id }}">
         <input type="hidden" name="slot" value="off_hand">
-        <button type="submit"{% if row.off_hand_blocked %} disabled title="Off hand occupied"{% endif %}>Off-hand</button>
+        <button type="submit" class="btn btn-inline"{% if row.off_hand_blocked %} disabled title="Off hand occupied"{% endif %}>Off-hand</button>
     </form>
     {% endif %}
     {% elif state == "carried" and row.equippable and not row.class_allowed %}
@@ -27,34 +26,28 @@
     {% elif state == "stashed" %}
     <form method="post" action="{{ target_url_prefix }}/unstash" class="inline-form">
         <input type="hidden" name="item_id" value="{{ row.id }}">
-        <button type="submit">Unstash</button>
+        <button type="submit" class="btn btn-inline">Unstash</button>
     </form>
     {% elif state == "container" %}
     <form method="post" action="{{ target_url_prefix }}/take-out" class="inline-form">
         <input type="hidden" name="item_id" value="{{ row.id }}">
         <input type="hidden" name="instance_id" value="{{ src_id }}">
-        <button type="submit">Take out</button>
+        <button type="submit" class="btn btn-inline">Take out</button>
     </form>
     {% elif state == "retainer" and row.equippable %}
     <form method="post" action="{{ target_url_prefix }}/equip" class="inline-form">
         <input type="hidden" name="item_id" value="{{ row.id }}">
-        <button type="submit">Equip</button>
+        <button type="submit" class="btn btn-inline">Equip</button>
     </form>
     {% endif %}
-    {% if inv_move_groups is defined %}
-    <form method="post" action="{{ inv_move_url }}" class="inline-form move-form">
-        <input type="hidden" name="category" value="item">
-        <input type="hidden" name="item_id" value="{{ row.id }}">
-        <input type="hidden" name="src_kind" value="{{ state }}">
-        <input type="hidden" name="src_id" value="{{ src_id }}">
-        {{ move_dest_control(inv_move_groups, state, src_id) }}
-    </form>
+    {% if move_targets is defined %}
+    {{ act_move(inv_move_url, {"category": "item", "id": row.id}, move_targets, state, src_id) }}
     {% endif %}
     {% if show_remove %}
     <form method="post" action="{{ target_url_prefix }}/remove" class="remove-form inline-form">
         <input type="hidden" name="item_id" value="{{ row.id }}">
         <input type="hidden" name="from_state" value="{{ state }}">
-        <button type="submit" name="mode" value="drop" class="danger"
+        <button type="submit" name="mode" value="drop" class="btn btn-inline danger"
                 title="Throw away — no gold back">Drop</button>
     </form>
     <form method="post" action="{{ target_url_prefix }}/remove" class="sell-form inline-form">

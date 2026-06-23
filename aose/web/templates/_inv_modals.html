@@ -1,9 +1,9 @@
 {# Shared per-item and per-container modal macros for the inventory box.
    Import `with context` so macros can reach `ammo_url_prefix`, `character_id`,
-   and `inv_move_groups`/`inv_move_url` from the template context. #}
+   `move_targets`, and `inv_move_url` from the template context. #}
 {% from "_detail_card.html" import detail_card with context %}
 {% from "_inv_row_actions.html" import inv_row_actions with context %}
-{% from "_move_dest.html" import move_dest_control with context %}
+{% from "_actions.html" import act_move with context %}
 
 {# Per-item modal — Equipped · Carried · Stashed · container-contents · carriers · retainers.
    id_prefix determines the modal id: modal-item-<id_prefix>-<row.id>.
@@ -46,7 +46,7 @@
 {% endmacro %}
 
 {# Per-container modal — capacity + catalog card + Move ▾ + Sell ▾ (empty only) + Drop. #}
-{% macro container_modal(c, group, url_prefix, move_groups) %}
+{% macro container_modal(c, group, url_prefix) %}
 <div class="overlay modal" id="modal-container-{{ c.instance_id }}" role="dialog" aria-label="{{ c.name }}">
   <div class="ov-head"><h3>{{ c.name }}</h3><button class="x" data-close>×</button></div>
   <div class="ov-body">
@@ -57,11 +57,7 @@
     </p>
     {% if c.detail %}{{ detail_card(c.detail) }}{% endif %}
     <div class="row-actions">
-      <form method="post" action="{{ url_prefix }}/inventory/move" class="inline-form move-form">
-        <input type="hidden" name="category" value="container">
-        <input type="hidden" name="item_id" value="{{ c.instance_id }}">
-        {{ move_dest_control(move_groups, group.kind, group.id or "", allow_containers=False) }}
-      </form>
+      {{ act_move(url_prefix ~ "/inventory/move", {"category": "container", "id": c.instance_id}, move_targets, group.kind, group.id or "") }}
       {% if not c.contents %}
       <form method="post" action="{{ url_prefix }}/equipment/remove-container" class="sell-form inline-form">
         <input type="hidden" name="instance_id" value="{{ c.instance_id }}">
@@ -74,7 +70,7 @@
       </form>
       <form method="post" action="{{ url_prefix }}/equipment/remove-container" class="remove-form inline-form">
         <input type="hidden" name="instance_id" value="{{ c.instance_id }}">
-        <button type="submit" name="mode" value="drop" class="danger">Drop</button>
+        <button type="submit" name="mode" value="drop" class="btn btn-inline danger">Drop</button>
       </form>
       {% else %}
       <span class="muted small">Empty the container before selling or dropping.</span>
@@ -85,10 +81,8 @@
 {% endmacro %}
 
 {# Per-coin-stack modal — Convert ▾ · Move ▾ · Adjust / Drop.  Keyed by
-   (owner_kind, owner_id, denom).  `group` provides the source location; treasure
-   moves stay between top-level carrier inventories (no container / retainer dest:
-   neither has a render path for loose coin stacks). #}
-{% macro coin_modal(c, group, url_prefix, move_groups) %}
+   (owner_kind, owner_id, denom).  ``group`` provides the source location. #}
+{% macro coin_modal(c, group, url_prefix) %}
 {%- set lk = group.kind -%}{%- set lid = group.id or "" -%}
 <div class="overlay modal" id="modal-coin-{{ lk }}-{{ lid }}-{{ c.denom }}" role="dialog" aria-label="{{ c.count }} {{ c.denom }}">
   <div class="ov-head"><h3>{{ c.count }} {{ c.denom }}</h3><button class="x" data-close>×</button></div>
@@ -108,15 +102,7 @@
     </div>
     <div class="ov-section">
       <h4>Move</h4>
-      <form method="post" action="{{ url_prefix }}/inventory/move" class="inline-form move-form">
-        <input type="hidden" name="category" value="coin">
-        <input type="hidden" name="denom" value="{{ c.denom }}">
-        <input type="hidden" name="src_kind" value="{{ lk }}">
-        <input type="hidden" name="src_id" value="{{ lid }}">
-        <input type="number" name="count" value="{{ c.count }}" min="1" style="width:4rem">
-        {{ move_dest_control(move_groups, lk, lid, allow_containers=False, allow_retainers=False) }}
-        <button class="btn" type="submit">Move</button>
-      </form>
+      {{ act_move(url_prefix ~ "/inventory/move", {"category": "coin", "id": c.denom}, move_targets, lk, lid, count=c.count) }}
     </div>
     <div class="ov-section">
       <h4>Adjust</h4>
@@ -140,7 +126,7 @@
 {% endmacro %}
 
 {# Per-gem-stack modal — Sell one · Sell all · ±1 · Move ▾ · Drop. #}
-{% macro gem_modal(g, group, url_prefix, move_groups) %}
+{% macro gem_modal(g, group, url_prefix) %}
 <div class="overlay modal" id="modal-gem-{{ g.instance_id }}" role="dialog" aria-label="{{ g.label or (g.value ~ ' gp gem') }}">
   <div class="ov-head"><h3>{{ g.label if g.label else g.value ~ " gp gem" }}</h3><button class="x" data-close>×</button></div>
   <div class="ov-body">
@@ -164,11 +150,7 @@
         <input type="hidden" name="delta" value="-1">
         <button class="btn tool dark" type="submit">−1</button>
       </form>
-      <form method="post" action="{{ url_prefix }}/inventory/move" class="inline-form move-form">
-        <input type="hidden" name="category" value="gem">
-        <input type="hidden" name="instance_id" value="{{ g.instance_id }}">
-        {{ move_dest_control(move_groups, group.kind, group.id or "", allow_containers=False, allow_retainers=False) }}
-      </form>
+      {{ act_move(url_prefix ~ "/inventory/move", {"category": "gem", "id": g.instance_id}, move_targets, group.kind, group.id or "", count=g.count) }}
       <form method="post" action="{{ url_prefix }}/gems/remove" class="inline-form">
         <input type="hidden" name="instance_id" value="{{ g.instance_id }}">
         <button class="btn danger" type="submit">Drop</button>
@@ -179,7 +161,7 @@
 {% endmacro %}
 
 {# Per-jewellery modal — Mark damaged/intact · Sell · Move ▾ · Drop. #}
-{% macro jewellery_modal(j, group, url_prefix, move_groups) %}
+{% macro jewellery_modal(j, group, url_prefix) %}
 <div class="overlay modal" id="modal-jewel-{{ j.instance_id }}" role="dialog" aria-label="{{ j.label or 'jewellery' }}">
   <div class="ov-head"><h3>{{ j.label if j.label else "Jewellery" }}</h3><button class="x" data-close>×</button></div>
   <div class="ov-body">
@@ -194,11 +176,7 @@
         <input type="hidden" name="instance_id" value="{{ j.instance_id }}">
         <button class="btn" type="submit">Sell</button>
       </form>
-      <form method="post" action="{{ url_prefix }}/inventory/move" class="inline-form move-form">
-        <input type="hidden" name="category" value="jewellery">
-        <input type="hidden" name="instance_id" value="{{ j.instance_id }}">
-        {{ move_dest_control(move_groups, group.kind, group.id or "", allow_containers=False, allow_retainers=False) }}
-      </form>
+      {{ act_move(url_prefix ~ "/inventory/move", {"category": "jewellery", "id": j.instance_id}, move_targets, group.kind, group.id or "") }}
       <form method="post" action="{{ url_prefix }}/jewellery/remove" class="inline-form">
         <input type="hidden" name="instance_id" value="{{ j.instance_id }}">
         <button class="btn danger" type="submit">Drop</button>

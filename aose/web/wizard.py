@@ -1665,38 +1665,6 @@ def _draft_ammo(draft: dict[str, Any]) -> list[AmmoStack]:
     return [AmmoStack.model_validate(a) for a in draft.get("ammo", [])]
 
 
-def _wizard_move_groups(
-    containers: list[ContainerInstance], game_data
-) -> list[TopLevelGroup]:
-    """Minimal two-group move list (Carried + Stashed) for the wizard."""
-    from aose.models import Container as _Container
-
-    def _container_views(loc_kind: str) -> list[ContainerView]:
-        views = []
-        for c in containers:
-            if c.location.kind != loc_kind:
-                continue
-            catalog = game_data.items.get(c.catalog_id)
-            if not isinstance(catalog, _Container):
-                continue
-            views.append(ContainerView(
-                instance_id=c.instance_id, catalog_id=c.catalog_id,
-                name=catalog.name, state=loc_kind,
-                capacity_cn=catalog.capacity_cn, used_cn=0,
-                weight_multiplier=catalog.weight_multiplier,
-                own_weight_cn=catalog.weight_cn, effective_weight_cn=0,
-                contents=[],
-            ))
-        return views
-
-    return [
-        TopLevelGroup(kind="carried", label="Carried",
-                      containers=_container_views("carried")),
-        TopLevelGroup(kind="stashed", label="Stashed",
-                      containers=_container_views("stashed")),
-    ]
-
-
 def _equipment_context(draft: dict[str, Any], game_data) -> dict:
     """Build the rendering context for the equipment partial — shared between
     the wizard equipment step and the live character sheet."""
@@ -1734,14 +1702,20 @@ def _equipment_context(draft: dict[str, Any], game_data) -> dict:
 
     # Build inventory_groups for the box (carried + stashed only; no carriers/retainers).
     from aose.sheet.view import build_inventory_groups as _big
+    from aose.engine import storage as _storage
     try:
         _spec = _draft_to_spec(draft, game_data)
         inventory_groups = [
             g for g in _big(_spec, game_data)
             if g.kind in ("carried", "stashed")
         ]
+        _move_targets = _storage.move_targets(_spec, game_data)
     except Exception:
         inventory_groups = []
+        _move_targets = [
+            {"kind": "carried", "id": None, "label": "Carried"},
+            {"kind": "stashed", "id": None, "label": "Stashed"},
+        ]
 
     return {
         "gold": draft.get("gold", 0),
@@ -1760,7 +1734,7 @@ def _equipment_context(draft: dict[str, Any], game_data) -> dict:
         "shop": shop_categories(game_data, _ruleset_of(draft)),
         "remove_modes": REMOVE_MODES,
         "ammo_load_options": load_options,
-        "inv_move_groups": _wizard_move_groups(containers, game_data),
+        "move_targets": _move_targets,
         "inv_move_url": f"/wizard/{draft_id}/inventory/move",
         "inventory_groups": inventory_groups,
     }

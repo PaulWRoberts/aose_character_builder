@@ -4,7 +4,7 @@
 {% from "_inv_row_actions.html" import inv_row_actions with context %}
 {% from "_detail_card.html" import detail_card with context %}
 {% from "_inv_pane.html" import inv_pane with context %}
-{% from "_move_dest.html" import move_dest_control with context %}
+{% from "_actions.html" import act_move, act_stepper with context %}
 {% from "_inv_modals.html" import item_modal, container_modal, coin_modal, gem_modal, jewellery_modal with context %}
 
 <div class="sheet-actions no-print">
@@ -987,9 +987,13 @@
 {% for row in c.contents %}{{ item_modal(row, "container", "container-" ~ c.instance_id, target_url_prefix, src_id=c.instance_id) }}{% endfor %}
 {% endfor %}{% endfor %}
 
-{# MODALS: per-magic-item (equipped: unequip + use-charge; unequipped: equip + remove) #}
+{%- set _char_url = "/character/" ~ character_id -%}
+{# MODALS: per-magic-item — iterate per group to get location context for Move.
+   Equipped: unequip + use-charge.  Unequipped: equip + Move + remove. #}
 {% set ench_ids = enchanted_rows | map(attribute='instance_id') | list %}
-{% for mi in sheet.magic_items %}
+{% for group in sheet.inventory_groups %}
+{%- set gkind = group.kind -%}{%- set gid = group.id or "" -%}
+{% for mi in group.equipped_magic + group.magic_items + group.enchanted %}
 {% set is_ench = mi.instance_id in ench_ids %}
 <div class="overlay modal" id="modal-magic-{{ mi.instance_id }}" role="dialog" aria-label="{{ mi.name }}">
   <div class="ov-head"><h3>{{ mi.name }}</h3><button class="x" data-close>×</button></div>
@@ -1000,66 +1004,101 @@
       {% if mi.equipped %}
       <form method="post" action="{{ target_url_prefix }}/{{ 'unequip-enchanted' if is_ench else 'unequip-magic' }}" class="inline-form">
         <input type="hidden" name="instance_id" value="{{ mi.instance_id }}">
-        <button type="submit">Unequip</button>
+        <button type="submit" class="btn btn-inline">Unequip</button>
       </form>
       {% if mi.charges_remaining is not none %}
       <span class="muted small">Charges {{ mi.charges_remaining }} / {{ mi.charges_max }}</span>
       <form method="post" action="{{ target_url_prefix }}/{{ 'enchanted/use-charge' if is_ench else 'use-charge' }}" class="inline-form">
         <input type="hidden" name="instance_id" value="{{ mi.instance_id }}">
-        <button type="submit" {% if mi.charges_remaining == 0 %}disabled{% endif %}>Use one</button>
+        <button type="submit" class="btn btn-inline" {% if mi.charges_remaining == 0 %}disabled{% endif %}>Use one</button>
       </form>
       {% endif %}
       {% else %}
       <form method="post" action="{{ target_url_prefix }}/{{ 'equipment/equip-enchanted' if is_ench else 'equipment/equip-magic' }}" class="inline-form">
         <input type="hidden" name="instance_id" value="{{ mi.instance_id }}">
-        <button type="submit">Equip</button>
+        <button type="submit" class="btn btn-inline">Equip</button>
       </form>
+      {{ act_move(_char_url ~ "/inventory/move", {"category": ("enchanted" if is_ench else "magic"), "id": mi.instance_id}, move_targets, gkind, gid) }}
       <form method="post" action="{{ target_url_prefix }}/{{ 'equipment/remove-enchanted' if is_ench else 'equipment/remove-magic' }}" class="inline-form">
         <input type="hidden" name="instance_id" value="{{ mi.instance_id }}">
-        <button type="submit" class="danger">Remove</button>
+        <button type="submit" class="btn btn-inline danger">Remove</button>
       </form>
       {% endif %}
     </div>
   </div>
 </div>
 {% endfor %}
+{# Container-stowed magic/enchanted items also need modals (clickable in _inv_pane.html) #}
+{% for c in group.containers %}
+{% for mi in c.stowed_magic + c.stowed_enchanted %}
+{% set is_ench = mi.instance_id in ench_ids %}
+<div class="overlay modal" id="modal-magic-{{ mi.instance_id }}" role="dialog" aria-label="{{ mi.name }}">
+  <div class="ov-head"><h3>{{ mi.name }}</h3><button class="x" data-close>×</button></div>
+  <div class="ov-body">
+    {% if mi.modifier_summary %}<p style="margin:0 0 8px">{% for chip in mi.modifier_summary %}<span class="tag stamp">{{ chip }}</span> {% endfor %}</p>{% endif %}
+    {% if mi.description %}<div class="prose">{{ mi.description | markdown | safe }}</div>{% endif %}
+    <div class="row-actions">
+      {{ act_move(_char_url ~ "/inventory/move", {"category": ("enchanted" if is_ench else "magic"), "id": mi.instance_id}, move_targets, "container", c.instance_id) }}
+      <form method="post" action="{{ target_url_prefix }}/{{ 'equipment/remove-enchanted' if is_ench else 'equipment/remove-magic' }}" class="inline-form">
+        <input type="hidden" name="instance_id" value="{{ mi.instance_id }}">
+        <button type="submit" class="btn btn-inline danger">Remove</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endfor %}
+{% endfor %}
+{% endfor %}
 
 {# MODALS: per-container (capacity badge + catalog card + Move + Sell + Drop) #}
-{%- set _char_url = "/character/" ~ character_id -%}
 {% for group in sheet.inventory_groups %}{% for c in group.containers %}
-{{ container_modal(c, group, _char_url, sheet.inventory_groups) }}
+{{ container_modal(c, group, _char_url) }}
 {% endfor %}{% endfor %}
 
 {# MODALS: coins / gems / jewellery per PC-managed inventory (carried · stashed ·
-   each animal/vehicle).  Retainer treasure stays display-only — its stacks live
-   in retainer.spec and have no PC-scoped management route. #}
+   each animal/vehicle).  Retainer treasure stays display-only.
+   Also renders modals for coin stacks stowed inside containers. #}
 {% for group in sheet.inventory_groups %}{% if group.kind != "retainer" %}
-{% for c in group.coins %}{{ coin_modal(c, group, _char_url, sheet.inventory_groups) }}{% endfor %}
-{% for g in group.treasure_gems %}{{ gem_modal(g, group, _char_url, sheet.inventory_groups) }}{% endfor %}
-{% for j in group.treasure_jewellery %}{{ jewellery_modal(j, group, _char_url, sheet.inventory_groups) }}{% endfor %}
+{% for c in group.coins %}{{ coin_modal(c, group, _char_url) }}{% endfor %}
+{% for g in group.treasure_gems %}{{ gem_modal(g, group, _char_url) }}{% endfor %}
+{% for j in group.treasure_jewellery %}{{ jewellery_modal(j, group, _char_url) }}{% endfor %}
+{% for cont in group.containers %}
+{% for coin_row in cont.stowed_coins %}{{ coin_modal(coin_row, {"kind": "container", "id": cont.instance_id}, _char_url) }}{% endfor %}
+{% endfor %}
 {% endif %}{% endfor %}
 
-{# MODALS: per-ammo (properties + count adjust) #}
-{% for a in sheet.ammo %}
+{# MODALS: per-ammo (properties + count adjust + Move) — iterate per group so
+   we have the location context for the Move destination control. #}
+{% for group in sheet.inventory_groups %}
+{%- set gkind = group.kind -%}{%- set gid = group.id or "" -%}
+{% for a in group.ammo %}
 <div class="overlay modal" id="modal-ammo-{{ a.instance_id }}" role="dialog" aria-label="{{ a.name }}">
   <div class="ov-head"><h3>{{ a.name }}</h3><button class="x" data-close>×</button></div>
   <div class="ov-body">
     {% if a.detail %}{{ detail_card(a.detail) }}{% endif %}
     <div class="row-actions">
       <span class="muted small">Count {{ a.count }}</span>
-      <form method="post" action="{{ ammo_url_prefix }}/ammo/adjust" class="inline-form">
-        <input type="hidden" name="instance_id" value="{{ a.instance_id }}">
-        <input type="hidden" name="delta" value="1">
-        <button class="btn tool dark" type="submit">+</button>
-      </form>
-      <form method="post" action="{{ ammo_url_prefix }}/ammo/adjust" class="inline-form">
-        <input type="hidden" name="instance_id" value="{{ a.instance_id }}">
-        <input type="hidden" name="delta" value="-1">
-        <button class="btn tool dark" type="submit">−</button>
-      </form>
+      {{ act_stepper(ammo_url_prefix ~ "/ammo/adjust", {"instance_id": a.instance_id}) }}
+      {{ act_move(_char_url ~ "/inventory/move", {"category": "ammo", "id": a.instance_id}, move_targets, gkind, gid, count=a.count) }}
     </div>
   </div>
 </div>
+{% endfor %}
+{% for c in group.containers %}
+{% for a in c.stowed_ammo %}
+<div class="overlay modal" id="modal-ammo-{{ a.instance_id }}" role="dialog" aria-label="{{ a.name }}">
+  <div class="ov-head"><h3>{{ a.name }}</h3><button class="x" data-close>×</button></div>
+  <div class="ov-body">
+    {% if a.detail %}{{ detail_card(a.detail) }}{% endif %}
+    <div class="row-actions">
+      <span class="muted small">Count {{ a.count }}</span>
+      {{ act_stepper(ammo_url_prefix ~ "/ammo/adjust", {"instance_id": a.instance_id}) }}
+      {{ act_move(_char_url ~ "/inventory/move", {"category": "ammo", "id": a.instance_id}, move_targets, "container", c.instance_id, count=a.count) }}
+    </div>
+  </div>
+</div>
+{% endfor %}
+{% endfor %}
 {% endfor %}
 
 {# MODALS: spell book / scroll contents (cast + copy inline) #}

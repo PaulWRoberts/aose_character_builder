@@ -202,6 +202,7 @@ async def character_sheet(request: Request, character_id: str):
     sheet = build_sheet(spec, game_data)
     classes = [game_data.classes[e.class_id] for e in spec.classes
                if e.class_id in game_data.classes]
+    from aose.engine import storage as _storage
     return templates.TemplateResponse(
         request, "sheet.html", {
             "sheet": sheet,
@@ -231,7 +232,7 @@ async def character_sheet(request: Request, character_id: str):
             "show_gold_reroll": False,
             "coins": sheet.coins,
             "coins_url_prefix": f"/character/{character_id}",
-            "inv_move_groups": sheet.inventory_groups,
+            "move_targets": _storage.move_targets(spec, game_data),
             "inv_move_url": f"/character/{character_id}/inventory/move",
             "spell_source_add_options": spell_source_add_options(game_data),
             # Equipment drawer tabs: Documents + Treasure (gated on presence)

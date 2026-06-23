@@ -1,18 +1,18 @@
-{# Destination <select> for a Move form. Lists every top-level inventory group
-   (and, when allow_containers, each group's containers) except the current
-   location. A submit handler in inventory.js copies the chosen option's
-   data-kind/data-id into the form's hidden dest_kind/dest_id inputs. Shared by
-   the carrier/retainer group panels and the Carried/Stashed row actions. #}
-{% macro move_dest_control(groups, cur_kind, cur_id, allow_containers=True, allow_retainers=True) %}
+{# Destination <select> for a Move form.  ``targets`` is a flat list of
+   {kind, id, label} dicts from storage.move_targets.  ``ref`` is {category, id}.
+   Excludes the current (cur_kind, cur_id) location and, when moving a container,
+   all container targets.  inventory.js copies data-kind/data-id into the hidden
+   dest_kind/dest_id inputs on select-change so the form auto-submits without a
+   button (except for coin/gem/ammo which need a count first). #}
+{% macro move_dest_control(targets, ref, cur_kind, cur_id) %}
   <select class="move-dest" style="max-width:9rem">
     <option value="" disabled selected>Move to…</option>
-    {% for g in groups %}
-      {% if not (g.kind == cur_kind and (g.id or '') == (cur_id or '')) and (allow_retainers or g.kind != "retainer") %}
-      <option data-kind="{{ g.kind }}" data-id="{{ g.id or '' }}">{{ g.label }}</option>
+    {% for t in targets %}
+      {% set skip_same = t.kind == cur_kind and (t.id or '') == (cur_id or '') %}
+      {% set skip_container = ref.category == 'container' and t.kind == 'container' %}
+      {% if not skip_same and not skip_container %}
+      <option data-kind="{{ t.kind }}" data-id="{{ t.id or '' }}">{{ t.label }}</option>
       {% endif %}
-      {% if allow_containers %}{% for c in g.containers %}
-      <option data-kind="container" data-id="{{ c.instance_id }}">{{ g.label }} ▸ {{ c.name }}</option>
-      {% endfor %}{% endif %}
     {% endfor %}
   </select>
   <input type="hidden" class="dest-kind" name="dest_kind" value="">

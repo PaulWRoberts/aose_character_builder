@@ -313,6 +313,33 @@ def test_container_view_shows_stowed_coins_and_magic(tmp_path):
 
 # ── Task 10: magic/enchanted/ammo bucket by storage location ─────────────────
 
+# ── Task 14: shared macros — magic Move control + no bare buttons ─────────────
+
+def test_magic_modal_has_move_control(tmp_path):
+    from aose.characters import save_character
+    from aose.models import CharacterSpec, ClassEntry, MagicItemInstance
+    spec = CharacterSpec(
+        name="Wiz", abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
+        race_id="human", classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
+        alignment="neutral",
+        magic_items=[MagicItemInstance(instance_id="m1", catalog_id="ring_protection_plus_1")],
+    )
+    app = _make_app(tmp_path)
+    save_character("tc-mm", spec, tmp_path / "characters")
+    body = TestClient(app, follow_redirects=False).get("/character/tc-mm").text
+    assert "/inventory/move" in body
+    assert 'value="magic"' in body
+
+
+def test_no_bare_button_in_inventory_action_rows(tmp_path):
+    from aose.characters import save_character
+    save_character("tc-bare", _treasure_spec(), tmp_path / "characters")
+    app = _make_app(tmp_path)
+    body = TestClient(app, follow_redirects=False).get("/character/tc-bare").text
+    assert '<button type="submit">Unequip</button>' not in body
+    assert '<button type="submit">Equip</button>' not in body
+
+
 def test_magic_on_carrier_buckets_under_carrier():
     from pathlib import Path
     from aose.data.loader import GameData

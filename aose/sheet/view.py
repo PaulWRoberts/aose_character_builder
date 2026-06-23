@@ -1416,9 +1416,6 @@ def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevel
     # The existing inventory_view gives us equipped/loose split + carried/stashed containers.
     inv_view = inventory_view(spec.inventory, spec.stashed, spec.equipped,
                               spec.containers, data)
-    carried_containers = [c for c in inv_view.containers if c.state == "carried"]
-    stashed_containers = [c for c in inv_view.containers if c.state == "stashed"]
-
     groups: list[TopLevelGroup] = []
 
     # ── Carried ───────────────────────────────────────────────────────────────
@@ -1452,7 +1449,7 @@ def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevel
         coins=_coin_rows(carried_loc),
         treasure_gems=_gem_rows(carried_loc),
         treasure_jewellery=_jewellery_rows(carried_loc),
-        containers=carried_containers,
+        containers=_container_views_from(spec.containers, carried_loc),
         magic_items=pc_magic_unequipped,
         enchanted=pc_enchanted,
         spell_sources=pc_spell_sources,
@@ -1469,7 +1466,7 @@ def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevel
         coins=_coin_rows(stashed_loc),
         treasure_gems=_gem_rows(stashed_loc),
         treasure_jewellery=_jewellery_rows(stashed_loc),
-        containers=stashed_containers,
+        containers=_container_views_from(spec.containers, stashed_loc),
         magic_items=magic_items_view(
             [mi for mi in spec.magic_items if mi.location == stashed_loc], [], data),
         enchanted=enchanted_items_view(
