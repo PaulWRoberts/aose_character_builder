@@ -99,6 +99,80 @@ def test_toplevelgroup_has_caps_and_extra_collections():
     assert g.spell_sources == [] and g.ammo == []
 
 
+def test_carried_caps_and_label_is_character_name():
+    from pathlib import Path
+    from aose.data.loader import GameData
+    from aose.sheet.view import build_inventory_groups
+    data = GameData.load(Path("data"))
+    spec = CharacterSpec(
+        name="Aldric",
+        abilities={"STR": 10, "DEX": 10, "CON": 10, "INT": 10, "WIS": 10, "CHA": 10},
+        race_id="human",
+        classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[6])],
+        alignment="neutral",
+    )
+    groups = build_inventory_groups(spec, data)
+    carried = next(g for g in groups if g.kind == "carried")
+    stashed = next(g for g in groups if g.kind == "stashed")
+    assert carried.caps.has_equipped
+    assert carried.caps.can_wield
+    assert carried.caps.bucket_label == "Carried"
+    assert carried.label == "Aldric"          # PC pane titled by character name
+    assert not stashed.caps.can_wield
+    assert stashed.caps.bucket_label == "Stowed"
+
+
+def test_vehicle_group_stowed_animal_carried():
+    from pathlib import Path
+    from aose.data.loader import GameData
+    from aose.sheet.view import build_inventory_groups
+    from aose.models import AnimalInstance, VehicleInstance
+    data = GameData.load(Path("data"))
+    spec = CharacterSpec(
+        name="Traveler",
+        abilities={"STR": 10, "DEX": 10, "CON": 10, "INT": 10, "WIS": 10, "CHA": 10},
+        race_id="human",
+        classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[6])],
+        alignment="neutral",
+        animals=[AnimalInstance(instance_id="a1", catalog_id="mule")],
+        vehicles=[VehicleInstance(instance_id="v1", catalog_id="cart", hull_max=10)],
+    )
+    groups = build_inventory_groups(spec, data)
+    veh = next(g for g in groups if g.kind == "vehicle")
+    ani = next(g for g in groups if g.kind == "animal")
+    assert veh.caps.bucket_label == "Stowed" and not veh.caps.has_equipped
+    assert ani.caps.bucket_label == "Carried" and ani.caps.has_equipped
+
+
+def test_retainer_group_caps_and_containers():
+    from pathlib import Path
+    from aose.data.loader import GameData
+    from aose.sheet.view import build_inventory_groups
+    from aose.engine.shop import new_container_instance
+    data = GameData.load(Path("data"))
+    npc = CharacterSpec(
+        name="Henchman",
+        abilities={"STR": 10, "DEX": 10, "CON": 10, "INT": 10, "WIS": 10, "CHA": 10},
+        race_id="human",
+        classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[5])],
+        alignment="neutral",
+    )
+    npc.containers.append(new_container_instance("backpack", data))
+    spec = CharacterSpec(
+        name="Boss",
+        abilities={"STR": 10, "DEX": 10, "CON": 10, "INT": 10, "WIS": 10, "CHA": 10},
+        race_id="human",
+        classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
+        alignment="neutral",
+        retainers=[Retainer(id="r1", spec=npc, loyalty=7)],
+    )
+    groups = build_inventory_groups(spec, data)
+    ret = next(g for g in groups if g.kind == "retainer")
+    assert any(c.catalog_id == "backpack" for c in ret.containers)
+    assert ret.caps.can_wield
+    assert ret.caps.class_filter_equip is False
+
+
 def test_inventory_box_retainer_item_modal_exists(tmp_path):
     from aose.characters import save_character
     app = _make_app(tmp_path)

@@ -23,7 +23,7 @@ from aose.engine.languages import (
 )
 from aose.engine.leveling import ClassAdvancement, all_advancement
 from aose.engine.detail import DetailCard, item_card, spell_card
-from aose.engine.shop import CoinRow, ContainerView, TopLevelGroup, _build_row, inventory_view
+from aose.engine.shop import CoinRow, ContainerView, OwnerCaps, TopLevelGroup, _build_row, inventory_view
 from aose.sheet.companions_view import CompanionsBlock, companions_block
 from aose.engine.features import is_race_as_class, open_doors_category_bonus, selected_options
 from aose.engine.initiative import initiative_detail
@@ -1358,9 +1358,10 @@ def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevel
             for j in spec.jewellery if j.location == loc
         ]
 
-    def _carrier_container_views(loc: StorageLocation) -> list[ContainerView]:
+    def _container_views_from(source: list, loc: StorageLocation) -> list[ContainerView]:
+        """Build ContainerView list from ``source`` (spec.containers or retainer.spec.containers)."""
         views = []
-        for c in spec.containers:
+        for c in source:
             if c.location != loc:
                 continue
             catalog = data.items.get(c.catalog_id)
@@ -1389,6 +1390,9 @@ def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevel
             ))
         return views
 
+    def _carrier_container_views(loc: StorageLocation) -> list[ContainerView]:
+        return _container_views_from(spec.containers, loc)
+
     # The existing inventory_view gives us equipped/loose split + carried/stashed containers.
     inv_view = inventory_view(spec.inventory, spec.stashed, spec.equipped,
                               spec.containers, data)
@@ -1401,25 +1405,38 @@ def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevel
     carried_loc = StorageLocation(kind="carried")
     pc_attacks = attack_profiles(spec, data)
     pc_worn = _equipped(spec, data)
-    pc_magic = [mi for mi in _magic_items(spec, data) if mi.equipped]
+    all_magic = _magic_items(spec, data)
+    pc_magic_equipped = [mi for mi in all_magic if mi.equipped]
+    pc_magic_unequipped = [mi for mi in all_magic if not mi.equipped]
+    pc_enchanted = enchanted_items_view(spec.enchanted, data)
+    pc_spell_sources = spell_sources_view(spec, data)
+    pc_ammo, _ = ammo_view(spec, data)
     groups.append(TopLevelGroup(
-        kind="carried", label="Carried",
-        has_equipped=bool(pc_attacks or pc_worn or pc_magic),
+        kind="carried", label=spec.name,
+        caps=OwnerCaps(has_equipped=True, can_wield=True, can_stash=True,
+                       class_filter_equip=True, bucket_label="Carried"),
+        has_equipped=bool(pc_attacks or pc_worn or pc_magic_equipped),
         equipped=inv_view.equipped,
         equipped_attacks=pc_attacks,
         equipped_worn=pc_worn,
-        equipped_magic=pc_magic,
+        equipped_magic=pc_magic_equipped,
         loose=inv_view.carried,
         coins=_coin_rows(carried_loc),
         treasure_gems=_gem_rows(carried_loc),
         treasure_jewellery=_jewellery_rows(carried_loc),
         containers=carried_containers,
+        magic_items=pc_magic_unequipped,
+        enchanted=pc_enchanted,
+        spell_sources=pc_spell_sources,
+        ammo=pc_ammo,
     ))
 
     # ── Stashed ───────────────────────────────────────────────────────────────
     stashed_loc = StorageLocation(kind="stashed")
     groups.append(TopLevelGroup(
         kind="stashed", label="Stashed",
+        caps=OwnerCaps(has_equipped=False, can_wield=False, can_stash=False,
+                       bucket_label="Stowed"),
         loose=inv_view.stashed,
         coins=_coin_rows(stashed_loc),
         treasure_gems=_gem_rows(stashed_loc),
@@ -1443,6 +1460,8 @@ def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevel
         )
         groups.append(TopLevelGroup(
             kind="animal", id=animal.instance_id, label=label,
+            caps=OwnerCaps(has_equipped=True, can_wield=False, can_stash=False,
+                           bucket_label="Carried"),
             has_equipped=bool(barding_worn), equipped=barding,
             equipped_worn=barding_worn,
             loose=sorted([_build_row(i, n, data) for i, n in count.items()],
@@ -1461,6 +1480,8 @@ def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevel
         count = Counter(vehicle.contents)
         groups.append(TopLevelGroup(
             kind="vehicle", id=vehicle.instance_id, label=label,
+            caps=OwnerCaps(has_equipped=False, can_wield=False, can_stash=False,
+                           bucket_label="Stowed"),
             loose=sorted([_build_row(i, n, data) for i, n in count.items()],
                          key=lambda r: r.name),
             coins=_coin_rows(vehicle_loc),
@@ -1472,6 +1493,7 @@ def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevel
     # ── Retainers ─────────────────────────────────────────────────────────────
     for retainer in spec.retainers:
         ret_carried = StorageLocation(kind="carried")
+        ret_stashed = StorageLocation(kind="stashed")
         count = Counter(retainer.spec.inventory)
         ret_coins = [CoinRow(denom=s.denom, count=s.count)
                      for s in retainer.spec.coins
@@ -1486,14 +1508,22 @@ def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevel
             for slot, iid in retainer.spec.equipped.items()
             if slot != "main_hand"   # main-hand weapon shown as an attack row
         ]
+        ret_containers = (
+            _container_views_from(retainer.spec.containers, ret_carried) +
+            _container_views_from(retainer.spec.containers, ret_stashed)
+        )
         groups.append(TopLevelGroup(
             kind="retainer", id=retainer.id, label=retainer.spec.name,
+            caps=OwnerCaps(has_equipped=bool(ret_attacks or ret_worn),
+                           can_wield=True, can_stash=False,
+                           class_filter_equip=False, bucket_label="Carried"),
             has_equipped=bool(ret_attacks or ret_worn), equipped=ret_equipped,
             equipped_attacks=ret_attacks,
             equipped_worn=ret_worn,
             loose=sorted([_build_row(i, n, data) for i, n in count.items()],
                          key=lambda r: r.name),
             coins=ret_coins,
+            containers=ret_containers,
         ))
 
     return groups
