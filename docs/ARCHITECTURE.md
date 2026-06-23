@@ -478,22 +478,28 @@ Illusionist/Magic-user/Thief). New languages: `hephaestan`, `language_of_wolves`
 - **Treasure weight** — gems 1 cn, jewellery 10 cn (**Carried only** — stashed /
   on-carrier treasure adds zero to PC encumbrance). Carried treasure magic items:
   potions 10 / wands 10 / rods 20 / staves 40 / scrolls 1, derived by category +
-  id-prefix in `treasure_item_weight`.
+  id-prefix in `treasure_item_weight`. Magic items, enchanted gear, and ammo are also
+  **Carried-only** for encumbrance: only instances at `StorageLocation(kind="carried")`
+  or stowed inside a carried container count toward PC load.
 - **Gems & jewellery** — `GemStack` + `JewelleryPiece` each carry a
   `location: StorageLocation` (default Carried). `add_gem`/`add_jewellery` accept an
   optional `location` param. `valuables_weight_cn` counts only Carried gems/jewellery.
   `total_value` sums all locations (for the wealth readout). `total_wealth_gp` (in
   `valuables.py`) = `total_value_gp(spec)` + `total_value(spec)`, excluding retainers
-  (they own their own purse). Routes `/inventory/move-valuable` re-homes gem stacks
-  (merging same-value/label stacks at destination) or jewellery pieces.
+  (they own their own purse). Route `/inventory/move` re-homes gem stacks
+  (merging same-value/label stacks at destination) or jewellery pieces via `move_thing`.
 - **Top-level inventory groups** — `sheet.inventory_groups: list[TopLevelGroup]`
   (Carried, Stashed, one per animal, one per vehicle, one per retainer) with
   `loose`, `coins`, `treasure_gems`, `treasure_jewellery`, `containers`, `magic_items`,
   `enchanted`, `spell_sources`, `ammo` sub-lists, plus rich display lists
   `equipped_attacks` (AttackProfile), `equipped_worn` (EquippedRow), `equipped_magic`
-  (MagicItemView). Each group carries an `OwnerCaps` descriptor (`has_equipped`,
-  `can_wield`, `can_stash`, `class_filter_equip`, `bucket_label`) that drives the
-  three-section pane layout (Equipped · Coins · Carried/Stowed) without any
+  (MagicItemView). `magic_items`/`enchanted`/`ammo` are **location-bucketed**: each
+  group contains only the instances whose `StorageLocation` matches that group's owner.
+  Container views (`ContainerView`) additionally carry `stowed_magic`, `stowed_enchanted`,
+  `stowed_ammo`, `stowed_coins`, `stowed_gems`, `stowed_jewellery` sub-lists for pointer
+  types stored inside that container. Each group carries an `OwnerCaps` descriptor
+  (`has_equipped`, `can_wield`, `can_stash`, `class_filter_equip`, `bucket_label`) that
+  drives the three-section pane layout (Equipped · Coins · Carried/Stowed) without any
   per-owner template branches. `build_inventory_groups(spec, data)` in
   `aose/sheet/view.py` builds this. `sheet.total_wealth_gp: int` for the wealth
   readout. The inventory box is the single interaction hub: every owned-item action
@@ -503,33 +509,42 @@ Illusionist/Magic-user/Thief). New languages: `hephaestan`, `language_of_wolves`
   accordion (one `<details class="inv-pane">` per group, Carried open by default).
   Spells / Mental Powers / Innate Abilities in a full-width `.spells-fullwidth` grid
   below. Companions cards no longer hold storage UI — all carrier/retainer inventory
-  is visible in the accordion. Container modals use `/inventory/move-container`.
-  Retainer containers are handled via `_find_container_anywhere` (searches
-  `spec.containers` then all `retainer.spec.containers`). Per-item modals
-  (`item_modal` in `_inv_modals.html`) expose **Sell ▾ + Drop** for the person
-  buckets (carried/stashed) on top of the gated equip/move actions; carrier &
-  retainer loose rows keep Move + their gated equip only.
+  is visible in the accordion. All container/item/pointer-type moves go through the
+  single route `POST /inventory/move`. Retainer containers are handled via
+  `_find_container_anywhere` (searches `spec.containers` then all
+  `retainer.spec.containers`). Per-item modals (`item_modal` in `_inv_modals.html`)
+  expose **Sell ▾ + Drop** for the person buckets (carried/stashed) on top of the
+  gated equip/move actions; carrier & retainer loose rows keep Move + their gated
+  equip only.
 - **Coin / gem / jewellery modals** — coin stacks, gem stacks, and jewellery pieces
   in the box are **clickable → per-stack modals** (`coin_modal` / `gem_modal` /
   `jewellery_modal` in `_inv_modals.html`), rendered per non-retainer group in
-  `sheet.html`. Coin modal: Convert ▾ (`/coins/convert`), Move ▾
-  (`/inventory/move-coins`), Adjust / Drop-all (`/coins/add`, signed). Gem modal:
-  Sell one / Sell all (`/gems/sell`, `/gems/sell-all`), ±1 (`/gems/adjust`), Move ▾
-  (`/inventory/move-valuable`), Drop (`/gems/remove`). Jewellery modal: Mark
-  damaged/intact (`/jewellery/toggle-damaged`), Sell (`/jewellery/sell`), Move ▾,
-  Drop (`/jewellery/remove`). **Treasure Move destinations are restricted to
-  top-level carrier inventories** (`move_dest_control(..., allow_containers=False,
-  allow_retainers=False)`): the view has no render path for loose coin/gem/jewellery
-  stacks located inside a container or a retainer, so those destinations would orphan
-  them. Coin weight still appears only for Carried; the pane summary bar shows a
-  `count denom` inline tally. The wizard box passes `manage_treasure=False` to
-  `inv_pane` (no draft-scoped treasure routes), so its treasure rows stay
-  non-clickable. Retainer treasure stays display-only (lives in `retainer.spec`, no
-  PC-scoped route).
+  `sheet.html`. Coin modal: Convert ▾ (`/coins/convert`), Move ▾ (`/inventory/move`),
+  Adjust / Drop-all (`/coins/add`, signed). Gem modal: Sell one / Sell all
+  (`/gems/sell`, `/gems/sell-all`), ±1 (`/gems/adjust`), Move ▾ (`/inventory/move`),
+  Drop (`/gems/remove`). Jewellery modal: Mark damaged/intact
+  (`/jewellery/toggle-damaged`), Sell (`/jewellery/sell`), Move ▾, Drop
+  (`/jewellery/remove`). All Move controls use the unified `act_move` macro from
+  `_actions.html`; destination list comes from `move_targets(spec, data)` (a flat
+  `[{kind, id, label}]` covering all carriers + containers + stash). Magic item modals
+  also gain Move ▾ for unequipped/stowed items. Coin weight still appears only for
+  Carried; the pane summary bar shows a `count denom` inline tally. The wizard box
+  passes `manage_treasure=False` to `inv_pane` (no draft-scoped treasure routes), so
+  its treasure rows stay non-clickable. Retainer treasure stays display-only (lives in
+  `retainer.spec`, no PC-scoped route).
 - **Move-route robustness** — `_loc(kind, id)` in `routes.py` builds the
-  `StorageLocation` for every `/inventory/move-*` (and `/coins/add`,`/coins/convert`)
-  route, mapping a bad/empty kind to HTTP 400 (Pydantic `ValidationError` would
-  otherwise surface as 500).
+  `StorageLocation` for `POST /inventory/move` (and `/coins/add`, `/coins/convert`),
+  mapping a bad/empty kind to HTTP 400 (Pydantic `ValidationError` would otherwise
+  surface as 500). The single `move_thing(spec, category, …)` dispatcher in
+  `aose/engine/storage.py` handles all owned-thing categories (`item`, `container`,
+  `coin`, `gem`, `jewellery`, `magic`, `enchanted`, `ammo`).
+- **Shared action controls** — `aose/web/templates/_actions.html` provides three
+  macros imported `with context` by every modal template: `act_button` (one-shot form
+  button with `.btn` size/variant classes), `act_move` (move-form using the flat
+  `move_targets` list from context), `act_stepper` (±1 stepper, two submit buttons on
+  one form). Button sizes follow a CSS scale: `.btn` (modal default 10px), `.btn-inline`
+  (row/inline-form 9px), `.btn-tool` (toolbar 9px, light-on-dark), `.btn-cta` (wizard
+  CTA 11px); `.btn.tool` is aliased to `.btn-tool` for call-site compatibility.
 
 ---
 
