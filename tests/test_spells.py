@@ -332,6 +332,7 @@ def test_spell_sources_view_cast_and_copy_flags():
     data = GameData.load(DATA_DIR)
     scroll = ss.new_spell_source("scroll", "arcane",
                                  ["magic_user_magic_missile", "magic_user_sleep"], data)
+    scroll = scroll.model_copy(update={"unlocked": True})
     spec = _spec("magic_user", spellbook=["magic_user_magic_missile"], advanced=True)
     spec.spell_sources = [scroll]
     view = spell_sources_view(spec, data)
@@ -353,6 +354,7 @@ def test_spell_sources_view_copy_hidden_under_standard_rule():
     from aose.sheet.view import spell_sources_view
     data = GameData.load(DATA_DIR)
     scroll = ss.new_spell_source("scroll", "arcane", ["magic_user_sleep"], data)
+    scroll = scroll.model_copy(update={"unlocked": True})
     spec = _spec("magic_user", advanced=False)
     spec.spell_sources = [scroll]
     sv = spell_sources_view(spec, data)[0]
