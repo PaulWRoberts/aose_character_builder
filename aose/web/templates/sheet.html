@@ -5,38 +5,7 @@
 {% from "_detail_card.html" import detail_card with context %}
 {% from "_inv_pane.html" import inv_pane with context %}
 {% from "_move_dest.html" import move_dest_control with context %}
-{% macro item_modal(row, state, id_prefix, url_prefix, load_options=none, attack=none, src_id="") %}
-<div class="overlay modal" id="modal-item-{{ id_prefix }}-{{ row.id }}" role="dialog" aria-label="{{ row.name }}">
-  <div class="ov-head"><h3>{{ row.name }}</h3><button class="x" data-close>×</button></div>
-  <div class="ov-body">
-    {% if row.detail %}{{ detail_card(row.detail) }}{% elif row.description %}<div class="prose">{{ row.description | markdown | safe }}</div>{% endif %}
-    {% if load_options %}
-    <div class="ov-section">
-      <h4>Ammunition</h4>
-      <p class="muted small" style="margin:0 0 6px">
-        {% if attack and attack.unloaded %}<span class="tag stamp">Unloaded</span>
-        {% elif attack and attack.loaded_ammo_name %}Loaded: <strong>{{ attack.loaded_ammo_name }}</strong>
-        {% else %}<span class="tag stamp">Unloaded</span>{% endif %}
-      </p>
-      <form method="post" action="{{ ammo_url_prefix }}/ammo/load" class="inline-form">
-        <input type="hidden" name="weapon_key" value="{{ row.id }}">
-        <select name="instance_id">
-          {% for opt in load_options %}
-          <option value="{{ opt.instance_id }}">{{ opt.name }} ({{ opt.count }})</option>
-          {% endfor %}
-        </select>
-        <button class="btn" type="submit">Load</button>
-      </form>
-      <form method="post" action="{{ ammo_url_prefix }}/ammo/unload" class="inline-form">
-        <input type="hidden" name="weapon_key" value="{{ row.id }}">
-        <button class="btn link" type="submit">Unload</button>
-      </form>
-    </div>
-    {% endif %}
-    <div class="row-actions">{{ inv_row_actions(row, url_prefix, state, show_remove=False, src_id=src_id) }}</div>
-  </div>
-</div>
-{% endmacro %}
+{% from "_inv_modals.html" import item_modal, container_modal with context %}
 
 <div class="sheet-actions no-print">
     <a href="/character/{{ character_id }}/print" target="_blank" class="button primary">Print / Save PDF</a>
@@ -1044,25 +1013,10 @@
 </div>
 {% endif %}{% endfor %}
 
-{# MODALS: per-container (capacity badge + catalog card + Move to any location) #}
+{# MODALS: per-container (capacity badge + catalog card + Move + Sell + Drop) #}
+{%- set _char_url = "/character/" ~ character_id -%}
 {% for group in sheet.inventory_groups %}{% for c in group.containers %}
-<div class="overlay modal" id="modal-container-{{ c.instance_id }}" role="dialog" aria-label="{{ c.name }}">
-  <div class="ov-head"><h3>{{ c.name }}</h3><button class="x" data-close>×</button></div>
-  <div class="ov-body">
-    <p style="margin:0 0 8px">
-      <span class="capacity-badge{% if c.capacity_cn and c.used_cn >= c.capacity_cn %} capacity-full{% endif %}">
-        {{ c.used_cn }} / {{ c.capacity_cn if c.capacity_cn else "∞" }} cn
-      </span>
-    </p>
-    {% if c.detail %}{{ detail_card(c.detail) }}{% endif %}
-    <div class="row-actions">
-      <form method="post" action="/character/{{ character_id }}/inventory/move-container" class="inline-form move-form">
-        <input type="hidden" name="container_id" value="{{ c.instance_id }}">
-        {{ move_dest_control(sheet.inventory_groups, group.kind, group.id or "", allow_containers=False) }}
-      </form>
-    </div>
-  </div>
-</div>
+{{ container_modal(c, group, _char_url, sheet.inventory_groups) }}
 {% endfor %}{% endfor %}
 
 {# MODALS: per-ammo (properties + count adjust) #}
