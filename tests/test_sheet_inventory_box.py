@@ -340,6 +340,24 @@ def test_no_bare_button_in_inventory_action_rows(tmp_path):
     assert '<button type="submit">Equip</button>' not in body
 
 
+def test_wielded_weapon_not_in_equipped_worn():
+    from pathlib import Path
+    from aose.data.loader import GameData
+    from aose.sheet.view import build_inventory_groups
+    data = GameData.load(Path("data"))
+    spec = CharacterSpec(
+        name="W", abilities={"STR": 12, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
+        race_id="human", classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
+        alignment="neutral", inventory=["sword"], equipped={"main_hand": "sword"},
+    )
+    groups = build_inventory_groups(spec, data)
+    pc = next(g for g in groups if g.kind == "carried")
+    worn_slots = {e.slot for e in pc.equipped_worn}
+    assert "main_hand" not in worn_slots and "off_hand" not in worn_slots
+    # the weapon still appears as an attack profile
+    assert any(a.name.lower().startswith("sword") for a in pc.equipped_attacks)
+
+
 def test_magic_on_carrier_buckets_under_carrier():
     from pathlib import Path
     from aose.data.loader import GameData

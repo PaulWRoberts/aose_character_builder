@@ -715,9 +715,16 @@ def _class_features(spec: CharacterSpec, data: GameData) -> list[SheetFeature]:
     return out
 
 
+_WEAPON_SLOTS = {"main_hand", "off_hand"}
+
+
 def _equipped(spec: CharacterSpec, data: GameData) -> list[EquippedRow]:
+    """Worn items (armour / shield / barding) only. Weapon slots render as
+    attack profiles, not as worn rows — including them double-renders the weapon."""
     rows: list[EquippedRow] = []
     for slot, item_id in spec.equipped.items():
+        if slot in _WEAPON_SLOTS:
+            continue
         name = data.items[item_id].name if item_id in data.items else item_id
         rows.append(EquippedRow(slot=slot, item_name=name, item_id=item_id))
     return rows
