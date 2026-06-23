@@ -1737,6 +1737,18 @@ def _equipment_context(draft: dict[str, Any], game_data) -> dict:
             load_options[slot_id] = opts
 
     draft_id = draft.get("_draft_id", "")
+
+    # Build inventory_groups for the box (carried + stashed only; no carriers/retainers).
+    from aose.sheet.view import build_inventory_groups as _big
+    try:
+        _spec = _draft_to_spec(draft, game_data)
+        inventory_groups = [
+            g for g in _big(_spec, game_data)
+            if g.kind in ("carried", "stashed")
+        ]
+    except Exception:
+        inventory_groups = []
+
     return {
         "gold": draft.get("gold", 0),
         "gold_locked": draft.get("gold_locked", False),
@@ -1759,6 +1771,7 @@ def _equipment_context(draft: dict[str, Any], game_data) -> dict:
         "ammo_load_options": load_options,
         "inv_move_groups": _wizard_move_groups(containers, game_data),
         "inv_move_url": f"/wizard/{draft_id}/equipment/move-item",
+        "inventory_groups": inventory_groups,
     }
 
 
@@ -2056,6 +2069,27 @@ async def equipment_remove_container(request: Request, draft_id: str,
         raise HTTPException(400, str(e))
     draft["containers"] = [c.model_dump() for c in new_containers]
     draft["gold"] = new_gold
+    save_draft(draft_id, draft, _drafts_dir(request))
+    return _redirect(f"/wizard/{draft_id}/equipment")
+
+
+@router.post("/{draft_id}/inventory/move-container")
+async def wiz_move_container(request: Request, draft_id: str):
+    """Shared container-move URL used by the container_modal macro."""
+    from aose.engine import storage as _storage
+    from aose.models.storage import StorageLocation
+    draft = _load(request, draft_id)
+    form = await request.form()
+    container_id = form.get("container_id", "")
+    dest_kind = form.get("dest_kind", "carried")
+    dest_id = form.get("dest_id") or None
+    spec = _draft_to_spec(draft, request.app.state.game_data)
+    try:
+        dest = StorageLocation(kind=dest_kind, id=dest_id)
+        _storage.move_container(spec, container_id, dest)
+    except (ValueError, _storage.StorageError) as e:
+        raise HTTPException(400, str(e))
+    draft["containers"] = [c.model_dump() for c in spec.containers]
     save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/equipment")
 
