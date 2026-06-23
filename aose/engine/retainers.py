@@ -86,7 +86,7 @@ def generate_retainer(*, name: str, class_ids: list[str], level: int,
 
     # 5. quick-equipment kit
     kit = quick_equipment.roll_kit(class_ids[0], data, rng=rng)
-    quick_equipment.apply_kit(spec, kit)
+    quick_equipment.apply_kit(spec, kit, data)
 
     # 6. loyalty
     loyalty = initial_loyalty(hiring_spec, race_id, data)

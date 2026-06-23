@@ -79,11 +79,21 @@ class CoinRow(BaseModel):
     count: int
 
 
+class OwnerCaps(BaseModel):
+    """Per-inventory capabilities; templates gate on these (no per-owner branches)."""
+    has_equipped: bool = False    # show Equipped subsection + label is "Carried"
+    can_wield: bool = False       # inline/modal Equip on loose rows
+    can_stash: bool = False       # offer Stash/Unstash
+    class_filter_equip: bool = True  # PC filters by class; retainers do not
+    bucket_label: str = "Carried"    # "Carried" or "Stowed"
+
+
 class TopLevelGroup(BaseModel):
     """One inventory pane — Carried, Stashed, or a carrier/retainer."""
     kind: str                             # carried | stashed | animal | vehicle | retainer
     id: str | None = None                 # carrier/retainer instance_id; None for person buckets
     label: str                            # display name
+    caps: OwnerCaps = Field(default_factory=OwnerCaps)
     has_equipped: bool = False
     equipped: list[InventoryRow] = Field(default_factory=list)
     # Rich equipped display for the live sheet pane. PC + retainers fill
@@ -97,6 +107,10 @@ class TopLevelGroup(BaseModel):
     treasure_gems: list = Field(default_factory=list)       # GemRow — list to avoid circular import
     treasure_jewellery: list = Field(default_factory=list)  # JewelleryRow
     containers: list[ContainerView] = Field(default_factory=list)
+    magic_items: list = Field(default_factory=list)         # MagicItemView (unequipped)
+    enchanted: list = Field(default_factory=list)           # MagicItemView (enchanted)
+    spell_sources: list = Field(default_factory=list)       # SpellSourceView
+    ammo: list = Field(default_factory=list)                # AmmoView
 
 
 class InventoryView(BaseModel):
@@ -341,24 +355,25 @@ class UnknownContainer(ValueError):
 
 
 def new_container_instance(catalog_id: str, data: GameData,
-                           state: str = "carried") -> ContainerInstance:
+                           state: str = "carried",
+                           location: "StorageLocation | None" = None) -> ContainerInstance:
     """Create a fresh ContainerInstance for the given catalog item.
 
-    Validates that ``catalog_id`` is a Container in ``data.items``.  Returns a
-    ContainerInstance with a uuid4-hex ``instance_id``.  Raises ``UnknownItem``
-    if the id isn't in ``data.items`` and ``ValueError`` if the item exists
-    but isn't a Container.
+    Validates that ``catalog_id`` is a Container. ``location`` (preferred) places
+    it at any non-container location; the legacy ``state`` kwarg still works for
+    person buckets.
     """
     item = data.items.get(catalog_id)
     if item is None:
         raise UnknownItem(f"No item with id {catalog_id!r}")
     if not isinstance(item, Container):
         raise ValueError(f"{catalog_id!r} is not a container")
-    from aose.models.storage import StorageLocation
+    if location is None:
+        location = StorageLocation(kind=state)  # type: ignore[arg-type]
     return ContainerInstance(
         instance_id=uuid.uuid4().hex,
         catalog_id=catalog_id,
-        location=StorageLocation(kind=state),  # type: ignore[arg-type]
+        location=location,
         contents=[],
     )
 
@@ -775,9 +790,9 @@ def sell_item(spec, item_id: str, mode: str, data: GameData) -> None:
 def sell_container(spec, instance_id: str, mode: str, data: GameData) -> None:
     """Remove a container instance; credit carried gp per mode."""
     from aose.engine import storage as _storage
-    new_containers, credit = remove_container(
-        spec.containers, 0, instance_id, mode, data)
-    spec.containers[:] = new_containers
+    src_coll, _ = _storage._find_container_anywhere(spec, instance_id)
+    new_containers, credit = remove_container(src_coll, 0, instance_id, mode, data)
+    src_coll[:] = new_containers
     if credit:
         _storage._add_coins(spec, "gp", credit, StorageLocation(kind="carried"))
 

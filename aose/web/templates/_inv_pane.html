@@ -1,9 +1,9 @@
-{# One top-level inventory rendered as a collapsible <details> pane. Triggers
-   only — per-item / per-container modals are rendered in the overlay block of
-   sheet.html. `prefix` is the modal id-prefix for this group's loose rows
-   (e.g. "carried", "animal-<id>"). `src_id` is the group's instance id (empty
-   for person buckets). `open` opens the pane by default. #}
+{# One top-level inventory rendered as a collapsible <details> pane.
+   Three subsections driven by caps: Equipped · Coins · <bucket_label>.
+   `prefix` is the modal id-prefix for loose rows. `src_id` is the group's
+   instance id (empty for person buckets). `open` opens the pane by default. #}
 {% macro inv_pane(group, prefix, src_id, open) %}
+{%- set caps = group.caps -%}
 {%- set n_items = group.loose|length + group.equipped_attacks|length
                   + group.equipped_worn|length + group.equipped_magic|length
                   + group.containers|length -%}
@@ -23,7 +23,8 @@
   </summary>
   <div class="inv-pane-body">
 
-    {% if group.equipped_attacks or group.equipped_worn or group.equipped_magic %}
+    {# ── Section 1: Equipped (weapons + worn + magic) ───────────────────── #}
+    {% if caps.has_equipped and (group.equipped_attacks or group.equipped_worn or group.equipped_magic) %}
     <div class="subhead">Equipped</div>
     <ul class="inv-list">
       {% for atk in group.equipped_attacks %}
@@ -51,62 +52,7 @@
     </ul>
     {% endif %}
 
-    {% if group.loose %}
-    <div class="subhead">Items</div>
-    <ul class="inv-list">
-      {% for row in group.loose %}
-      <li class="clickable" data-modal="modal-item-{{ prefix }}-{{ row.id }}">
-        <span>{{ row.name }}{% if row.count > 1 %} ×{{ row.count }}{% endif %}</span>
-        <span class="q">{% if group.kind == "stashed" %}—{% elif row.weight_cn is defined %}{{ row.weight_cn }} cn{% endif %}</span>
-      </li>
-      {% endfor %}
-    </ul>
-    {% endif %}
-
-    {% if group.kind == "carried" and sheet.ammo %}
-    <div class="subhead">Ammunition</div>
-    <ul class="inv-list">
-      {% for a in sheet.ammo %}
-      <li class="clickable" data-modal="modal-ammo-{{ a.instance_id }}">
-        <span>{{ a.name }}{% if a.magic %}<span class="tag stamp">magic</span>{% endif %}</span>
-        <span class="q">× {{ a.count }}</span>
-      </li>
-      {% endfor %}
-    </ul>
-    {% endif %}
-
-    {% if group.kind == "carried" and sheet.spell_sources %}
-    <div class="subhead">Spell Sources</div>
-    <ul class="inv-list">
-      {% for src in sheet.spell_sources %}
-      <li class="clickable" data-modal="modal-source-{{ src.instance_id }}">
-        <span>{{ src.name }}<span class="tag">{{ src.kind }}</span></span>
-        <span class="q">{% if src.kind == 'scroll' %}1{% endif %} cn</span>
-      </li>
-      {% endfor %}
-    </ul>
-    {% endif %}
-
-    {% for c in group.containers %}
-    <details class="inv-container">
-      <summary>
-        <strong>{{ c.name }}</strong>
-        <span class="capacity-badge{% if c.capacity_cn and c.used_cn >= c.capacity_cn %} capacity-full{% endif %}">{{ c.used_cn }} / {{ c.capacity_cn if c.capacity_cn else "∞" }} cn</span>
-        <span class="inv-container-manage clickable" data-modal="modal-container-{{ c.instance_id }}" title="Manage container">⚙</span>
-      </summary>
-      <ul class="inv-list">
-        {% for row in c.contents %}
-        <li class="clickable" data-modal="modal-item-container-{{ c.instance_id }}-{{ row.id }}">
-          <span><span class="indent">↳</span> {{ row.name }}{% if row.count > 1 %} ×{{ row.count }}{% endif %}</span>
-          <span class="q">{% if row.weight_cn is defined %}{{ row.weight_cn }} cn{% endif %}</span>
-        </li>
-        {% else %}
-        <li class="muted small">empty</li>
-        {% endfor %}
-      </ul>
-    </details>
-    {% endfor %}
-
+    {# ── Section 2: Coins ───────────────────────────────────────────────── #}
     {% if group.coins %}
     <div class="subhead">Coins</div>
     <ul class="inv-list">
@@ -116,15 +62,79 @@
     </ul>
     {% endif %}
 
-    {% if group.treasure_gems or group.treasure_jewellery %}
-    <div class="subhead">Treasure</div>
+    {# ── Section 3: <bucket_label> (Carried or Stowed) — catch-all ─────── #}
+    {%- set has_bucket = group.loose or group.containers or group.ammo or group.spell_sources
+                         or group.magic_items or group.enchanted
+                         or group.treasure_gems or group.treasure_jewellery -%}
+    {% if has_bucket %}
+    <div class="subhead">{{ caps.bucket_label }}</div>
     <ul class="inv-list">
+
+      {# Loose items #}
+      {% for row in group.loose %}
+      <li class="clickable" data-modal="modal-item-{{ prefix }}-{{ row.id }}">
+        <span>{{ row.name }}{% if row.count > 1 %} ×{{ row.count }}{% endif %}</span>
+        <span class="q">{% if caps.bucket_label == "Stowed" %}—{% elif row.weight_cn is defined %}{{ row.weight_cn }} cn{% endif %}</span>
+      </li>
+      {% endfor %}
+
+      {# Container rows — inline summary; gear icon opens container_modal #}
+      {% for c in group.containers %}
+      <li>
+        <span class="clickable" data-modal="modal-container-{{ c.instance_id }}">
+          <strong>{{ c.name }}</strong>
+          <span class="capacity-badge{% if c.capacity_cn and c.used_cn >= c.capacity_cn %} capacity-full{% endif %} muted small">{{ c.used_cn }}/{{ c.capacity_cn if c.capacity_cn else "∞" }} cn</span>
+        </span>
+        <span class="q inv-container-manage clickable" data-modal="modal-container-{{ c.instance_id }}" title="Manage container">⚙</span>
+      </li>
+      {% for row in c.contents %}
+      <li class="clickable" data-modal="modal-item-container-{{ c.instance_id }}-{{ row.id }}">
+        <span><span class="indent">↳</span> {{ row.name }}{% if row.count > 1 %} ×{{ row.count }}{% endif %}</span>
+        <span class="q">{% if row.weight_cn is defined %}{{ row.weight_cn }} cn{% endif %}</span>
+      </li>
+      {% endfor %}
+      {% endfor %}
+
+      {# Unequipped magic items #}
+      {% for mi in group.magic_items %}
+      <li class="clickable" data-modal="modal-magic-{{ mi.instance_id }}">
+        <span>{{ mi.name }} <span class="tag stamp">magic</span></span>
+        <span class="st">{% for chip in mi.modifier_summary %}{{ chip }}{% if not loop.last %}, {% endif %}{% endfor %}</span>
+      </li>
+      {% endfor %}
+
+      {# Enchanted items (unequipped) #}
+      {% for mi in group.enchanted %}
+      <li class="clickable" data-modal="modal-magic-{{ mi.instance_id }}">
+        <span>{{ mi.name }} <span class="tag stamp">enchanted</span></span>
+        <span class="st">{% for chip in mi.modifier_summary %}{{ chip }}{% if not loop.last %}, {% endif %}{% endfor %}</span>
+      </li>
+      {% endfor %}
+
+      {# Spell sources (books / scrolls) #}
+      {% for src in group.spell_sources %}
+      <li class="clickable" data-modal="modal-source-{{ src.instance_id }}">
+        <span>{{ src.name }}<span class="tag">{{ src.kind }}</span></span>
+        <span class="q">{% if src.kind == 'scroll' %}1{% endif %} cn</span>
+      </li>
+      {% endfor %}
+
+      {# Ammunition #}
+      {% for a in group.ammo %}
+      <li class="clickable" data-modal="modal-ammo-{{ a.instance_id }}">
+        <span>{{ a.name }}{% if a.magic %}<span class="tag stamp">magic</span>{% endif %}</span>
+        <span class="q">× {{ a.count }}</span>
+      </li>
+      {% endfor %}
+
+      {# Treasure — gems + jewellery #}
       {% for g in group.treasure_gems %}
       <li><span>{% if g.label %}{{ g.label }}{% else %}{{ g.value }} gp gem{% endif %} × {{ g.count }}<span class="tag faint">gem · {{ g.stack_value }} gp</span></span><span class="q">{{ g.count }} cn</span></li>
       {% endfor %}
       {% for j in group.treasure_jewellery %}
       <li><span>{% if j.label %}{{ j.label }}{% else %}jewellery{% endif %}<span class="tag faint">jewel · {{ j.effective_value }} gp</span></span><span class="q">10 cn</span></li>
       {% endfor %}
+
     </ul>
     {% endif %}
 

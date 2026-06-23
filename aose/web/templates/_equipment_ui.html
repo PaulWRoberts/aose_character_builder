@@ -1,537 +1,128 @@
 {% from "_inv_row_actions.html" import inv_row_actions with context %}
 {% from "_detail_card.html" import detail_card with context %}
 {% from "_move_dest.html" import move_dest_control with context %}
-{# Shared equipment UI partial — used by the wizard's equipment step and the
-   live character sheet's equipment section (drawer).  Caller must supply:
+{# Acquisition-only drawer — Shop · Enchant · Scribe · Treasure.
+   Caller must supply:
      - target_url_prefix   e.g. "/wizard/{id}/equipment" or "/character/{id}/equipment"
      - gold                int
-     - gold_locked         bool   (true once a purchase locks the gold; always true in the wizard)
-     - inventory_view      InventoryView  (three sections: equipped / carried / stashed + containers)
      - shop                list[ShopCategory]
-     - show_gold_grant     bool   (sheet only — for the +/- gold form)
-     - gold_grant_url      str    (sheet only — POST target for the grant form)
-     - magic_items_view    list[MagicItemView]  (instances + inventory-magic rows)
-     - coins               dict[str,int]  (sheet only — pp/gp/ep/sp/cp counts)
-     - coins_url_prefix    str    (sheet only — POST target prefix for coin routes)
-     - spell_sources       list[SpellSourceView]  (sheet only — if defined, shows Documents tab)
-     - valuables           ValuablesView  (sheet only — if defined, shows Treasure tab)
-     - spell_source_add_options  SpellSourceAddOptions (sheet only, for Documents tab)
-
-   Tab visibility logic:
-     - Carried: always
-     - Magic: only when magic_acquisition is True
-     - Documents: only when spell_sources is defined
-     - Treasure: only when valuables is defined
-     - Shop: always
-   The wizard passes only the always-visible contexts, so it gets only Carried + Shop.
+     - magic_acquisition   bool
+   Sheet-only (optional, all keyed on `coins_url_prefix is defined`):
+     - coins_url_prefix    str   (POST target prefix for coin/source/possessions routes)
+     - enchant_choices     list  (Enchant tab add form)
+     - spell_sources       ...   (Scribe tab gating)
+     - spell_source_add_options  SpellSourceAddOptions
+     - valuables           ValuablesView  (Treasure tab)
 #}
 
 <div class="equip-ui">
 
 {# ── Tab bar ── #}
 <div class="tabs" id="equip-tabs">
-  <button class="tab on" data-tab="inv">Carried</button>
-  {% if magic_acquisition %}<button class="tab" data-tab="magic">Magic</button>{% endif %}
-  {% if spell_sources is defined %}<button class="tab" data-tab="docs">Documents</button>{% endif %}
+  <button class="tab on" data-tab="shop">Shop</button>
+  {% if magic_acquisition %}<button class="tab" data-tab="enchant">Enchant</button>{% endif %}
+  {% if spell_sources is defined %}<button class="tab" data-tab="scribe">Scribe</button>{% endif %}
   {% if valuables is defined %}<button class="tab" data-tab="treasure">Treasure</button>{% endif %}
-  <button class="tab" data-tab="shop">Shop</button>
 </div>
 
-{# ══════════════ PANE: Carried ══════════════ #}
-<div data-pane="inv">
 
-{% macro inv_table(rows, target_url_prefix, state, label, weight_note) %}
-{% if rows %}
-<div class="ov-section"><h4>{{ label }} {% if weight_note %}<span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--faint);font-size:11px">{{ weight_note }}</span>{% endif %}</h4>
-<table class="dtable">
+{# ══════════════ PANE: Shop ══════════════ #}
+<div data-pane="shop">
+
+<input type="text" id="shop-search" class="search"
+       placeholder="Search items by name…"
+       aria-label="Search items">
+
+{% for category in shop %}
+{% set is_magic_cat = category.items | selectattr("magic") | list | length == category.items | length %}
+{% if is_magic_cat %}
+<details data-shop-category="{{ category.id }}">
+<summary class="shop-cat" style="cursor:pointer;list-style:none;" data-shop-category="{{ category.id }}">{{ category.name }}</summary>
+{% else %}
+<div class="shop-cat" data-shop-category="{{ category.id }}">{{ category.name }}</div>
+{% endif %}
+<table class="dtable" data-shop-category="{{ category.id }}">
     <thead>
-        <tr>
-            <th>Item</th>
-            <th class="n">Qty</th>
-            <th class="n">Weight</th>
-            <th></th>
-        </tr>
+        <tr><th>Item</th><th class="n">Cost</th><th class="n">Wt</th><th></th></tr>
     </thead>
     <tbody>
-    {% for row in rows %}
-        {% set uid = "inv-" ~ state ~ "-" ~ row.id %}
-        <tr class="inv-row" data-item-id="{{ row.id }}"
+    {% for item in category.items %}
+        {% set uid = "shop-" ~ category.id ~ "-" ~ item.id %}
+        <tr class="shop-row {% if not item.magic and item.cost_gp > gold %}out{% endif %}"
+            data-shop-name="{{ item.name | lower }}"
             data-detail-toggle="{{ uid }}" aria-expanded="false">
-            <td>{{ row.name }}</td>
-            <td class="n">{{ row.count }}</td>
-            <td class="n">{{ (row.weight_cn * row.count) }}&nbsp;cn</td>
-            <td class="n">{{ inv_row_actions(row, target_url_prefix, state) }}</td>
+            <td>{{ item.name }}{% if item.bundle_count > 1 %} <span class="tag faint">buys {{ item.bundle_count }}</span>{% endif %}</td>
+            <td class="n">{% if item.magic %}—{% else %}{{ item.cost_gp | int }} gp{% endif %}</td>
+            <td class="n">{{ item.weight_cn }}</td>
+            <td class="n">
+                {% if not item.magic %}
+                <form method="post" action="{{ target_url_prefix }}/buy" class="inline-form">
+                    <input type="hidden" name="item_id" value="{{ item.id }}">
+                    <button class="btn tool dark" type="submit"
+                            {% if item.cost_gp > gold %}disabled{% endif %}>Buy</button>
+                </form>
+                {% endif %}
+                <form method="post" action="{{ target_url_prefix }}/add" class="inline-form">
+                    <input type="hidden" name="item_id" value="{{ item.id }}">
+                    <button class="btn link" type="submit"
+                            title="Add to inventory without spending gold">add</button>
+                </form>
+            </td>
         </tr>
-        {% if row.detail %}
+        {% if item.detail %}
         <tr class="row-detail collapsed" data-detail-for="{{ uid }}">
-            <td colspan="4">{{ detail_card(row.detail) }}</td>
+            <td colspan="4">{{ detail_card(item.detail) }}</td>
         </tr>
         {% endif %}
     {% endfor %}
     </tbody>
-</table></div>
-{% endif %}
-{% endmacro %}
-
-{% macro container_table(state, label) %}
-{% set bags = inventory_view.containers | selectattr("state", "equalto", state) | list %}
-{% if bags %}
-<div class="ov-section"><h4>{{ label }} Containers</h4>
-<table class="dtable containers-table">
-    <thead>
-        <tr>
-            <th>Container</th>
-            <th class="n">Capacity</th>
-            <th class="n">Weight</th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-    {% for c in bags %}
-        <tr class="container-row"
-            data-instance-id="{{ c.instance_id }}"
-            data-state="{{ c.state }}">
-            <td>
-                <button type="button" class="container-toggle" aria-expanded="true"
-                        aria-controls="cnt-{{ c.instance_id }}">&#9662;</button>
-                <strong>{{ c.name }}</strong>
-            </td>
-            <td class="n">
-                <span class="capacity-badge{% if c.capacity_cn and c.used_cn >= c.capacity_cn %} capacity-full{% endif %}">
-                    {{ c.used_cn }} / {{ c.capacity_cn if c.capacity_cn else "&#8734;" }} cn
-                </span>
-            </td>
-            <td class="n">{{ c.effective_weight_cn }} cn</td>
-            <td class="n">
-                {% if c.state == "carried" %}
-                <form method="post" action="{{ target_url_prefix }}/stash-container" class="inline-form">
-                    <input type="hidden" name="instance_id" value="{{ c.instance_id }}">
-                    <button type="submit" title="Move container off-person">Stash</button>
-                </form>
-                {% else %}
-                <form method="post" action="{{ target_url_prefix }}/unstash-container" class="inline-form">
-                    <input type="hidden" name="instance_id" value="{{ c.instance_id }}">
-                    <button type="submit">Unstash</button>
-                </form>
-                {% endif %}
-                <form method="post" action="{{ target_url_prefix }}/remove-container" class="remove-form">
-                    <input type="hidden" name="instance_id" value="{{ c.instance_id }}">
-                    <button type="submit" name="mode" value="drop"
-                            title="Discard the container and its contents">Drop</button>
-                    <button type="submit" name="mode" value="sell"
-                            {% if c.contents %}disabled title="Empty the container first"{% endif %}>Sell</button>
-                    <button type="submit" name="mode" value="refund"
-                            {% if c.contents %}disabled title="Empty the container first"{% endif %}>Refund</button>
-                </form>
-            </td>
-        </tr>
-        {% for row in c.contents %}
-        <tr class="container-child" id="cnt-{{ c.instance_id }}"
-            data-instance-id="{{ c.instance_id }}"
-            data-item-id="{{ row.id }}">
-            <td><span class="indent">&#8627;</span> {{ row.name }}</td>
-            <td class="n">{{ row.count }}</td>
-            <td class="n">{{ row.weight_cn * row.count }} cn</td>
-            <td class="n">
-                <form method="post" action="{{ target_url_prefix }}/take-out" class="inline-form">
-                    <input type="hidden" name="instance_id" value="{{ c.instance_id }}">
-                    <input type="hidden" name="item_id" value="{{ row.id }}">
-                    <button type="submit">Take Out</button>
-                </form>
-            </td>
-        </tr>
-        {% endfor %}
-    {% endfor %}
-    </tbody>
-</table></div>
-{% endif %}
-{% endmacro %}
-
-{# Coin stacks at one location, each rendered like any other inventory row: a
-   denom + qty plus a full Move dropdown (any top-level / container), an in-place
-   Convert, and an Adjust (GM grant; negative removes). Shared by Carried,
-   Stashed, and every carrier/retainer group so coins behave identically
-   everywhere. `cur_kind`/`cur_id` identify the stack's current location. #}
-{% macro coin_table(coins, prefix, groups, cur_kind, cur_id) %}
-{% if coins %}
-<table class="dtable">
-  <thead><tr><th>Coins</th><th class="n">Qty</th><th></th></tr></thead>
-  <tbody>
-  {% for coin in coins %}
-  <tr>
-    <td>{{ coin.denom }}</td>
-    <td class="n">{{ coin.count }}</td>
-    <td class="n">
-      <form method="post" action="{{ prefix }}/inventory/move-coins" class="inline-form move-form">
-        <input type="hidden" name="denom" value="{{ coin.denom }}">
-        <input type="hidden" name="src_kind" value="{{ cur_kind }}">
-        <input type="hidden" name="src_id" value="{{ cur_id or '' }}">
-        <input type="number" name="count" value="{{ coin.count }}" min="1" max="{{ coin.count }}" style="width:3.5rem">
-        {{ move_dest_control(groups, cur_kind, cur_id) }}
-        <button type="submit">Move</button>
-      </form>
-      <form method="post" action="{{ prefix }}/coins/convert" class="inline-form">
-        <input type="hidden" name="loc_kind" value="{{ cur_kind }}">
-        <input type="hidden" name="loc_id" value="{{ cur_id or '' }}">
-        <input type="hidden" name="frm" value="{{ coin.denom }}">
-        <select name="to" style="width:4rem">{% for d in ["pp","gp","ep","sp","cp"] %}{% if d != coin.denom %}<option value="{{ d }}">{{ d }}</option>{% endif %}{% endfor %}</select>
-        <input type="number" name="count" value="1" min="1" max="{{ coin.count }}" style="width:3.5rem">
-        <button type="submit">Convert</button>
-      </form>
-      <form method="post" action="{{ prefix }}/coins/add" class="inline-form">
-        <input type="hidden" name="denom" value="{{ coin.denom }}">
-        <input type="hidden" name="loc_kind" value="{{ cur_kind }}">
-        <input type="hidden" name="loc_id" value="{{ cur_id or '' }}">
-        <input type="number" name="count" value="-{{ coin.count }}" style="width:4rem">
-        <button type="submit" title="Adjust count (negative removes)">Adj</button>
-      </form>
-    </td>
-  </tr>
-  {% endfor %}
-  </tbody>
 </table>
-{% endif %}
-{% endmacro %}
+{% if is_magic_cat %}</details>{% endif %}
+{% endfor %}
 
-{# A non-Carried/Stashed top-level group (animal / vehicle / retainer): its
-   loose items, coins, treasure, and containers, each with a Move control. #}
-{% macro inv_group_panel(group, prefix, groups) %}
-<div class="ov-section" data-inv-group="{{ group.kind }}{% if group.id %}:{{ group.id }}{% endif %}">
-  <h4>{{ group.label }} <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--faint);font-size:11px">{{ group.kind }}</span></h4>
-
-  {% if group.equipped %}
-  <table class="dtable"><thead><tr><th>Equipped</th><th></th></tr></thead><tbody>
-  {% for row in group.equipped %}<tr><td>{{ row.name }}</td><td class="n">—</td></tr>{% endfor %}
-  </tbody></table>
-  {% endif %}
-
-  {% if group.loose %}
-  <table class="dtable">
-    <thead><tr><th>Item</th><th class="n">Qty</th><th></th></tr></thead>
-    <tbody>
-    {% for row in group.loose %}
-    <tr><td>{{ row.name }}</td><td class="n">{{ row.count }}</td>
-      <td class="n">
-        <form method="post" action="{{ prefix }}/inventory/move-item" class="inline-form move-form">
-          <input type="hidden" name="item_id" value="{{ row.id }}">
-          <input type="hidden" name="src_kind" value="{{ group.kind }}">
-          <input type="hidden" name="src_id" value="{{ group.id or '' }}">
-          {{ move_dest_control(groups, group.kind, group.id) }}
-        </form>
-      </td></tr>
-    {% endfor %}
-    </tbody>
-  </table>
-  {% endif %}
-
-  {{ coin_table(group.coins, prefix, groups, group.kind, group.id) }}
-
-  {% if group.treasure_gems or group.treasure_jewellery %}
-  <table class="dtable"><thead><tr><th>Treasure</th><th></th></tr></thead><tbody>
-    {% for g in group.treasure_gems %}
-    <tr><td>{{ g.value }} gp gem{% if g.label %} · {{ g.label }}{% endif %} ×{{ g.count }}</td>
-      <td class="n">
-        <form method="post" action="{{ prefix }}/inventory/move-valuable" class="inline-form move-form">
-          <input type="hidden" name="instance_id" value="{{ g.instance_id }}">
-          {{ move_dest_control(groups, group.kind, group.id) }}
-        </form>
-      </td></tr>
-    {% endfor %}
-    {% for j in group.treasure_jewellery %}
-    <tr><td>{% if j.label %}{{ j.label }}{% else %}jewellery{% endif %} · {{ j.effective_value }} gp{% if j.damaged %} (damaged){% endif %}</td>
-      <td class="n">
-        <form method="post" action="{{ prefix }}/inventory/move-valuable" class="inline-form move-form">
-          <input type="hidden" name="instance_id" value="{{ j.instance_id }}">
-          {{ move_dest_control(groups, group.kind, group.id) }}
-        </form>
-      </td></tr>
-    {% endfor %}
-  </tbody></table>
-  {% endif %}
-
-  {% for c in group.containers %}
-  <table class="dtable containers-table"><tbody>
-    <tr class="container-row" data-instance-id="{{ c.instance_id }}">
-      <td>
-        <button type="button" class="container-toggle" aria-expanded="true" aria-controls="cnt-{{ c.instance_id }}">&#9662;</button>
-        <strong>{{ c.name }}</strong>
-        <span class="capacity-badge{% if c.capacity_cn and c.used_cn >= c.capacity_cn %} capacity-full{% endif %}">{{ c.used_cn }} / {{ c.capacity_cn if c.capacity_cn else "&#8734;" }} cn</span>
-      </td>
-      <td class="n">
-        <form method="post" action="{{ prefix }}/inventory/move-container" class="inline-form move-form">
-          <input type="hidden" name="container_id" value="{{ c.instance_id }}">
-          {{ move_dest_control(groups, group.kind, group.id, allow_containers=False) }}
-        </form>
-      </td>
-    </tr>
-    {% for row in c.contents %}
-    <tr class="container-child" data-instance-id="{{ c.instance_id }}">
-      <td><span class="indent">&#8627;</span> {{ row.name }} ×{{ row.count }}</td>
-      <td class="n">
-        <form method="post" action="{{ prefix }}/inventory/move-item" class="inline-form">
-          <input type="hidden" name="item_id" value="{{ row.id }}">
-          <input type="hidden" name="src_kind" value="container">
-          <input type="hidden" name="src_id" value="{{ c.instance_id }}">
-          <input type="hidden" name="dest_kind" value="{{ group.kind }}">
-          <input type="hidden" name="dest_id" value="{{ group.id or '' }}">
-          <button type="submit">Take Out</button>
-        </form>
-      </td>
-    </tr>
-    {% endfor %}
-  </tbody></table>
-  {% endfor %}
-</div>
-{% endmacro %}
-
-{% if sheet is defined and sheet.inventory_groups is defined and coins_url_prefix is defined %}
-{# Per-stack coin display (character sheet — inventory_groups available) #}
-{% set _cg = sheet.inventory_groups | selectattr("kind", "equalto", "carried") | first | default(none) %}
-{% if _cg %}
-<div class="ov-section">
-  <h4>Coins{% if sheet.total_wealth_gp > 0 %} <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--faint)">— {{ sheet.total_wealth_gp }} gp total wealth</span>{% endif %}</h4>
-  {% if _cg.coins %}
-  {{ coin_table(_cg.coins, coins_url_prefix, sheet.inventory_groups, "carried", none) }}
-  {% else %}
-  <p class="hint" style="margin-bottom:4px">No carried coins.</p>
-  {% endif %}
-  <form method="post" action="{{ coins_url_prefix }}/coins/add" style="margin-top:6px" class="inline-form">
-    <select name="denom"><option value="gp" selected>gp</option><option value="sp">sp</option><option value="cp">cp</option><option value="ep">ep</option><option value="pp">pp</option></select>
-    <input type="number" name="count" value="10" min="1" style="width:4rem">
-    <input type="hidden" name="loc_kind" value="carried">
-    <input type="hidden" name="loc_id" value="">
-    <button type="submit" class="btn">Add coins</button>
+{% if coins_url_prefix is defined %}
+<div class="ov-section" style="margin-top:12px">
+  <h4>Other Possessions</h4>
+  <form method="post" action="{{ coins_url_prefix }}/possessions/add" class="inline-form">
+    <input type="text" name="text" placeholder="Custom item (e.g. bronze key)…" style="flex:1;min-width:0;font-size:13px">
+    <button type="submit" class="btn">Add</button>
   </form>
 </div>
 {% endif %}
-{% elif show_gold_grant %}
-<div class="ov-section"><h4>Gold — {{ gold }} gp</h4>
-<form method="post" action="{{ gold_grant_url }}" class="inline-form">
-    <input type="number" name="amount" value="10" step="5">
-    <button class="btn" type="submit">Adjust gold</button>
-</form>
-</div>
-{% else %}
-<div style="font-family:var(--display);font-size:11px;color:var(--gray);margin-bottom:8px;">Gold: <strong style="color:var(--ink);">{{ gold }} gp</strong></div>
-{% endif %}
 
-{{ inv_table(inventory_view.equipped, target_url_prefix, "equipped", "Equipped", "contributes to weight") }}
-{% if sheet is defined and sheet.armor_tailorable %}
-<form method="post"
-      action="{{ target_url_prefix }}/tailored"
-      class="tailored-toggle">
-  <input type="hidden" name="value" value="{{ 'false' if sheet.armor_tailored else 'true' }}">
-  <label>
-    <input type="checkbox" disabled {{ 'checked' if sheet.armor_tailored else '' }}>
-    Tailored to wearer
-  </label>
-  <button type="submit" class="link-button">
-    {{ "Mark as another's plate (AC 3)" if sheet.armor_tailored else "Mark as tailored (AC 2)" }}
-  </button>
-</form>
-{% endif %}
-{{ inv_table(inventory_view.carried,  target_url_prefix, "carried",  "Carried",  "contributes to weight") }}
-{{ container_table("carried", "Carried") }}
-{{ inv_table(inventory_view.stashed,  target_url_prefix, "stashed",  "Stashed",  "not on person — no weight") }}
-{{ container_table("stashed", "Stashed") }}
-{% if sheet is defined and sheet.inventory_groups is defined and coins_url_prefix is defined %}
-{% set _sg = sheet.inventory_groups | selectattr("kind", "equalto", "stashed") | first | default(none) %}
-{% if _sg and _sg.coins %}
-<div class="ov-section">
-  <h4>Stashed Coins</h4>
-  {{ coin_table(_sg.coins, coins_url_prefix, sheet.inventory_groups, "stashed", none) }}
-</div>
-{% endif %}
-{% endif %}
+<script>
+    (function () {
+        const input = document.getElementById('shop-search');
+        if (!input) return;
+        const rows = document.querySelectorAll('.shop-row');
+        function applyFilter() {
+            const q = input.value.trim().toLowerCase();
+            const visibleByCat = {};
+            rows.forEach(row => {
+                const matches = !q || row.dataset.shopName.includes(q);
+                row.style.display = matches ? '' : 'none';
+                if (matches) {
+                    const cat = row.closest('table').dataset.shopCategory;
+                    visibleByCat[cat] = (visibleByCat[cat] || 0) + 1;
+                }
+            });
+            document.querySelectorAll('[data-shop-category]').forEach(el => {
+                const cat = el.dataset.shopCategory;
+                el.style.display = (visibleByCat[cat] || 0) > 0 ? '' : 'none';
+            });
+        }
+        input.addEventListener('input', applyFilter);
+    })();
+</script>
 
-{# ── Carrier / retainer top-level inventory groups ── #}
-{% if sheet is defined and sheet.inventory_groups is defined and coins_url_prefix is defined %}
-{% for group in sheet.inventory_groups %}
-{% if group.kind not in ("carried", "stashed") %}
-{{ inv_group_panel(group, coins_url_prefix, sheet.inventory_groups) }}
-{% endif %}
-{% endfor %}
-{% endif %}
+<script src="/static/inventory.js" defer></script>
 
-{% if not inventory_view.equipped and not inventory_view.carried and not inventory_view.stashed and not inventory_view.containers %}
-<div class="ov-section"><p class="hint">No items in inventory.</p></div>
-{% endif %}
-
-{% if ammo_rows is defined and ammo_rows %}
-<div class="ov-section"><h4>Ammunition</h4>
-<table class="dtable ammo-table">
-  <thead><tr><th>Ammo</th><th class="n">Count</th><th></th></tr></thead>
-  <tbody>
-  {% for row in ammo_rows %}
-    <tr>
-      <td>{% if row.magic %}<em>{{ row.name }}</em>{% else %}{{ row.name }}{% endif %}</td>
-      <td class="n">{{ row.count }}</td>
-      <td class="n">
-        <form method="post" action="{{ ammo_url_prefix }}/ammo/adjust" class="inline-form">
-          <input type="hidden" name="instance_id" value="{{ row.instance_id }}">
-          <input type="hidden" name="delta" value="1">
-          <button class="btn tool dark" type="submit">+</button>
-        </form>
-        <form method="post" action="{{ ammo_url_prefix }}/ammo/adjust" class="inline-form">
-          <input type="hidden" name="instance_id" value="{{ row.instance_id }}">
-          <input type="hidden" name="delta" value="-1">
-          <button class="btn tool dark" type="submit">−</button>
-        </form>
-        <form method="post" action="{{ ammo_url_prefix }}/ammo/remove" class="inline-form">
-          <input type="hidden" name="instance_id" value="{{ row.instance_id }}">
-          <button class="btn link" type="submit">remove</button>
-        </form>
-      </td>
-    </tr>
-  {% endfor %}
-  </tbody>
-</table></div>
-{% endif %}
-
-{% if ammo_load_options is defined and ammo_load_options %}
-<div class="ov-section"><h4>Load Ammo</h4>
-{% for weapon_key, opts in ammo_load_options.items() %}
-<form method="post" action="{{ ammo_url_prefix }}/ammo/load" class="inline-form" style="margin-bottom:6px">
-  <input type="hidden" name="weapon_key" value="{{ weapon_key }}">
-  <label>{{ weapon_key }}:
-    <select name="instance_id">
-      {% for opt in opts %}
-      <option value="{{ opt.instance_id }}">{{ opt.name }} ({{ opt.count }})</option>
-      {% endfor %}
-    </select>
-  </label>
-  <button class="btn" type="submit">Load</button>
-</form>
-<form method="post" action="{{ ammo_url_prefix }}/ammo/unload" class="inline-form">
-  <input type="hidden" name="weapon_key" value="{{ weapon_key }}">
-  <button class="btn link" type="submit">Unload</button>
-</form>
-{% endfor %}
-</div>
-{% endif %}
-
-</div>{# /data-pane=inv #}
+</div>{# /data-pane=shop #}
 
 
-{# ══════════════ PANE: Magic ══════════════ #}
+{# ══════════════ PANE: Enchant ══════════════ #}
 {% if magic_acquisition %}
-<div data-pane="magic" hidden>
-{% set owned_instances = magic_items_view | selectattr("instance_id") | list %}
-{% if owned_instances %}
-<div class="ov-section"><h4>Magic Items</h4>
-<table class="dtable magic-items-table">
-  <thead><tr><th>Item</th><th>State</th><th>Charges</th><th>Note</th><th></th></tr></thead>
-  <tbody>
-  {% for mi in owned_instances %}
-    <tr class="magic-item-row">
-      <td>
-        <strong>{{ mi.name }}</strong>
-        {% for chip in mi.modifier_summary %}<span class="tag stamp">{{ chip }}</span>{% endfor %}
-      </td>
-      <td>
-        {% if mi.equippable %}
-          {% if mi.equipped %}
-          <form method="post" action="{{ target_url_prefix }}/unequip-magic" class="inline-form">
-            <input type="hidden" name="instance_id" value="{{ mi.instance_id }}">
-            <button class="btn link" type="submit">unequip</button>
-          </form>
-          {% else %}
-          <form method="post" action="{{ target_url_prefix }}/equip-magic" class="inline-form">
-            <input type="hidden" name="instance_id" value="{{ mi.instance_id }}">
-            <button class="btn link" type="submit">equip</button>
-          </form>
-          {% endif %}
-        {% else %}<span class="hint">—</span>{% endif %}
-      </td>
-      <td>
-        {% if mi.charges_remaining is not none %}
-          {{ mi.charges_remaining }} / {{ mi.charges_max }}
-          <form method="post" action="{{ target_url_prefix }}/use-charge" class="inline-form">
-            <input type="hidden" name="instance_id" value="{{ mi.instance_id }}">
-            <button class="btn link" type="submit" {% if mi.charges_remaining == 0 %}disabled{% endif %}>use one</button>
-          </form>
-          <form method="post" action="{{ target_url_prefix }}/reset-charges" class="inline-form">
-            <input type="hidden" name="instance_id" value="{{ mi.instance_id }}">
-            <button class="btn link" type="submit">reset</button>
-          </form>
-        {% else %}<span class="hint">—</span>{% endif %}
-      </td>
-      <td>
-        <form method="post" action="{{ target_url_prefix }}/magic-note" class="inline-form">
-          <input type="hidden" name="instance_id" value="{{ mi.instance_id }}">
-          <input type="text" name="note" value="{{ mi.note }}" placeholder="note…" style="width:7rem">
-          <button class="btn" type="submit">Save</button>
-        </form>
-      </td>
-      <td>
-        <form method="post" action="{{ target_url_prefix }}/remove-magic" class="inline-form">
-          <input type="hidden" name="instance_id" value="{{ mi.instance_id }}">
-          <button class="btn link" type="submit">remove</button>
-        </form>
-      </td>
-    </tr>
-  {% endfor %}
-  </tbody>
-</table>
-</div>
-{% endif %}
-
-{% if enchanted_rows %}
-<div class="ov-section"><h4>Enchanted Items</h4>
-<table class="dtable magic-items-table">
-  <thead><tr><th>Item</th><th>State</th><th>Charges</th><th>Note</th><th></th></tr></thead>
-  <tbody>
-  {% for mi in enchanted_rows %}
-    <tr class="magic-item-row">
-      <td>
-        <strong>{{ mi.name }}</strong>
-        {% for chip in mi.modifier_summary %}<span class="tag stamp">{{ chip }}</span>{% endfor %}
-      </td>
-      <td>
-        {% if mi.equipped %}
-        <form method="post" action="{{ target_url_prefix }}/unequip-enchanted" class="inline-form">
-          <input type="hidden" name="instance_id" value="{{ mi.instance_id }}">
-          <button class="btn link" type="submit">unequip</button>
-        </form>
-        {% else %}
-        <form method="post" action="{{ target_url_prefix }}/equip-enchanted" class="inline-form">
-          <input type="hidden" name="instance_id" value="{{ mi.instance_id }}">
-          <button class="btn link" type="submit">equip</button>
-        </form>
-        {% endif %}
-      </td>
-      <td>
-        {% if mi.charges_remaining is not none %}
-          {{ mi.charges_remaining }} / {{ mi.charges_max }}
-          <form method="post" action="{{ target_url_prefix }}/enchanted/use-charge" class="inline-form">
-            <input type="hidden" name="instance_id" value="{{ mi.instance_id }}">
-            <button class="btn link" type="submit" {% if mi.charges_remaining == 0 %}disabled{% endif %}>use one</button>
-          </form>
-          <form method="post" action="{{ target_url_prefix }}/enchanted/reset-charges" class="inline-form">
-            <input type="hidden" name="instance_id" value="{{ mi.instance_id }}">
-            <button class="btn link" type="submit">reset</button>
-          </form>
-        {% else %}<span class="hint">—</span>{% endif %}
-      </td>
-      <td>
-        <form method="post" action="{{ target_url_prefix }}/enchanted-note" class="inline-form">
-          <input type="hidden" name="instance_id" value="{{ mi.instance_id }}">
-          <input type="text" name="note" value="{{ mi.note }}" placeholder="note…" style="width:7rem">
-          <button class="btn" type="submit">Save</button>
-        </form>
-      </td>
-      <td>
-        <form method="post" action="{{ target_url_prefix }}/remove-enchanted" class="inline-form">
-          <input type="hidden" name="instance_id" value="{{ mi.instance_id }}">
-          <button class="btn link" type="submit">remove</button>
-        </form>
-      </td>
-    </tr>
-  {% endfor %}
-  </tbody>
-</table>
-</div>
-{% endif %}
+<div data-pane="enchant" hidden>
 
 {% if enchant_choices %}
 <div class="ov-section"><h4>Add Enchanted Item <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--faint)">— GM grant</span></h4>
@@ -576,81 +167,14 @@
 </script>
 </div>
 {% endif %}
-</div>{# /data-pane=magic #}
+
+</div>{# /data-pane=enchant #}
 {% endif %}{# magic_acquisition #}
 
 
-{# ══════════════ PANE: Documents ══════════════ #}
+{# ══════════════ PANE: Scribe ══════════════ #}
 {% if spell_sources is defined %}
-<div data-pane="docs" hidden>
-<div class="ov-section">
-  <h4>Spell Books &amp; Scrolls <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--faint)">— physical documents</span></h4>
-  {% if spell_sources %}
-  <table class="dtable">
-    <tbody>
-    {% for src in spell_sources %}
-    <tr>
-      <td>
-        <strong>{{ src.name }}</strong>
-        <span class="tag faint">{{ src.caster_type }} · {{ src.entries | length }} spell{{ 's' if src.entries | length != 1 }}</span>
-        {% if src.kind == "scroll" and src.caster_type == "divine" %}
-        <span class="tag faint">{{ src.language }}</span>
-        {% endif %}
-        {% if src.kind == "scroll" and src.caster_type == "arcane" %}
-          {% if src.unlocked %}<span class="tag">deciphered</span>
-          {% else %}<span class="tag stamp">sealed</span>{% endif %}
-        {% endif %}
-      </td>
-      <td class="n">
-        {% if src.kind == "scroll" and src.caster_type == "arcane" and not src.unlocked %}
-        <form method="post" action="{{ coins_url_prefix }}/spell-sources/read" style="display:inline">
-          <input type="hidden" name="instance_id" value="{{ src.instance_id }}">
-          <button class="btn link" type="submit"{% if not src.can_read %} disabled title="Memorize Read Magic first"{% endif %}>read</button>
-        </form>
-        {% endif %}
-        <form method="post" action="{{ coins_url_prefix }}/spell-sources/remove" style="display:inline">
-          <input type="hidden" name="instance_id" value="{{ src.instance_id }}">
-          <button class="btn link" type="submit">remove</button>
-        </form>
-      </td>
-    </tr>
-    {% for e in src.entries %}
-    {% set uid = "doc-" ~ src.instance_id ~ "-" ~ e.spell_id %}
-    <tr class="child" data-detail-toggle="{{ uid }}" aria-expanded="false">
-      <td>{{ e.name }} <span class="tag faint">L{{ e.level }}</span>
-        {% if e.copy_failed %}<span class="tag stamp">copy failed</span>{% endif %}
-      </td>
-      <td class="n">
-        {% if e.can_cast %}
-        <form method="post" action="{{ coins_url_prefix }}/spell-sources/cast" style="display:inline">
-          <input type="hidden" name="instance_id" value="{{ src.instance_id }}">
-          <input type="hidden" name="spell_id" value="{{ e.spell_id }}">
-          <button class="btn link" type="submit">cast</button>
-        </form>
-        {% endif %}
-        {% if e.can_copy and src.arcane_class_id %}
-        <form method="post" action="{{ coins_url_prefix }}/spell-sources/copy" style="display:inline">
-          <input type="hidden" name="instance_id" value="{{ src.instance_id }}">
-          <input type="hidden" name="class_id" value="{{ src.arcane_class_id }}">
-          <input type="hidden" name="spell_id" value="{{ e.spell_id }}">
-          <button class="btn link" type="submit">copy to book</button>
-        </form>
-        {% endif %}
-      </td>
-    </tr>
-    {% if e.detail %}
-    <tr class="row-detail collapsed" data-detail-for="{{ uid }}">
-      <td colspan="2">{{ detail_card(e.detail) }}</td>
-    </tr>
-    {% endif %}
-    {% endfor %}
-    {% endfor %}
-    </tbody>
-  </table>
-  {% else %}
-  <p class="hint">No spell books or scrolls yet.</p>
-  {% endif %}
-</div>
+<div data-pane="scribe" hidden>
 
 {% if spell_source_add_options is defined %}
 <div class="ov-section"><h4>Add Spell Book or Scroll</h4>
@@ -705,13 +229,30 @@
 <script src="/static/spell_source_add.js" defer></script>
 </div>
 {% endif %}
-</div>{# /data-pane=docs #}
+
+</div>{# /data-pane=scribe #}
 {% endif %}{# spell_sources defined #}
 
 
 {# ══════════════ PANE: Treasure ══════════════ #}
 {% if valuables is defined %}
 <div data-pane="treasure" hidden>
+
+{% if coins_url_prefix is defined %}
+<div class="ov-section"><h4>Coins</h4>
+<form method="post" action="{{ coins_url_prefix }}/coins/add">
+  <label class="f"><span class="lab">Denomination</span>
+    <select name="denom"><option value="gp" selected>gp</option><option value="sp">sp</option><option value="cp">cp</option><option value="ep">ep</option><option value="pp">pp</option></select>
+  </label>
+  <label class="f"><span class="lab">Amount</span>
+    <input type="number" name="count" value="10" min="1" style="width:4rem">
+  </label>
+  <input type="hidden" name="loc_kind" value="carried">
+  <input type="hidden" name="loc_id" value="">
+  <button type="submit" class="btn solid">Add coins</button>
+</form>
+</div>
+{% endif %}
 
 <div class="ov-section"><h4>Gems <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--faint)">— stowable in containers</span></h4>
 {% if valuables.gems %}
@@ -816,88 +357,5 @@
 </div>{# /data-pane=treasure #}
 {% endif %}{# valuables defined #}
 
-
-{# ══════════════ PANE: Shop ══════════════ #}
-<div data-pane="shop" hidden>
-
-<input type="text" id="shop-search" class="search"
-       placeholder="Search items by name…"
-       aria-label="Search items">
-
-{% for category in shop %}
-{% set is_magic_cat = category.items | selectattr("magic") | list | length == category.items | length %}
-{% if is_magic_cat %}
-<details data-shop-category="{{ category.id }}">
-<summary class="shop-cat" style="cursor:pointer;list-style:none;" data-shop-category="{{ category.id }}">{{ category.name }}</summary>
-{% else %}
-<div class="shop-cat" data-shop-category="{{ category.id }}">{{ category.name }}</div>
-{% endif %}
-<table class="dtable" data-shop-category="{{ category.id }}">
-    <thead>
-        <tr><th>Item</th><th class="n">Cost</th><th class="n">Wt</th><th></th></tr>
-    </thead>
-    <tbody>
-    {% for item in category.items %}
-        {% set uid = "shop-" ~ category.id ~ "-" ~ item.id %}
-        <tr class="shop-row {% if not item.magic and item.cost_gp > gold %}out{% endif %}"
-            data-shop-name="{{ item.name | lower }}"
-            data-detail-toggle="{{ uid }}" aria-expanded="false">
-            <td>{{ item.name }}{% if item.bundle_count > 1 %} <span class="tag faint">buys {{ item.bundle_count }}</span>{% endif %}</td>
-            <td class="n">{% if item.magic %}—{% else %}{{ item.cost_gp | int }} gp{% endif %}</td>
-            <td class="n">{{ item.weight_cn }}</td>
-            <td class="n">
-                {% if not item.magic %}
-                <form method="post" action="{{ target_url_prefix }}/buy" class="inline-form">
-                    <input type="hidden" name="item_id" value="{{ item.id }}">
-                    <button class="btn tool dark" type="submit"
-                            {% if item.cost_gp > gold %}disabled{% endif %}>Buy</button>
-                </form>
-                {% endif %}
-                <form method="post" action="{{ target_url_prefix }}/add" class="inline-form">
-                    <input type="hidden" name="item_id" value="{{ item.id }}">
-                    <button class="btn link" type="submit"
-                            title="Add to inventory without spending gold">add</button>
-                </form>
-            </td>
-        </tr>
-        {% if item.detail %}
-        <tr class="row-detail collapsed" data-detail-for="{{ uid }}">
-            <td colspan="4">{{ detail_card(item.detail) }}</td>
-        </tr>
-        {% endif %}
-    {% endfor %}
-    </tbody>
-</table>
-{% if is_magic_cat %}</details>{% endif %}
-{% endfor %}
-
-<script>
-    (function () {
-        const input = document.getElementById('shop-search');
-        if (!input) return;
-        const rows = document.querySelectorAll('.shop-row');
-        function applyFilter() {
-            const q = input.value.trim().toLowerCase();
-            const visibleByCat = {};
-            rows.forEach(row => {
-                const matches = !q || row.dataset.shopName.includes(q);
-                row.style.display = matches ? '' : 'none';
-                if (matches) {
-                    const cat = row.closest('table').dataset.shopCategory;
-                    visibleByCat[cat] = (visibleByCat[cat] || 0) + 1;
-                }
-            });
-            document.querySelectorAll('[data-shop-category]').forEach(el => {
-                const cat = el.dataset.shopCategory;
-                el.style.display = (visibleByCat[cat] || 0) > 0 ? '' : 'none';
-            });
-        }
-        input.addEventListener('input', applyFilter);
-    })();
-</script>
-
-<script src="/static/inventory.js" defer></script>
-
-</div>{# /data-pane=shop #}
 
 </div>{# outer wrapper #}

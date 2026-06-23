@@ -1,3 +1,6 @@
+{% from "_inv_pane.html" import inv_pane with context %}
+{% from "_inv_modals.html" import item_modal, container_modal with context %}
+{%- set _wiz_url = "/wizard/" ~ draft_id -%}
 <h2>Equipment</h2>
 
 {% if not gold_rolled %}
@@ -16,6 +19,29 @@
 <form method="post" action="/wizard/{{ draft_id }}/equipment/roll-gold" class="inline-form">
     <button type="submit">Re-roll gold</button>
 </form>
+{% endif %}
+
+{# ── Inventory box (carried + stashed) ── #}
+{% if inventory_groups %}
+<div class="inv-accordion" style="margin-bottom:16px">
+  {% for group in inventory_groups %}
+  {%- set prefix = group.kind -%}
+  {{ inv_pane(group, prefix, "", group.kind == "carried") }}
+  {% endfor %}
+</div>
+
+{# Item modals for the wizard box #}
+{% for group in inventory_groups %}
+{% set _url = target_url_prefix %}
+{% for row in group.loose %}{{ item_modal(row, group.kind, group.kind, _url) }}{% endfor %}
+{% for row in group.equipped_attacks %}
+  {% if row.manageable_item_id %}{{ item_modal(row, "equipped", "equipped", _url) }}{% endif %}
+{% endfor %}
+{% for c in group.containers %}
+{{ container_modal(c, group, _wiz_url, inventory_groups) }}
+{% for row in c.contents %}{{ item_modal(row, "container", "container-" ~ c.instance_id, _url, src_id=c.instance_id) }}{% endfor %}
+{% endfor %}
+{% endfor %}
 {% endif %}
 
 {% include "_equipment_ui.html" %}

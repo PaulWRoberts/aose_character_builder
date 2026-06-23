@@ -1708,16 +1708,10 @@ def _equipment_context(draft: dict[str, Any], game_data) -> dict:
     ]
     classes = [game_data.classes[cid] for cid in _class_ids(draft)
                if cid in game_data.classes]
-    # Build ammo view rows and load-options from draft state
+    # Build ammo load-options for item modals (equipped launchers)
     ammo_stacks = _draft_ammo(draft)
     from aose.engine.ammo import accepts, resolve_ammo
-    from aose.sheet.view import AmmoOption, AmmoRow
-
-    ammo_rows = []
-    for s in ammo_stacks:
-        view = resolve_ammo(s, game_data)
-        ammo_rows.append(AmmoRow(instance_id=s.instance_id, name=view["name"],
-                                 count=s.count, magic=s.enchantment_id is not None))
+    from aose.sheet.view import AmmoOption
 
     # Load options keyed by weapon_id for each equipped launcher (from hand slots)
     from aose.models import Ammunition as _Ammunition, Weapon as _Weapon
@@ -1737,6 +1731,18 @@ def _equipment_context(draft: dict[str, Any], game_data) -> dict:
             load_options[slot_id] = opts
 
     draft_id = draft.get("_draft_id", "")
+
+    # Build inventory_groups for the box (carried + stashed only; no carriers/retainers).
+    from aose.sheet.view import build_inventory_groups as _big
+    try:
+        _spec = _draft_to_spec(draft, game_data)
+        inventory_groups = [
+            g for g in _big(_spec, game_data)
+            if g.kind in ("carried", "stashed")
+        ]
+    except Exception:
+        inventory_groups = []
+
     return {
         "gold": draft.get("gold", 0),
         "gold_locked": draft.get("gold_locked", False),
@@ -1749,16 +1755,14 @@ def _equipment_context(draft: dict[str, Any], game_data) -> dict:
             eligible=two_weapon_eligible(classes),
             gargantua_1h_2h=False,
         ),
-        "magic_items_view": [],   # wizard equipment step is mundane-only
-        "enchanted_rows": [],
         "magic_acquisition": False,
         "enchant_choices": [],
         "shop": shop_categories(game_data, _ruleset_of(draft)),
         "remove_modes": REMOVE_MODES,
-        "ammo_rows": ammo_rows,
         "ammo_load_options": load_options,
         "inv_move_groups": _wizard_move_groups(containers, game_data),
         "inv_move_url": f"/wizard/{draft_id}/equipment/move-item",
+        "inventory_groups": inventory_groups,
     }
 
 
@@ -2056,6 +2060,49 @@ async def equipment_remove_container(request: Request, draft_id: str,
         raise HTTPException(400, str(e))
     draft["containers"] = [c.model_dump() for c in new_containers]
     draft["gold"] = new_gold
+    save_draft(draft_id, draft, _drafts_dir(request))
+    return _redirect(f"/wizard/{draft_id}/equipment")
+
+
+@router.post("/{draft_id}/inventory/use-as-container")
+async def wiz_use_as_container(request: Request, draft_id: str):
+    from aose.engine import storage as _storage
+    from aose.models.storage import StorageLocation
+    draft = _load(request, draft_id)
+    form = await request.form()
+    owner_kind = form.get("owner_kind", "carried")
+    owner_id = form.get("owner_id") or None
+    item_id = form.get("item_id", "")
+    spec = _draft_to_spec(draft, request.app.state.game_data)
+    try:
+        owner = StorageLocation(kind=owner_kind, id=owner_id)
+        _storage.use_as_container(spec, owner, item_id, request.app.state.game_data)
+    except (ValueError, _storage.StorageError) as e:
+        raise HTTPException(400, str(e))
+    draft["inventory"] = list(spec.inventory)
+    draft["stashed"] = list(spec.stashed)
+    draft["containers"] = [c.model_dump() for c in spec.containers]
+    save_draft(draft_id, draft, _drafts_dir(request))
+    return _redirect(f"/wizard/{draft_id}/equipment")
+
+
+@router.post("/{draft_id}/inventory/move-container")
+async def wiz_move_container(request: Request, draft_id: str):
+    """Shared container-move URL used by the container_modal macro."""
+    from aose.engine import storage as _storage
+    from aose.models.storage import StorageLocation
+    draft = _load(request, draft_id)
+    form = await request.form()
+    container_id = form.get("container_id", "")
+    dest_kind = form.get("dest_kind", "carried")
+    dest_id = form.get("dest_id") or None
+    spec = _draft_to_spec(draft, request.app.state.game_data)
+    try:
+        dest = StorageLocation(kind=dest_kind, id=dest_id)
+        _storage.move_container(spec, container_id, dest)
+    except (ValueError, _storage.StorageError) as e:
+        raise HTTPException(400, str(e))
+    draft["containers"] = [c.model_dump() for c in spec.containers]
     save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/equipment")
 

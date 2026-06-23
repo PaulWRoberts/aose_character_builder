@@ -1,0 +1,80 @@
+{# Shared per-item and per-container modal macros for the inventory box.
+   Import `with context` so macros can reach `ammo_url_prefix`, `character_id`,
+   and `inv_move_groups`/`inv_move_url` from the template context. #}
+{% from "_detail_card.html" import detail_card with context %}
+{% from "_inv_row_actions.html" import inv_row_actions with context %}
+{% from "_move_dest.html" import move_dest_control with context %}
+
+{# Per-item modal — Equipped · Carried · Stashed · container-contents · carriers · retainers.
+   id_prefix determines the modal id: modal-item-<id_prefix>-<row.id>.
+   state controls which action buttons appear (see _inv_row_actions.html). #}
+{% macro item_modal(row, state, id_prefix, url_prefix, load_options=none, attack=none, src_id="") %}
+<div class="overlay modal" id="modal-item-{{ id_prefix }}-{{ row.id }}" role="dialog" aria-label="{{ row.name }}">
+  <div class="ov-head"><h3>{{ row.name }}</h3><button class="x" data-close>×</button></div>
+  <div class="ov-body">
+    {% if row.detail %}{{ detail_card(row.detail) }}{% elif row.description %}<div class="prose">{{ row.description | markdown | safe }}</div>{% endif %}
+    {% if load_options %}
+    <div class="ov-section">
+      <h4>Ammunition</h4>
+      <p class="muted small" style="margin:0 0 6px">
+        {% if attack and attack.unloaded %}<span class="tag stamp">Unloaded</span>
+        {% elif attack and attack.loaded_ammo_name %}Loaded: <strong>{{ attack.loaded_ammo_name }}</strong>
+        {% else %}<span class="tag stamp">Unloaded</span>{% endif %}
+      </p>
+      <form method="post" action="{{ ammo_url_prefix }}/ammo/load" class="inline-form">
+        <input type="hidden" name="weapon_key" value="{{ row.id }}">
+        <select name="instance_id">
+          {% for opt in load_options %}
+          <option value="{{ opt.instance_id }}">{{ opt.name }} ({{ opt.count }})</option>
+          {% endfor %}
+        </select>
+        <button class="btn" type="submit">Load</button>
+      </form>
+      <form method="post" action="{{ ammo_url_prefix }}/ammo/unload" class="inline-form">
+        <input type="hidden" name="weapon_key" value="{{ row.id }}">
+        <button class="btn link" type="submit">Unload</button>
+      </form>
+    </div>
+    {% endif %}
+    <div class="row-actions">{{ inv_row_actions(row, url_prefix, state, show_remove=False, src_id=src_id) }}</div>
+  </div>
+</div>
+{% endmacro %}
+
+{# Per-container modal — capacity + catalog card + Move ▾ + Sell ▾ (empty only) + Drop. #}
+{% macro container_modal(c, group, url_prefix, move_groups) %}
+<div class="overlay modal" id="modal-container-{{ c.instance_id }}" role="dialog" aria-label="{{ c.name }}">
+  <div class="ov-head"><h3>{{ c.name }}</h3><button class="x" data-close>×</button></div>
+  <div class="ov-body">
+    <p style="margin:0 0 8px">
+      <span class="capacity-badge{% if c.capacity_cn and c.used_cn >= c.capacity_cn %} capacity-full{% endif %}">
+        {{ c.used_cn }} / {{ c.capacity_cn if c.capacity_cn else "∞" }} cn
+      </span>
+    </p>
+    {% if c.detail %}{{ detail_card(c.detail) }}{% endif %}
+    <div class="row-actions">
+      <form method="post" action="{{ url_prefix }}/inventory/move-container" class="inline-form move-form">
+        <input type="hidden" name="container_id" value="{{ c.instance_id }}">
+        {{ move_dest_control(move_groups, group.kind, group.id or "", allow_containers=False) }}
+      </form>
+      {% if not c.contents %}
+      <form method="post" action="{{ url_prefix }}/equipment/remove-container" class="sell-form inline-form">
+        <input type="hidden" name="instance_id" value="{{ c.instance_id }}">
+        <input type="hidden" name="mode" value="">
+        <select class="sell-dest">
+          <option value="" disabled selected>Sell…</option>
+          <option value="sell">half price</option>
+          <option value="refund">full refund</option>
+        </select>
+      </form>
+      <form method="post" action="{{ url_prefix }}/equipment/remove-container" class="remove-form inline-form">
+        <input type="hidden" name="instance_id" value="{{ c.instance_id }}">
+        <button type="submit" name="mode" value="drop" class="danger">Drop</button>
+      </form>
+      {% else %}
+      <span class="muted small">Empty the container before selling or dropping.</span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endmacro %}

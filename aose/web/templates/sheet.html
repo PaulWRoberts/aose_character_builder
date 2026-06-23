@@ -5,38 +5,7 @@
 {% from "_detail_card.html" import detail_card with context %}
 {% from "_inv_pane.html" import inv_pane with context %}
 {% from "_move_dest.html" import move_dest_control with context %}
-{% macro item_modal(row, state, id_prefix, url_prefix, load_options=none, attack=none, src_id="") %}
-<div class="overlay modal" id="modal-item-{{ id_prefix }}-{{ row.id }}" role="dialog" aria-label="{{ row.name }}">
-  <div class="ov-head"><h3>{{ row.name }}</h3><button class="x" data-close>×</button></div>
-  <div class="ov-body">
-    {% if row.detail %}{{ detail_card(row.detail) }}{% elif row.description %}<div class="prose">{{ row.description | markdown | safe }}</div>{% endif %}
-    {% if load_options %}
-    <div class="ov-section">
-      <h4>Ammunition</h4>
-      <p class="muted small" style="margin:0 0 6px">
-        {% if attack and attack.unloaded %}<span class="tag stamp">Unloaded</span>
-        {% elif attack and attack.loaded_ammo_name %}Loaded: <strong>{{ attack.loaded_ammo_name }}</strong>
-        {% else %}<span class="tag stamp">Unloaded</span>{% endif %}
-      </p>
-      <form method="post" action="{{ ammo_url_prefix }}/ammo/load" class="inline-form">
-        <input type="hidden" name="weapon_key" value="{{ row.id }}">
-        <select name="instance_id">
-          {% for opt in load_options %}
-          <option value="{{ opt.instance_id }}">{{ opt.name }} ({{ opt.count }})</option>
-          {% endfor %}
-        </select>
-        <button class="btn" type="submit">Load</button>
-      </form>
-      <form method="post" action="{{ ammo_url_prefix }}/ammo/unload" class="inline-form">
-        <input type="hidden" name="weapon_key" value="{{ row.id }}">
-        <button class="btn link" type="submit">Unload</button>
-      </form>
-    </div>
-    {% endif %}
-    <div class="row-actions">{{ inv_row_actions(row, url_prefix, state, show_remove=False, src_id=src_id) }}</div>
-  </div>
-</div>
-{% endmacro %}
+{% from "_inv_modals.html" import item_modal, container_modal with context %}
 
 <div class="sheet-actions no-print">
     <a href="/character/{{ character_id }}/print" target="_blank" class="button primary">Print / Save PDF</a>
@@ -1018,9 +987,9 @@
 {% for row in c.contents %}{{ item_modal(row, "container", "container-" ~ c.instance_id, target_url_prefix, src_id=c.instance_id) }}{% endfor %}
 {% endfor %}{% endfor %}
 
-{# MODALS: per-worn-magic-item (properties + unequip + use-charge) #}
+{# MODALS: per-magic-item (equipped: unequip + use-charge; unequipped: equip + remove) #}
 {% set ench_ids = enchanted_rows | map(attribute='instance_id') | list %}
-{% for mi in sheet.magic_items %}{% if mi.equipped %}
+{% for mi in sheet.magic_items %}
 {% set is_ench = mi.instance_id in ench_ids %}
 <div class="overlay modal" id="modal-magic-{{ mi.instance_id }}" role="dialog" aria-label="{{ mi.name }}">
   <div class="ov-head"><h3>{{ mi.name }}</h3><button class="x" data-close>×</button></div>
@@ -1028,6 +997,7 @@
     {% if mi.modifier_summary %}<p style="margin:0 0 8px">{% for chip in mi.modifier_summary %}<span class="tag stamp">{{ chip }}</span> {% endfor %}</p>{% endif %}
     {% if mi.description %}<div class="prose">{{ mi.description | markdown | safe }}</div>{% endif %}
     <div class="row-actions">
+      {% if mi.equipped %}
       <form method="post" action="{{ target_url_prefix }}/{{ 'unequip-enchanted' if is_ench else 'unequip-magic' }}" class="inline-form">
         <input type="hidden" name="instance_id" value="{{ mi.instance_id }}">
         <button type="submit">Unequip</button>
@@ -1039,30 +1009,25 @@
         <button type="submit" {% if mi.charges_remaining == 0 %}disabled{% endif %}>Use one</button>
       </form>
       {% endif %}
-    </div>
-  </div>
-</div>
-{% endif %}{% endfor %}
-
-{# MODALS: per-container (capacity badge + catalog card + Move to any location) #}
-{% for group in sheet.inventory_groups %}{% for c in group.containers %}
-<div class="overlay modal" id="modal-container-{{ c.instance_id }}" role="dialog" aria-label="{{ c.name }}">
-  <div class="ov-head"><h3>{{ c.name }}</h3><button class="x" data-close>×</button></div>
-  <div class="ov-body">
-    <p style="margin:0 0 8px">
-      <span class="capacity-badge{% if c.capacity_cn and c.used_cn >= c.capacity_cn %} capacity-full{% endif %}">
-        {{ c.used_cn }} / {{ c.capacity_cn if c.capacity_cn else "∞" }} cn
-      </span>
-    </p>
-    {% if c.detail %}{{ detail_card(c.detail) }}{% endif %}
-    <div class="row-actions">
-      <form method="post" action="/character/{{ character_id }}/inventory/move-container" class="inline-form move-form">
-        <input type="hidden" name="container_id" value="{{ c.instance_id }}">
-        {{ move_dest_control(sheet.inventory_groups, group.kind, group.id or "", allow_containers=False) }}
+      {% else %}
+      <form method="post" action="{{ target_url_prefix }}/{{ 'equipment/equip-enchanted' if is_ench else 'equipment/equip-magic' }}" class="inline-form">
+        <input type="hidden" name="instance_id" value="{{ mi.instance_id }}">
+        <button type="submit">Equip</button>
       </form>
+      <form method="post" action="{{ target_url_prefix }}/{{ 'equipment/remove-enchanted' if is_ench else 'equipment/remove-magic' }}" class="inline-form">
+        <input type="hidden" name="instance_id" value="{{ mi.instance_id }}">
+        <button type="submit" class="danger">Remove</button>
+      </form>
+      {% endif %}
     </div>
   </div>
 </div>
+{% endfor %}
+
+{# MODALS: per-container (capacity badge + catalog card + Move + Sell + Drop) #}
+{%- set _char_url = "/character/" ~ character_id -%}
+{% for group in sheet.inventory_groups %}{% for c in group.containers %}
+{{ container_modal(c, group, _char_url, sheet.inventory_groups) }}
 {% endfor %}{% endfor %}
 
 {# MODALS: per-ammo (properties + count adjust) #}
@@ -1088,24 +1053,50 @@
 </div>
 {% endfor %}
 
-{# MODALS: spell book / scroll contents (read-only; manage from the Documents tab) #}
+{# MODALS: spell book / scroll contents (cast + copy inline) #}
 {% for src in sheet.spell_sources %}
 <div class="overlay modal" id="modal-source-{{ src.instance_id }}" role="dialog" aria-label="{{ src.name }}">
   <div class="ov-head"><h3>{{ src.name }}</h3><button class="x" data-close>×</button></div>
   <div class="ov-body">
     <p class="hint" style="margin:0 0 10px">{{ src.kind }} · {{ src.caster_type }} · {{ src.entries | length }} spell{{ 's' if src.entries | length != 1 }}</p>
+    {% if src.can_read %}
+    <div class="row-actions" style="margin-bottom:8px">
+      <form method="post" action="/character/{{ character_id }}/spell-sources/read-magic" class="inline-form">
+        <input type="hidden" name="instance_id" value="{{ src.instance_id }}">
+        <button class="btn" type="submit">Decipher (Read Magic)</button>
+      </form>
+    </div>
+    {% endif %}
     {% if src.entries %}
     <ul style="list-style:none;padding:0;margin:0">
       {% for e in src.entries %}
-      <li style="padding:3px 0;border-bottom:1px solid var(--hair)">{{ e.name }}
-        <span class="tag faint">L{{ e.level }}</span>
-        {% if e.copy_failed %}<span class="tag stamp">copy failed</span>{% endif %}
+      <li style="padding:6px 0;border-bottom:1px solid var(--hair)">
+        <div>{{ e.name }} <span class="tag faint">L{{ e.level }}</span>
+          {% if e.copy_failed %}<span class="tag stamp">copy failed</span>{% endif %}
+        </div>
+        {% if e.can_cast or e.can_copy %}
+        <div class="row-actions" style="margin-top:4px">
+          {% if e.can_cast %}
+          <form method="post" action="/character/{{ character_id }}/spell-sources/cast" class="inline-form">
+            <input type="hidden" name="instance_id" value="{{ src.instance_id }}">
+            <input type="hidden" name="spell_id" value="{{ e.spell_id }}">
+            <button class="btn solid" type="submit" data-close>Cast</button>
+          </form>
+          {% endif %}
+          {% if e.can_copy %}
+          <form method="post" action="/character/{{ character_id }}/spell-sources/copy" class="inline-form">
+            <input type="hidden" name="instance_id" value="{{ src.instance_id }}">
+            <input type="hidden" name="spell_id" value="{{ e.spell_id }}">
+            {% if src.arcane_class_id %}<input type="hidden" name="class_id" value="{{ src.arcane_class_id }}">{% endif %}
+            <button class="btn" type="submit" data-close>Copy</button>
+          </form>
+          {% endif %}
+        </div>
+        {% endif %}
       </li>
       {% endfor %}
     </ul>
     {% endif %}
-    <p class="hint" style="margin:12px 0 0">Cast, copy, or remove from the
-      <button class="btn" data-drawer="drawer-equip" style="font-size:10px;padding:3px 7px;">Documents</button> tab.</p>
   </div>
 </div>
 {% endfor %}
