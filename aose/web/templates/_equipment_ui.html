@@ -238,6 +238,22 @@
 {% if valuables is defined %}
 <div data-pane="treasure" hidden>
 
+{% if coins_url_prefix is defined %}
+<div class="ov-section"><h4>Coins</h4>
+<form method="post" action="{{ coins_url_prefix }}/coins/add">
+  <label class="f"><span class="lab">Denomination</span>
+    <select name="denom"><option value="gp" selected>gp</option><option value="sp">sp</option><option value="cp">cp</option><option value="ep">ep</option><option value="pp">pp</option></select>
+  </label>
+  <label class="f"><span class="lab">Amount</span>
+    <input type="number" name="count" value="10" min="1" style="width:4rem">
+  </label>
+  <input type="hidden" name="loc_kind" value="carried">
+  <input type="hidden" name="loc_id" value="">
+  <button type="submit" class="btn solid">Add coins</button>
+</form>
+</div>
+{% endif %}
+
 <div class="ov-section"><h4>Gems <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--faint)">— stowable in containers</span></h4>
 {% if valuables.gems %}
 <table class="dtable">
