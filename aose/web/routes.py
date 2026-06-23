@@ -219,8 +219,6 @@ async def character_sheet(request: Request, character_id: str):
                 eligible=two_weapon_eligible(classes),
                 gargantua_1h_2h=_1h2h(spec, game_data),
             ),
-            "magic_items_view": [v for v in sheet.magic_items
-                                 if v.instance_id not in {e.instance_id for e in spec.enchanted}],
             "enchanted_rows": [v for v in sheet.magic_items
                                if v.instance_id in {e.instance_id for e in spec.enchanted}],
             "magic_acquisition": True,
@@ -228,12 +226,9 @@ async def character_sheet(request: Request, character_id: str):
             "shop": shop_categories(game_data, spec.ruleset),
             "remove_modes": REMOVE_MODES,
             "target_url_prefix": f"/character/{character_id}/equipment",
-            "ammo_rows": sheet.ammo,
             "ammo_load_options": sheet.ammo_load_options,
             "ammo_url_prefix": f"/character/{character_id}",
             "show_gold_reroll": False,
-            "show_gold_grant": True,
-            "gold_grant_url": f"/character/{character_id}/gold",
             "coins": sheet.coins,
             "coins_url_prefix": f"/character/{character_id}",
             "inv_move_groups": sheet.inventory_groups,

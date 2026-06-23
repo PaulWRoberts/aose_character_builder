@@ -1708,16 +1708,10 @@ def _equipment_context(draft: dict[str, Any], game_data) -> dict:
     ]
     classes = [game_data.classes[cid] for cid in _class_ids(draft)
                if cid in game_data.classes]
-    # Build ammo view rows and load-options from draft state
+    # Build ammo load-options for item modals (equipped launchers)
     ammo_stacks = _draft_ammo(draft)
     from aose.engine.ammo import accepts, resolve_ammo
-    from aose.sheet.view import AmmoOption, AmmoRow
-
-    ammo_rows = []
-    for s in ammo_stacks:
-        view = resolve_ammo(s, game_data)
-        ammo_rows.append(AmmoRow(instance_id=s.instance_id, name=view["name"],
-                                 count=s.count, magic=s.enchantment_id is not None))
+    from aose.sheet.view import AmmoOption
 
     # Load options keyed by weapon_id for each equipped launcher (from hand slots)
     from aose.models import Ammunition as _Ammunition, Weapon as _Weapon
@@ -1761,13 +1755,10 @@ def _equipment_context(draft: dict[str, Any], game_data) -> dict:
             eligible=two_weapon_eligible(classes),
             gargantua_1h_2h=False,
         ),
-        "magic_items_view": [],   # wizard equipment step is mundane-only
-        "enchanted_rows": [],
         "magic_acquisition": False,
         "enchant_choices": [],
         "shop": shop_categories(game_data, _ruleset_of(draft)),
         "remove_modes": REMOVE_MODES,
-        "ammo_rows": ammo_rows,
         "ammo_load_options": load_options,
         "inv_move_groups": _wizard_move_groups(containers, game_data),
         "inv_move_url": f"/wizard/{draft_id}/equipment/move-item",
