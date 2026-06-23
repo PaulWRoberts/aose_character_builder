@@ -869,9 +869,9 @@ def test_sheet_renders_container_row_with_capacity_badge(tmp_path):
     instance_id = spec.containers[0].instance_id
     r = client.get("/character/test")
     assert r.status_code == 200
-    assert f'data-instance-id="{instance_id}"' in r.text
+    assert f'id="modal-container-{instance_id}"' in r.text
     assert "Backpack" in r.text
-    assert "0 / 400" in r.text  # capacity badge
+    assert "0 / 400" in r.text  # capacity badge in container modal
     # Move control appears on loose carried items (covers stow-to-container as a destination)
     client.post("/character/test/equipment/add", data={"item_id": "torch"})
     r = client.get("/character/test")
@@ -929,7 +929,7 @@ def test_sheet_container_row_collapse_button_present(tmp_path):
     _seed_character(client)
     client.post("/character/test/equipment/add", data={"item_id": "backpack"})
     r = client.get("/character/test")
-    assert 'class="container-toggle"' in r.text
+    assert 'data-modal="modal-container-' in r.text
 
 
 def test_sheet_print_only_lists_container_contents(tmp_path):

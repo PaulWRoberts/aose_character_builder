@@ -67,8 +67,10 @@ def test_apply_kit_writes_onto_spec():
                              "CON": 10, "CHA": 10},
         race_id="human", classes=[{"class_id": "fighter"}], alignment="neutral")
     kit = qe.roll_kit("fighter", DATA, rng=random.Random(1))
-    qe.apply_kit(spec, kit)
-    assert spec.inventory == kit.inventory
+    qe.apply_kit(spec, kit, DATA)
+    # apply_kit routes Container items to spec.containers; verify all items placed.
+    all_placed = sorted(spec.inventory + [c.catalog_id for c in spec.containers])
+    assert all_placed == sorted(kit.inventory)
     assert spec.equipped == kit.equipped
     assert spec.ammo == kit.ammo
     carried_gp = next((s.count for s in spec.coins

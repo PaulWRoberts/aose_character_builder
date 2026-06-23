@@ -29,6 +29,12 @@
         <input type="hidden" name="item_id" value="{{ row.id }}">
         <button type="submit">Unstash</button>
     </form>
+    {% elif state == "container" %}
+    <form method="post" action="{{ target_url_prefix }}/take-out" class="inline-form">
+        <input type="hidden" name="item_id" value="{{ row.id }}">
+        <input type="hidden" name="instance_id" value="{{ src_id }}">
+        <button type="submit">Take out</button>
+    </form>
     {% elif state == "retainer" and row.equippable %}
     <form method="post" action="{{ target_url_prefix }}/equip" class="inline-form">
         <input type="hidden" name="item_id" value="{{ row.id }}">

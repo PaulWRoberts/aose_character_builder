@@ -270,7 +270,7 @@ def test_sheet_renders_spell_sources_section(client):
     save_character("mu", spec, client._characters_dir)
     r = client.get("/character/mu")
     assert r.status_code == 200
-    assert "Spell Books &amp; Scrolls" in r.text or "Spell Books & Scrolls" in r.text
+    assert 'data-modal="modal-source-' in r.text  # scroll appears in inventory box
     assert "Magic Missile" in r.text
     # cast action present (arcane caster, unlocked arcane scroll)
     assert "/spell-sources/cast" in r.text

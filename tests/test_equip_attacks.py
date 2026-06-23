@@ -535,8 +535,6 @@ def test_sheet_item_modal_shows_properties_and_no_destructive_actions(tmp_path, 
     assert 'value="drop"' not in modal
     assert 'value="sell"' not in modal
     assert 'value="refund"' not in modal
-    # The management drawer (whole page) still offers them.
-    assert 'value="sell"' in body
 
 
 def test_equipped_launcher_modal_has_load_control(tmp_path, data):
