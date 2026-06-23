@@ -305,6 +305,39 @@ def test_bootstrap_seeds_from_examples(tmp_path):
     assert (characters_dir / "sample.json").exists()
 
 
+def _advance_to_equipment(client, tmp_path, draft_id):
+    """Advance a fresh draft through all pre-equipment steps."""
+    _override_abilities(tmp_path, draft_id, {
+        "STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10
+    })
+    client.post(f"/wizard/{draft_id}/abilities", data={})
+    client.post(f"/wizard/{draft_id}/race", data={"race_id": "human"})
+    client.post(f"/wizard/{draft_id}/class", data={"class_id": "fighter"})
+    client.post(f"/wizard/{draft_id}/adjust", data={})
+    client.post(f"/wizard/{draft_id}/hp/roll")
+    client.post(f"/wizard/{draft_id}/hp")
+    client.post(f"/wizard/{draft_id}/identity", data={"name": "Boxtest", "alignment": "neutral"})
+
+
+def test_wizard_use_as_container_promotes_loose_backpack(client, tmp_path):
+    draft_id = _start_draft(client)
+    _advance_to_equipment(client, tmp_path, draft_id)
+    # Inject a loose backpack directly (bypassing the add route, which already
+    # promotes Container items; this simulates a backpack arriving as a plain
+    # inventory string, e.g. from an old draft or a future route).
+    draft = load_draft(draft_id, tmp_path / "drafts")
+    draft["inventory"] = ["backpack"]
+    save_draft(draft_id, draft, tmp_path / "drafts")
+    # Promote the loose backpack to a container instance
+    r = client.post(f"/wizard/{draft_id}/inventory/use-as-container",
+                    data={"owner_kind": "carried", "item_id": "backpack"})
+    assert r.status_code == 303
+    draft = load_draft(draft_id, tmp_path / "drafts")
+    # Loose backpack gone; a container instance promoted
+    assert "backpack" not in draft.get("inventory", [])
+    assert any(c.get("catalog_id") == "backpack" for c in draft.get("containers", []))
+
+
 def test_bootstrap_skipped_when_characters_present(tmp_path):
     characters_dir = tmp_path / "characters"
     characters_dir.mkdir()

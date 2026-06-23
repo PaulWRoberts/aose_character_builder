@@ -2073,6 +2073,28 @@ async def equipment_remove_container(request: Request, draft_id: str,
     return _redirect(f"/wizard/{draft_id}/equipment")
 
 
+@router.post("/{draft_id}/inventory/use-as-container")
+async def wiz_use_as_container(request: Request, draft_id: str):
+    from aose.engine import storage as _storage
+    from aose.models.storage import StorageLocation
+    draft = _load(request, draft_id)
+    form = await request.form()
+    owner_kind = form.get("owner_kind", "carried")
+    owner_id = form.get("owner_id") or None
+    item_id = form.get("item_id", "")
+    spec = _draft_to_spec(draft, request.app.state.game_data)
+    try:
+        owner = StorageLocation(kind=owner_kind, id=owner_id)
+        _storage.use_as_container(spec, owner, item_id, request.app.state.game_data)
+    except (ValueError, _storage.StorageError) as e:
+        raise HTTPException(400, str(e))
+    draft["inventory"] = list(spec.inventory)
+    draft["stashed"] = list(spec.stashed)
+    draft["containers"] = [c.model_dump() for c in spec.containers]
+    save_draft(draft_id, draft, _drafts_dir(request))
+    return _redirect(f"/wizard/{draft_id}/equipment")
+
+
 @router.post("/{draft_id}/inventory/move-container")
 async def wiz_move_container(request: Request, draft_id: str):
     """Shared container-move URL used by the container_modal macro."""
