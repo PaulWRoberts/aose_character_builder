@@ -402,6 +402,40 @@ def move_instance(spec: CharacterSpec, kind: str, instance_id: str,
         _world_lists(dest_world, kind).append(inst.model_copy(update={"location": new_loc}))
 
 
+def _find_spell_source(spec: CharacterSpec, instance_id: str):
+    """Return (owner_spec, list, src) for a spell source in the PC world or any
+    retainer world."""
+    for s in spec.spell_sources:
+        if s.instance_id == instance_id:
+            return spec, spec.spell_sources, s
+    for r in spec.retainers:
+        for s in r.spec.spell_sources:
+            if s.instance_id == instance_id:
+                return r.spec, r.spec.spell_sources, s
+    raise StorageError(f"no spell source {instance_id!r}")
+
+
+def move_spell_source(spec: CharacterSpec, instance_id: str,
+                      dest: StorageLocation, data) -> None:
+    """Move a spell book / scroll to ``dest``. Same world → re-point location;
+    cross world (PC↔retainer) → list-to-list into retainer.spec.spell_sources."""
+    if dest.kind in ("animal", "vehicle"):
+        _carrier(spec, dest.kind, dest.id)
+    if dest.kind == "container":
+        _container(spec, dest.id)
+    owner_spec, src_list, src = _find_spell_source(spec, instance_id)
+    added = 1 if src.kind == "scroll" else 0
+    _check_capacity(spec, dest, added, data)
+    dest_world = _retainer(spec, dest.id).spec if dest.kind == "retainer" else spec
+    if dest_world is owner_spec:
+        src.location = dest
+    else:
+        src_list.remove(src)
+        new_loc = (StorageLocation(kind="carried")
+                   if dest.kind == "retainer" else dest)
+        dest_world.spell_sources.append(src.model_copy(update={"location": new_loc}))
+
+
 def move_thing(spec: CharacterSpec, category: str, ref_id: str,
                dest: StorageLocation, *, count: int | None = None,
                src: StorageLocation | None = None, data=None) -> None:
@@ -424,6 +458,8 @@ def move_thing(spec: CharacterSpec, category: str, ref_id: str,
         move_ammo(spec, ref_id, dest, count if count is not None else 0)
     elif category in ("magic", "enchanted"):
         move_instance(spec, category, ref_id, dest)
+    elif category == "source":
+        move_spell_source(spec, ref_id, dest, data)
     else:
         raise StorageError(f"unknown move category {category!r}")
 

@@ -224,3 +224,31 @@ def test_moving_one_of_two_copies_keeps_the_equipped_one():
     spec = _spec(inventory=["sword", "sword"], equipped={"main_hand": "sword"})
     storage.move_item(spec, "sword", CARRIED, STASHED)
     assert spec.equipped.get("main_hand") == "sword"   # a carried copy remains
+
+
+# ── Task 6 (plan): move_spell_source + source category ───────────────────────
+
+from aose.models import SpellSource, SpellSourceEntry, Retainer
+
+
+def _scroll(iid="s1", loc=None):
+    return SpellSource(instance_id=iid, kind="scroll", caster_type="arcane",
+                       entries=[SpellSourceEntry(spell_id="magic_user_magic_missile")],
+                       location=loc or CARRIED)
+
+
+def test_move_spell_source_repoints_location_same_world():
+    spec = _spec(spell_sources=[_scroll()])
+    storage.move_thing(spec, "source", "s1", STASHED, data=DATA)
+    assert spec.spell_sources[0].location == STASHED
+
+
+def test_move_spell_source_to_container():
+    spec = _spec(
+        spell_sources=[_scroll()],
+        containers=[ContainerInstance(instance_id="c1", catalog_id="backpack",
+                                      location=CARRIED)],
+    )
+    dest = StorageLocation(kind="container", id="c1")
+    storage.move_thing(spec, "source", "s1", dest, data=DATA)
+    assert spec.spell_sources[0].location == dest
