@@ -193,6 +193,7 @@ class MagicItemView(BaseModel):
     charges_max: int | None
     note: str
     modifier_summary: list[str]
+    cost_gp: int = 0
 
 
 class AmmoRow(BaseModel):
@@ -578,6 +579,7 @@ def magic_items_view(
             charges_max=inst.charges_max,
             note=inst.note,
             modifier_summary=summary,
+            cost_gp=int(catalog.cost_gp) if catalog else 0,
         ))
 
     # Plain-inventory magic items (deduped by catalog_id; V1 has no count field)
@@ -600,6 +602,7 @@ def magic_items_view(
             charges_max=None,
             note="",
             modifier_summary=_magic_bonus_summary(item),
+            cost_gp=int(item.cost_gp),
         ))
 
     return views

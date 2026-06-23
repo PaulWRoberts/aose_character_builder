@@ -124,6 +124,11 @@
         <span><span class="indent">↳</span> {{ a.name }} ×{{ a.count }}</span>
       </li>
       {% endfor %}
+      {% for src in c.stowed_spell_sources %}
+      <li class="clickable" data-modal="modal-source-{{ src.instance_id }}">
+        <span><span class="indent">↳</span> {{ src.name }}<span class="tag">{{ src.kind }}</span></span>
+      </li>
+      {% endfor %}
       {% endfor %}
 
       {# Unequipped magic items #}
