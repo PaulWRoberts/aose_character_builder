@@ -5,7 +5,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from aose.characters import load_character, save_character
-from aose.models import CharacterSpec, ClassEntry
+from aose.models import CharacterSpec, ClassEntry, RuleSet
 from aose.web.app import create_app
 
 DATA_DIR = Path(__file__).parent.parent / "data"
@@ -152,3 +152,49 @@ def test_sheet_renders_animal_barding_modal(client):
     assert resp.status_code == 200
     assert "modal-item-animal-a1-eq-horse_barding" in resp.text
     assert "/character/boss/animal/a1/unequip" in resp.text
+
+
+def _save_char_rs(client, ruleset) -> str:
+    spec = CharacterSpec(
+        name="Boss",
+        abilities={"STR": 12, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 13},
+        race_id="human",
+        classes=[ClassEntry(class_id="fighter", level=11, hp_rolls=[8] * 9)],
+        alignment="neutral", gold=50, ruleset=ruleset,
+    )
+    save_character("boss", spec, client._characters_dir)
+    return "boss"
+
+
+def test_hire_rejects_disabled_class(client):
+    cid = _save_char_rs(client, RuleSet(disabled_content=["carcass_crawler_1:classes"]))
+    resp = client.post(f"/character/{cid}/retainer/add", data={
+        "name": "X", "class_id": "acolyte", "level": "1",
+        "race_id": "human", "alignment": "neutral"})
+    assert resp.status_code == 400
+
+
+def test_hire_rejects_illegal_demihuman_combo(client):
+    cid = _save_char_rs(client, RuleSet(separate_race_class=True))
+    resp = client.post(f"/character/{cid}/retainer/add", data={
+        "name": "X", "class_id": "magic_user", "level": "1",
+        "race_id": "dwarf", "alignment": "neutral"})
+    assert resp.status_code == 400
+
+
+def test_hire_allows_combo_when_restrictions_lifted(client):
+    cid = _save_char_rs(client, RuleSet(separate_race_class=True,
+                                        lift_demihuman_restrictions=True))
+    resp = client.post(f"/character/{cid}/retainer/add", data={
+        "name": "X", "class_id": "magic_user", "level": "1",
+        "race_id": "dwarf", "alignment": "neutral"})
+    assert resp.status_code == 303
+
+
+def test_hire_rejects_level_above_race_cap(client):
+    # PC is fighter L11; dwarf fighter cap is 10, so level 11 is illegal.
+    cid = _save_char_rs(client, RuleSet(separate_race_class=True))
+    resp = client.post(f"/character/{cid}/retainer/add", data={
+        "name": "X", "class_id": "fighter", "level": "11",
+        "race_id": "dwarf", "alignment": "neutral"})
+    assert resp.status_code == 400
