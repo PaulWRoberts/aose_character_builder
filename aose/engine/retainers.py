@@ -61,7 +61,10 @@ def generate_retainer(*, name: str, class_ids: list[str], level: int,
     if race_locked:
         race_id = primary.race_locked
     elif hiring_spec.ruleset.separate_race_class and race_id in data.races:
-        abilities = apply_racial_modifiers(abilities, data.races[race_id])
+        abilities = apply_racial_modifiers(
+            abilities, data.races[race_id],
+            include_optional=hiring_spec.ruleset.human_racial_abilities,
+        )
 
     # 3. bump each class's ability_requirements to its minimum (post-racial)
     for cid in class_ids:
