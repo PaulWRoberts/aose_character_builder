@@ -459,6 +459,7 @@ class CharacterSheet(BaseModel):
     companions: CompanionsBlock | None = None
     race_id: str = ""
     retainer_class_options: list[dict] = Field(default_factory=list)
+    retainer_race_options: list[dict] = Field(default_factory=list)
     other_possessions: list[str] = Field(default_factory=list)
     notes: str = ""
 
@@ -1299,12 +1300,25 @@ def _level_choice_extras(spec: CharacterSpec, data: GameData) -> dict:
 
 
 def _retainer_class_options(spec: CharacterSpec, data: GameData) -> list[dict]:
-    from aose.engine.retainers import allowed_retainer_classes
-    allowed = allowed_retainer_classes(spec, data)
+    from aose.engine.retainers import retainer_class_ids
+    ids = retainer_class_ids(spec, data)
     return [
         {"id": c.id, "name": c.name}
         for c in data.classes.values()
-        if c.id == "normal_human" or allowed == "any" or (isinstance(allowed, set) and c.id in allowed)
+        if c.id in ids
+    ]
+
+
+def _retainer_race_options(spec: CharacterSpec, data: GameData) -> list[dict]:
+    """Race choices for an Advanced retainer hire (content-filtered). Empty in
+    Basic mode, where a retainer has no separately-chosen race."""
+    from aose.engine.sources import race_available
+    if not spec.ruleset.separate_race_class:
+        return []
+    return [
+        {"id": r.id, "name": r.name}
+        for r in sorted(data.races.values(), key=lambda r: r.name)
+        if race_available(r, spec.ruleset)
     ]
 
 
@@ -1817,6 +1831,7 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
         companions=_with_retainers(companions_block(spec, data), spec, data, class_options=_retainer_class_options(spec, data)),
         race_id=spec.race_id,
         retainer_class_options=_retainer_class_options(spec, data),
+        retainer_race_options=_retainer_race_options(spec, data),
         other_possessions=list(spec.other_possessions),
         notes=spec.notes,
         coins=_coins_dict(spec),

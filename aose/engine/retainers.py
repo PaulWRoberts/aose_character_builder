@@ -14,6 +14,7 @@ from aose.data.loader import GameData
 from aose.engine import ability_mods, leveling, quick_equipment
 from aose.engine.ability_mods import apply_racial_modifiers
 from aose.engine.dice import roll_hp
+from aose.engine.sources import class_available
 from aose.models import Ability, CharacterSpec, ClassEntry, Retainer
 
 
@@ -117,6 +118,24 @@ def allowed_retainer_classes(hiring_spec: CharacterSpec, data: GameData):
     for s in per_class:
         union |= s
     return union
+
+
+def retainer_class_ids(hiring_spec: CharacterSpec, data: GameData) -> set[str]:
+    """The class ids a retainer may be hired as: ``normal_human`` always, plus
+    every class that is content/edition-available to the player AND permitted by
+    the AOSE per-class hiring tier (``allowed_retainer_classes``)."""
+    allowed = allowed_retainer_classes(hiring_spec, data)
+    rs = hiring_spec.ruleset
+    ids: set[str] = set()
+    for c in data.classes.values():
+        if c.id == "normal_human":
+            ids.add(c.id)
+            continue
+        if not class_available(c, rs):
+            continue
+        if allowed == "any" or (isinstance(allowed, set) and c.id in allowed):
+            ids.add(c.id)
+    return ids
 
 
 def initial_loyalty(hiring_spec: CharacterSpec, retainer_race_id: str,
