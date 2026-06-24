@@ -97,7 +97,13 @@ from aose.models import (
     RuleSet,
 )
 from aose.sheet.view import magic_items_view
-from aose.engine.sources import content_enabled
+from aose.engine.sources import (
+    content_enabled,
+    class_available,
+    race_available,
+    class_allowed_for_race,
+    class_level_cap,
+)
 from aose.web.settings_routes import (
     _content_keys,
     _ruleset_view_context,
@@ -610,7 +616,7 @@ async def get_race(request: Request, draft_id: str):
     ruleset = _ruleset_of(draft)
     races = []
     for race in sorted(data.races.values(), key=lambda r: r.name):
-        if not content_enabled(race.source, "classes", ruleset):
+        if not race_available(race, ruleset):
             continue
         effective = apply_racial_modifiers(abilities, race)
         ability_changes = [
@@ -663,19 +669,6 @@ async def post_race(request: Request, draft_id: str, race_id: str = Form(...)):
     return _redirect(f"/wizard/{draft_id}/class")
 
 
-def _class_allowed_for_race(class_id: str, race, ruleset: RuleSet) -> bool:
-    """Return whether a race may pick a class, given the active ruleset.
-
-    With ``lift_demihuman_restrictions`` on, any race may pick any class.
-    Otherwise an empty ``allowed_classes`` is treated as "no restriction"
-    (the human-style default), and a populated list is enforced.
-    """
-    if ruleset.lift_demihuman_restrictions:
-        return True
-    if not race.allowed_classes:
-        return True
-    return class_id in race.allowed_classes
-
 
 @router.get("/{draft_id}/class", response_class=HTMLResponse)
 async def get_class(request: Request, draft_id: str):
@@ -701,24 +694,16 @@ async def get_class(request: Request, draft_id: str):
 
     classes = []
     for cls in sorted(data.classes.values(), key=lambda c: c.name):
-        # Split mode hides race-as-class entries; race-as-class mode shows
-        # everything (race-locked entries become the "demihuman as class" picks).
-        if ruleset.separate_race_class and cls.race_locked:
-            continue
         if cls.id == "normal_human":   # retainer-only class; not player-choosable
             continue
-        if not content_enabled(cls.source, "classes", ruleset):
+        if not class_available(cls, ruleset):
             continue
 
         meets_abilities = _meets_ability_requirements(cls.ability_requirements, abilities)
 
         if ruleset.separate_race_class:
-            allowed_by_race = _class_allowed_for_race(cls.id, race, ruleset)
-            level_cap = (
-                race.class_level_caps.get(cls.id)
-                if not ruleset.lift_demihuman_restrictions
-                else None
-            )
+            allowed_by_race = class_allowed_for_race(cls.id, race, ruleset)
+            level_cap = class_level_cap(race, cls.id, ruleset)
         else:
             allowed_by_race = True  # no race chosen yet
             level_cap = None         # race caps don't bind a race-as-class entry
@@ -821,7 +806,7 @@ async def post_class(request: Request, draft_id: str):
                     "Separate Race & Class on.",
                 )
             race = data.races[draft["race_id"]]
-            if not _class_allowed_for_race(cid, race, ruleset):
+            if not class_allowed_for_race(cid, race, ruleset):
                 raise HTTPException(400, f"{race.name} cannot be a {cls.name}")
 
     # Reject alignment-incompatible multi-class combos up front so the player

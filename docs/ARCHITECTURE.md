@@ -856,18 +856,38 @@ real class at L1 (keeping accumulated XP).
 
 **Retainers engine** (`aose/engine/retainers.py`):
 - `allowed_retainer_classes(hiring_spec, data)` — returns `"any"` or a `set` of
-  class ids (empty = may not hire) derived from `retainer_hiring` rules.
+  class ids (empty = may not hire) derived from `retainer_hiring` rules on the PC's
+  class. This is the AOSE per-class hiring tier, orthogonal to content/edition gates.
+- `retainer_class_ids(hiring_spec, data)` — the single source of truth for what a
+  retainer may be hired as: `normal_human` always, plus every class that is
+  content/edition-available (`class_available` from `engine/sources`) AND permitted
+  by `allowed_retainer_classes`. Used by the sheet option builder and the hire route.
 - `initial_loyalty(hiring_spec, retainer_race_id, data)` — CHA base + racial
   modifiers (`retainer_loyalty_modifier` in race/class features; `except_same_race`
   flag for half-orc). Race-as-class double-counting is prevented in `_features_with`.
-- `generate_retainer(...)` — rolls 3d6-drop-lowest abilities, applies racial mods,
-  bumps to class minimums, rolls HP per level, assigns quick-equipment kit.
+- `generate_retainer(...)` — rolls baseline-10 abilities, applies racial mods (in
+  Advanced/split mode only; optional human benefits applied when `human_racial_abilities`
+  is on), bumps to class minimums, rolls HP per level, assigns quick-equipment kit.
+  Retainers are always single-class regardless of the `multiclassing` rule.
 - `grant_retainer_xp(retainer, data, amount)` — halves positive XP (−50% rule)
   then delegates to `leveling.grant_xp`.
 - `promote_normal_human(retainer, new_class_id, data)` — replaces the normal_human
   ClassEntry in-place, re-rolls HP, reassigns kit.
 - `transfer_to_retainer` / `transfer_to_pc` — move a single item id between the
   PC's `inventory` and the retainer's `spec.inventory`.
+
+**Hiring follows the PC's edition and content rules:**
+- **Basic** (`separate_race_class` off): all classes offered including race-as-class
+  demihuman entries; no separate race is chosen (race-as-class entries carry their own
+  race via `race_locked`; standard classes are human).
+- **Advanced** (`separate_race_class` on): class and race are chosen separately;
+  race-as-class entries are excluded; demihuman `allowed_classes` and `class_level_caps`
+  are enforced at the route (governed by `lift_demihuman_restrictions`); optional human
+  benefits apply to human retainers when `human_racial_abilities` is on.
+- **Content gate**: classes and races from a `disabled_content` source are excluded.
+  Shared predicates in `engine/sources.py` (`class_available`, `race_available`,
+  `class_allowed_for_race`, `class_level_cap`) are consumed by both the wizard and
+  the retainer layer — one source of truth.
 
 **CHA accessors** (`aose/engine/ability_mods.py`): `max_retainers(cha)` and
 `base_loyalty(cha)` read from the existing `_CHA_RETAINERS_MAX` and
@@ -878,7 +898,9 @@ each retainer spec (safe because `retainer.spec.retainers` is always empty).
 `_with_retainers` attaches cards and `max_retainers` to `CompanionsBlock`; it
 also returns a non-None block when `retainer_class_options` exist (so the add
 form is visible even for PCs with no existing companions). `CharacterSheet`
-gains `race_id` and `retainer_class_options: list[dict]`.
+gains `race_id`, `retainer_class_options: list[dict]`, and
+`retainer_race_options: list[dict]` (non-empty in Advanced only; drives the
+race `<select>` in the hire form).
 
 **Routes**: 12 POST routes under `/character/{id}/retainer/` — `add`, `{rid}/remove`,
 `{rid}/hp`, `{rid}/loyalty`, `{rid}/role`, `{rid}/xp`, `{rid}/levelup`, `{rid}/promote`,

@@ -1717,6 +1717,7 @@ async def vehicle_extra_animals(request: Request, character_id: str,
 # ── Retainer routes ────────────────────────────────────────────────────────
 
 from aose.engine import retainers as retainers_engine
+from aose.engine.sources import class_allowed_for_race, class_level_cap
 
 
 @router.post("/character/{character_id}/retainer/add")
@@ -1726,9 +1727,26 @@ async def retainer_add(request: Request, character_id: str,
                        alignment: str = Form("neutral")):
     spec = _load_spec_or_404(request, character_id)
     data = request.app.state.game_data
+    rs = spec.ruleset
     pc_level = max((e.level for e in spec.classes), default=1)
     if class_id != "normal_human" and level > pc_level:
         raise HTTPException(400, "A retainer may not exceed your level")
+
+    if class_id not in retainers_engine.retainer_class_ids(spec, data):
+        raise HTTPException(400, f"{class_id!r} is not available to hire")
+
+    if rs.separate_race_class and class_id != "normal_human":
+        race = data.races.get(race_id)
+        if race is None:
+            raise HTTPException(400, f"Unknown race {race_id!r}")
+        if not class_allowed_for_race(class_id, race, rs):
+            raise HTTPException(
+                400, f"{race.name} may not be a {data.classes[class_id].name}")
+        cap = class_level_cap(race, class_id, rs)
+        if cap is not None and level > cap:
+            raise HTTPException(
+                400, f"{race.name} {data.classes[class_id].name} is capped at level {cap}")
+
     try:
         ret = retainers_engine.generate_retainer(
             name=name, class_ids=[class_id], level=level, race_id=race_id,
