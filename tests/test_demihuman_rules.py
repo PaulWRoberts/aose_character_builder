@@ -11,7 +11,7 @@ from aose.data.loader import GameData
 from aose.models import CharacterSpec, ClassEntry, Race, RuleSet
 from aose.sheet.view import _xp_to_next
 from aose.web.app import create_app
-from aose.web.wizard import _class_allowed_for_race
+from aose.engine.sources import class_allowed_for_race as _class_allowed_for_race
 
 PROJECT_ROOT = Path(__file__).parent.parent
 DATA_DIR = PROJECT_ROOT / "data"
