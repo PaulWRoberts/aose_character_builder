@@ -2117,4 +2117,469 @@ git commit -m "feat(companions): animal/vehicle load + contents over located ite
 
 ---
 
-> **End of Part 3.** Parts 4–5 (view/routes/wizard, templates/tests/docs) follow.
+# Part 4 — View builders, routes, wizard
+
+### Task 17: `shop.py` — quantity engine + view-builders over `items`
+
+This task introduces the **single quantity vocabulary** (move/sell/drop/use all
+split a count off a stack) and rebuilds the inventory view over `items`.
+
+**Files:**
+- Modify: `aose/engine/shop.py` (`inventory_view`, `_build_row`, `buy_item`, `sell_item`, `new_container_instance`, add `remove_units`)
+- Test: `tests/test_shop_units.py` (create)
+
+- [ ] **Step 1: Write the failing test**
+
+```python
+# tests/test_shop_units.py
+from pathlib import Path
+import pytest
+from aose.data.loader import GameData
+from aose.engine import shop
+from aose.engine.currency import coin_count
+from aose.models import CharacterSpec, ClassEntry, ItemInstance
+from aose.models.storage import StorageLocation
+
+DATA = GameData.load(Path("data"))
+CARRIED = StorageLocation(kind="carried")
+
+
+def _spec(**kw):
+    base = dict(name="H", abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10,
+                "CON": 10, "CHA": 10}, race_id="human",
+                classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
+                alignment="neutral")
+    base.update(kw); return CharacterSpec(**base)
+
+
+def test_remove_units_drops_partial_stack():
+    spec = _spec(items=[ItemInstance(instance_id="i1", catalog_id="torch", count=5)])
+    shop.remove_units(spec, "i1", count=2, mode="drop", data=DATA)
+    assert spec.items[0].count == 3
+
+
+def test_remove_units_sell_credits_coins_and_clamps():
+    spec = _spec(items=[ItemInstance(instance_id="i1", catalog_id="torch", count=5)])
+    with pytest.raises(shop.QuantityError):
+        shop.remove_units(spec, "i1", count=6, mode="sell", data=DATA)   # > count
+    shop.remove_units(spec, "i1", count=5, mode="sell", data=DATA)
+    assert all(i.catalog_id != "torch" for i in spec.items)              # stack gone
+
+
+def test_remove_units_equippable_clears_equip():
+    spec = _spec(items=[ItemInstance(instance_id="i1", catalog_id="sword", equip="main_hand")])
+    shop.remove_units(spec, "i1", count=1, mode="drop", data=DATA)
+    assert spec.items == []
+```
+
+- [ ] **Step 2: Run to verify it fails**
+
+Run: `.venv\Scripts\python.exe -m pytest tests/test_shop_units.py -q`
+Expected: FAIL — `shop` has no `remove_units`/`QuantityError`.
+
+- [ ] **Step 3: Implement `remove_units` and migrate buy/sell/view**
+
+Add to `aose/engine/shop.py`:
+
+```python
+class QuantityError(ValueError):
+    """A move/sell/drop count outside 1..stack-count."""
+
+
+def remove_units(spec, instance_id: str, *, count: int, mode: str,
+                 data: GameData) -> int:
+    """Remove ``count`` units of an ItemInstance (sell/drop/refund), crediting
+    carried gp per mode. Equippables are count 1 and clear equip when removed.
+    Returns the gp credited. ``mode`` in REMOVE_MODES."""
+    from aose.engine import storage as _storage
+    if mode not in REMOVE_MODES:
+        raise ValueError(f"Unknown remove mode {mode!r}")
+    inst = next((i for i in spec.items if i.instance_id == instance_id), None)
+    if inst is None:
+        raise UnknownItem(f"no item instance {instance_id!r}")
+    if count <= 0 or count > inst.count:
+        raise QuantityError(f"cannot remove {count} of {inst.count}")
+    credit = _removal_gold(inst.catalog_id, mode, data) * count if mode == "sell" \
+        else (_removal_gold(inst.catalog_id, mode, data) if mode == "refund" else 0)
+    inst.count -= count
+    if inst.count == 0:
+        spec.items.remove(inst)            # equip rides with the removed instance
+    if credit:
+        _storage._add_coins(spec, "gp", credit, StorageLocation(kind="carried"))
+    return credit
+```
+
+> `_removal_gold` already gives per-unit sell price and full refund price; here sell multiplies by count, refund stays bundle-priced (refund of a multi-unit stack is rare — keep the existing semantics).
+
+Rewrite `buy_item` to mint an instance (merging into a carried stack for stackables):
+
+```python
+def buy_item(spec, item_id: str, data: GameData) -> None:
+    from aose.engine.equip import is_stackable
+    import uuid
+    if item_id not in data.items:
+        raise UnknownItem(f"No item with id {item_id!r}")
+    item = data.items[item_id]
+    spend(spec, int(item.cost_gp))
+    n = _bundle_count(item)
+    carried = StorageLocation(kind="carried")
+    if is_stackable(item):
+        resident = next((i for i in spec.items
+                         if i.catalog_id == item_id and i.location == carried), None)
+        if resident is not None:
+            resident.count += n
+            return
+    for _ in range(n if not is_stackable(item) else 1):
+        spec.items.append(ItemInstance(instance_id=uuid.uuid4().hex,
+                                       catalog_id=item_id,
+                                       count=(n if is_stackable(item) else 1)))
+```
+
+Replace `sell_item`/`sell_from_stash` callers (Part 4 Task 19 wires the routes to `remove_units` with the instance id + count). Delete the legacy string-based `buy`/`add_free`/`remove`/`remove_from_stash`/`inventory_rows` and the dict-based `inventory_view` once Task 18 no longer needs them (grep first: `rg -n "shop\.(buy|add_free|remove|remove_from_stash|inventory_rows|inventory_view)\b" aose tests`).
+
+Rewrite `inventory_view` to take `spec` and bucket `spec.items`:
+
+```python
+def inventory_view(spec, data, *, allowed_weapons="all", allowed_armor="all",
+                   allow_shields=True, two_weapon=False, eligible=False,
+                   gargantua_1h_2h=False) -> InventoryView:
+    from aose.engine import storage
+    CARRIED = StorageLocation(kind="carried"); STASHED = StorageLocation(kind="stashed")
+    off_full = any(i.equip == "off_hand" for i in spec.items)
+    def row(inst):
+        r = _build_row(inst.catalog_id, inst.count, data, allowed_weapons,
+                       allowed_armor, allow_shields, two_weapon=two_weapon,
+                       eligible=eligible, off_full=off_full)
+        return r.model_copy(update={"instance_id": inst.instance_id,
+                                    "equipped_slot": inst.equip})
+    eq, carried, stashed = [], [], []
+    for inst in spec.items:
+        if inst.location == CARRIED:
+            (eq if inst.equip else carried).append(row(inst))
+        elif inst.location == STASHED:
+            stashed.append(row(inst))
+    # containers built by build_inventory_groups now; keep [] here
+    for lst in (eq, carried, stashed):
+        lst.sort(key=lambda r: r.name)
+    return InventoryView(equipped=eq, carried=carried, stashed=stashed, containers=[])
+```
+
+Add `instance_id: str = ""` and `equipped_slot: str | None = None` fields to `InventoryRow` (so templates can equip/move by instance id). Keep `_build_row`'s catalog-based signature (it builds the static catalog half); the row gets its `instance_id` from the caller.
+
+- [ ] **Step 4: Run to verify it passes**
+
+Run: `.venv\Scripts\python.exe -m pytest tests/test_shop_units.py -q`
+Expected: PASS (3 tests).
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add aose/engine/shop.py tests/test_shop_units.py
+git commit -m "feat(shop): remove_units quantity engine; buy/inventory_view over ItemInstances"
+```
+
+---
+
+### Task 18: `sheet/view.py` over `items`
+
+Mechanical migration using the Part 3 substitution table. No new tests beyond the
+end-to-end sheet build (Task 27); the goal here is to compile and render.
+
+**Files:**
+- Modify: `aose/sheet/view.py` (`_equipped:736`, `_inventory:748`, `_weapon_qualities_reference:794`, `_retainer_cards:1354`, `build_inventory_groups:1394`, `_armor_id:1800`)
+
+- [ ] **Step 1: Apply the substitutions**
+
+- `_equipped`: iterate equipped instances, not the dict:
+```python
+def _equipped(spec, data):
+    from aose.engine.equip import equipped_instance
+    rows = []
+    for slot in ("armor", "off_hand"):       # weapons render as attacks
+        inst = equipped_instance(spec, slot)
+        if inst is None:
+            continue
+        from aose.models import ItemInstance
+        cid = inst.catalog_id if isinstance(inst, ItemInstance) else inst.instance_id
+        name = data.items[inst.catalog_id].name if getattr(inst, "catalog_id", None) in data.items else cid
+        # off_hand only if it is a shield (a weapon stays an attack profile)
+        from aose.engine.equip import slot_item
+        from aose.models import Armor
+        item = slot_item(spec, slot, data)
+        if slot == "off_hand" and not (isinstance(item, Armor) and item.is_shield):
+            continue
+        rows.append(EquippedRow(slot=slot, item_name=item.name if item else name,
+                                item_id=inst.instance_id))
+    return rows
+```
+- `_inventory`: `return [data.items[i.catalog_id].name if i.catalog_id in data.items else i.catalog_id for i in spec.items]`.
+- `_weapon_qualities_reference`: `for inst in spec.items: item = data.items.get(inst.catalog_id)` (drop the `spec.equipped.values()` union — equipped items are in `spec.items`).
+- `_armor_id` (1800): `from aose.engine.equip import equipped_instance; ai = equipped_instance(spec, "armor"); _armor_id = getattr(ai, "catalog_id", None)`.
+- `_retainer_cards`: `equipped_names` from `equipped_instance`/`slot_item` over `r.spec`; `inv_rows` from `r.spec.items` (one row per instance with count). `RetainerCard.equipped` stays `dict[str,str]` (slot→name) built via `slot_item(r.spec, slot, data)`.
+
+- [ ] **Step 2: Migrate `build_inventory_groups`**
+
+This is the largest single edit. Apply these rules across the function:
+- The PC carried/stashed split comes from the new `inventory_view(spec, data, ...)` (Task 17) — pass `spec`, not `spec.inventory/stashed/equipped`.
+- Loose rows per carrier/retainer come from `storage.items_at(spec_or_world, loc)`; build each row via `_build_row(inst.catalog_id, inst.count, ...)` then attach `instance_id`/`equipped_slot`.
+- Container content rows: replace `Counter(c.contents)` + `raw_used = sum(... for x in c.contents)` with `storage.items_at(spec, here)` and `storage.location_load_cn(spec, here, data)`.
+- Retainer group: `Counter(retainer.spec.inventory)` → iterate `retainer.spec.items`; `retainer.spec.equipped.values()` → `equipped_instance(retainer.spec, slot)` for each slot; equipped-worn via `_equipped(retainer.spec, data)`.
+- Animal barding equipped row is unchanged (it reads `inst.armor_id`, not items).
+
+Acceptance (add to `tests/test_sheet_inventory_box.py` during Part 5 migration): a carried sword instance renders one equipped row; a torch stack of 3 renders one carried row with `count == 3`; an item with `location=container/<id>` renders inside that container's view and nowhere else.
+
+- [ ] **Step 3: Run the sheet build smoke check**
+
+Run: `.venv\Scripts\python.exe -c "from pathlib import Path; from aose.data.loader import GameData; from aose.sheet.view import build_sheet; from aose.models import CharacterSpec, ClassEntry, ItemInstance; d=GameData.load(Path('data')); s=CharacterSpec(name='x', abilities={'STR':10,'INT':10,'WIS':10,'DEX':10,'CON':10,'CHA':10}, race_id='human', classes=[ClassEntry(class_id='fighter', level=1, hp_rolls=[8])], alignment='neutral', items=[ItemInstance(instance_id='i1', catalog_id='sword', equip='main_hand')]); build_sheet(s, d); print('ok')"`
+Expected: prints `ok`.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add aose/sheet/view.py
+git commit -m "feat(view): build sheet + inventory groups from the items model"
+```
+
+---
+
+### Task 19: Routes — equip/move/sell/drop/use by `instance_id`; give/take via `move_thing`
+
+**Files:**
+- Modify: `aose/web/routes.py` (equip/unequip:748-790, remove/sell:786-801, equip-enchanted:912-965, retainer give/take/equip/unequip:1871-1935, ammo load/unload routes, tailored:484)
+- Test: `tests/test_inventory_routes_units.py` (create — uses the FastAPI test client pattern from `tests/test_retainer_routes.py`)
+
+- [ ] **Step 1: Write the failing test** (mirror the existing route-test client setup)
+
+```python
+# tests/test_inventory_routes_units.py — assert the new form contracts
+# (Use the app/test-client fixtures already used by tests/test_retainer_routes.py.)
+# 1. POST /character/{id}/equipment/equip with instance_id equips that instance.
+# 2. POST /character/{id}/equipment/sell with instance_id + count=2 reduces the
+#    stack by 2 and credits gp.
+# 3. POST /character/{id}/inventory/use with instance_id drops exactly 1.
+# 4. POST /character/{id}/retainer/{rid}/give with instance_id moves it to the
+#    retainer (via move_thing), and a follow-up equip on the retainer then
+#    /inventory/move back leaves no dupe (the Task 9 contract, end-to-end).
+```
+
+Write these as real client tests following `tests/test_retainer_routes.py` (same `client`, `_make_character` helpers). Each posts the new form fields and asserts the persisted spec.
+
+- [ ] **Step 2: Run to verify it fails**
+
+Run: `.venv\Scripts\python.exe -m pytest tests/test_inventory_routes_units.py -q`
+Expected: FAIL.
+
+- [ ] **Step 3: Implement the route changes**
+
+- `equipment_equip`/`equipment_unequip`: accept `instance_id: str = Form(...)`; call `equip.equip(spec, instance_id, data=…, slot=…, two_weapon=…, eligible=…, gargantua_1h_2h=…, allowed_weapons/armor/shields=…)` / `equip.unequip(spec, instance_id)`. Compute the allowance triple from the PC's classes (already done elsewhere — reuse `_owner_allowances`/proficiency helpers).
+- `equipment_equip_enchanted`/`unequip_enchanted`: route through the same `equip.equip(spec, instance_id, …)` (an enchanted instance id is found by `_find_equippable`); drop the separate `enchant.equip` + `spec.equipped` dance.
+- `equipment_remove` (sell/drop): accept `instance_id` + `count: int = Form(1)`; call `shop.remove_units(spec, instance_id, count=count, mode=mode, data=data)`. Map `QuantityError` → HTTP 400.
+- New `POST /character/{id}/inventory/use`: `shop.remove_units(spec, instance_id, count=1, mode="drop", data=data)`.
+- `equipment_tailored`: flip the armour slot instance's `.tailored` (find via `equip.equipped_instance(spec, "armor")`), not `spec.armor_tailored`.
+- Ammo load/unload routes: set `equip.equipped_instance(spec, slot).loaded_ammo_id = ammo_instance_id` (load) / `= None` (unload); the launcher is whichever equipped weapon accepts the ammo.
+- `retainer_give`/`retainer_take`: replace `transfer_to_*` with
+  `storage.move_thing(spec, "item", instance_id, dest, data=data)` where `dest` is
+  `StorageLocation(kind="retainer", id=retainer_id)` (give) or `kind="carried"` (take, with the item currently in the retainer world).
+- `retainer_equip`/`retainer_unequip`: `equip.equip(ret.spec, instance_id, data=…, two_weapon=ret.spec.ruleset.two_weapon_fighting)` / `equip.unequip(ret.spec, instance_id)`.
+
+- [ ] **Step 4: Run to verify it passes**
+
+Run: `.venv\Scripts\python.exe -m pytest tests/test_inventory_routes_units.py -q`
+Expected: PASS.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add aose/web/routes.py tests/test_inventory_routes_units.py
+git commit -m "feat(routes): equip/sell/use/move by instance_id; give/take via move_thing"
+```
+
+---
+
+### Task 20: Wizard equipment step
+
+**Files:**
+- Modify: `aose/web/wizard.py` (equipment step — builds the draft inventory/equipped), `aose/web/templates/wizard/equipment.html`
+- Test: extend `tests/test_wizard_equipment*.py` (grep for the file)
+
+- [ ] **Step 1: Locate the wizard equip/inventory writes**
+
+Run: `rg -n "inventory|equipped|loaded_ammo|stashed|\.items" aose/web/wizard.py`
+Every place the wizard appends to `draft["inventory"]` / sets `draft["equipped"]` must build `ItemInstance`s in `draft["items"]` instead, and equip by setting the instance's `equip`. The wizard equips via the same `equip.equip(spec, instance_id, …)` once the draft is materialised to a spec.
+
+- [ ] **Step 2–4: TDD the wizard equip path**
+
+Add a test that the equipment step yields a draft whose `items` contains the bought instances with the right `equip` slots; then implement; then green. (Use the wizard-test client pattern already present.)
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add aose/web/wizard.py aose/web/templates/wizard/equipment.html tests/
+git commit -m "feat(wizard): equipment step builds ItemInstances + instance equips"
+```
+
+---
+
+# Part 5 — Templates, test-suite migration, docs
+
+### Task 21: Templates — count box, "use" button, equip/move by `instance_id`
+
+**Files:**
+- Modify: `aose/web/templates/_actions.html` (shared macros — add count box + use), `_inv_modals.html`, `_inv_pane.html`, `_companions.html`, `sheet.html`, `sheet_print.html`, `wizard/equipment.html`
+- Test: covered by Task 27 render checks + Task 19 route tests
+
+- [ ] **Step 1: Add the quantity macros to `_actions.html`**
+
+```jinja
+{# Number box for a stackable action; defaults to full count, clamps 1..count. #}
+{% macro act_count(field='count', count=1) %}
+  <input class="act-num" type="number" name="{{ field }}"
+         value="{{ count }}" min="1" max="{{ count }}" step="1"
+         {% if count <= 1 %}hidden{% endif %}>
+{% endmacro %}
+
+{# "Use" = drop exactly one; consumables only. #}
+{% macro act_use(url, instance_id) %}
+  <form class="inline-form" method="post" action="{{ url }}">
+    <input type="hidden" name="instance_id" value="{{ instance_id }}">
+    <button class="btn btn-inline" type="submit">Use</button>
+  </form>
+{% endmacro %}
+```
+
+- [ ] **Step 2: Wire each item row/modal**
+
+For every loose / stowed item row (`_inv_pane.html`, `_inv_modals.html`,
+`_companions.html`, and the wizard equipment list):
+- Equip/Unequip/Move/Sell/Drop forms post `instance_id` (the row's
+  `row.instance_id`) instead of `item_id`.
+- The **Move**, **Sell**, and **Drop** forms include `{{ act_count('count', row.count) }}`
+  when `row.count > 1` (and for any durable stackable — gems/coins keep their
+  existing count input, now unified to `act_count`).
+- A **Use** button (`{{ act_use(use_url, row.instance_id) }}`) renders only when
+  the row is a *consumable* stackable — pass a `row.consumable` flag from
+  `_build_row` (`consumable = is_stackable(item)` since all stackable catalog gear
+  is consumable; coins/gems are durable and rendered by their own partials, which
+  do not get Use).
+- Container / animal / vehicle content blocks render `storage.items_at`-derived
+  rows (already built in Task 18) — drop any `c.contents`/`Counter` template logic.
+
+- [ ] **Step 3: Render smoke check**
+
+Run the app and load a character sheet; confirm no `UndefinedError`:
+Run: `.venv\Scripts\python.exe -m pytest tests/ -q -k "sheet or inventory or template"`
+Expected: the render-path tests pass (after Task 22 migrates their fixtures).
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add aose/web/templates/
+git commit -m "feat(ui): count box on move/sell/drop, Use button, equip/move by instance_id"
+```
+
+---
+
+### Task 22: Migrate the test suite to the instance model
+
+The model change breaks every test that constructs a spec with `inventory=[…]`,
+`stashed=[…]`, `equipped={…}`, `loaded_ammo={…}`, `armor_tailored=…`, or a
+carrier `contents=[…]`. This task sweeps them.
+
+**Files:**
+- Modify: every test under `tests/` flagged by the grep below.
+
+- [ ] **Step 1: Enumerate the breakage**
+
+Run: `rg -ln "inventory=|stashed=|equipped=|loaded_ammo=|armor_tailored=|contents=" tests`
+Run: `rg -ln "spec\.inventory|spec\.equipped|spec\.stashed|\.loaded_ammo|\.contents" tests`
+
+- [ ] **Step 2: Apply the mechanical fixture translation**
+
+Per the substitution table, in each test:
+- `inventory=["a", "b", "b"]` → `items=[ItemInstance(instance_id="t_a", catalog_id="a"), ItemInstance(instance_id="t_b", catalog_id="b", count=2)]` for stackables, or two separate equippable instances. Use stable `instance_id`s (`t_<n>`) so assertions can target them.
+- `stashed=["x"]` → an `ItemInstance(..., location=StorageLocation(kind="stashed"))`.
+- `equipped={"main_hand": "sword"}` → the matching `ItemInstance(catalog_id="sword", equip="main_hand")`.
+- `loaded_ammo={"short_bow": "a1"}` → `loaded_ammo_id="a1"` on the bow instance.
+- `armor_tailored=False` → `tailored=False` on the armour instance.
+- carrier `contents=["torch"]` → an `ItemInstance(catalog_id="torch", location=StorageLocation(kind="animal"/"vehicle"/"container", id=<carrier id>))`.
+- Assertions reading `spec.equipped[...]` → `equip.equipped_ref(spec, slot)`; reading `spec.inventory` membership → `{i.catalog_id for i in spec.items}`.
+
+Work file-by-file; run that file's tests green before moving on. Suggested order
+(densest first): `test_equipment.py`, `test_equip_enforcement.py`,
+`test_equip_attacks.py`, `test_storage*.py`, `test_shop*.py`,
+`test_quick_equipment*.py`, `test_retainer_*`, `test_encumbrance*`, the AC/attack
+tests, then the route/view tests.
+
+- [ ] **Step 3: Run the full suite**
+
+Run: `.venv\Scripts\python.exe -m pytest tests/ -q`
+Expected: GREEN (ignore the trailing `pytest-current` PermissionError).
+
+- [ ] **Step 4: Commit (may be several commits, one per file cluster)**
+
+```bash
+git add tests/
+git commit -m "test: migrate the suite to the ItemInstance model"
+```
+
+---
+
+### Task 23: Delete dead code + confirm no legacy references remain
+
+**Files:**
+- Modify: any module still referencing removed fields/functions.
+
+- [ ] **Step 1: Grep for stragglers**
+
+Run: `rg -n "\.inventory\b|\.stashed\b|spec\.equipped|\.loaded_ammo|armor_tailored|\.contents\b|transfer_to_retainer|transfer_to_pc|inventory_rows\b" aose`
+Expected: **no hits** in `aose/` except the new `ItemInstance`/`items` code. Fix any straggler (e.g. a forgotten `auth` seed, a print template).
+
+- [ ] **Step 2: Run the full suite + app smoke**
+
+Run: `.venv\Scripts\python.exe -m pytest tests/ -q`
+Run: `.venv\Scripts\python.exe -m uvicorn aose.web.app:app` (load a saved character, the sheet, the wizard equipment step, and a retainer card; equip/move/sell/use an item; move an equipped item off a retainer and confirm no dupe).
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add -A
+git commit -m "chore: remove legacy item fields/helpers; no stragglers remain"
+```
+
+---
+
+### Task 24: Docs
+
+**Files:**
+- Modify: `docs/ARCHITECTURE.md` (Inventory/storage/encumbrance/equip sections — in place), `CLAUDE.md` (Storage shapes), `docs/CHANGELOG.md` (one row)
+
+- [ ] **Step 1: Update `CLAUDE.md` Storage shapes**
+
+Replace the `inventory`/`stashed`/`equipped` bullets with the `items: list[ItemInstance]` model (instance_id + location + count + equip + tailored + loaded_ammo_id); note coins carry `instance_id`; note `contents` removed from carriers; note `equipped`/`loaded_ammo`/`armor_tailored` removed.
+
+- [ ] **Step 2: Update `ARCHITECTURE.md`** — edit the inventory/storage/equip topics in place: one flat `items` list, the `LocationPolicy` descriptor (uniform locations, differences are parameters), instance equip-state, `move_thing` single front door (retainers included), the quantity vocabulary (move/sell/drop/use + auto-merge).
+
+- [ ] **Step 3: Add a `CHANGELOG.md` row**
+
+```
+| 2026-06-24 | Item identity unification: every owned thing is an instance (items get ids/location/count/equip-state); equipped/loaded-ammo/tailored become instance fields; one move + equip path; retainer equip-then-move dupe fixed | feat/item-identity-unification | 2026-06-24-item-identity-unification |
+```
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add docs/ CLAUDE.md
+git commit -m "docs: item identity unification (architecture, storage shapes, changelog)"
+```
+
+---
+
+## Self-Review (against the spec)
+
+- **Spec coverage:** ItemInstance + flat list (Task 1); coin ids (Task 1); equip-as-state slotted + magic toggle (Tasks 1–3, 11, 13, 14); loaded-ammo/tailored as instance fields (Tasks 1, 11, 12, 19); durable vs consumable + count box + use (Tasks 17, 21); auto-merge ≤1 stack/key+location (Tasks 7, 17); split-by-move (Task 7); one move path + retainer transfer deletion (Tasks 8, 9, 19); uniform LocationPolicy (Task 5); coercion at loader (Task 4); the five invariants tested (Tasks 2, 5, 7, 9); dupe regression (Task 9); docs (Task 24). All spec sections map to a task.
+- **Known judgement calls (flagged to the user):** equip by `instance_id`; coercion at the loader not a model validator; legacy enchanted-launcher `loaded_ammo` dropped if unmatched; suite red mid-landing.
+- **Type consistency:** `equip.equip(spec, instance_id, …)`/`unequip(spec, instance_id)` used identically in Tasks 2, 13, 19; `storage.move_thing(spec, "item", instance_id, dest, count=…, data=…)` in Tasks 8, 9, 19; `shop.remove_units(spec, instance_id, count=…, mode=…, data=…)` in Tasks 17, 19; `storage.items_at`/`location_load_cn`/`location_policy` signatures stable across Parts 2–4.
+
+---
+
+> **Plan complete.** Atomic landing; suite returns to green at Task 22 and stays green through Task 24.
