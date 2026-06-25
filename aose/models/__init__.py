@@ -35,8 +35,8 @@ from .modifier import GrantedModifier, Modifier, RolledModifier, Scaling
 from .enchantment import AppliesTo, Enchantment
 from .storage import StorageLocation, CoinStack
 from .character import (
-    AmmoStack, AnimalInstance, CharacterSpec, ClassEntry, ContainerInstance,
-    EnchantedInstance, MagicItemInstance, Retainer, SpellSlot, SpellSource,
+    AnimalInstance, CharacterSpec, ClassEntry, ContainerInstance,
+    EquipSlot, ItemInstance, MagicItemInstance, Retainer, SpellSlot, SpellSource,
     SpellSourceEntry, VehicleInstance,
 )
 from .valuable import GemStack, JewelleryPiece
@@ -85,12 +85,12 @@ __all__ = [
     "Scaling",
     "AppliesTo",
     "Enchantment",
-    "AmmoStack",
     "AnimalInstance",
     "CharacterSpec",
     "ClassEntry",
     "ContainerInstance",
-    "EnchantedInstance",
+    "EquipSlot",
+    "ItemInstance",
     "MagicItemInstance",
     "Retainer",
     "SpellSlot",

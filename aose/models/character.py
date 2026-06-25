@@ -8,6 +8,26 @@ from .ruleset import RuleSet
 from .storage import CoinStack, StorageLocation
 from .valuable import GemStack, JewelleryPiece
 
+EquipSlot = Literal["armor", "main_hand", "off_hand"]
+
+
+class ItemInstance(BaseModel):
+    """One owned catalog item, with identity — plain, enchanted, or stacked."""
+    model_config = ConfigDict(extra="forbid")
+
+    instance_id: str                       # uuid4 hex
+    catalog_id: str                        # references a Weapon / Armor / gear / Ammunition item
+    location: StorageLocation = Field(default_factory=lambda: StorageLocation(kind="carried"))
+    enchantment_id: str | None = None      # None = plain; else references an Enchantment
+    count: int = 1
+    equip: EquipSlot | None = None
+    tailored: bool = True
+    loaded_ammo_id: str | None = None      # launcher weapons only; an ammo ItemInstance id
+    charges_max: int | None = None
+    charges_remaining: int | None = None
+    extra_modifiers: list[Modifier] = Field(default_factory=list)  # escape hatch
+    note: str = ""                                                  # escape hatch
+
 
 class MagicItemInstance(BaseModel):
     """A specific magic item the character owns — per-instance state separate
@@ -29,42 +49,6 @@ class MagicItemInstance(BaseModel):
     note: str = ""                                                 # escape hatch
 
 
-class EnchantedInstance(BaseModel):
-    """A specific magic weapon/armour the character owns, modelled as a
-    composition of a base catalog item + a reusable ``Enchantment``.  Resolved
-    to a synthetic ``Weapon``/``Armor`` at display time by
-    ``aose/engine/enchant.py``; nothing composed is persisted.  Not stored in
-    its own ``equipped`` bool (body armour only; weapons/shields are
-    slot-resident in ``CharacterSpec.equipped``).  Passive enchantment modifiers apply only while equipped.
-    """
-    model_config = ConfigDict(extra="forbid")
-
-    instance_id: str                  # uuid4 hex
-    base_id: str                      # references a Weapon or Armor
-    enchantment_id: str               # references an Enchantment
-    location: StorageLocation = Field(default_factory=lambda: StorageLocation(kind="carried"))
-    equipped: bool = False
-    charges_max: int | None = None
-    charges_remaining: int | None = None
-    extra_modifiers: list[Modifier] = Field(default_factory=list)  # escape hatch
-    note: str = ""
-
-
-class AmmoStack(BaseModel):
-    """A stack of one kind of ammunition the character owns.  Stacks with the
-    same (base_id, enchantment_id) combine; counts are adjusted manually (no
-    automatic per-shot consumption).  ``enchantment_id`` set => magic ammo,
-    resolved like an EnchantedInstance to confer its bonus to a loaded launcher.
-    """
-    model_config = ConfigDict(extra="forbid")
-
-    instance_id: str                       # uuid4 hex
-    base_id: str                           # references an Ammunition item
-    enchantment_id: str | None = None      # references an Enchantment (kind ammunition)
-    count: int = 0
-    location: StorageLocation = Field(default_factory=lambda: StorageLocation(kind="carried"))
-
-
 class ContainerInstance(BaseModel):
     """A specific container the character owns — per-instance state, separate
     from the catalog ``Container`` item.  Items inside ``contents`` are not in
@@ -77,7 +61,6 @@ class ContainerInstance(BaseModel):
     catalog_id: str
     # carried/stashed/animal/vehicle only — never "container" (no nesting).
     location: StorageLocation = Field(default_factory=lambda: StorageLocation(kind="carried"))
-    contents: list[str] = Field(default_factory=list)
 
     @model_validator(mode="before")
     @classmethod
@@ -115,7 +98,6 @@ class AnimalInstance(BaseModel):
     name: str = ""                   # optional label
     hp_damage: int = 0               # current hp = max(0, catalog.hp - hp_damage)
     armor_id: str | None = None      # references an AnimalArmor in catalog.armor_fits
-    contents: list[str] = Field(default_factory=list)
     magic_note: str = ""             # free-text placeholder until magic items land
 
 
@@ -129,7 +111,6 @@ class VehicleInstance(BaseModel):
     name: str = ""
     hull_max: int                    # resolved from catalog.hull_points at purchase
     hull_damage: int = 0
-    contents: list[str] = Field(default_factory=list)
     extra_animals: bool = False      # raises cap to cargo_capacity_extra_cn
     note: str = ""
 
@@ -244,28 +225,13 @@ class CharacterSpec(BaseModel):
     # score to [3, 18] (see aose/engine/magic.py). The real `abilities` are
     # never altered.
     temp_ability_modifiers: dict[Ability, int] = Field(default_factory=dict)
-    # Items on the character's person — equipped items live here too.  Weight
-    # in this list contributes to encumbrance.
-    inventory: list[str] = Field(default_factory=list)
-    # Items left behind / on a horse / at camp.  Don't contribute to weight.
-    stashed: list[str] = Field(default_factory=list)
-    # slot -> id, for worn/held gear. Slots: "armor" (body), "main_hand",
-    # "off_hand" (a shield OR an off-hand weapon). Hand-slot values may be a
-    # catalog item id or an enchanted instance id. equip() enforces the wield
-    # budget; see aose/engine/equip.py.
-    equipped: dict[str, str] = Field(default_factory=dict)
-    # Whether the equipped tailorable body armour (full plate) is fitted to this
-    # character. Inert unless the worn armour is `tailorable`; a single toggle
-    # (one body-armour slot), remembered across re-equips.
-    armor_tailored: bool = True
+    # All owned catalog items (plain, enchanted, or stacked ammo) — unified.
+    # Location, equip-state, and enchantment are on each instance.
+    items: list[ItemInstance] = Field(default_factory=list)
     containers: list[ContainerInstance] = Field(default_factory=list)
     animals: list[AnimalInstance] = Field(default_factory=list)
     vehicles: list[VehicleInstance] = Field(default_factory=list)
     magic_items: list[MagicItemInstance] = Field(default_factory=list)
-    enchanted: list[EnchantedInstance] = Field(default_factory=list)
-    # Ammunition stacks (counts), plus which stack is loaded into each launcher.
-    ammo: list[AmmoStack] = Field(default_factory=list)
-    loaded_ammo: dict[str, str] = Field(default_factory=dict)  # weapon_key -> AmmoStack.instance_id
     # Owned spell books / scrolls (custom contents).  Not in `inventory`.
     spell_sources: list[SpellSource] = Field(default_factory=list)
     # Owned treasure — gems (stacked by value+label) and jewellery (individual).
