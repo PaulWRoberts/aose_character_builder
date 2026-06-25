@@ -4,7 +4,29 @@
 
 **Goal:** Give every owned thing a real instance identity (`instance_id` + `location`, plus `count` for stackables and equip-state for equippables), deleting the `equipped`/`loaded_ammo`/`armor_tailored`/`contents` side tables, so one move path and one equip path serve PC and retainer alike — and the retainer equip-then-move dupe is fixed structurally.
 
-**Architecture:** Single **atomic engine landing** (no compatibility layer): the model changes and every engine reader/writer, the view-data builders, the routes, the wizard, and the whole test suite move together on one branch. Loose catalog items become `ItemInstance`s in one flat `CharacterSpec.items` list (location is a field, not a positional list); `equipped`/`loaded_ammo`/`armor_tailored` become per-instance fields; coin stacks gain `instance_id`. Storage locations are uniform, differing only by a policy descriptor (capacity / encumbrance / equip-allowed / equip-eligibility). Old saves are coerced at the loader (where `GameData` is available), not in a model validator.
+**Architecture:** Single **atomic engine landing** (no compatibility layer): the model changes and every engine reader/writer, the view-data builders, the routes, the wizard, and the whole test suite move together on one branch. Loose catalog items become `ItemInstance`s in one flat `CharacterSpec.items` list (location is a field, not a positional list); `equipped`/`loaded_ammo`/`armor_tailored` become per-instance fields; coin stacks gain `instance_id`. **Plain, enchanted, and ammo collapse into the one `ItemInstance` type** (type is `catalog_id`; enchantment is an optional `enchantment_id` field; ammo is a stack with `count`), deleting `EnchantedInstance`, `AmmoStack`, and the `spec.enchanted`/`spec.ammo` lists. Storage locations are uniform, differing only by a policy descriptor (capacity / encumbrance / equip-allowed / equip-eligibility). Old saves are coerced at the loader (where `GameData` is available), not in a model validator.
+
+> **Revision 2026-06-25 — three types merged into one.** This plan was first
+> authored with `ItemInstance` (plain), `EnchantedInstance`, and `AmmoStack` as
+> three separate types/lists. The approved design now folds them into **one**
+> `ItemInstance` (one `spec.items` list). `MagicItemInstance`, `SpellSource`,
+> `coins`, `gems`, `jewellery`, `containers`, `animals`, `vehicles` stay separate.
+> Apply this **global substitution** everywhere below (the per-task code is updated
+> for the structural tasks; this table governs the rest):
+>
+> | Pre-merge plan text | Read it as |
+> |---|---|
+> | `EnchantedInstance(instance_id=…, base_id=B, enchantment_id=E, equip=S)` | `ItemInstance(instance_id=…, catalog_id=B, enchantment_id=E, equip=S)` |
+> | `AmmoStack(instance_id=…, base_id=B, enchantment_id=E, count=N)` | `ItemInstance(instance_id=…, catalog_id=B, enchantment_id=E, count=N)` |
+> | `spec.enchanted` (the list) | the subset of `spec.items` with `enchantment_id is not None` |
+> | `spec.ammo` (the list) | the subset of `spec.items` whose resolved catalog item is `Ammunition` |
+> | `move_thing(spec, "enchanted"/"ammo", …)` | `move_thing(spec, "item", …)` (one item category) |
+> | `isinstance(inst, ItemInstance) else <enchanted-instance_id branch>` | always the `ItemInstance` branch (one type) |
+> | merge-key `catalog_id` / ammo `base_id+enchantment_id` | unified `(catalog_id, enchantment_id)` |
+> | resolve an enchanted instance to its `Weapon`/`Armor` | `enchant.resolve(inst, data)` (one resolver; plain → `data.items[catalog_id]`) |
+>
+> Where a task's code block still shows the old shape and is **not** re-listed in a
+> "Revised" note, apply the table mechanically.
 
 **Tech Stack:** Python 3.14, Pydantic v2, FastAPI, Jinja2, pytest. Run tests with `.venv\Scripts\python.exe -m pytest tests/ -q` (the trailing `pytest-current` PermissionError is a known Windows quirk — ignore it).
 
@@ -30,15 +52,15 @@ This plan covers the **whole atomic landing**. It is authored in five parts that
 
 | File | Responsibility | Change |
 |---|---|---|
-| `aose/models/character.py` | `ItemInstance`; `CharacterSpec.items`; equip-state on `ItemInstance`/`EnchantedInstance`; drop `inventory`/`stashed`/`equipped`/`loaded_ammo`/`armor_tailored`; drop `contents` from container/animal/vehicle | Modify |
+| `aose/models/character.py` | Unified `ItemInstance` (gains `enchantment_id`, `count`, charges, escape hatches); `CharacterSpec.items`; **delete `EnchantedInstance`, `AmmoStack`, `spec.enchanted`, `spec.ammo`**; drop `inventory`/`stashed`/`equipped`/`loaded_ammo`/`armor_tailored`; drop `contents` from container/animal/vehicle | Modify |
 | `aose/models/storage.py` | `instance_id` on `CoinStack` | Modify |
-| `aose/engine/equip.py` | Instance-based `equip`/`unequip`/`validate_wield` + slot accessors (`equipped_instance`, `slot_item`, `equipped_ref`) | Rewrite |
+| `aose/engine/equip.py` | Instance-based `equip`/`unequip`/`validate_wield` + slot accessors (`equipped_instance`, `slot_item`, `equipped_ref`) over the single `spec.items` list | Rewrite |
 | `aose/characters/migrate_items.py` | Loader-time coercion of legacy saves to the new shape (needs `GameData`) | Create |
 | `aose/characters/storage.py`, `drafts.py` | Call the coercion before `CharacterSpec(**raw)` | Modify |
 | `aose/engine/storage.py` | Location policy descriptor; `loose` by location over `items`; `split_stack`; instance `move_item`/`move_thing`; delete retainer-transfer reliance | Rewrite |
 | `aose/engine/encumbrance.py` `armor_class.py` `attacks.py` `ammo.py` | Read instances via accessors | Modify |
 | `aose/engine/quick_equipment.py` | Build `ItemInstance`s; equip on the kit's item list | Modify |
-| `aose/engine/enchant.py` | `equip`/`unequip` set `EnchantedInstance.equip` slot (was bool) | Modify |
+| `aose/engine/enchant.py` | Collapse to one `resolve(inst, data)` over `ItemInstance` (plain → catalog item; else compose); delete the list-based `equip`/`unequip` (enchanted is just an `ItemInstance`, equipped via `equip.py`) | Modify |
 | `aose/engine/retainers.py` | Delete `transfer_to_retainer`/`transfer_to_pc`; give/take routes use `move_thing` | Modify |
 | `aose/engine/shop.py` | `inventory_view`/`_build_row`/`buy_item`/`sell_item`/`new_container_instance` over `items`; `OwnerCaps` becomes a projection of the policy descriptor | Modify |
 | `aose/sheet/view.py`, `companions_view.py` | Build groups from `items` by location; equip block via `equip` field | Modify |
@@ -62,7 +84,7 @@ This plan covers the **whole atomic landing**. It is authored in five parts that
 ```python
 # tests/test_item_instance_model.py
 import pytest
-from aose.models import CharacterSpec, ClassEntry, ItemInstance, EnchantedInstance, CoinStack
+from aose.models import CharacterSpec, ClassEntry, ItemInstance, CoinStack
 from aose.models.storage import StorageLocation
 
 CARRIED = StorageLocation(kind="carried")
@@ -85,6 +107,7 @@ def test_item_instance_defaults():
     assert ii.location == CARRIED
     assert ii.count == 1
     assert ii.equip is None
+    assert ii.enchantment_id is None
     assert ii.tailored is True
     assert ii.loaded_ammo_id is None
 
@@ -93,20 +116,26 @@ def test_spec_has_items_list_and_no_legacy_fields():
     spec = _spec(items=[ItemInstance(instance_id="i1", catalog_id="sword", equip="main_hand")])
     assert spec.items[0].equip == "main_hand"
     # Legacy fields are gone (extra="forbid" rejects them).
-    for legacy in ("inventory", "stashed", "equipped", "loaded_ammo", "armor_tailored"):
+    for legacy in ("inventory", "stashed", "equipped", "loaded_ammo", "armor_tailored",
+                   "enchanted", "ammo"):
         with pytest.raises(Exception):
-            _spec(**{legacy: [] if legacy in ("inventory", "stashed") else {}})
+            _spec(**{legacy: [] if legacy in ("inventory", "stashed", "enchanted", "ammo")
+                     else {}})
 
 
-def test_enchanted_instance_uses_equip_slot_not_bool():
-    e = EnchantedInstance(instance_id="e1", base_id="sword", enchantment_id="generic_plus_1")
-    assert e.equip is None
-    e2 = EnchantedInstance(instance_id="e2", base_id="plate_mail",
-                           enchantment_id="generic_plus_1", equip="armor")
-    assert e2.equip == "armor"
-    with pytest.raises(Exception):                 # bool no longer accepted
-        EnchantedInstance(instance_id="e3", base_id="sword",
-                          enchantment_id="generic_plus_1", equipped=True)
+def test_item_instance_carries_enchantment_and_count():
+    # An enchanted weapon and a stack of ammo are ItemInstances — one type.
+    plus1 = ItemInstance(instance_id="e1", catalog_id="sword",
+                         enchantment_id="generic_plus_1", equip="main_hand")
+    assert plus1.enchantment_id == "generic_plus_1" and plus1.equip == "main_hand"
+    arrows = ItemInstance(instance_id="a1", catalog_id="arrow", count=20)
+    assert arrows.count == 20 and arrows.enchantment_id is None
+
+
+def test_enchanted_instance_and_ammo_stack_are_gone():
+    import aose.models as m
+    assert not hasattr(m, "EnchantedInstance")
+    assert not hasattr(m, "AmmoStack")
 
 
 def test_coin_stack_has_instance_id():
@@ -127,7 +156,7 @@ Expected: FAIL — `ImportError: cannot import name 'ItemInstance'`.
 
 - [ ] **Step 3: Add `ItemInstance` and reshape `CharacterSpec`**
 
-In `aose/models/character.py`, add the `EquipSlot` alias and `ItemInstance` near the top (after the imports):
+In `aose/models/character.py`, add the `EquipSlot` alias and the unified `ItemInstance` near the top (after the imports). This **one** type covers plain loose gear, enchanted weapons/armour, and ammo stacks — folding in the old `EnchantedInstance` and `AmmoStack`:
 
 ```python
 from typing import Literal
@@ -136,48 +165,60 @@ EquipSlot = Literal["armor", "main_hand", "off_hand"]
 
 
 class ItemInstance(BaseModel):
-    """One owned loose catalog item, with identity.
+    """One owned catalog item, with identity — plain, enchanted, or stacked.
 
-    Stackables (consumable gear, etc.) carry ``count > 1`` and ``equip is None``.
-    Equippables (weapon/armour/shield) are always per-instance (``count == 1``)
-    and may carry an ``equip`` slot. ``tailored``/``loaded_ammo_id`` are inert
-    except on tailorable armour / launcher weapons. Stackable-vs-equippable is a
-    catalog property enforced by the engine, not by this model."""
+    The item *type* is ``catalog_id`` (a reference into ``GameData.items``);
+    whether it is enchanted is the optional ``enchantment_id`` field, not a
+    different class. Stackables (consumable gear, ammo, …) carry ``count > 1``
+    and ``equip is None``. Equippables (weapon/armour/shield, enchanted or not)
+    are always per-instance (``count == 1``) and may carry an ``equip`` slot.
+    ``tailored``/``loaded_ammo_id`` are inert except on tailorable armour /
+    launcher weapons; charges/escape-hatches are inert unless the enchantment
+    uses them. Stackable-vs-equippable derives from the *resolved* catalog item
+    type (enchantment does not change it), enforced by the engine, not this
+    model."""
     model_config = ConfigDict(extra="forbid")
 
     instance_id: str                       # uuid4 hex
-    catalog_id: str                        # references a Weapon / Armor / gear item
+    catalog_id: str                        # references a Weapon / Armor / gear / Ammunition item
     location: StorageLocation = Field(default_factory=lambda: StorageLocation(kind="carried"))
+    enchantment_id: str | None = None      # None = plain; else references an Enchantment
     count: int = 1
     equip: EquipSlot | None = None
     tailored: bool = True
-    loaded_ammo_id: str | None = None
+    loaded_ammo_id: str | None = None      # launcher weapons only; an ammo ItemInstance id
+    charges_max: int | None = None         # from the old EnchantedInstance
+    charges_remaining: int | None = None
+    extra_modifiers: list[Modifier] = Field(default_factory=list)  # escape hatch
+    note: str = ""                                                 # escape hatch
 ```
 
-Change `EnchantedInstance` (replace the `equipped: bool` field and add `tailored`/`loaded_ammo_id`):
+(`Modifier` is already imported in this module for `MagicItemInstance`.)
+
+**Delete `EnchantedInstance` and `AmmoStack` entirely** — every owned weapon/
+armour/ammo (plain or enchanted) is now an `ItemInstance`. Keep
+`MagicItemInstance` (catalog magic items with a toggle `equipped` bool — a
+genuinely different equip mechanic).
+
+In `CharacterSpec`, **replace** the `inventory`, `stashed`, `equipped`,
+`armor_tailored`, `loaded_ammo`, **`enchanted`**, and **`ammo`** fields with a
+single:
 
 ```python
-    # was: equipped: bool = False
-    equip: EquipSlot | None = None
-    tailored: bool = True
-    loaded_ammo_id: str | None = None
-```
-
-In `CharacterSpec`, **replace** the `inventory`, `stashed`, `equipped`, `armor_tailored`, and `loaded_ammo` fields with a single:
-
-```python
-    # Every loose owned item, with its own identity + location. Replaces the
-    # old positional inventory/stashed lists and the equipped/loaded_ammo/
-    # armor_tailored side tables (equip/tailoring/loaded-ammo are now fields on
-    # the instance). Items "in" a container/animal/vehicle carry that location.
+    # Every owned catalog item — plain, enchanted, or stacked — with its own
+    # identity + location. Replaces the positional inventory/stashed lists, the
+    # equipped/loaded_ammo/armor_tailored side tables, AND the former separate
+    # `enchanted`/`ammo` lists (enchantment_id/count are now fields here). Items
+    # "in" a container/animal/vehicle carry that location.
     items: list[ItemInstance] = Field(default_factory=list)
 ```
 
-Delete the `loaded_ammo: dict[str, str]` field. Keep `magic_items` (still `equipped: bool`).
+Keep `magic_items` (still `equipped: bool`), `gems`, `jewellery`, `coins`,
+`spell_sources`, `containers`, `animals`, `vehicles`.
 
 In `ContainerInstance`, `AnimalInstance`, `VehicleInstance`: **delete the `contents: list[str]` field** (items located there now live in `spec.items`). Remove the `_migrate_legacy_location` validator's `contents` handling if any (it doesn't touch contents — leave it).
 
-Export `ItemInstance` and `EquipSlot` from `aose/models/__init__.py` (add to the import list and `__all__`).
+Export `ItemInstance` and `EquipSlot` from `aose/models/__init__.py`, and **remove `EnchantedInstance` and `AmmoStack`** from the import list and `__all__`.
 
 In `aose/models/storage.py`, add `instance_id` to `CoinStack`:
 
@@ -194,7 +235,7 @@ class CoinStack(BaseModel):
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `.venv\Scripts\python.exe -m pytest tests/test_item_instance_model.py -q`
-Expected: PASS (5 tests). Other suites are expected to break — that is the atomic landing.
+Expected: PASS (6 tests). Other suites are expected to break — that is the atomic landing.
 
 - [ ] **Step 5: Commit**
 
@@ -300,43 +341,32 @@ Keep `hand_cost`, `off_hand_eligible`, `OFF_HAND_FORBIDDEN`, `WieldError`, and `
 
 ```python
 def _find_equippable(spec, instance_id: str):
-    """The ItemInstance or EnchantedInstance with this id, or None."""
-    for ii in spec.items:
-        if ii.instance_id == instance_id:
-            return ii
-    for ei in spec.enchanted:
-        if ei.instance_id == instance_id:
-            return ei
-    return None
+    """The ItemInstance (plain or enchanted) with this id, or None.
+    One list now — enchanted gear is an ItemInstance with enchantment_id set."""
+    return next((i for i in spec.items if i.instance_id == instance_id), None)
 
 
 def _resolve_equippable(inst, data: GameData):
-    """Resolve an ItemInstance/EnchantedInstance to its Weapon/Armor, or None."""
-    from aose.models import ItemInstance
-    if isinstance(inst, ItemInstance):
+    """Resolve an ItemInstance (plain or enchanted) to its Weapon/Armor, or None.
+    Plain → the catalog item; enchanted → compose via resolve_instance (Task 3
+    updates resolve_instance to read catalog_id instead of base_id)."""
+    if inst.enchantment_id is None:
         return data.items.get(inst.catalog_id)
-    return resolve_instance(inst, data)          # EnchantedInstance
+    return resolve_instance(inst, data)
 
 
 def equipped_instance(spec, slot: str):
-    """The instance occupying ``slot`` (ItemInstance or EnchantedInstance), or None."""
-    for ii in spec.items:
-        if ii.equip == slot:
-            return ii
-    for ei in spec.enchanted:
-        if ei.equip == slot:
-            return ei
-    return None
+    """The ItemInstance occupying ``slot``, or None."""
+    return next((i for i in spec.items if i.equip == slot), None)
 
 
 def equipped_ref(spec, slot: str) -> str | None:
-    """The resolvable slot value: an ItemInstance's catalog_id, or an
-    EnchantedInstance's instance_id (matching ``resolve_slot``'s contract)."""
-    from aose.models import ItemInstance
+    """The catalog_id of the instance equipped in ``slot``, or None. (A +1 sword's
+    catalog_id is still "sword".) For the resolved item — including any
+    enchantment — use ``slot_item``; for a form/route id use
+    ``equipped_instance(spec, slot).instance_id``."""
     inst = equipped_instance(spec, slot)
-    if inst is None:
-        return None
-    return inst.catalog_id if isinstance(inst, ItemInstance) else inst.instance_id
+    return inst.catalog_id if inst is not None else None
 
 
 def slot_item(spec, slot: str, data: GameData):
@@ -444,96 +474,127 @@ git commit -m "feat(equip): instance-based equip/unequip/validate_wield (equip i
 
 ---
 
-### Task 3: Enchanted equip sets the slot (`enchant.py`)
+### Task 3: One resolver over `ItemInstance`; delete the enchant list-equip path
+
+With enchanted gear folded into `spec.items`, `enchant.py` is no longer a second
+equip path — it is the **resolver** (`resolve`) plus the instance factory and the
+charge/note list helpers. Equipping an enchanted item now goes through `equip.py`
+exactly like a plain one (Task 2). `resolve_instance` reads `catalog_id` (was
+`base_id`).
 
 **Files:**
-- Modify: `aose/engine/enchant.py:163-177` (`new_enchanted_instance`, `equip`, `unequip`), `equipped_enchanted:218-230`
-- Test: `tests/test_enchant_equip_slot.py` (create)
+- Modify: `aose/engine/enchant.py` (imports; `resolve_instance`/`resolve`;
+  `new_enchanted_instance`; `equipped_enchanted`; charge/note helpers; **delete
+  the list-based `equip`/`unequip`**)
+- Test: `tests/test_enchant_resolve.py` (create)
 
 - [ ] **Step 1: Write the failing test**
 
 ```python
-# tests/test_enchant_equip_slot.py
+# tests/test_enchant_resolve.py
 from pathlib import Path
 from aose.data.loader import GameData
 from aose.engine import enchant
-from aose.models import EnchantedInstance
+from aose.models import ItemInstance, Weapon, Armor
 
 DATA = GameData.load(Path("data"))
 
 
-def test_equip_sets_slot_from_kind():
-    items = [EnchantedInstance(instance_id="e1", base_id="sword",
-                               enchantment_id="generic_plus_1")]
-    out = enchant.equip(items, "e1", DATA)
-    assert out[0].equip == "main_hand"
+def test_resolve_plain_returns_catalog_item():
+    inst = ItemInstance(instance_id="i1", catalog_id="sword")
+    assert enchant.resolve(inst, DATA) is DATA.items["sword"]
 
 
-def test_equip_armor_sets_armor_slot():
-    items = [EnchantedInstance(instance_id="e1", base_id="plate_mail",
-                              enchantment_id="generic_plus_1")]
-    out = enchant.equip(items, "e1", DATA)
-    assert out[0].equip == "armor"
+def test_resolve_enchanted_weapon_composes_synthetic():
+    inst = ItemInstance(instance_id="e1", catalog_id="sword",
+                        enchantment_id="generic_plus_1")
+    out = enchant.resolve(inst, DATA)
+    assert isinstance(out, Weapon) and out.magic and out.magic_bonus == 1
+    assert out.base_weapon == "sword"
 
 
-def test_unequip_clears_slot():
-    items = [EnchantedInstance(instance_id="e1", base_id="sword",
-                              enchantment_id="generic_plus_1", equip="main_hand")]
-    out = enchant.unequip(items, "e1")
-    assert out[0].equip is None
+def test_resolve_enchanted_armor_composes_synthetic():
+    inst = ItemInstance(instance_id="e2", catalog_id="plate_mail",
+                        enchantment_id="generic_plus_1")
+    out = enchant.resolve(inst, DATA)
+    assert isinstance(out, Armor) and out.magic and out.base_armor == "plate_mail"
+
+
+def test_new_enchanted_instance_is_an_item_instance():
+    inst = enchant.new_enchanted_instance("sword", "generic_plus_1", DATA)
+    assert isinstance(inst, ItemInstance)
+    assert inst.catalog_id == "sword" and inst.enchantment_id == "generic_plus_1"
+    assert inst.equip is None
+
+
+def test_enchant_has_no_list_equip():
+    # The list-based equip/unequip are gone — equipping is equip.py's job now.
+    assert not hasattr(enchant, "equip")
+    assert not hasattr(enchant, "unequip")
 ```
 
 - [ ] **Step 2: Run to verify it fails**
 
-Run: `.venv\Scripts\python.exe -m pytest tests/test_enchant_equip_slot.py -q`
-Expected: FAIL — `enchant.equip` ignores the slot / sets a bool.
+Run: `.venv\Scripts\python.exe -m pytest tests/test_enchant_resolve.py -q`
+Expected: FAIL — `enchant.resolve` does not exist; `resolve_instance` reads `base_id`.
 
 - [ ] **Step 3: Update `enchant.py`**
 
-`new_enchanted_instance`: change `equipped=False` to `equip=None` in the constructor call (line ~157).
-
-Replace `equip`/`unequip` (they now need `data` to know the slot from the enchantment kind):
+- **Imports:** drop `EnchantedInstance`; add `ItemInstance`.
+- **`resolve_instance(inst, data)`:** read `inst.catalog_id` instead of
+  `inst.base_id` (everything else unchanged — it still composes the synthetic
+  `Weapon`/`Armor` from base + enchantment).
+- **Add the unified `resolve`** (the one resolver the spec calls for — plain or
+  enchanted):
 
 ```python
-_KIND_SLOT = {"weapon": "main_hand", "armor": "armor", "shield": "off_hand"}
-
-
-def equip(items: list[EnchantedInstance], instance_id: str,
-          data: GameData) -> list[EnchantedInstance]:
-    idx = _index(items, instance_id)
-    kind = _kind_of_instance(items[idx], data)
-    slot = _KIND_SLOT.get(kind or "", "main_hand")
-    updated = items[idx].model_copy(update={"equip": slot})
-    return [*items[:idx], updated, *items[idx + 1:]]
-
-
-def unequip(items: list[EnchantedInstance], instance_id: str) -> list[EnchantedInstance]:
-    idx = _index(items, instance_id)
-    updated = items[idx].model_copy(update={"equip": None})
-    return [*items[:idx], updated, *items[idx + 1:]]
+def resolve(inst: ItemInstance, data: GameData):
+    """Resolve an ItemInstance to its effective catalog item.
+    Plain (enchantment_id is None) → the base catalog item; enchanted → the
+    composed synthetic Weapon/Armor (or None if base/enchantment missing)."""
+    if inst.enchantment_id is None:
+        return data.items.get(inst.catalog_id)
+    return resolve_instance(inst, data)
 ```
 
-Update `equipped_enchanted` to test `inst.equip is not None` instead of `inst.equipped`:
+- **`new_enchanted_instance(...)`:** return an `ItemInstance` (not
+  `EnchantedInstance`) with `catalog_id=base_id`, `enchantment_id=...`,
+  `equip=None`, and the rolled `charges_max`/`charges_remaining`. (The base/
+  enchantment validation is unchanged.)
+- **Delete the list-based `equip`/`unequip`** (the bool/slot toggles). Enchanted
+  items are equipped through `equip.equip(spec, instance_id, data=...)` (Task 2);
+  there is no separate enchanted equip path.
+- **`equipped_enchanted(spec, data, kind)`:** iterate the enchanted subset of
+  `spec.items` and gate on `equip`:
 
 ```python
-    for inst in spec.enchanted:
-        if inst.equip is None:
+    for inst in spec.items:
+        if inst.enchantment_id is None or inst.equip is None:
             continue
         if _kind_of_instance(inst, data) != kind:
             continue
-        ...
+        resolved = resolve_instance(inst, data)
+        if resolved is not None:
+            out.append(resolved)
 ```
+
+- **`_kind_of_instance`, `use_charge`, `reset_charges`, `set_note`, `remove`,
+  `add_free_enchanted`:** retype `EnchantedInstance` → `ItemInstance`. The
+  charge/note helpers still take a `list` of instances + an `instance_id` and
+  return a new list; callers will pass `spec.items` (the enchanted subset is found
+  by id, so passing the whole `items` list is fine). `add_free_enchanted` appends a
+  `new_enchanted_instance(...)` to `spec.items`.
 
 - [ ] **Step 4: Run to verify it passes**
 
-Run: `.venv\Scripts\python.exe -m pytest tests/test_enchant_equip_slot.py -q`
-Expected: PASS (3 tests).
+Run: `.venv\Scripts\python.exe -m pytest tests/test_enchant_resolve.py -q`
+Expected: PASS (5 tests).
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add aose/engine/enchant.py tests/test_enchant_equip_slot.py
-git commit -m "feat(enchant): enchanted equip writes the slot field (was bool)"
+git add aose/engine/enchant.py tests/test_enchant_resolve.py
+git commit -m "feat(enchant): one resolve() over ItemInstance; drop the list-equip path"
 ```
 
 ---
@@ -618,8 +679,31 @@ def test_loaded_ammo_and_tailored_become_instance_fields():
     spec = CharacterSpec(**raw)
     bow = next(i for i in spec.items if i.catalog_id == "short_bow")
     plate = next(i for i in spec.items if i.catalog_id == "plate_mail")
+    arrow = next(i for i in spec.items if i.catalog_id == "arrow")
     assert bow.loaded_ammo_id == "a1"
     assert plate.tailored is False
+    assert arrow.instance_id == "a1" and arrow.count == 20   # ammo folded into items
+
+
+def test_enchanted_list_folds_into_items_with_slot():
+    raw = migrate_legacy_items(_legacy(
+        enchanted=[
+            {"instance_id": "e1", "base_id": "sword",
+             "enchantment_id": "generic_plus_1", "equipped": False,
+             "location": {"kind": "carried"}},
+            {"instance_id": "e2", "base_id": "plate_mail",
+             "enchantment_id": "generic_plus_1", "equipped": True,
+             "location": {"kind": "carried"}},
+        ],
+        # enchanted weapon's hand slot lived in the equipped dict by instance_id
+        equipped={"main_hand": "e1"},
+    ), DATA)
+    spec = CharacterSpec(**raw)
+    assert not hasattr(spec, "enchanted")
+    by_id = {i.instance_id: i for i in spec.items}
+    assert by_id["e1"].catalog_id == "sword" and by_id["e1"].enchantment_id == "generic_plus_1"
+    assert by_id["e1"].equip == "main_hand"    # reconciled from the equipped dict
+    assert by_id["e2"].equip == "armor"        # reconciled from the equipped bool + kind
 
 
 def test_retainer_items_also_migrated():
@@ -662,11 +746,18 @@ import uuid
 from aose.data.loader import GameData
 from aose.models import Armor, Weapon
 
-_LEGACY_KEYS = ("inventory", "stashed", "equipped", "loaded_ammo", "armor_tailored")
+_LEGACY_KEYS = ("inventory", "stashed", "equipped", "loaded_ammo", "armor_tailored",
+                "enchanted", "ammo")
+_KIND_SLOT = {"weapon": "main_hand", "armor": "armor", "shield": "off_hand"}
 
 
 def _is_equippable(catalog_id: str, data: GameData) -> bool:
     return isinstance(data.items.get(catalog_id), (Weapon, Armor))
+
+
+def _ench_kind(enchantment_id, data: GameData):
+    ench = data.enchantments.get(enchantment_id) if enchantment_id else None
+    return ench.kind if ench else None
 
 
 def _new_instance(catalog_id: str, location: dict, count: int = 1) -> dict:
@@ -726,11 +817,38 @@ def _coerce_spec(raw: dict, data: GameData) -> dict:
     for coll, kind in (("containers", "container"), ("animals", "animal"),
                        ("vehicles", "vehicle")):
         for carrier in raw.get(coll, []):
-            cid_loc = ({"kind": "carried"} if kind == "container"
-                       else None)  # placeholder; real loc set below
             carrier_id = carrier.get("instance_id")
             for content_id in carrier.pop("contents", []) or []:
                 add_loose(content_id, {"kind": kind, "id": carrier_id})
+
+    # Fold the old separate `enchanted` list into items (now ItemInstances).
+    # Reconcile the doubly-tracked equip: an enchanted weapon/shield's slot lived
+    # in the `equipped` dict keyed by its instance_id; body armour used the bool.
+    slot_by_ench_id = {ref: slot for slot, ref in equipped.items()}
+    for e in raw.get("enchanted", []) or []:
+        loc = e.get("location") or {"kind": "carried"}
+        slot = slot_by_ench_id.get(e["instance_id"])
+        if slot is None and e.get("equipped"):                 # body-armour bool
+            slot = _KIND_SLOT.get(_ench_kind(e.get("enchantment_id"), data) or "")
+        if slot is not None and loc.get("kind") != "carried":  # only carried equips
+            slot = None
+        lid = loaded_ammo.get(e["instance_id"]) or loaded_ammo.get(e.get("base_id"))
+        items.append({"instance_id": e["instance_id"], "catalog_id": e["base_id"],
+                      "enchantment_id": e.get("enchantment_id"), "location": loc,
+                      "count": 1, "equip": slot, "tailored": e.get("tailored", True),
+                      "loaded_ammo_id": lid,
+                      "charges_max": e.get("charges_max"),
+                      "charges_remaining": e.get("charges_remaining"),
+                      "extra_modifiers": e.get("extra_modifiers", []),
+                      "note": e.get("note", "")})
+
+    # Fold the old `ammo` list into items (stackable ItemInstances; instance_id
+    # preserved so the launcher's loaded_ammo_id still points at it).
+    for a in raw.get("ammo", []) or []:
+        items.append({"instance_id": a["instance_id"], "catalog_id": a["base_id"],
+                      "enchantment_id": a.get("enchantment_id"),
+                      "location": a.get("location") or {"kind": "carried"},
+                      "count": a.get("count", 0)})
 
     raw["items"] = items
     for k in _LEGACY_KEYS:
@@ -758,7 +876,10 @@ def migrate_legacy_items(raw: dict, data: GameData) -> dict:
     return _coerce_spec(raw, data)
 ```
 
-> Note: the `cid_loc` placeholder line above is dead — delete it; the loop sets the location inline. (Left here only to mark the carrier-location intent.) Container's own `location` is unchanged; only its `contents` drain.
+> Note: a carrier's own `location` is unchanged; only its `contents` drain into
+> `items` at `{"kind": <carrier kind>, "id": <carrier instance_id>}`. The
+> enchanted/ammo folds run after the loose/contents passes so the `equipped` and
+> `loaded_ammo` maps (read above) are still available for reconciliation.
 
 - [ ] **Step 4: Wire the coercion into the load path**
 
@@ -779,7 +900,7 @@ Thread `data` to those functions from their callers (routes already hold `reques
 - [ ] **Step 5: Run to verify it passes**
 
 Run: `.venv\Scripts\python.exe -m pytest tests/test_migrate_items.py -q`
-Expected: PASS (7 tests).
+Expected: PASS (8 tests).
 
 - [ ] **Step 6: Commit**
 
@@ -1098,10 +1219,14 @@ Expected: FAIL — `move_item` signature/behaviour mismatch.
 Replace the old string-based `move_item` in `aose/engine/storage.py`:
 
 ```python
-def _merge_target(spec: CharacterSpec, catalog_id: str, dest: StorageLocation):
-    """The ItemInstance stack of this catalog id already at ``dest``, or None."""
+def _merge_target(spec: CharacterSpec, proto, dest: StorageLocation):
+    """The resident stackable ItemInstance at ``dest`` matching ``proto``'s
+    merge-key — ``(catalog_id, enchantment_id)`` — or None. Including
+    ``enchantment_id`` keeps +1 arrows from fusing with plain arrows."""
     for i in spec.items:
-        if i.catalog_id == catalog_id and i.location == dest:
+        if (i.catalog_id == proto.catalog_id
+                and i.enchantment_id == proto.enchantment_id
+                and i.location == dest):
             return i
     return None
 
@@ -1147,7 +1272,7 @@ def move_item(spec: CharacterSpec, instance_id: str, dest: StorageLocation,
     # Same world. Stackable partial → split/merge; else re-point whole.
     if not (item is not None and is_equippable(item)) and n < src_inst.count:
         src_inst.count -= n
-        resident = _merge_target(spec, src_inst.catalog_id, dest)
+        resident = _merge_target(spec, src_inst, dest)
         if resident is not None:
             resident.count += n
         else:
@@ -1157,7 +1282,7 @@ def move_item(spec: CharacterSpec, instance_id: str, dest: StorageLocation,
         return
     # whole move
     resident = (None if (item is not None and is_equippable(item))
-                else _merge_target(spec, src_inst.catalog_id, dest))
+                else _merge_target(spec, src_inst, dest))
     if resident is not None:
         resident.count += src_inst.count
         spec.items.remove(src_inst)
@@ -1183,7 +1308,7 @@ def _move_cross_world(pc: CharacterSpec, dest_spec: CharacterSpec, inst,
     else:
         src_list.remove(inst)
         _clear_equip_state(inst)
-    resident = _merge_target(dest_spec, inst.catalog_id, carried)
+    resident = _merge_target(dest_spec, inst, carried)
     if resident is not None and not (item is not None and is_equippable(item)):
         resident.count += n
     else:
@@ -1290,7 +1415,8 @@ Update `move_thing` so `item` dispatches to the new `move_item` by `instance_id`
 
 ```python
 def move_thing(spec, category, ref_id, dest, *, count=None, src=None, data=None):
-    if category == "item":
+    # "ammo" and "enchanted" are ItemInstances now — same path as "item".
+    if category in ("item", "ammo", "enchanted"):
         move_item(spec, ref_id, dest, count=count, data=data)
     elif category == "container":
         move_container(spec, ref_id, dest, data)
@@ -1299,33 +1425,34 @@ def move_thing(spec, category, ref_id, dest, *, count=None, src=None, data=None)
                    count if count is not None else 0, data)
     elif category in ("gem", "jewellery"):
         move_valuable(spec, ref_id, dest, count=count, data=data)
-    elif category == "ammo":
-        move_ammo(spec, ref_id, dest, count if count is not None else 0, data)
-    elif category in ("magic", "enchanted"):
-        move_instance(spec, category, ref_id, dest, data)
+    elif category == "magic":
+        move_instance(spec, category, ref_id, dest, data)   # MagicItemInstance only
     elif category == "source":
         move_spell_source(spec, ref_id, dest, data)
     else:
         raise StorageError(f"unknown move category {category!r}")
 ```
 
-> `src` is now only needed for coins (denom keyed). `move_container`/`move_ammo`/`move_valuable`/`move_instance`/`move_spell_source` keep their existing internals; only `move_instance` changes its auto-unequip to clear the new `equip` slot (Task 8b below).
+> `src` is now only needed for coins (denom keyed). `move_ammo` is **deleted**
+> (ammo is an `ItemInstance`, moved by `move_item` with `count`).
+> `move_container`/`move_valuable`/`move_instance`/`move_spell_source` keep their
+> existing internals; `move_instance` now moves only `MagicItemInstance`s and its
+> auto-unequip is the bool case (Task 8b below).
 
-- [ ] **Step 3b: `move_instance` clears the `equip` slot**
+- [ ] **Step 3b: `move_instance` clears the magic-item `equipped` bool**
 
-In `move_instance`, replace the `inst.equipped = False` + `CharacterSpec.equipped` slot-clearing block with:
+`move_instance` now handles only `MagicItemInstance` (enchanted weapons/armour
+are `ItemInstance`s, moved by `move_item`, which clears `equip`/`loaded_ammo_id`
+on leaving carried — Task 7). Replace its `CharacterSpec.equipped` slot-clearing
+block with the bool reset:
 
 ```python
-    # Auto-unequip on the owning spec (enchanted weapons/armour use .equip;
-    # magic items use .equipped).
-    if hasattr(inst, "equip"):
-        inst.equip = None
-        inst.loaded_ammo_id = None
-    if hasattr(inst, "equipped"):
-        inst.equipped = False
+    # Auto-unequip the magic item on the owning spec (toggle mechanic).
+    inst.equipped = False
 ```
 
-(The old loop over `owner_spec.equipped.items()` is deleted — there is no spec-level equipped map any more.)
+(The old loop over `owner_spec.equipped.items()` is deleted — there is no
+spec-level equipped map any more.)
 
 - [ ] **Step 4: Run to verify it passes**
 
@@ -1644,7 +1771,7 @@ git commit -m "feat(ac): read armour/shield/tailored from equipped instances"
 from pathlib import Path
 from aose.data.loader import GameData
 from aose.engine import ammo
-from aose.models import CharacterSpec, ClassEntry, ItemInstance, AmmoStack
+from aose.models import CharacterSpec, ClassEntry, ItemInstance
 from aose.models.storage import StorageLocation
 
 DATA = GameData.load(Path("data"))
@@ -1660,11 +1787,12 @@ def _spec(**kw):
 
 
 def test_loaded_stack_reads_instance_id():
-    spec = _spec(
-        items=[ItemInstance(instance_id="i1", catalog_id="short_bow",
-                            equip="main_hand", loaded_ammo_id="a1")],
-        ammo=[AmmoStack(instance_id="a1", base_id="arrow", count=20, location=CARRIED)],
-    )
+    # Ammo is an ItemInstance in spec.items now — no separate spec.ammo.
+    spec = _spec(items=[
+        ItemInstance(instance_id="i1", catalog_id="short_bow",
+                     equip="main_hand", loaded_ammo_id="a1"),
+        ItemInstance(instance_id="a1", catalog_id="arrow", count=20, location=CARRIED),
+    ])
     stack = ammo.loaded_stack(spec, "a1")
     assert stack is not None and stack.instance_id == "a1"
 
@@ -1683,13 +1811,23 @@ Expected: FAIL.
 
 - [ ] **Step 3: Implement**
 
+`ammo.py` is now `ItemInstance`-based: `AmmoStack` import → gone (use
+`ItemInstance`); `spec.ammo` → the ammo subset of `spec.items`; every
+`.base_id` → `.catalog_id`. An "ammo stack" is an `ItemInstance` whose resolved
+catalog item is `Ammunition`.
+
 Replace the dict-keyed `load`/`unload`/`loaded_stack`/`loaded_bonus`/`is_unloaded`:
 
 ```python
-def loaded_stack(spec, loaded_ammo_id: str | None) -> AmmoStack | None:
+def _is_ammo(inst, data) -> bool:
+    from aose.models import Ammunition
+    return isinstance(data.items.get(inst.catalog_id), Ammunition)
+
+
+def loaded_stack(spec, loaded_ammo_id: str | None):
     if not loaded_ammo_id:
         return None
-    for s in spec.ammo:
+    for s in spec.items:
         if s.instance_id == loaded_ammo_id and s.count > 0:
             return s
     return None
@@ -1711,7 +1849,21 @@ def is_unloaded(weapon: Weapon, loaded_ammo_id: str | None, spec) -> bool:
     return loaded_stack(spec, loaded_ammo_id) is None
 ```
 
-Delete the old `load(loaded, ...)`/`unload(loaded, ...)` dict helpers (loading is now setting `instance.loaded_ammo_id`, done in the route — Part 4).
+Delete the old `load(loaded, ...)`/`unload(loaded, ...)` dict helpers (loading is
+now setting `instance.loaded_ammo_id`, done in the route — Part 4).
+
+**The remaining ammo functions** retarget to `ItemInstance`/`spec.items`:
+- `resolve_ammo(stack, data)`: read `stack.catalog_id` (was `base_id`); the
+  returned dict's `"base_id"` key becomes `"catalog_id"` (update its one caller in
+  attacks Task 13). `accepts`/`_ammo_base` unchanged (catalog lookups).
+- `buy_ammo`/`add_free_ammo`/`_combine`: append/merge ammo `ItemInstance`s onto
+  `spec.items` with merge-key `(catalog_id, enchantment_id, location)` —
+  equivalent to `storage._merge_target` (Task 7). These stay the ammo-specific
+  acquisition entry points; they take `spec` and mutate `spec.items` (or return a
+  new items list, matching the existing call style).
+- `adjust_count`/`remove_ammo`: count edits now go through
+  `shop.remove_units` (Task 17) for the UI; if any internal caller remains, retype
+  it to find the ammo `ItemInstance` in `spec.items` by id.
 
 - [ ] **Step 4: Run to verify it passes**
 
@@ -1801,8 +1953,7 @@ In `attack_profiles`, replace the slot resolution (lines 317-344) to iterate equ
         item = slot_item(spec, slot, data)
         if inst is None or not isinstance(item, Weapon):
             continue
-        from aose.models import ItemInstance
-        manageable = inst.instance_id if isinstance(inst, ItemInstance) else None
+        manageable = inst.instance_id    # one type now — always an ItemInstance
         g_atk, g_dmg = _atk_dmg(mods, melee=item.melee, ranged=item.ranged)
         dual_penalty = 0
         hand = None
@@ -1848,7 +1999,7 @@ git commit -m "feat(attacks): build profiles from equipped instances; manage by 
 from pathlib import Path
 from aose.data.loader import GameData
 from aose.engine.magic import active_modifiers
-from aose.models import CharacterSpec, ClassEntry, EnchantedInstance
+from aose.models import CharacterSpec, ClassEntry, ItemInstance
 
 DATA = GameData.load(Path("data"))
 
@@ -1862,8 +2013,9 @@ def _spec(**kw):
 
 
 def test_unequipped_enchanted_contributes_nothing():
-    spec = _spec(enchanted=[EnchantedInstance(instance_id="e1", base_id="plate_mail",
-                            enchantment_id="generic_plus_1", equip=None)])
+    # Enchanted gear is an ItemInstance with enchantment_id set, in spec.items.
+    spec = _spec(items=[ItemInstance(instance_id="e1", catalog_id="plate_mail",
+                        enchantment_id="generic_plus_1", equip=None)])
     # an unequipped enchanted item adds no modifiers
     assert active_modifiers(spec, DATA) == [] or all(True for _ in active_modifiers(spec, DATA))
 ```
@@ -1871,20 +2023,22 @@ def test_unequipped_enchanted_contributes_nothing():
 - [ ] **Step 2: Run to verify it fails**
 
 Run: `.venv\Scripts\python.exe -m pytest tests/test_magic_enchanted_equip.py -q`
-Expected: FAIL (`EnchantedInstance` no longer accepts `equipped`; `active_modifiers` reads `.equipped`).
+Expected: FAIL (`active_modifiers` reads `spec.enchanted`, which no longer exists).
 
 - [ ] **Step 3: Implement**
 
-In `active_modifiers`, change the enchanted loop guard:
+In `active_modifiers`, iterate the enchanted subset of `spec.items` and gate on the
+equip slot (was a loop over `spec.enchanted` reading `.equipped`):
 
 ```python
-    for inst in spec.enchanted:
-        if inst.equip is None:        # was: if not inst.equipped
+    for inst in spec.items:
+        if inst.enchantment_id is None or inst.equip is None:   # plain or unequipped
             continue
-        ...
+        ...   # resolve via enchant.resolve_instance(inst, data) / read the enchantment
 ```
 
-(The magic-items loop keeps `inst.equipped` — magic items still use the bool toggle.)
+(The magic-items loop over `spec.magic_items` keeps `inst.equipped` — magic items
+still use the bool toggle.)
 
 - [ ] **Step 4: Run to verify it passes**
 
@@ -1997,24 +2151,27 @@ def apply_kit(spec, kit, data):
         inst = next((x for x in items if x.catalog_id == catalog_id and x.equip is None), None)
         if inst is not None:
             inst.equip = slot
-    spec.items = items
-    spec.ammo = list(kit.ammo)
+    spec.items = [*items, *kit.ammo]    # ammo are ItemInstances too — one list
     spec.containers = [*spec.containers, *new_containers]
     if kit.gold > 0:
         spec.coins = [CoinStack(denom="gp", count=kit.gold)]
 ```
 
-Update `QuickKit`:
+Update `QuickKit` (ammo entries are `ItemInstance`s now):
 
 ```python
 class QuickKit(BaseModel):
     inventory: list[str] = Field(default_factory=list)
     equips: list[tuple[str, str]] = Field(default_factory=list)   # (catalog_id, slot)
-    ammo: list[AmmoStack] = Field(default_factory=list)
+    ammo: list[ItemInstance] = Field(default_factory=list)        # ammo ItemInstances
     gold: int = 0
 ```
 
-Remove the `from aose.engine.equip import equip` import (no longer used here); keep `hand_cost`.
+Wherever the roll tables build the kit's ammo, construct an
+`ItemInstance(instance_id=uuid4().hex, catalog_id=<ammo id>, count=<bundle>,
+enchantment_id=<opt>)` instead of an `AmmoStack`. Remove the
+`from aose.engine.equip import equip` import (no longer used here); keep
+`hand_cost`.
 
 - [ ] **Step 4: Run to verify it passes**
 
@@ -2245,13 +2402,19 @@ def inventory_view(spec, data, *, allowed_weapons="all", allowed_armor="all",
                    gargantua_1h_2h=False) -> InventoryView:
     from aose.engine import storage
     CARRIED = StorageLocation(kind="carried"); STASHED = StorageLocation(kind="stashed")
+    from aose.engine.enchant import resolve as resolve_item
     off_full = any(i.equip == "off_hand" for i in spec.items)
     def row(inst):
         r = _build_row(inst.catalog_id, inst.count, data, allowed_weapons,
                        allowed_armor, allow_shields, two_weapon=two_weapon,
                        eligible=eligible, off_full=off_full)
-        return r.model_copy(update={"instance_id": inst.instance_id,
-                                    "equipped_slot": inst.equip})
+        upd = {"instance_id": inst.instance_id, "equipped_slot": inst.equip,
+               "enchantment_id": inst.enchantment_id}
+        if inst.enchantment_id is not None:           # show the enchanted name
+            resolved = resolve_item(inst, data)
+            if resolved is not None:
+                upd["name"] = resolved.name
+        return r.model_copy(update=upd)
     eq, carried, stashed = [], [], []
     for inst in spec.items:
         if inst.location == CARRIED:
@@ -2264,7 +2427,12 @@ def inventory_view(spec, data, *, allowed_weapons="all", allowed_armor="all",
     return InventoryView(equipped=eq, carried=carried, stashed=stashed, containers=[])
 ```
 
-Add `instance_id: str = ""` and `equipped_slot: str | None = None` fields to `InventoryRow` (so templates can equip/move by instance id). Keep `_build_row`'s catalog-based signature (it builds the static catalog half); the row gets its `instance_id` from the caller.
+Add `instance_id: str = ""`, `equipped_slot: str | None = None`, and
+`enchantment_id: str | None = None` fields to `InventoryRow` (so templates can
+equip/move by instance id and show the enchanted name). Keep `_build_row`'s
+catalog-based signature (it builds the static catalog half from the *base* item);
+the caller overrides `name` for enchanted instances and attaches the
+`instance_id`.
 
 - [ ] **Step 4: Run to verify it passes**
 
@@ -2293,23 +2461,19 @@ end-to-end sheet build (Task 27); the goal here is to compile and render.
 - `_equipped`: iterate equipped instances, not the dict:
 ```python
 def _equipped(spec, data):
-    from aose.engine.equip import equipped_instance
+    from aose.engine.equip import equipped_instance, slot_item
+    from aose.models import Armor
     rows = []
     for slot in ("armor", "off_hand"):       # weapons render as attacks
         inst = equipped_instance(spec, slot)
         if inst is None:
             continue
-        from aose.models import ItemInstance
-        cid = inst.catalog_id if isinstance(inst, ItemInstance) else inst.instance_id
-        name = data.items[inst.catalog_id].name if getattr(inst, "catalog_id", None) in data.items else cid
+        item = slot_item(spec, slot, data)    # resolves any enchantment
         # off_hand only if it is a shield (a weapon stays an attack profile)
-        from aose.engine.equip import slot_item
-        from aose.models import Armor
-        item = slot_item(spec, slot, data)
         if slot == "off_hand" and not (isinstance(item, Armor) and item.is_shield):
             continue
-        rows.append(EquippedRow(slot=slot, item_name=item.name if item else name,
-                                item_id=inst.instance_id))
+        name = item.name if item else inst.catalog_id
+        rows.append(EquippedRow(slot=slot, item_name=name, item_id=inst.instance_id))
     return rows
 ```
 - `_inventory`: `return [data.items[i.catalog_id].name if i.catalog_id in data.items else i.catalog_id for i in spec.items]`.
@@ -2482,16 +2646,17 @@ git commit -m "feat(ui): count box on move/sell/drop, Use button, equip/move by 
 ### Task 22: Migrate the test suite to the instance model
 
 The model change breaks every test that constructs a spec with `inventory=[…]`,
-`stashed=[…]`, `equipped={…}`, `loaded_ammo={…}`, `armor_tailored=…`, or a
-carrier `contents=[…]`. This task sweeps them.
+`stashed=[…]`, `equipped={…}`, `loaded_ammo={…}`, `armor_tailored=…`, a carrier
+`contents=[…]`, or the deleted `enchanted=[EnchantedInstance(…)]` / `ammo=[AmmoStack(…)]`.
+This task sweeps them.
 
 **Files:**
 - Modify: every test under `tests/` flagged by the grep below.
 
 - [ ] **Step 1: Enumerate the breakage**
 
-Run: `rg -ln "inventory=|stashed=|equipped=|loaded_ammo=|armor_tailored=|contents=" tests`
-Run: `rg -ln "spec\.inventory|spec\.equipped|spec\.stashed|\.loaded_ammo|\.contents" tests`
+Run: `rg -ln "inventory=|stashed=|equipped=|loaded_ammo=|armor_tailored=|contents=|enchanted=|ammo=|EnchantedInstance|AmmoStack" tests`
+Run: `rg -ln "spec\.inventory|spec\.equipped|spec\.stashed|\.loaded_ammo|\.contents|spec\.enchanted|spec\.ammo" tests`
 
 - [ ] **Step 2: Apply the mechanical fixture translation**
 
@@ -2502,7 +2667,9 @@ Per the substitution table, in each test:
 - `loaded_ammo={"short_bow": "a1"}` → `loaded_ammo_id="a1"` on the bow instance.
 - `armor_tailored=False` → `tailored=False` on the armour instance.
 - carrier `contents=["torch"]` → an `ItemInstance(catalog_id="torch", location=StorageLocation(kind="animal"/"vehicle"/"container", id=<carrier id>))`.
-- Assertions reading `spec.equipped[...]` → `equip.equipped_ref(spec, slot)`; reading `spec.inventory` membership → `{i.catalog_id for i in spec.items}`.
+- `enchanted=[EnchantedInstance(instance_id="e1", base_id="sword", enchantment_id="generic_plus_1", equip="main_hand")]` → `items=[ItemInstance(instance_id="e1", catalog_id="sword", enchantment_id="generic_plus_1", equip="main_hand")]`.
+- `ammo=[AmmoStack(instance_id="a1", base_id="arrow", count=20)]` → `items=[ItemInstance(instance_id="a1", catalog_id="arrow", count=20)]` (magic ammo carries `enchantment_id`).
+- Assertions reading `spec.equipped[...]` → `equip.equipped_ref(spec, slot)`; reading `spec.inventory` membership → `{i.catalog_id for i in spec.items}`; reading `spec.enchanted`/`spec.ammo` → the matching subset of `spec.items`.
 
 Work file-by-file; run that file's tests green before moving on. Suggested order
 (densest first): `test_equipment.py`, `test_equip_enforcement.py`,
@@ -2531,8 +2698,8 @@ git commit -m "test: migrate the suite to the ItemInstance model"
 
 - [ ] **Step 1: Grep for stragglers**
 
-Run: `rg -n "\.inventory\b|\.stashed\b|spec\.equipped|\.loaded_ammo|armor_tailored|\.contents\b|transfer_to_retainer|transfer_to_pc|inventory_rows\b" aose`
-Expected: **no hits** in `aose/` except the new `ItemInstance`/`items` code. Fix any straggler (e.g. a forgotten `auth` seed, a print template).
+Run: `rg -n "\.inventory\b|\.stashed\b|spec\.equipped|\.loaded_ammo|armor_tailored|\.contents\b|transfer_to_retainer|transfer_to_pc|inventory_rows\b|spec\.enchanted|spec\.ammo|EnchantedInstance|AmmoStack|move_ammo\b" aose`
+Expected: **no hits** in `aose/` except the new `ItemInstance`/`items` code. Fix any straggler (e.g. a forgotten `auth` seed, a print template). `EnchantedInstance`/`AmmoStack` must be gone from models, `__init__`, and every importer.
 
 - [ ] **Step 2: Run the full suite + app smoke**
 
@@ -2555,14 +2722,14 @@ git commit -m "chore: remove legacy item fields/helpers; no stragglers remain"
 
 - [ ] **Step 1: Update `CLAUDE.md` Storage shapes**
 
-Replace the `inventory`/`stashed`/`equipped` bullets with the `items: list[ItemInstance]` model (instance_id + location + count + equip + tailored + loaded_ammo_id); note coins carry `instance_id`; note `contents` removed from carriers; note `equipped`/`loaded_ammo`/`armor_tailored` removed.
+Replace the `inventory`/`stashed`/`equipped` bullets with the `items: list[ItemInstance]` model (instance_id + catalog_id + location + enchantment_id + count + equip + tailored + loaded_ammo_id + charges); note that **plain, enchanted, and ammo are all `ItemInstance`** (type by `catalog_id`, enchantment by `enchantment_id`), so the separate `enchanted`/`ammo` lists are **removed**; note coins carry `instance_id`; note `contents` removed from carriers; note `equipped`/`loaded_ammo`/`armor_tailored` removed; note `MagicItemInstance`/`gems`/`jewellery`/`spell_sources` stay separate.
 
 - [ ] **Step 2: Update `ARCHITECTURE.md`** — edit the inventory/storage/equip topics in place: one flat `items` list, the `LocationPolicy` descriptor (uniform locations, differences are parameters), instance equip-state, `move_thing` single front door (retainers included), the quantity vocabulary (move/sell/drop/use + auto-merge).
 
 - [ ] **Step 3: Add a `CHANGELOG.md` row**
 
 ```
-| 2026-06-24 | Item identity unification: every owned thing is an instance (items get ids/location/count/equip-state); equipped/loaded-ammo/tailored become instance fields; one move + equip path; retainer equip-then-move dupe fixed | feat/item-identity-unification | 2026-06-24-item-identity-unification |
+| 2026-06-24 | Item identity unification: every owned thing is an instance (items get ids/location/count/equip-state); plain/enchanted/ammo fold into one ItemInstance (type by catalog_id, enchantment by field); equipped/loaded-ammo/tailored become instance fields; one move + equip path; retainer equip-then-move dupe fixed | feat/item-identity-unification | 2026-06-24-item-identity-unification |
 ```
 
 - [ ] **Step 4: Commit**
@@ -2576,8 +2743,8 @@ git commit -m "docs: item identity unification (architecture, storage shapes, ch
 
 ## Self-Review (against the spec)
 
-- **Spec coverage:** ItemInstance + flat list (Task 1); coin ids (Task 1); equip-as-state slotted + magic toggle (Tasks 1–3, 11, 13, 14); loaded-ammo/tailored as instance fields (Tasks 1, 11, 12, 19); durable vs consumable + count box + use (Tasks 17, 21); auto-merge ≤1 stack/key+location (Tasks 7, 17); split-by-move (Task 7); one move path + retainer transfer deletion (Tasks 8, 9, 19); uniform LocationPolicy (Task 5); coercion at loader (Task 4); the five invariants tested (Tasks 2, 5, 7, 9); dupe regression (Task 9); docs (Task 24). All spec sections map to a task.
-- **Known judgement calls (flagged to the user):** equip by `instance_id`; coercion at the loader not a model validator; legacy enchanted-launcher `loaded_ammo` dropped if unmatched; suite red mid-landing.
+- **Spec coverage:** ItemInstance + flat list (Task 1); **plain/enchanted/ammo folded into one type + one `resolve`** (Tasks 1, 3; readers 12–14, 17, 18); coin ids (Task 1); equip-as-state slotted + magic toggle (Tasks 1–3, 11, 13, 14); loaded-ammo/tailored as instance fields (Tasks 1, 11, 12, 19); durable vs consumable + count box + use (Tasks 17, 21); auto-merge ≤1 stack per `(catalog_id, enchantment_id, location)` (Tasks 7, 17); split-by-move (Task 7); one move path + retainer transfer deletion (Tasks 8, 9, 19); uniform LocationPolicy (Task 5); coercion at loader incl. enchanted/ammo fold (Task 4); the invariants tested (Tasks 2, 3, 5, 7, 9); dupe regression (Task 9); docs (Task 24). All spec sections map to a task.
+- **Known judgement calls (flagged to the user):** plain/enchanted/ammo collapse into one `ItemInstance` (magic items / spell sources stay separate); equip by `instance_id`; `equipped_ref` returns the equipped instance's `catalog_id`; coercion at the loader not a model validator; legacy enchanted-launcher `loaded_ammo` dropped if unmatched; suite red mid-landing.
 - **Type consistency:** `equip.equip(spec, instance_id, …)`/`unequip(spec, instance_id)` used identically in Tasks 2, 13, 19; `storage.move_thing(spec, "item", instance_id, dest, count=…, data=…)` in Tasks 8, 9, 19; `shop.remove_units(spec, instance_id, count=…, mode=…, data=…)` in Tasks 17, 19; `storage.items_at`/`location_load_cn`/`location_policy` signatures stable across Parts 2–4.
 
 ---

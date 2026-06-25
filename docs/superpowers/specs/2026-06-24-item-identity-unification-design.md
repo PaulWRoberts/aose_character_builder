@@ -1,7 +1,7 @@
 # Item Identity Unification — Design
 
 **Date:** 2026-06-24
-**Status:** Approved (design)
+**Status:** Approved (design); revised 2026-06-25 to fold plain/enchanted/ammo into one instance type
 **Branch:** feat/item-identity-unification
 
 ## Problem
@@ -27,22 +27,30 @@ catalog-item storage … loose catalog items stay identity-less strings"* as a
 **non-goal** — this design closes that deferral.
 
 The engine mints an instance only when forced to (scrolls, magic items,
-enchanted gear, ammo, gems). That lazy boundary is the recurring source of
-item bugs: two representations, two mental models, side tables that fall out of
-sync.
+enchanted gear, ammo, gems), and even then it mints *different types* for what is
+the same kind of thing: a plain sword is a bare `str`, a +1 sword is an
+`EnchantedInstance`, and arrows are an `AmmoStack`. That lazy, type-split boundary
+is the recurring source of item bugs: many representations, many mental models,
+side tables and parallel code paths that fall out of sync.
 
 ## North-star invariant
 
 **Every owned thing is an instance with identity.** It carries an `instance_id`
 and a `location`; stackables additionally carry a `count`; equippables carry
-their equip-state *as a field on the instance*. There are no side tables keyed by
+their equip-state *as a field on the instance*. A plain item, an enchanted item,
+and a stack of ammo are **one type** differing only by data (an optional
+`enchantment_id`, a `count`), never by class. There are no side tables keyed by
 catalog id, and no positional lists. One move path and one equip path operate on
-instances regardless of owner (PC or retainer) or kind.
+instances regardless of owner (PC or retainer), kind, or enchantment.
 
 ## Goals
 
 - Give **loose catalog items** real instance identity (`ItemInstance`): id +
   location (+ count for stackables, + equip-state for equippables).
+- **Unify plain, enchanted, and ammo into the one `ItemInstance` type.** The item
+  *type* is a reference (`catalog_id`); whether it is enchanted is an optional
+  *field* (`enchantment_id`), not a different class. Delete `EnchantedInstance`,
+  `AmmoStack`, and the separate `spec.enchanted` / `spec.ammo` lists.
 - Make **equipped** and **loaded-ammo** and **armour-tailored** *instance state*,
   deleting the `equipped` / `loaded_ammo` side tables and the `armor_tailored`
   spec field.
@@ -60,50 +68,69 @@ instances regardless of owner (PC or retainer) or kind.
 
 ## Non-goals
 
-- **No single polymorphic collection.** We keep the existing typed lists
-  (`magic_items`, `enchanted`, `ammo`, `gems`, `jewellery`, `spell_sources`,
-  `coins`, `containers`, `animals`, `vehicles`); they already satisfy the
-  instance contract. Unification is a *shared contract*, not one physical list.
-  (Approach A from brainstorming; the "one collection" Approach B was rejected as
-  a big-bang rewrite.)
+- **No single polymorphic collection for *everything*.** Plain, enchanted, and
+  ammo merge into `ItemInstance` (they share the same base+optional-enchantment+
+  count shape). But `magic_items`, `gems`, `jewellery`, `spell_sources`, `coins`,
+  `containers`, `animals`, `vehicles` stay their own typed lists — they carry
+  genuinely different state (charges with a toggle-equip mechanic; spell entries;
+  value/label; carrier capacity) and do not fit the catalog+enchantment+count
+  contract. Unification is "one type per shared shape", not "one physical list".
+  (Approach A from brainstorming; the "one collection for all" Approach B was
+  rejected as a big-bang rewrite.)
 - **No change to the two real equip mechanics.** Slotted (weapons/armour/shields
   → `armor`/`main_hand`/`off_hand`) and toggled (magic items → worn bool) are
   both genuine game concepts; we make both *instance state*, we do not merge them
-  into one.
+  into one. (This is why `MagicItemInstance` stays separate: its equip is a
+  toggle, not a slot.)
 - **No nesting.** A container still cannot live inside a container.
 - **No new per-shot ammo consumption.** "Use" on a consumable is an explicit
   drop-1 button, not automatic.
+- **No denormalised type data.** The instance references its type by `catalog_id`;
+  the type's attributes (weight, damage, cost) stay in the catalog (`GameData`),
+  never copied onto the instance.
 - **No migration tooling.** App is not deployed (project convention). A
   best-effort load-time coercion of old saves is provided as a courtesy only.
 
 ## Decisions (from brainstorming)
 
-1. **Shared contract, keep typed lists** (Approach A). Every owned thing shares
-   `instance_id + location (+ count) (+ equip-state)`.
-2. **Stackable vs equippable.** Stackables (coins, gems, ammo, bulk consumables)
+1. **Shared contract, typed lists per shape** (Approach A). Every owned thing
+   shares `instance_id + location (+ count) (+ equip-state)`. The catalog-item
+   shape (plain, enchanted, ammo) collapses into **one** `ItemInstance` type and
+   **one** `spec.items` list; the other instance shapes keep their own lists.
+2. **Type by reference, enchantment by field.** An item's *type* is `catalog_id`
+   (a reference into `GameData.items`). Whether it is enchanted is an optional
+   `enchantment_id` field on the same instance — `None` for a plain sword,
+   `"generic_plus_1"` for a +1 sword. Resolving an instance to its effective
+   `Weapon`/`Armor`/`Ammunition` is one function: no enchantment → the catalog
+   item; else compose the synthetic item from base + enchantment. No code branches
+   on "is this enchanted" by *type*; it reads the field.
+3. **Stackable vs equippable.** Stackables (coins, gems, ammo, bulk consumables)
    are one instance with `count`. Equippables (weapons, armour, shields) are
    always per-instance, `count == 1`, and **never** stack. Stackability and
-   equippability derive from the **catalog item type**, not an instance flag
-   (data-not-code).
-3. **Two stackable categories.** *Durable* = exactly {coins, gems}. *Consumable*
+   equippability derive from the **resolved catalog item type**, not an instance
+   flag (data-not-code) — enchantment does not change it (a +1 sword is still
+   equippable; +1 arrows are still stackable).
+4. **Two stackable categories.** *Durable* = exactly {coins, gems}. *Consumable*
    = ammo + all bulk gear (torches, rations, spikes, oil, …). The only
    behavioural difference is the **"use"** button (consumables only).
-4. **Equip is instance state.** Slotted things carry `equip = slot | None`;
+5. **Equip is instance state.** Slotted things carry `equip = slot | None`;
    magic items keep `equipped: bool`. `CharacterSpec.equipped` is **deleted**.
-5. **Quantity vocabulary.** Every quantity-removing action on a stackable — move,
+6. **Quantity vocabulary.** Every quantity-removing action on a stackable — move,
    sell, drop — takes a `count`, rendered as a number box defaulting to the full
    current count and clamped to `1..count`. Consumables also get **use** (= drop
    1). The box appears per action only where that action exists for the type.
-6. **Auto-merge.** At most **one stack per (merge-key, location)**. Any operation
+7. **Auto-merge.** At most **one stack per (merge-key, location)**. Any operation
    that lands a stackable into a location with a matching stack has the resident
    absorb the incoming count; the incoming instance is discarded. Splitting is
    only by moving a partial count to a *different* location. Merge-keys: coins →
-   `denom`; gems → `value + label`; ammo → `base_id + enchantment_id`; consumable
-   gear → `catalog_id`.
-7. **One move path, retainers included.** `move_thing` is the single front door;
+   `denom`; gems → `value + label`; every `ItemInstance` stackable →
+   `(catalog_id, enchantment_id)`. (This subsumes the old ammo merge-key
+   `base_id + enchantment_id` and the consumable-gear key `catalog_id` —
+   `enchantment_id` is just `None` for unenchanted gear.)
+8. **One move path, retainers included.** `move_thing` is the single front door;
    `transfer_to_retainer`/`transfer_to_pc` are deleted; give/take is a move with
    `kind="retainer"` as src/dest, identical to container/carrier moves.
-8. **Storage locations are uniform; their differences are parameters, not code
+9. **Storage locations are uniform; their differences are parameters, not code
    variations.** Every location behaves identically (hold instances, weigh them,
    place-or-merge stackables) and differs only by a small policy descriptor:
    *capacity cap*, *encumbrance contribution* (which character's load it adds to,
@@ -116,46 +143,78 @@ instances regardless of owner (PC or retainer) or kind.
 
 ### Models (`aose/models/character.py`, `storage.py`)
 
-**New `ItemInstance`** — the loose catalog item, finally an instance:
+**New `ItemInstance`** — the single catalog-item instance (plain, enchanted, or
+stacked):
 
 ```
 instance_id: str            # uuid4 hex
-catalog_id: str             # references a Weapon / Armor / gear item
+catalog_id: str             # references a Weapon / Armor / gear / Ammunition item (the "type")
 location: StorageLocation   # carried/stashed/container/animal/vehicle/retainer
+enchantment_id: str | None = None   # None = plain; else references an Enchantment
 count: int = 1              # >1 only for stackables; equippables always 1
 equip: Literal["armor","main_hand","off_hand"] | None = None  # equippables only
 tailored: bool = True       # inert unless tailorable body armour
-loaded_ammo_id: str | None = None   # launcher weapons only; an AmmoStack id
+loaded_ammo_id: str | None = None   # launcher weapons only; an ItemInstance (ammo) id
+charges_max: int | None = None      # carried over from EnchantedInstance (charged enchantments)
+charges_remaining: int | None = None
+extra_modifiers: list[Modifier] = []   # escape hatch (from EnchantedInstance)
+note: str = ""                          # escape hatch
 ```
 
 - `CharacterSpec.inventory: list[str]` and `stashed: list[str]` → **one**
   `items: list[ItemInstance]`. Carried-vs-stashed is `location.kind`.
+- **`EnchantedInstance` is deleted.** An enchanted weapon/armour is an
+  `ItemInstance` with `enchantment_id` set; it slots, moves, and weighs exactly
+  like a plain one. Its old fields (`equipped` bool, `charges_*`,
+  `extra_modifiers`, `note`) move onto `ItemInstance` (equip becomes the slot
+  field; the rest become optional). `CharacterSpec.enchanted` is removed.
+- **`AmmoStack` is deleted.** A stack of ammo is an `ItemInstance` whose
+  `catalog_id` references an `Ammunition` item, with `count > 1` and optional
+  `enchantment_id` (magic ammo). `CharacterSpec.ammo` is removed.
 - `ContainerInstance.contents` / `AnimalInstance.contents` /
   `VehicleInstance.contents` (`list[str]`) → **removed**. An item in a container
   is an `ItemInstance` with `location = container:<id>` — exactly how a magic
   item in a container already works.
 - `CharacterSpec.equipped: dict[str,str]` → **removed**; the slot is read from
-  each `ItemInstance.equip` / `EnchantedInstance.equip`.
+  each `ItemInstance.equip`.
 - `CharacterSpec.loaded_ammo: dict[str,str]` → **removed**; loaded ammo is
-  `ItemInstance.loaded_ammo_id` on the launcher.
-- `CharacterSpec.armor_tailored: bool` → **removed**; `ItemInstance.tailored` /
-  `EnchantedInstance.tailored` on the worn armour.
-- `EnchantedInstance.equipped: bool` → `equip: slot | None` (so an enchanted
-  weapon/armour is slotted exactly like a loose one). It also gains `tailored`.
-- `MagicItemInstance.equipped: bool` — **unchanged** (toggle mechanic).
+  `ItemInstance.loaded_ammo_id` on the launcher (pointing at an ammo
+  `ItemInstance`).
+- `CharacterSpec.armor_tailored: bool` → **removed**; `ItemInstance.tailored` on
+  the worn armour.
+- `MagicItemInstance.equipped: bool` — **unchanged** (toggle mechanic; stays its
+  own list).
 - `CoinStack` gains `instance_id: str`. The `(denom, location)` uniqueness
   invariant stays (it is just the coin merge-key).
 
 Models stay "dumb": invariants that need a catalog lookup (equippable ⇒ count 1;
-equip only on equippables; stackable ⇒ no equip) are enforced in the engine, not
-the model.
+equip only on equippables; stackable ⇒ no equip; `enchantment_id` resolvable for
+the base's kind) are enforced in the engine, not the model.
+
+### Resolution — one function (`enchant.py`)
+
+`resolve(inst, data) -> Weapon | Armor | Ammunition | GearItem | None`:
+
+- `inst.enchantment_id is None` → return `data.items[inst.catalog_id]` directly;
+- else compose the synthetic item from the base catalog item + the `Enchantment`
+  (today's `resolve_instance`), now taking an `ItemInstance` instead of an
+  `EnchantedInstance`.
+
+Every reader (attacks, AC, encumbrance, ammo, magic) resolves through this one
+function and then works on the resulting catalog item — no `isinstance(...
+EnchantedInstance)` branches, no parallel "enchanted vs plain" code paths.
 
 ### Engine — one equip path (`equip.py`)
 
 - `equip(spec, instance_id, slot, *, data, ruleset_flags...)` and
   `unequip(spec, instance_id)` operate on **instances** of whichever spec owns
-  them — a loose `ItemInstance` or an `EnchantedInstance`. They set/clear the
-  instance's `equip` field. No `equipped` dict is threaded through.
+  them. They look the instance up in the single `spec.items` list and set/clear
+  its `equip` field. No `equipped` dict, and no second list to scan — folding
+  `enchanted` into `items` removes the dual-loop / `isinstance` lookup the
+  pre-merge design needed.
+- The old `equipped_ref` catalog_id-vs-instance_id split (and much of
+  `resolve_slot`) goes away: the equipped item in a slot is found by scanning
+  `items` for `equip == slot`, and resolved via the one resolver.
 - Wield-budget validation (`validate_wield`) iterates the owner spec's instances
   whose `equip in {main_hand, off_hand}` — identical code for PC and retainer.
 - **Invariant: `equip is not None ⇒ the instance sits in a location whose policy
@@ -225,14 +284,13 @@ remains the front door; every category reduces to the same primitives:
   existing move UI).
 - `move_targets` and `loose_list`/`containers_collection`/`_carrier`/`_retainer`
   resolvers stay, adjusted for the flat `items` list (location-filtered instead
-  of positional).
+  of positional). Ammo, formerly its own collection, is now part of `items`.
 
 ### Engine — sell / drop / use (`shop.py`, `storage.py`)
 
 - **Sell** a stackable: `split_stack` off `count` (default full, clamp
   `1..count`), credit half-price (or refund) to the PC's carried coins, prune an
-  emptied source. One path for coins-can't-be-sold aside; gems and consumable
-  gear share it.
+  emptied source. One path; gems and consumable gear (incl. ammo) share it.
 - **Drop** a stackable: `split_stack` off `count` to a discard sink (the
   instance/quantity is removed from the world). Equippables drop whole.
 - **Use** (consumables only): `drop(count=1)` — a dedicated shortcut, no number
@@ -241,25 +299,29 @@ remains the front door; every category reduces to the same primitives:
 ### Derivations (encumbrance, attacks, AC, ammo, quick_equipment, retainers)
 
 - **Encumbrance** (`encumbrance.py`, `location_load_cn`): sum `items` by
-  `location` and `count` (catalog `weight_cn × count`) instead of iterating a
-  positional list; equipped items still weigh (they are carried). Magic/enchanted/
-  coins/gems already filter by location — unchanged.
+  `location` and `count` (resolved catalog `weight_cn × count`) instead of
+  iterating a positional list; equipped items still weigh (they are carried). Ammo
+  weight now flows through this same sum (it is an `ItemInstance`).
+  Magic/coins/gems already filter by location — unchanged.
 - **Attacks / AC / equip queries** read the equipped instance via
-  `equip == slot` instead of `spec.equipped[slot]`. A small helper
+  `equip == slot`, then `resolve(...)`. A small helper
   `equipped_in(spec, slot) -> instance | None` centralises the lookup.
-- **Ammo** loaded-launcher reads `ItemInstance.loaded_ammo_id` instead of the
-  `loaded_ammo` dict.
+- **Ammo** loaded-launcher reads `ItemInstance.loaded_ammo_id` (pointing at an
+  ammo `ItemInstance`) instead of the `loaded_ammo` dict; the magic-ammo bonus is
+  read by resolving that ammo instance's `enchantment_id`.
 - **quick_equipment** / kit application builds `ItemInstance`s (with ids)
-  directly.
+  directly, including ammo stacks (no separate `AmmoStack` construction).
 - **retainers**: transfer helpers removed (use `move_thing`); generation/kit
   already routes through `quick_equipment`, so retainer items are instances with
-  ids like the PC's — same equip/move code throughout.
+  ids like the PC's — same equip/move/resolve code throughout.
 
 ### View + templates (`sheet/view.py`, inventory templates)
 
 - Inventory grouping buckets the flat `items` list by `location` (as it already
-  does for magic/enchanted/coins/gems). Equipped items render in the equipped
-  block via `equip`; everything else under its location group/container.
+  does for magic/coins/gems). Equipped items render in the equipped block via
+  `equip`; everything else under its location group/container. Enchanted items and
+  ammo are no longer separate render branches — they are `ItemInstance`s with an
+  `enchantment_id` / `count` and render through the one item row.
 - The shared action macros (`_actions.html`, from the 2026-06-23 work) gain the
   **count box** on move/sell/drop for stackables (default full, clamp `1..count`)
   and the **use** button for consumables. One affordance, every stackable.
@@ -273,21 +335,29 @@ remains the front door; every category reduces to the same primitives:
   removed if the move UI fully covers them — decided at plan time by grepping
   call sites).
 - Equip/unequip routes (PC, retainer, enchanted) collapse onto the single
-  instance-based `equip`/`unequip`.
+  instance-based `equip`/`unequip`. The separate "enchanted equip" route is gone
+  (enchanted is just an `ItemInstance`).
 
 ### Load-time coercion (courtesy, no migration tooling)
 
-A `model_validator(mode="before")` on `CharacterSpec`:
+A data-aware coercion (in the loader, where `GameData` is available — see plan
+Task 4) on the raw dict, before `CharacterSpec` validation:
 
 - wraps `inventory`/`stashed` strings into `ItemInstance`s
   (`location = carried/stashed`, `count` by collapsing duplicates for stackables,
   per-instance for equippables);
 - drains each container/animal/vehicle `contents` into `items` with the matching
   `location`;
-- converts the `equipped` dict into `equip` on the matching instances (and the
-  enchanted `equipped` bool likewise);
-- converts `loaded_ammo` → `loaded_ammo_id`; `armor_tailored` → `tailored` on the
-  worn armour;
+- **folds the old `enchanted` list into `items`** — each becomes an `ItemInstance`
+  with `catalog_id = base_id`, `enchantment_id` set, `equip`/`tailored`/charges
+  carried over;
+- **folds the old `ammo` list into `items`** — each becomes an `ItemInstance`
+  with `catalog_id = base_id`, `count`, optional `enchantment_id`;
+- converts the `equipped` dict into `equip` on the matching instances (reconciling
+  the old doubly-tracked enchanted weapon — `equipped` bool *and* a `spec.equipped`
+  slot id — into the single `equip` slot, keeping which hand);
+- converts `loaded_ammo` → `loaded_ammo_id` (now pointing at the migrated ammo
+  `ItemInstance`); `armor_tailored` → `tailored` on the worn armour;
 - assigns `instance_id` to coin stacks.
 
 Old saves load unchanged; no separate migration step.
@@ -296,9 +366,9 @@ Old saves load unchanged; no separate migration step.
 
 ```
 spec ─► build_inventory_groups(spec, data)
-          items + coins/gems/jewellery/magic/enchanted/ammo
+          items (plain · enchanted · ammo, all one type) + coins/gems/jewellery/magic
           all bucketed by StorageLocation (top-level + per container)
-          equipped block ← instances where .equip is set / magic .equipped
+          equipped block ← items where .equip is set / magic .equipped
                     ▼
        sheet templates → per-item modal → _actions.html macros
           Move ▾ (count box for stackables) · Sell ▾ (count) · Drop (count)
@@ -306,28 +376,31 @@ spec ─► build_inventory_groups(spec, data)
                     ▼
        POST /inventory/move | /sell | /drop | /use | /equip | /unequip
           → storage.move_thing / shop / equip  (all instance-based, owner-agnostic)
-          → invariants enforced once: equipped⇒carried; ≤1 stack per key+location
+          → resolve(inst, data) for stats; invariants enforced once:
+            equipped⇒carried; ≤1 stack per (catalog_id, enchantment_id, location)
 ```
 
 ## Phasing (cohesive spec → phased plan)
 
 Each phase keeps the suite green before the next.
 
-1. **Model + coercion + primitives.** Add `ItemInstance`, flat `items`,
-   `equip`/`tailored`/`loaded_ammo_id`; `instance_id` on coins; enchanted `equip`.
-   Add the before-validator coercion. Reshape `storage.py` resolvers + `equip.py`
-   onto instances; add `split_stack`; lift the location policy descriptor into the
-   engine and route `_check_capacity` + equip-allowed/eligibility through it;
-   enforce the invariants. Green: `test_storage*`, `test_equip`,
-   `test_retainer_transfer`.
+1. **Model + coercion + primitives.** Add the unified `ItemInstance`
+   (`enchantment_id`, `count`, `equip`, `tailored`, `loaded_ammo_id`, charges),
+   flat `items`; delete `EnchantedInstance`/`AmmoStack` and `spec.enchanted`/
+   `spec.ammo`; `instance_id` on coins. Add the loader coercion. Reshape
+   `storage.py` resolvers + `equip.py` onto instances; add the one `resolve`;
+   add `split_stack`; lift the location policy descriptor into the engine and
+   route `_check_capacity` + equip-allowed/eligibility through it; enforce the
+   invariants. Green: `test_storage*`, `test_equip`, `test_retainer_transfer`.
 2. **Derivations.** encumbrance, attacks, AC, ammo, quick_equipment, retainers
-   read instances. Delete `transfer_to_*`. Green: engine suite.
+   read instances through the one resolver. Delete `transfer_to_*`. Green:
+   engine suite.
 3. **View + templates + UI.** bucket `items` by location; count box + use button
    in the shared macros; equip block via `equip`. Green: web/view tests.
 4. **Delete dead side tables.** Remove `spec.equipped`, `loaded_ammo`,
-   `armor_tailored`, the `contents` sub-lists, and the transfer routes; sweep call
-   sites by grep. Update `ARCHITECTURE.md` (storage shapes, equip, encumbrance)
-   in place + a `CHANGELOG.md` row.
+   `armor_tailored`, `spec.enchanted`, `spec.ammo`, the `contents` sub-lists, and
+   the transfer routes; sweep call sites by grep. Update `ARCHITECTURE.md`
+   (storage shapes, equip, encumbrance) in place + a `CHANGELOG.md` row.
 
 ## Testing
 
@@ -336,9 +409,15 @@ Each phase keeps the suite green before the next.
   one copy exists in the world.
 - **Equip-as-state:** equipping sets `equip`; moving an equipped instance off
   carried clears `equip`; equipping a stashed/in-container instance is rejected;
-  PC and retainer use the same path.
-- **Auto-merge:** moving a stackable into a location with a matching stack yields
-  exactly one stack (resident absorbs; incoming id gone); equippables never merge.
+  PC and retainer use the same path; a +1 weapon (enchanted `ItemInstance`)
+  equips through the identical path as a plain one.
+- **One type, one resolver:** a plain item resolves to its catalog item; an
+  `ItemInstance` with `enchantment_id` resolves to the composed synthetic item;
+  attacks/AC read both through the same call.
+- **Auto-merge:** moving a stackable into a location with a matching
+  `(catalog_id, enchantment_id)` stack yields exactly one stack (resident absorbs;
+  incoming id gone); +1 arrows do **not** merge with plain arrows; equippables
+  never merge.
 - **Split-by-move:** partial move leaves a remainder at source and one stack at
   dest; full move prunes the source.
 - **Quantity actions:** sell/drop clamp `count` to `1..count` and default to
@@ -347,8 +426,8 @@ Each phase keeps the suite green before the next.
 - **Loaded ammo / tailoring follow the instance:** moving/unequipping a launcher
   clears its load; tailoring survives re-equip on the same armour instance.
 - **Coercion:** an old save (string inventory, `equipped` dict, `loaded_ammo`,
-  `armor_tailored`, `contents`) loads into the new shape with weights, equip, and
-  load preserved.
+  `armor_tailored`, `contents`, separate `enchanted` + `ammo` lists) loads into
+  the new shape with weights, equip, enchantment, and load preserved.
 - **Regression:** full suite green; encumbrance totals unchanged for an
   unmodified character; print sheet lists all groups; settings page shows no
   "pending" badge.
@@ -358,18 +437,23 @@ Each phase keeps the suite green before the next.
 - **Blast radius.** This touches models, loader, ~10 engine modules, the sheet
   view, and many templates. Phasing keeps each step green, but the model change is
   inherently atomic (the flat `items` list breaks every positional reader at
-  once); Phase 1 must land model + all `storage`/`equip` readers together.
+  once, and deleting `enchanted`/`ammo` breaks every enchanted/ammo reader);
+  Phase 1 must land model + all `storage`/`equip`/`resolve` readers together.
 - **Coercion fidelity.** Collapsing duplicate strings into counted stacks must use
   the same stackable/equippable classification the runtime uses, or weights/counts
   drift on load. Share one `is_stackable(catalog_item)` helper between coercion and
-  engine.
-- **Merge-key correctness.** Each stackable type's merge-key must match its
-  existing behaviour (coins `denom`, gems `value+label`, ammo
-  `base_id+enchantment_id`) and the new consumable-gear key (`catalog_id`); a wrong
-  key either fragments or wrongly fuses stacks.
+  engine. Folding `enchanted`/`ammo` must preserve `enchantment_id`, charges,
+  counts, and which-hand equip.
+- **Merge-key correctness.** Every `ItemInstance` stackable merges by
+  `(catalog_id, enchantment_id)`; coins by `denom`; gems by `value+label`. A wrong
+  key either fragments or wrongly fuses stacks — in particular enchanted vs plain
+  of the same base must stay distinct.
 - **Enchanted equip migration.** Enchanted weapons were doubly tracked (an
   `equipped` bool *and* a `spec.equipped` slot id). The coercion must reconcile
   both into the single `equip` slot without losing which hand.
+- **Field bloat on plain items.** The unified `ItemInstance` carries optional
+  enchantment/charge/escape-hatch fields that are inert for plain gear. This is
+  the accepted cost of one type; defaults keep saves small and construction cheap.
 - **Call-site sweep on deletion.** Removing `spec.equipped`/`loaded_ammo`/
-  `contents`/`transfer_*` 404s or AttributeErrors any missed reader; grep
-  exhaustively before deleting (Phase 4).
+  `contents`/`enchanted`/`ammo`/`transfer_*` 404s or AttributeErrors any missed
+  reader; grep exhaustively before deleting (Phase 4).
