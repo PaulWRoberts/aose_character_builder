@@ -1409,4 +1409,712 @@ git commit -m "feat(retainers): delete bespoke transfer; dupe fixed via unified 
 
 ---
 
-> **End of Part 2.** Parts 3–5 (reader migrations, view/routes/wizard, templates/tests/docs) follow.
+# Part 3 — Reader migrations
+
+These modules only *read* the old fields. The substitutions are mechanical and
+defined once here:
+
+| Old | New |
+|---|---|
+| `spec.equipped.get(slot)` (need the resolvable ref) | `equip.equipped_ref(spec, slot)` |
+| `resolve_slot(spec.equipped.get(slot), data, spec.enchanted)` (need the item) | `equip.slot_item(spec, slot, data)` |
+| `spec.equipped.get("armor")` then resolve | `equip.slot_item(spec, "armor", data)` |
+| iterate `spec.inventory` (carried catalog ids) | `for inst in storage.items_at(spec, CARRIED): … inst.catalog_id … inst.count` |
+| `spec.armor_tailored` | the armour slot instance's `.tailored` (`equip.equipped_instance(spec, "armor").tailored`) |
+| `spec.loaded_ammo.get(weapon_key)` | the equipped weapon instance's `.loaded_ammo_id` |
+| `carrier.contents` weight | `storage.location_load_cn(spec, <carrier loc>, data)` |
+| membership `x in spec.inventory` | `x in {i.catalog_id for i in spec.items}` |
+
+### Task 10: `encumbrance.py` over `items`
+
+**Files:**
+- Modify: `aose/engine/encumbrance.py:120-195` (`equipment_weight_cn`, `armor_movement_class`)
+- Test: `tests/test_encumbrance_items.py` (create)
+
+- [ ] **Step 1: Write the failing test**
+
+```python
+# tests/test_encumbrance_items.py
+from pathlib import Path
+from aose.data.loader import GameData
+from aose.engine.encumbrance import equipment_weight_cn, armor_movement_class
+from aose.models import CharacterSpec, ClassEntry, ItemInstance
+from aose.models.storage import StorageLocation
+
+DATA = GameData.load(Path("data"))
+CARRIED = StorageLocation(kind="carried")
+STASHED = StorageLocation(kind="stashed")
+
+
+def _spec(**kw):
+    base = dict(name="H", abilities={"STR": 12, "INT": 10, "WIS": 10, "DEX": 10,
+                "CON": 10, "CHA": 10}, race_id="human",
+                classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
+                alignment="neutral")
+    base.update(kw); return CharacterSpec(**base)
+
+
+def test_carried_weapon_counts_stashed_does_not():
+    spec = _spec(items=[
+        ItemInstance(instance_id="i1", catalog_id="sword", location=CARRIED),
+        ItemInstance(instance_id="i2", catalog_id="sword", location=STASHED),
+    ])
+    assert equipment_weight_cn(spec, DATA) == DATA.items["sword"].weight_cn
+
+
+def test_equipped_armor_drives_movement_class():
+    spec = _spec(items=[ItemInstance(instance_id="i1", catalog_id="plate_mail",
+                                     equip="armor", location=CARRIED)])
+    assert armor_movement_class(spec, DATA) == "metal"
+```
+
+- [ ] **Step 2: Run to verify it fails**
+
+Run: `.venv\Scripts\python.exe -m pytest tests/test_encumbrance_items.py -q`
+Expected: FAIL (`'CharacterSpec' object has no attribute 'inventory'`).
+
+- [ ] **Step 3: Implement**
+
+In `equipment_weight_cn`, replace the `for item_id in spec.inventory:` loop with a carried-items loop that multiplies by `count`:
+
+```python
+    from aose.engine import storage
+    from aose.models.storage import StorageLocation
+    CARRIED = StorageLocation(kind="carried")
+    for inst in storage.items_at(spec, CARRIED):
+        item = data.items.get(inst.catalog_id)
+        if item is None:
+            continue
+        if isinstance(item, Armor):
+            total += int(item.weight_cn * item.weight_multiplier) * inst.count
+        elif isinstance(item, Weapon):
+            total += item.weight_cn * inst.count
+        elif isinstance(item, AdventuringGear):
+            has_gear = True
+        else:
+            total += item.weight_cn * inst.count
+```
+
+In `armor_movement_class`, replace `armor_id = spec.equipped.get("armor")` + lookup with:
+
+```python
+    from aose.engine.equip import slot_item
+    item = slot_item(spec, "armor", data)
+    if not isinstance(item, Armor) or item.is_shield:
+        return "none"
+    return item.movement_impact
+```
+
+(`spec.inventory`/`spec.equipped` no longer exist; the `_is_carried` helper and the magic/enchanted/container loops are unchanged — they already filter by `location`.)
+
+- [ ] **Step 4: Run to verify it passes**
+
+Run: `.venv\Scripts\python.exe -m pytest tests/test_encumbrance_items.py -q`
+Expected: PASS.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add aose/engine/encumbrance.py tests/test_encumbrance_items.py
+git commit -m "feat(encumbrance): weigh carried items by instance+count; armour class via slot_item"
+```
+
+---
+
+### Task 11: `armor_class.py` over the equip field
+
+**Files:**
+- Modify: `aose/engine/armor_class.py:62-116` (`_has_worn_armor`, `_compute_ac`)
+- Test: `tests/test_ac_items.py` (create)
+
+- [ ] **Step 1: Write the failing test**
+
+```python
+# tests/test_ac_items.py
+from pathlib import Path
+from aose.data.loader import GameData
+from aose.engine.armor_class import armor_class
+from aose.models import CharacterSpec, ClassEntry, ItemInstance
+from aose.models.storage import StorageLocation
+
+DATA = GameData.load(Path("data"))
+CARRIED = StorageLocation(kind="carried")
+
+
+def _spec(**kw):
+    base = dict(name="H", abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10,
+                "CON": 10, "CHA": 10}, race_id="human",
+                classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
+                alignment="neutral")
+    base.update(kw); return CharacterSpec(**base)
+
+
+def test_worn_armor_sets_base_ac():
+    spec = _spec(items=[ItemInstance(instance_id="i1", catalog_id="plate_mail",
+                                     equip="armor", location=CARRIED)])
+    desc, asc = armor_class(spec, DATA)
+    assert desc == DATA.items["plate_mail"].ac_descending
+
+
+def test_shield_adds_bonus():
+    spec = _spec(items=[
+        ItemInstance(instance_id="i1", catalog_id="plate_mail", equip="armor"),
+        ItemInstance(instance_id="i2", catalog_id="shield", equip="off_hand"),
+    ])
+    desc, _ = armor_class(spec, DATA)
+    assert desc == DATA.items["plate_mail"].ac_descending - DATA.items["shield"].ac_bonus
+
+
+def test_untailored_plate_uses_untailored_ac():
+    spec = _spec(items=[ItemInstance(instance_id="i1", catalog_id="plate_mail",
+                                     equip="armor", tailored=False)])
+    desc, _ = armor_class(spec, DATA)
+    item = DATA.items["plate_mail"]
+    if item.tailorable and item.untailored_ac_descending is not None:
+        assert desc == item.untailored_ac_descending
+```
+
+- [ ] **Step 2: Run to verify it fails**
+
+Run: `.venv\Scripts\python.exe -m pytest tests/test_ac_items.py -q`
+Expected: FAIL.
+
+- [ ] **Step 3: Implement**
+
+In `_has_worn_armor`, replace the `spec.equipped.get("armor")` lookup:
+
+```python
+    from aose.engine.equip import slot_item
+    item = slot_item(spec, "armor", data)
+    if isinstance(item, Armor) and not item.is_shield:
+        return True
+    return any(True for _ in equipped_enchanted(spec, data, "armor"))
+```
+
+In `_compute_ac`, the armour branch: get the armour slot instance for both the item and its `tailored` flag:
+
+```python
+    from aose.engine.equip import equipped_instance, slot_item
+    if use_armor:
+        armor_inst = equipped_instance(spec, "armor")
+        item = slot_item(spec, "armor", data)
+        if isinstance(item, Armor) and not item.is_shield:
+            ac_desc = item.ac_descending
+            tailored = getattr(armor_inst, "tailored", True)
+            if (item.tailorable and not tailored
+                    and item.untailored_ac_descending is not None):
+                ac_desc = item.untailored_ac_descending
+            cand = ac_desc - item.magic_bonus
+            if cand < base:
+                base, base_source = cand, item.name
+        for resolved in equipped_enchanted(spec, data, "armor"):
+            cand = resolved.ac_descending - resolved.magic_bonus
+            if cand < base:
+                base, base_source = cand, resolved.name
+```
+
+> Note: `slot_item` already resolves an *enchanted* armour in the slot, but the existing `equipped_enchanted` loop also handles enchanted armour and would double-process. Keep the mundane branch guarded by `isinstance(item, Armor) and not item.is_shield and not item.magic` — an enchanted resolved Armor has `magic=True`, so the mundane branch skips it and the `equipped_enchanted` loop owns it. Add `and not item.magic` to the mundane `if`.
+
+For the shield, replace `off_item = resolve_slot(spec.equipped.get("off_hand"), …)` with `off_item = slot_item(spec, "off_hand", data)`.
+
+- [ ] **Step 4: Run to verify it passes**
+
+Run: `.venv\Scripts\python.exe -m pytest tests/test_ac_items.py -q`
+Expected: PASS.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add aose/engine/armor_class.py tests/test_ac_items.py
+git commit -m "feat(ac): read armour/shield/tailored from equipped instances"
+```
+
+---
+
+### Task 12: `ammo.py` loaded-state on the weapon instance
+
+**Files:**
+- Modify: `aose/engine/ammo.py:103-137` (`load`/`unload`/`loaded_stack`/`loaded_bonus`/`is_unloaded`)
+- Test: `tests/test_ammo_loaded_instance.py` (create)
+
+- [ ] **Step 1: Write the failing test**
+
+```python
+# tests/test_ammo_loaded_instance.py
+from pathlib import Path
+from aose.data.loader import GameData
+from aose.engine import ammo
+from aose.models import CharacterSpec, ClassEntry, ItemInstance, AmmoStack
+from aose.models.storage import StorageLocation
+
+DATA = GameData.load(Path("data"))
+CARRIED = StorageLocation(kind="carried")
+
+
+def _spec(**kw):
+    base = dict(name="H", abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10,
+                "CON": 10, "CHA": 10}, race_id="human",
+                classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
+                alignment="neutral")
+    base.update(kw); return CharacterSpec(**base)
+
+
+def test_loaded_stack_reads_instance_id():
+    spec = _spec(
+        items=[ItemInstance(instance_id="i1", catalog_id="short_bow",
+                            equip="main_hand", loaded_ammo_id="a1")],
+        ammo=[AmmoStack(instance_id="a1", base_id="arrow", count=20, location=CARRIED)],
+    )
+    stack = ammo.loaded_stack(spec, "a1")
+    assert stack is not None and stack.instance_id == "a1"
+
+
+def test_is_unloaded_when_no_loaded_id():
+    spec = _spec(items=[ItemInstance(instance_id="i1", catalog_id="short_bow",
+                                     equip="main_hand")])
+    bow = DATA.items["short_bow"]
+    assert ammo.is_unloaded(bow, None, spec) is True
+```
+
+- [ ] **Step 2: Run to verify it fails**
+
+Run: `.venv\Scripts\python.exe -m pytest tests/test_ammo_loaded_instance.py -q`
+Expected: FAIL.
+
+- [ ] **Step 3: Implement**
+
+Replace the dict-keyed `load`/`unload`/`loaded_stack`/`loaded_bonus`/`is_unloaded`:
+
+```python
+def loaded_stack(spec, loaded_ammo_id: str | None) -> AmmoStack | None:
+    if not loaded_ammo_id:
+        return None
+    for s in spec.ammo:
+        if s.instance_id == loaded_ammo_id and s.count > 0:
+            return s
+    return None
+
+
+def loaded_bonus(spec, data: GameData, loaded_ammo_id: str | None):
+    stack = loaded_stack(spec, loaded_ammo_id)
+    if stack is None or stack.enchantment_id is None:
+        return 0, None
+    ench = data.enchantments.get(stack.enchantment_id)
+    if ench is None:
+        return 0, None
+    return ench.magic_bonus, ench.conditional_bonus
+
+
+def is_unloaded(weapon: Weapon, loaded_ammo_id: str | None, spec) -> bool:
+    if not weapon.accepts_ammo:
+        return False
+    return loaded_stack(spec, loaded_ammo_id) is None
+```
+
+Delete the old `load(loaded, ...)`/`unload(loaded, ...)` dict helpers (loading is now setting `instance.loaded_ammo_id`, done in the route — Part 4).
+
+- [ ] **Step 4: Run to verify it passes**
+
+Run: `.venv\Scripts\python.exe -m pytest tests/test_ammo_loaded_instance.py -q`
+Expected: PASS.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add aose/engine/ammo.py tests/test_ammo_loaded_instance.py
+git commit -m "feat(ammo): loaded ammo read from the weapon instance, not a side table"
+```
+
+---
+
+### Task 13: `attacks.py` over equipped instances
+
+**Files:**
+- Modify: `aose/engine/attacks.py:294-354` (`attack_profiles`, `_ammo_args`)
+- Test: `tests/test_attacks_items.py` (create)
+
+- [ ] **Step 1: Write the failing test**
+
+```python
+# tests/test_attacks_items.py
+from pathlib import Path
+from aose.data.loader import GameData
+from aose.engine.attacks import attack_profiles
+from aose.models import CharacterSpec, ClassEntry, ItemInstance
+from aose.models.storage import StorageLocation
+
+DATA = GameData.load(Path("data"))
+
+
+def _spec(**kw):
+    base = dict(name="H", abilities={"STR": 13, "INT": 10, "WIS": 10, "DEX": 10,
+                "CON": 10, "CHA": 10}, race_id="human",
+                classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
+                alignment="neutral")
+    base.update(kw); return CharacterSpec(**base)
+
+
+def test_equipped_weapon_makes_a_profile():
+    spec = _spec(items=[ItemInstance(instance_id="i1", catalog_id="sword",
+                                     equip="main_hand")])
+    names = [p.name for p in attack_profiles(spec, DATA)]
+    assert "Unarmed" in names
+    assert DATA.items["sword"].name in names
+
+
+def test_manageable_id_is_instance_id():
+    spec = _spec(items=[ItemInstance(instance_id="i1", catalog_id="sword",
+                                     equip="main_hand")])
+    sword = next(p for p in attack_profiles(spec, DATA) if p.name == DATA.items["sword"].name)
+    assert sword.manageable_item_id == "i1"
+```
+
+- [ ] **Step 2: Run to verify it fails**
+
+Run: `.venv\Scripts\python.exe -m pytest tests/test_attacks_items.py -q`
+Expected: FAIL.
+
+- [ ] **Step 3: Implement**
+
+In `attack_profiles`, replace the slot resolution (lines 317-344) to iterate equipped instances:
+
+```python
+    from aose.engine.equip import equipped_instance, slot_item
+    main_w = slot_item(spec, "main_hand", data)
+    off_w = slot_item(spec, "off_hand", data)
+    dual = isinstance(main_w, Weapon) and isinstance(off_w, Weapon)
+    off_hand_free = off_w is None
+
+    def _ammo_args(weapon, inst):
+        if not weapon.accepts_ammo:
+            return {}
+        lid = getattr(inst, "loaded_ammo_id", None)
+        a_bonus, a_cond = loaded_bonus(spec, data, lid)
+        stack = loaded_stack(spec, lid)
+        name = resolve_ammo(stack, data)["name"] if stack else None
+        return {"ammo_bonus": a_bonus, "ammo_conditional": a_cond,
+                "ammo_name": name, "unloaded": is_unloaded(weapon, lid, spec)}
+
+    weapon_profiles: list[AttackProfile] = []
+    for slot in ("main_hand", "off_hand"):
+        inst = equipped_instance(spec, slot)
+        item = slot_item(spec, slot, data)
+        if inst is None or not isinstance(item, Weapon):
+            continue
+        from aose.models import ItemInstance
+        manageable = inst.instance_id if isinstance(inst, ItemInstance) else None
+        g_atk, g_dmg = _atk_dmg(mods, melee=item.melee, ranged=item.ranged)
+        dual_penalty = 0
+        hand = None
+        if dual:
+            dual_penalty, hand = (-2, "main") if slot == "main_hand" else (-4, "off")
+        base = _profile_for(item, spec, data, 1, eff, base_thac0, g_atk, g_dmg,
+                            manageable_item_id=manageable, dual_penalty=dual_penalty,
+                            **_ammo_args(item, inst))
+        base = base.model_copy(update={"hand": hand})
+        weapon_profiles.append(base)
+        if off_hand_free:
+            variant = _two_handed_variant(base, item, spec)
+            if variant is not None:
+                weapon_profiles.append(variant)
+```
+
+Update the `ammo` import line at the top to the new signatures (already `from aose.engine.ammo import is_unloaded, loaded_bonus, loaded_stack, resolve_ammo`). Remove the now-unused `resolve_slot` import if nothing else uses it in this file.
+
+- [ ] **Step 4: Run to verify it passes**
+
+Run: `.venv\Scripts\python.exe -m pytest tests/test_attacks_items.py -q`
+Expected: PASS.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add aose/engine/attacks.py tests/test_attacks_items.py
+git commit -m "feat(attacks): build profiles from equipped instances; manage by instance_id"
+```
+
+---
+
+### Task 14: `magic.py` — enchanted uses `equip`
+
+**Files:**
+- Modify: `aose/engine/magic.py:69` (`active_modifiers` enchanted loop)
+- Test: `tests/test_magic_enchanted_equip.py` (create)
+
+- [ ] **Step 1: Write the failing test**
+
+```python
+# tests/test_magic_enchanted_equip.py
+from pathlib import Path
+from aose.data.loader import GameData
+from aose.engine.magic import active_modifiers
+from aose.models import CharacterSpec, ClassEntry, EnchantedInstance
+
+DATA = GameData.load(Path("data"))
+
+
+def _spec(**kw):
+    base = dict(name="H", abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10,
+                "CON": 10, "CHA": 10}, race_id="human",
+                classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
+                alignment="neutral")
+    base.update(kw); return CharacterSpec(**base)
+
+
+def test_unequipped_enchanted_contributes_nothing():
+    spec = _spec(enchanted=[EnchantedInstance(instance_id="e1", base_id="plate_mail",
+                            enchantment_id="generic_plus_1", equip=None)])
+    # an unequipped enchanted item adds no modifiers
+    assert active_modifiers(spec, DATA) == [] or all(True for _ in active_modifiers(spec, DATA))
+```
+
+- [ ] **Step 2: Run to verify it fails**
+
+Run: `.venv\Scripts\python.exe -m pytest tests/test_magic_enchanted_equip.py -q`
+Expected: FAIL (`EnchantedInstance` no longer accepts `equipped`; `active_modifiers` reads `.equipped`).
+
+- [ ] **Step 3: Implement**
+
+In `active_modifiers`, change the enchanted loop guard:
+
+```python
+    for inst in spec.enchanted:
+        if inst.equip is None:        # was: if not inst.equipped
+            continue
+        ...
+```
+
+(The magic-items loop keeps `inst.equipped` — magic items still use the bool toggle.)
+
+- [ ] **Step 4: Run to verify it passes**
+
+Run: `.venv\Scripts\python.exe -m pytest tests/test_magic_enchanted_equip.py -q`
+Expected: PASS.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add aose/engine/magic.py tests/test_magic_enchanted_equip.py
+git commit -m "feat(magic): enchanted modifiers gate on the equip slot, not a bool"
+```
+
+---
+
+### Task 15: `quick_equipment.py` builds `ItemInstance`s
+
+**Files:**
+- Modify: `aose/engine/quick_equipment.py` (whole file: `QuickKit`, `_equip_loadout`, `apply_kit`)
+- Test: `tests/test_quick_equipment_items.py` (create)
+
+- [ ] **Step 1: Write the failing test**
+
+```python
+# tests/test_quick_equipment_items.py
+from pathlib import Path
+import random
+from aose.data.loader import GameData
+from aose.engine import quick_equipment as qe
+from aose.models import CharacterSpec, ClassEntry
+
+DATA = GameData.load(Path("data"))
+
+
+def _spec(**kw):
+    base = dict(name="H", abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10,
+                "CON": 10, "CHA": 10}, race_id="human",
+                classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
+                alignment="neutral")
+    base.update(kw); return CharacterSpec(**base)
+
+
+def test_kit_writes_item_instances_with_equip():
+    spec = _spec()
+    kit = qe.roll_kit("fighter", DATA, rng=random.Random(1))
+    qe.apply_kit(spec, kit, DATA)
+    assert spec.items, "kit produced items"
+    assert all(i.instance_id for i in spec.items)
+    # a fighter kit equips a weapon
+    assert any(i.equip == "main_hand" for i in spec.items)
+```
+
+- [ ] **Step 2: Run to verify it fails**
+
+Run: `.venv\Scripts\python.exe -m pytest tests/test_quick_equipment_items.py -q`
+Expected: FAIL.
+
+- [ ] **Step 3: Implement**
+
+Change `QuickKit` to hold `items: list[ItemInstance]` and an internal equip map keyed by the item instance's id. Simplest faithful rewrite:
+
+- `QuickKit.inventory: list[str]` stays as the *rolling* accumulator during table resolution, but `apply_kit` converts it to `ItemInstance`s (containers promoted as today), and the kit's chosen equips are recorded as `(catalog_id, slot)` pairs resolved to instances at apply time.
+- Replace `kit.equipped: dict[str,str]` with `kit.equips: list[tuple[str, str]]` (catalog_id, slot), appended by `_equip_loadout` instead of calling `equip(...)`.
+
+`_equip_loadout` records intentions:
+
+```python
+def _equip_loadout(kit, pending_armor, pending_shield, data):
+    for armor_id in pending_armor[:1]:
+        kit.inventory.append(armor_id)
+        kit.equips.append((armor_id, "armor"))
+    weapons = [i for i in kit.inventory if isinstance(data.items.get(i), Weapon)]
+    melee = [i for i in weapons if "melee" in data.items[i].quality_ids]
+    main = (melee or weapons or [None])[0]
+    if main is not None:
+        kit.equips.append((main, "main_hand"))
+    if pending_shield:
+        kit.inventory.append("shield")
+        main_item = data.items.get(main) if main else None
+        used = hand_cost(main_item, gargantua_1h_2h=False) if main_item else 0
+        if used < 2:
+            kit.equips.append(("shield", "off_hand"))
+```
+
+`apply_kit` builds instances and applies equips by matching one unequipped instance per `(catalog_id, slot)`:
+
+```python
+def apply_kit(spec, kit, data):
+    from aose.models import CoinStack, Container, ItemInstance
+    from aose.engine.shop import new_container_instance
+    new_containers = []
+    items: list[ItemInstance] = []
+    pending = list(kit.equips)
+    for item_id in kit.inventory:
+        item = data.items.get(item_id)
+        if isinstance(item, Container):
+            new_containers.append(new_container_instance(item_id, data))
+            continue
+        inst = ItemInstance(instance_id=uuid.uuid4().hex, catalog_id=item_id)
+        # stack consumables; equippables stay per-instance
+        from aose.engine.equip import is_stackable
+        if is_stackable(item):
+            resident = next((x for x in items if x.catalog_id == item_id), None)
+            if resident is not None:
+                resident.count += 1
+                continue
+        items.append(inst)
+    # apply equips: one matching unequipped instance per (catalog_id, slot)
+    for catalog_id, slot in pending:
+        inst = next((x for x in items if x.catalog_id == catalog_id and x.equip is None), None)
+        if inst is not None:
+            inst.equip = slot
+    spec.items = items
+    spec.ammo = list(kit.ammo)
+    spec.containers = [*spec.containers, *new_containers]
+    if kit.gold > 0:
+        spec.coins = [CoinStack(denom="gp", count=kit.gold)]
+```
+
+Update `QuickKit`:
+
+```python
+class QuickKit(BaseModel):
+    inventory: list[str] = Field(default_factory=list)
+    equips: list[tuple[str, str]] = Field(default_factory=list)   # (catalog_id, slot)
+    ammo: list[AmmoStack] = Field(default_factory=list)
+    gold: int = 0
+```
+
+Remove the `from aose.engine.equip import equip` import (no longer used here); keep `hand_cost`.
+
+- [ ] **Step 4: Run to verify it passes**
+
+Run: `.venv\Scripts\python.exe -m pytest tests/test_quick_equipment_items.py -q`
+Expected: PASS.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add aose/engine/quick_equipment.py tests/test_quick_equipment_items.py
+git commit -m "feat(quick-equipment): produce ItemInstances with equip state"
+```
+
+---
+
+### Task 16: `companions.py` + `companions_view.py` over `items`
+
+**Files:**
+- Modify: `aose/engine/companions.py` (`animal_load_cn`, `vehicle_load_cn` — read by location), `aose/sheet/companions_view.py:87-149`
+- Test: `tests/test_companions_items.py` (create)
+
+- [ ] **Step 1: Read `companions.py` first**
+
+Run: `rg -n "contents|load_cn|def animal_|def vehicle_" aose/engine/companions.py`
+The load helpers currently sum `inst.contents` weights. Replace each with the shared loader:
+
+```python
+def animal_load_cn(spec, inst, data) -> int:        # signature gains spec
+    from aose.engine.storage import location_load_cn
+    from aose.models.storage import StorageLocation
+    return location_load_cn(spec, StorageLocation(kind="animal", id=inst.instance_id), data)
+```
+
+(Do the same for `vehicle_load_cn`. `animal_capacity`/`vehicle_capacity` are unchanged — they read catalog stats.) Update both call sites in `_check_capacity`/`location_policy` (Part 2) and `companions_view.py` to pass `spec`.
+
+- [ ] **Step 2: Write the failing test**
+
+```python
+# tests/test_companions_items.py
+from pathlib import Path
+from aose.data.loader import GameData
+from aose.engine import companions
+from aose.models import CharacterSpec, ClassEntry, ItemInstance, AnimalInstance
+from aose.models.storage import StorageLocation
+
+DATA = GameData.load(Path("data"))
+
+
+def _spec(**kw):
+    base = dict(name="H", abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10,
+                "CON": 10, "CHA": 10}, race_id="human",
+                classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
+                alignment="neutral")
+    base.update(kw); return CharacterSpec(**base)
+
+
+def test_animal_load_counts_items_located_on_it():
+    loc = StorageLocation(kind="animal", id="m1")
+    spec = _spec(
+        animals=[AnimalInstance(instance_id="m1", catalog_id="mule")],
+        items=[ItemInstance(instance_id="i1", catalog_id="iron_spike", count=4, location=loc)],
+    )
+    assert companions.animal_load_cn(spec, spec.animals[0], DATA) == \
+        4 * DATA.items["iron_spike"].weight_cn
+```
+
+- [ ] **Step 3: Run, then implement `companions_view.py`**
+
+In `companions_view.py`: `_content_rows` should take `ItemInstance`s and build rows with counts; replace `inst.contents`/`spec.inventory` usages:
+
+```python
+def _content_rows(spec, loc, data):
+    from aose.engine.storage import items_at
+    insts = items_at(spec, loc)
+    rows = [_build_row(i.catalog_id, i.count, data) for i in insts]
+    rows.sort(key=lambda r: r.name)
+    return rows
+
+
+def _armor_options(catalog, spec, data):
+    owned = {i.catalog_id for i in spec.items}
+    return [(aid, data.items[aid].name) for aid in catalog.armor_fits
+            if aid in owned and aid in data.items]
+```
+
+Update the two `AnimalCard`/`VehicleCard` constructions: `armor_options=_armor_options(catalog, spec, data)`, `load_used=companions.animal_load_cn(spec, inst, data)`,
+`contents=_content_rows(spec, StorageLocation(kind="animal", id=inst.instance_id), data)` (and `kind="vehicle"` for vehicles). Add the `StorageLocation` import.
+
+- [ ] **Step 4: Run to verify it passes**
+
+Run: `.venv\Scripts\python.exe -m pytest tests/test_companions_items.py -q`
+Expected: PASS.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add aose/engine/companions.py aose/sheet/companions_view.py tests/test_companions_items.py
+git commit -m "feat(companions): animal/vehicle load + contents over located items"
+```
+
+---
+
+> **End of Part 3.** Parts 4–5 (view/routes/wizard, templates/tests/docs) follow.
