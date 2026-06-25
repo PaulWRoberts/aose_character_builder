@@ -338,6 +338,23 @@ def test_wizard_use_as_container_promotes_loose_backpack(client, tmp_path):
     assert any(c.get("catalog_id") == "backpack" for c in draft.get("containers", []))
 
 
+def test_wizard_equipment_renders_with_a_container(client, tmp_path):
+    """The equipment step must render its container_modal without error when a
+    container is present in inventory (regression: stale 4th macro arg)."""
+    draft_id = _start_draft(client)
+    _advance_to_equipment(client, tmp_path, draft_id)
+    # The inventory box (and its container modals) only render once gold is rolled.
+    client.post(f"/wizard/{draft_id}/equipment/roll-gold")
+    draft = load_draft(draft_id, tmp_path / "drafts")
+    draft["inventory"] = ["backpack"]
+    save_draft(draft_id, draft, tmp_path / "drafts")
+    client.post(f"/wizard/{draft_id}/inventory/use-as-container",
+                data={"owner_kind": "carried", "item_id": "backpack"})
+    r = client.get(f"/wizard/{draft_id}/equipment")
+    assert r.status_code == 200
+    assert "modal-container-" in r.text
+
+
 def test_bootstrap_skipped_when_characters_present(tmp_path):
     characters_dir = tmp_path / "characters"
     characters_dir.mkdir()

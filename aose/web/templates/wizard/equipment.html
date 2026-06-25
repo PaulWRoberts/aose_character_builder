@@ -38,7 +38,7 @@
   {% if row.manageable_item_id %}{{ item_modal(row, "equipped", "equipped", _url) }}{% endif %}
 {% endfor %}
 {% for c in group.containers %}
-{{ container_modal(c, group, _wiz_url, inventory_groups) }}
+{{ container_modal(c, group, _wiz_url) }}
 {% for row in c.contents %}{{ item_modal(row, "container", "container-" ~ c.instance_id, _url, src_id=c.instance_id) }}{% endfor %}
 {% endfor %}
 {% endfor %}
