@@ -317,6 +317,20 @@ textarea{
 .row-actions{ display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
 .act-num{ width:4rem; }
 .act-select{ max-width:9rem; }
+/* One control height across an action row so buttons and dropdowns line up
+   (selects were 26px, .btn 21px, .btn-inline 18px). */
+.row-actions .btn,
+.row-actions select,
+.row-actions input[type=number]{ height:26px; box-sizing:border-box; }
+.row-actions .btn{ display:inline-flex; align-items:center; justify-content:center; font-size:10px; }
+/* Move ▾ / Sell ▾ read as buttons: uppercase, inked hover, and a fixed width so
+   the closed control is uniform (it always shows its short placeholder). The
+   native popup still sizes to its options when open. */
+.row-actions select{ font-size:10px; font-weight:600; letter-spacing:.07em; text-transform:uppercase; background-color:var(--box); }
+.row-actions select.move-dest,
+.row-actions select.sell-dest{ width:6rem; }
+.row-actions select:hover{ background-color:var(--ink); color:#f7f5ed;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23f7f5ed'/%3E%3C/svg%3E"); }
 
 /* ── overlays ──────────────────────────────────────────────── */
 .scrim{ position:fixed; inset:0; z-index:40; background:rgba(24,22,15,.42); opacity:0; visibility:hidden; transition:opacity .16s; }
@@ -517,6 +531,8 @@ input:focus-visible, select:focus-visible, textarea:focus-visible{
   letter-spacing:.02em; color:var(--ink); text-decoration:none;
 }
 .character-list a:hover{ color:var(--stamp); }
+.char-meta{ font-size:13px; color:var(--gray); font-family:var(--body,serif); }
+.character-list .char-export{ margin-left:auto; font-size:13px; font-weight:400; font-family:var(--body,serif); }
 
 /* flash */
 .flash{

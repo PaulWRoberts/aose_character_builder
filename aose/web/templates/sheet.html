@@ -1014,23 +1014,23 @@
       </form>
       {% endif %}
       {% else %}
-      <form method="post" action="{{ target_url_prefix }}/{{ 'equipment/equip-enchanted' if is_ench else 'equipment/equip-magic' }}" class="inline-form">
+      {% if mi.class_allowed %}
+      <form method="post" action="{{ target_url_prefix }}/{{ 'equip-enchanted' if is_ench else 'equip-magic' }}" class="inline-form">
         <input type="hidden" name="instance_id" value="{{ mi.instance_id }}">
         <button type="submit" class="btn btn-inline">Equip</button>
       </form>
+      {% else %}
+      <span class="muted small" title="Your class cannot use this item">Not usable</span>
+      {% endif %}
       {{ act_move(_char_url ~ "/inventory/move", {"category": ("enchanted" if is_ench else "magic"), "id": mi.instance_id}, move_targets, gkind, gid) }}
       {% if is_ench %}
-      <form method="post" action="{{ target_url_prefix }}/equipment/remove-enchanted" class="inline-form">
+      <form method="post" action="{{ target_url_prefix }}/remove-enchanted" class="inline-form">
         <input type="hidden" name="instance_id" value="{{ mi.instance_id }}">
         <button type="submit" class="btn btn-inline danger">Drop</button>
       </form>
       {% else %}
-      <form method="post" action="{{ target_url_prefix }}/equipment/remove-magic" class="inline-form">
-        <input type="hidden" name="instance_id" value="{{ mi.instance_id }}">
-        <button type="submit" name="mode" value="drop" class="btn btn-inline danger">Drop</button>
-      </form>
       {% if mi.cost_gp > 0 %}
-      <form method="post" action="{{ target_url_prefix }}/equipment/remove-magic" class="sell-form inline-form">
+      <form method="post" action="{{ target_url_prefix }}/remove-magic" class="sell-form inline-form">
         <input type="hidden" name="instance_id" value="{{ mi.instance_id }}">
         <input type="hidden" name="mode" value="">
         <select class="sell-dest">
@@ -1040,6 +1040,10 @@
         </select>
       </form>
       {% endif %}
+      <form method="post" action="{{ target_url_prefix }}/remove-magic" class="inline-form">
+        <input type="hidden" name="instance_id" value="{{ mi.instance_id }}">
+        <button type="submit" name="mode" value="drop" class="btn btn-inline danger">Drop</button>
+      </form>
       {% endif %}
       {% endif %}
     </div>
@@ -1058,17 +1062,13 @@
     <div class="row-actions">
       {{ act_move(_char_url ~ "/inventory/move", {"category": ("enchanted" if is_ench else "magic"), "id": mi.instance_id}, move_targets, "container", c.instance_id) }}
       {% if is_ench %}
-      <form method="post" action="{{ target_url_prefix }}/equipment/remove-enchanted" class="inline-form">
+      <form method="post" action="{{ target_url_prefix }}/remove-enchanted" class="inline-form">
         <input type="hidden" name="instance_id" value="{{ mi.instance_id }}">
         <button type="submit" class="btn btn-inline danger">Drop</button>
       </form>
       {% else %}
-      <form method="post" action="{{ target_url_prefix }}/equipment/remove-magic" class="inline-form">
-        <input type="hidden" name="instance_id" value="{{ mi.instance_id }}">
-        <button type="submit" name="mode" value="drop" class="btn btn-inline danger">Drop</button>
-      </form>
       {% if mi.cost_gp > 0 %}
-      <form method="post" action="{{ target_url_prefix }}/equipment/remove-magic" class="sell-form inline-form">
+      <form method="post" action="{{ target_url_prefix }}/remove-magic" class="sell-form inline-form">
         <input type="hidden" name="instance_id" value="{{ mi.instance_id }}">
         <input type="hidden" name="mode" value="">
         <select class="sell-dest">
@@ -1078,6 +1078,10 @@
         </select>
       </form>
       {% endif %}
+      <form method="post" action="{{ target_url_prefix }}/remove-magic" class="inline-form">
+        <input type="hidden" name="instance_id" value="{{ mi.instance_id }}">
+        <button type="submit" name="mode" value="drop" class="btn btn-inline danger">Drop</button>
+      </form>
       {% endif %}
     </div>
   </div>
@@ -1146,7 +1150,7 @@
     <p class="hint" style="margin:0 0 10px">{{ src.kind }} · {{ src.caster_type }} · {{ src.entries | length }} spell{{ 's' if src.entries | length != 1 }}</p>
     {% if src.can_read %}
     <div class="row-actions" style="margin-bottom:8px">
-      <form method="post" action="/character/{{ character_id }}/spell-sources/read-magic" class="inline-form">
+      <form method="post" action="/character/{{ character_id }}/spell-sources/read" class="inline-form">
         <input type="hidden" name="instance_id" value="{{ src.instance_id }}">
         <button class="btn" type="submit">Decipher (Read Magic)</button>
       </form>

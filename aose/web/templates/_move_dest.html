@@ -5,7 +5,7 @@
    dest_kind/dest_id inputs on select-change so the form auto-submits without a
    button (except for coin/gem/ammo which need a count first). #}
 {% macro move_dest_control(targets, ref, cur_kind, cur_id) %}
-  <select class="move-dest" style="max-width:9rem">
+  <select class="move-dest">
     <option value="" disabled selected>Move to…</option>
     {% for t in targets %}
       {% set skip_same = t.kind == cur_kind and (t.id or '') == (cur_id or '') %}

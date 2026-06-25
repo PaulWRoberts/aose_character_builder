@@ -30,15 +30,12 @@
     </form>
     {% endif %}
     {% if move_targets is defined %}
-    {{ act_move(inv_move_url, {"category": "item", "id": row.id}, move_targets, state, src_id) }}
+    {# An equipped item physically lives in the PC's carried inventory, so its
+       Move control's current location is "carried" — never the literal
+       "equipped" (which isn't a move target and would leave carried offered). #}
+    {{ act_move(inv_move_url, {"category": "item", "id": row.id}, move_targets, ("carried" if state == "equipped" else state), src_id) }}
     {% endif %}
     {% if show_remove %}
-    <form method="post" action="{{ target_url_prefix }}/remove" class="remove-form inline-form">
-        <input type="hidden" name="item_id" value="{{ row.id }}">
-        <input type="hidden" name="from_state" value="{{ state }}">
-        <button type="submit" name="mode" value="drop" class="btn btn-inline danger"
-                title="Throw away — no gold back">Drop</button>
-    </form>
     <form method="post" action="{{ target_url_prefix }}/remove" class="sell-form inline-form">
         <input type="hidden" name="item_id" value="{{ row.id }}">
         <input type="hidden" name="from_state" value="{{ state }}">
@@ -50,6 +47,12 @@
             <option value="refund">+{{ row.cost_gp | int }}&nbsp;gp (refund{% if row.bundle_count > 1 %}&nbsp;×{{ row.bundle_count }}{% endif %})</option>
             {% endif %}
         </select>
+    </form>
+    <form method="post" action="{{ target_url_prefix }}/remove" class="remove-form inline-form">
+        <input type="hidden" name="item_id" value="{{ row.id }}">
+        <input type="hidden" name="from_state" value="{{ state }}">
+        <button type="submit" name="mode" value="drop" class="btn btn-inline danger"
+                title="Throw away — no gold back">Drop</button>
     </form>
     {% endif %}
 {% endmacro %}
