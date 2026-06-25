@@ -175,9 +175,15 @@ def shop_categories(data: GameData, ruleset: RuleSet | None = None) -> list[Shop
     return out
 
 
-def _class_allows(item, allowed_weapons, allowed_armor, allow_shields) -> bool:
+def class_allows(item, allowed_weapons, allowed_armor, allow_shields) -> bool:
     """Whether the character's class may equip ``item`` given the allowance
-    sets (or the ``"all"`` sentinel).  Non-equippable items are always True."""
+    sets (or the ``"all"`` sentinel).  Non-equippable items are always True.
+
+    Single source of truth for the *UI* equip-eligibility decision: consumed by
+    both the mundane inventory rows (``_build_row``) and the enchanted/magic
+    views (``enchanted_items_view``), so the two rendering paths can never
+    diverge on what a class may wield.  (``equip()`` in ``equip.py`` is the
+    server-side gate that backstops it.)"""
     from aose.engine.proficiency import base_armor_id, base_weapon_id
     from aose.models import Armor, Weapon  # local to avoid circular import
     if isinstance(item, Weapon):
@@ -212,7 +218,7 @@ def _build_row(item_id: str, count: int, data: GameData,
         cost_gp=item.cost_gp,
         sell_gp=int((item.cost_gp / bundle) / 2),
         equippable=isinstance(item, (Weapon, Armor)),
-        class_allowed=_class_allows(item, allowed_weapons, allowed_armor, allow_shields),
+        class_allowed=class_allows(item, allowed_weapons, allowed_armor, allow_shields),
         bundle_count=bundle,
         can_refund=count >= bundle,
         can_off_hand=can_off,

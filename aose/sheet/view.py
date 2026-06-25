@@ -194,6 +194,7 @@ class MagicItemView(BaseModel):
     note: str
     modifier_summary: list[str]
     cost_gp: int = 0
+    class_allowed: bool = True   # False when the wearer's class can't use it
 
 
 class AmmoRow(BaseModel):
@@ -284,6 +285,7 @@ class LanguageOption(BaseModel):
 
 
 class SpellSourceAddOptions(BaseModel):
+    advanced: bool = False                       # Advanced Spell Book rule on? (gates spellbooks)
     arcane_lists: list[SpellSourceOptionGroup]   # spellbook: one group per arcane list
     arcane_spells: list[SpellEntryView]          # scroll arcane: all arcane spells
     divine_spells: list[SpellEntryView]          # scroll divine: all divine spells
@@ -614,12 +616,19 @@ def _magic_items(spec: CharacterSpec, data: GameData) -> list[MagicItemView]:
     return magic_items_view(spec.magic_items, spec.inventory, data)
 
 
-def enchanted_items_view(enchanted, data: GameData) -> list[MagicItemView]:
+def enchanted_items_view(enchanted, data: GameData,
+                         allowed_weapons: "set[str] | str" = "all",
+                         allowed_armor: "set[str] | str" = "all",
+                         allow_shields: bool = True) -> list[MagicItemView]:
     """Build Magic-Items rows for EnchantedInstance items.  Each resolves to a
     synthetic weapon/armour for its display name; the summary combines the
     enchantment's magic_bonus, passive modifiers, and per-instance
-    extra_modifiers.  All enchanted items are equippable."""
+    extra_modifiers.  All enchanted items are equippable, but ``class_allowed``
+    reflects whether the wearer's class may actually use the base item — via the
+    same ``class_allows`` predicate the mundane inventory rows use, so the Equip
+    button is hidden (→ "Not usable") for gear the class can't wield."""
     from aose.engine.enchant import resolve_instance
+    from aose.engine.shop import class_allows
     views: list[MagicItemView] = []
     for inst in enchanted:
         ench = data.enchantments.get(inst.enchantment_id)
@@ -649,6 +658,8 @@ def enchanted_items_view(enchanted, data: GameData) -> list[MagicItemView]:
             charges_max=inst.charges_max,
             note=inst.note,
             modifier_summary=summary,
+            class_allowed=class_allows(
+                resolved, allowed_weapons, allowed_armor, allow_shields),
         ))
     return views
 
@@ -1085,7 +1096,9 @@ def spell_sources_view(spec: CharacterSpec, data: GameData,
         if location is not None and source.location != location:
             continue
         castable = spell_source_engine.can_cast_scroll(source, spec, data)
-        can_read = (source.kind == "scroll" and source.caster_type == "arcane"
+        # Arcane scrolls AND arcane spell books (a captured grimoire) are
+        # unreadable until deciphered with Read Magic; divine scrolls are not.
+        can_read = (source.caster_type == "arcane"
                     and not source.unlocked
                     and spell_source_engine.ready_read_magic_slot(spec, data) is not None)
         copyable: set[str] = set()
@@ -1119,16 +1132,30 @@ def spell_sources_view(spec: CharacterSpec, data: GameData,
     return out
 
 
-def spell_source_add_options(data: GameData) -> SpellSourceAddOptions:
-    """Selectable spells for the Add-document form, grouped for the UI."""
-    arcane_list_ids = {lid for lid, sl in data.spell_lists.items() if sl.caster_type == "arcane"}
-    divine_list_ids = {lid for lid, sl in data.spell_lists.items() if sl.caster_type == "divine"}
+def spell_source_add_options(data: GameData, ruleset: RuleSet) -> SpellSourceAddOptions:
+    """Selectable spells for the Add-document form, grouped for the UI, filtered
+    by the active ruleset: only lists whose source content is enabled are shown,
+    and level-0 cantrips appear only when the Cantrips optional rule is on."""
+    from aose.engine.sources import content_enabled
+
+    def list_enabled(lid: str) -> bool:
+        sl = data.spell_lists.get(lid)
+        return sl is not None and content_enabled(sl.source, "classes", ruleset)
+
+    def offered(s) -> bool:
+        # Cantrips (level-0 spells) are only available under the Cantrips rule.
+        return ruleset.cantrips or s.level > 0
+
+    arcane_list_ids = {lid for lid, sl in data.spell_lists.items()
+                       if sl.caster_type == "arcane" and list_enabled(lid)}
+    divine_list_ids = {lid for lid, sl in data.spell_lists.items()
+                       if sl.caster_type == "divine" and list_enabled(lid)}
 
     arcane_lists: list[SpellSourceOptionGroup] = []
     for lid in sorted(arcane_list_ids):
         sl = data.spell_lists[lid]
         spells = sorted(
-            (s for s in data.spells.values() if lid in s.spell_lists),
+            (s for s in data.spells.values() if lid in s.spell_lists and offered(s)),
             key=lambda s: (s.level, s.name),
         )
         arcane_lists.append(SpellSourceOptionGroup(
@@ -1138,13 +1165,15 @@ def spell_source_add_options(data: GameData) -> SpellSourceAddOptions:
 
     def bucket(list_ids) -> list[SpellEntryView]:
         spells = sorted(
-            (s for s in data.spells.values() if set(s.spell_lists) & list_ids),
+            (s for s in data.spells.values()
+             if set(s.spell_lists) & list_ids and offered(s)),
             key=lambda s: (s.level, s.name),
         )
         return [_spell_entry(s) for s in spells]
 
     langs = sorted(data.languages.names.items(), key=lambda kv: (kv[0] != "common", kv[1]))
     return SpellSourceAddOptions(
+        advanced=ruleset.advanced_spell_books,
         arcane_lists=arcane_lists,
         arcane_spells=bucket(arcane_list_ids),
         divine_spells=bucket(divine_list_ids),
@@ -1369,6 +1398,18 @@ def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevel
     from collections import Counter
     from aose.models import Container as _Container
     from aose.models.storage import StorageLocation
+    from aose.engine.proficiency import (
+        allowed_armor_ids, allowed_weapon_ids, shields_allowed)
+
+    def _owner_allowances(owner: CharacterSpec):
+        """The (weapons, armour, shields) allowance triple for a character — the
+        inputs the enchanted/magic view needs to compute ``class_allowed``."""
+        cls = [data.classes[e.class_id] for e in owner.classes
+               if e.class_id in data.classes]
+        return (allowed_weapon_ids(cls, data, owner.ruleset),
+                allowed_armor_ids(cls, data), shields_allowed(cls))
+
+    _pc_aw, _pc_aa, _pc_as = _owner_allowances(spec)
 
     def _coin_rows(loc: StorageLocation) -> list[CoinRow]:
         return [CoinRow(denom=s.denom, count=s.count)
@@ -1435,7 +1476,8 @@ def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevel
                 stowed_magic=magic_items_view(
                     [mi for mi in spec.magic_items if mi.location == here], [], data),
                 stowed_enchanted=enchanted_items_view(
-                    [inst for inst in spec.enchanted if inst.location == here], data),
+                    [inst for inst in spec.enchanted if inst.location == here], data,
+                    _pc_aw, _pc_aa, _pc_as),
                 stowed_ammo=stowed_ammo_rows,
                 stowed_spell_sources=spell_sources_view(spec, data, here),
             ))
@@ -1462,7 +1504,8 @@ def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevel
     pc_magic_equipped = [mi for mi in all_carried_magic if mi.equipped]
     pc_magic_unequipped = [mi for mi in all_carried_magic if not mi.equipped]
     pc_enchanted = enchanted_items_view(
-        [inst for inst in spec.enchanted if inst.location == carried_loc], data)
+        [inst for inst in spec.enchanted if inst.location == carried_loc], data,
+        _pc_aw, _pc_aa, _pc_as)
     pc_spell_sources = spell_sources_view(spec, data, carried_loc)
     pc_ammo = [_ammo_by_iid[s.instance_id]
                for s in spec.ammo if s.location == carried_loc
@@ -1501,7 +1544,8 @@ def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevel
         magic_items=magic_items_view(
             [mi for mi in spec.magic_items if mi.location == stashed_loc], [], data),
         enchanted=enchanted_items_view(
-            [inst for inst in spec.enchanted if inst.location == stashed_loc], data),
+            [inst for inst in spec.enchanted if inst.location == stashed_loc], data,
+            _pc_aw, _pc_aa, _pc_as),
         ammo=[_ammo_by_iid[s.instance_id]
               for s in spec.ammo if s.location == stashed_loc
               and s.instance_id in _ammo_by_iid],
@@ -1537,7 +1581,8 @@ def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevel
             magic_items=magic_items_view(
                 [mi for mi in spec.magic_items if mi.location == animal_loc], [], data),
             enchanted=enchanted_items_view(
-                [inst for inst in spec.enchanted if inst.location == animal_loc], data),
+                [inst for inst in spec.enchanted if inst.location == animal_loc], data,
+                _pc_aw, _pc_aa, _pc_as),
             ammo=[_ammo_by_iid[s.instance_id]
                   for s in spec.ammo if s.location == animal_loc
                   and s.instance_id in _ammo_by_iid],
@@ -1563,7 +1608,8 @@ def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevel
             magic_items=magic_items_view(
                 [mi for mi in spec.magic_items if mi.location == vehicle_loc], [], data),
             enchanted=enchanted_items_view(
-                [inst for inst in spec.enchanted if inst.location == vehicle_loc], data),
+                [inst for inst in spec.enchanted if inst.location == vehicle_loc], data,
+                _pc_aw, _pc_aa, _pc_as),
             ammo=[_ammo_by_iid[s.instance_id]
                   for s in spec.ammo if s.location == vehicle_loc
                   and s.instance_id in _ammo_by_iid],

@@ -36,6 +36,9 @@
     list.disabled = !isBook();
     langLabel.style.display = (!isBook() && caster.value === "divine") ? "" : "none";
     cap.style.display = isBook() ? "none" : "";
+    // Spell books hold one of each spell (no charges) — the quantity stepper is
+    // meaningful for scrolls only.
+    qty.style.display = isBook() ? "none" : "";
     // Filter the pick list to matching spells.
     Array.prototype.forEach.call(pick.options, function (opt) {
       var ok = opt.getAttribute("data-caster") === wantCaster();

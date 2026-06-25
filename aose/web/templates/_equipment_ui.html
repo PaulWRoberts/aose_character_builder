@@ -181,7 +181,9 @@
 <form method="post" action="{{ coins_url_prefix }}/spell-sources/add" id="spell-source-add-form">
   <label class="f"><span class="lab">Type</span>
     <select name="kind" id="ss-kind">
-      <option value="spellbook">Spell Book (arcane)</option>
+      {# Spell books are only useful under the Advanced Spell Book rule (cast: never;
+         copy: Advanced only), so hide the option otherwise to avoid confusion. #}
+      {% if spell_source_add_options.advanced %}<option value="spellbook">Spell Book (arcane)</option>{% endif %}
       <option value="scroll">Spell Scroll</option>
     </select>
   </label>

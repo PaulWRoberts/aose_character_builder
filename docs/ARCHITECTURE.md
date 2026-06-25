@@ -232,6 +232,23 @@ fly. Tag-based matching (`groups`, `Armor.ac_bonus`, kind wildcards
 adopted by every compatible enchantment with no YAML changes. Shield `ac_bonus`
 is a data field, not a constant.
 
+Equipping an enchanted item enforces the **same class weapon/armour allowances**
+as mundane gear: the `equip-enchanted` route resolves the synthetic
+`Weapon`/`Armor` and checks its `base_weapon_id`/`base_armor_id` against the
+class's allowed sets. Weapons/shields go through `equip()` (slot-resident);
+body armour is flag-resident (`EnchantedInstance.equipped`) so the route applies
+the `allowed_armor_ids` gate itself before flipping the flag.
+
+The **UI** equip-eligibility decision has a single source of truth so the two
+rendering paths can't diverge: `shop.class_allows(item, allowed_weapons,
+allowed_armor, allow_shields)` is consumed by both `_build_row` (mundane
+`InventoryRow.class_allowed`) and `enchanted_items_view`
+(`MagicItemView.class_allowed`). The enchanted/magic modal hides the Equip
+button (→ "Not usable") whenever `class_allowed` is false, mirroring the mundane
+row and preventing a server error on submit. `equip()` remains the server-side
+backstop. (Retainer gear is DM-controlled, so its enchanted view keeps the
+`"all"` default — unrestricted, matching `OwnerCaps.class_filter_equip=False`.)
+
 ---
 
 ## Attacks & ammunition
@@ -311,6 +328,9 @@ is a data field, not a constant.
   `scroll_cast_block_reason`), `copy_spell` (Advanced rule; rolls 1d100 vs
   `copy_chance_for_int(effective INT)`; **failure is recorded on the source entry,
   never the character** — same spell stays copyable from another source).
+  **Copying requires the arcane source to be deciphered** (`unlocked`) — both an
+  arcane scroll's magical script and a captured spell book are unreadable until
+  Read Magic is used (`copyable_spell_ids` returns ∅ for a sealed source).
   **Cast/decipher/copy are all gated on the document being Carried** by the PC
   (`location.kind == "carried"`); a stashed or carrier-stored scroll shows the
   block reason and cannot be used. Movement uses `move_thing(spec, "source", ...)`.
@@ -318,10 +338,19 @@ is a data field, not a constant.
   container-stowed sources appear in `ContainerView.stowed_spell_sources`. Modals
   show Move ▾ + Drop for every source. Sheet-only, Add-only. Protection scrolls live
   as `MagicItem` catalog data in `data/equipment/scrolls.yaml`.
-  - **Arcane scrolls** carry `unlocked: bool` (default False). Must be deciphered by
-    casting Read Magic — `ready_read_magic_slot` finds a memorized unspent slot,
-    `read_scroll` burns it and sets `unlocked=True`. Casting a spell from a sealed
-    arcane scroll is blocked; `scroll_cast_block_reason` returns "needs Read Magic".
+  - **Scribe Add form** — `spell_source_add_options(data, ruleset)` is
+    ruleset-filtered: only spell lists whose source content is enabled appear,
+    level-0 cantrips show only under the Cantrips rule, and the `advanced` flag
+    (Advanced Spell Book rule) gates the Spell Book document type (hidden in the
+    template otherwise, since books are useless without copying). The JS hides the
+    per-charge quantity stepper for books.
+  - **Arcane documents** (scrolls and spell books) carry `unlocked: bool`
+    (default False). Must be deciphered by casting Read Magic —
+    `ready_read_magic_slot` finds a memorized unspent slot, `decipher_source`
+    burns it and sets `unlocked=True` (works on any arcane source, not just
+    scrolls). Casting from a sealed arcane scroll is blocked
+    (`scroll_cast_block_reason` → "needs Read Magic"); copying from a sealed
+    arcane scroll *or* spell book is blocked too.
   - **Divine scrolls** carry `language: str` (default "Common"). Casting requires
     the character to know the scroll's language (case-insensitive, via
     `known_languages`). `scroll_cast_block_reason` returns "unknown language: X".
