@@ -26,6 +26,7 @@ from aose.engine.enchant import (
     add_free_enchanted as _add_free_enchanted,
     equip as _equip_enchanted,
     remove as _remove_enchanted,
+    resolve_instance as _resolve_enchanted,
     reset_charges as _reset_ench_charges,
     set_note as _set_enchanted_note,
     unequip as _unequip_enchanted,
@@ -76,6 +77,7 @@ from aose.engine.features import one_handed_two_handed_weapons as _1h2h
 from aose.engine.proficiency import (
     allowed_armor_ids,
     allowed_weapon_ids,
+    base_armor_id,
     base_weapon_id,
     shields_allowed,
     specialisation_allowed,
@@ -162,14 +164,26 @@ def _enchant_choices(game_data, ruleset=None):
     return out
 
 
-def _character_summaries(characters_dir: Path):
+def _character_summaries(characters_dir: Path, game_data):
     summaries = []
     for cid in list_character_ids(characters_dir):
         try:
             spec = load_character(cid, characters_dir)
         except Exception:
             continue
-        summaries.append({"id": cid, "name": spec.name, "race_id": spec.race_id})
+        class_name = "/".join(
+            game_data.classes[e.class_id].name
+            for e in spec.classes
+            if e.class_id in game_data.classes
+        )
+        race = game_data.races.get(spec.race_id)
+        summaries.append({
+            "id": cid,
+            "name": spec.name,
+            "class_name": class_name,
+            "race_name": race.name if race else "",
+            "separate_race_class": spec.ruleset.separate_race_class,
+        })
     return summaries
 
 
@@ -177,7 +191,9 @@ def _character_summaries(characters_dir: Path):
 
 @router.get("/", response_class=HTMLResponse)
 async def index(request: Request):
-    characters = _character_summaries(request.state.characters_dir)
+    characters = _character_summaries(
+        request.state.characters_dir, request.app.state.game_data
+    )
     return templates.TemplateResponse(
         request, "index.html", {"characters": characters}
     )
@@ -227,7 +243,7 @@ async def character_sheet(request: Request, character_id: str):
             "coins_url_prefix": f"/character/{character_id}",
             "move_targets": _storage.move_targets(spec, game_data),
             "inv_move_url": f"/character/{character_id}/inventory/move",
-            "spell_source_add_options": spell_source_add_options(game_data),
+            "spell_source_add_options": spell_source_add_options(game_data, spec.ruleset),
             # Equipment drawer tabs: Documents + Treasure (gated on presence)
             "spell_sources": sheet.spell_sources,
             "valuables": sheet.valuables,
@@ -903,11 +919,18 @@ async def equipment_equip_enchanted(request: Request, character_id: str,
     if inst is None:
         raise HTTPException(400, f"No enchanted instance {instance_id!r}")
     kind = _enchanted_kind(inst, data)
+    classes = [data.classes[e.class_id] for e in spec.classes if e.class_id in data.classes]
     try:
         if kind == "armor":
+            # Body armour is flag-resident, not slot-resident, so it bypasses
+            # _equip's allowance gate — enforce the class armour allowance here.
+            allowed_armor = allowed_armor_ids(classes, data)
+            resolved = _resolve_enchanted(inst, data)
+            if (resolved is not None and allowed_armor != "all"
+                    and base_armor_id(resolved) not in allowed_armor):
+                raise ValueError(f"This class cannot use {resolved.name!r}")
             spec.enchanted = _equip_enchanted(spec.enchanted, instance_id)
         else:
-            classes = [data.classes[e.class_id] for e in spec.classes if e.class_id in data.classes]
             spec.equipped = _equip(
                 instance_id,
                 inventory=spec.inventory, equipped=spec.equipped,
@@ -916,6 +939,8 @@ async def equipment_equip_enchanted(request: Request, character_id: str,
                 two_weapon=spec.ruleset.two_weapon_fighting,
                 eligible=two_weapon_eligible(classes),
                 gargantua_1h_2h=_1h2h(spec, data),
+                allowed_weapons=allowed_weapon_ids(classes, data, spec.ruleset),
+                allowed_armor=allowed_armor_ids(classes, data),
                 allow_shields=shields_allowed(classes),
             )
     except (ValueError, WieldError) as e:
@@ -1267,7 +1292,7 @@ async def sheet_spell_source_read(request: Request, character_id: str,
     spec = _load_spec_or_404(request, character_id)
     data = request.app.state.game_data
     try:
-        classes, sources = spell_source_engine.read_scroll(spec, data, instance_id)
+        classes, sources = spell_source_engine.decipher_source(spec, data, instance_id)
     except SpellSourceError as e:
         raise HTTPException(400, str(e))
     spec.classes = classes

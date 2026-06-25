@@ -11,8 +11,8 @@
         {% for c in characters %}
         <li>
             <a href="/character/{{ c.id }}">{{ c.name }}</a>
-            <span class="muted">({{ c.race_id }})</span>
-            <a href="/character/{{ c.id }}/export">Export</a>
+            <span class="char-meta">{{ c.class_name }}{% if c.separate_race_class %} · {{ c.race_name }}{% endif %}</span>
+            <a href="/character/{{ c.id }}/export" class="char-export">Export</a>
         </li>
         {% endfor %}
     </ul>
