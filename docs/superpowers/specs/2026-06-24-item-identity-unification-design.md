@@ -103,6 +103,14 @@ instances regardless of owner (PC or retainer) or kind.
 7. **One move path, retainers included.** `move_thing` is the single front door;
    `transfer_to_retainer`/`transfer_to_pc` are deleted; give/take is a move with
    `kind="retainer"` as src/dest, identical to container/carrier moves.
+8. **Storage locations are uniform; their differences are parameters, not code
+   variations.** Every location behaves identically (hold instances, weigh them,
+   place-or-merge stackables) and differs only by a small policy descriptor:
+   *capacity cap*, *encumbrance contribution* (which character's load it adds to,
+   or weightless), *equip-allowed* (and *of what* — wield vs wear), and
+   *equip-eligibility source* (the class allowances of the character it sits on,
+   or "all"). Adding a new kind of location is filling in parameters, never
+   adding a branch.
 
 ## Architecture
 
@@ -150,12 +158,45 @@ the model.
   instance's `equip` field. No `equipped` dict is threaded through.
 - Wield-budget validation (`validate_wield`) iterates the owner spec's instances
   whose `equip in {main_hand, off_hand}` — identical code for PC and retainer.
-- **Invariant: `equip is not None ⇒ location.kind == "carried"`.** Enforced at
-  the single equip/move chokepoint. Equipping requires the instance be carried;
-  moving an equipped instance off `carried` clears its `equip` first.
+- **Invariant: `equip is not None ⇒ the instance sits in a location whose policy
+  permits equipping`** — canonically a character's own carried bucket
+  (`location.kind == "carried"` within that character's world). Enforced at the
+  single equip/move chokepoint by reading the location's policy descriptor (below),
+  not by a `kind` branch. Equipping is rejected where the policy forbids it;
+  moving an equipped instance into such a location clears its `equip` first.
+- **Eligibility** (which weapons/armour the wearer's class may use) comes from the
+  policy descriptor's *equip-eligibility source* — the owning character's class
+  allowances for a PC/retainer carried bucket, `"all"` elsewhere — so the PC and a
+  retainer run the identical gate with different parameters.
 - Loaded-ammo and tailoring follow the instance: moving/unequipping the launcher
   clears `loaded_ammo_id`; the armour's `tailored` rides with the instance across
   re-equips for free (it is the instance's own field now).
+
+### The uniform location policy descriptor
+
+There is **one** description of how a storage location behaves, extending today's
+view-only `OwnerCaps` (`aose/engine/shop.py`) into the engine's single source of
+truth for per-location policy:
+
+| parameter | meaning | examples |
+|---|---|---|
+| `capacity_cn` | hard cap, or `None` for uncapped | container `capacity_cn`; animal `max_load`; vehicle `cargo`; carried/stashed/retainer `None` |
+| `encumbers` | whose load this adds to (a character) or weightless | carried → that character; stashed → weightless; carrier/container → resolved through their own rule |
+| `equip_allowed` | may instances here be equipped, and of what kind | carried → wield+wear; animal → wear (barding) only; stashed/vehicle/container → none |
+| `equip_eligibility` | class allowance gate for equipping here | PC/retainer carried → that character's class allowances; else `"all"` |
+
+`move_thing`, `_check_capacity`, and `equip`/`unequip` all **read this descriptor**
+instead of switching on `location.kind`. The descriptor is resolved once per
+location from the carrier/character behind it. Today's per-kind `_check_capacity`
+`if/elif` collapses into "read `capacity_cn`, compare". OwnerCaps' view flags
+(`has_equipped`, `can_wield`, `can_stash`, `bucket_label`) become a *projection* of
+this same descriptor, so the view and the engine cannot disagree about a
+location's powers.
+
+*(Animal barding stays the `AnimalInstance.armor_id` field this pass — it is the
+one `equip_allowed=wear` location whose worn slot is not yet an `ItemInstance`.
+The descriptor model accommodates promoting it later; doing so now is out of
+scope and not required for the dupe fix.)*
 
 ### Engine — one move path (`storage.py`)
 
@@ -275,8 +316,10 @@ Each phase keeps the suite green before the next.
 1. **Model + coercion + primitives.** Add `ItemInstance`, flat `items`,
    `equip`/`tailored`/`loaded_ammo_id`; `instance_id` on coins; enchanted `equip`.
    Add the before-validator coercion. Reshape `storage.py` resolvers + `equip.py`
-   onto instances; add `split_stack`; enforce the two invariants. Green:
-   `test_storage*`, `test_equip`, `test_retainer_transfer`.
+   onto instances; add `split_stack`; lift the location policy descriptor into the
+   engine and route `_check_capacity` + equip-allowed/eligibility through it;
+   enforce the invariants. Green: `test_storage*`, `test_equip`,
+   `test_retainer_transfer`.
 2. **Derivations.** encumbrance, attacks, AC, ammo, quick_equipment, retainers
    read instances. Delete `transfer_to_*`. Green: engine suite.
 3. **View + templates + UI.** bucket `items` by location; count box + use button
