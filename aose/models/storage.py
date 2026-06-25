@@ -1,3 +1,4 @@
+import uuid
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -29,7 +30,7 @@ class CoinStack(BaseModel):
     per (denom, location); empty stacks are pruned by the movement engine."""
     model_config = ConfigDict(extra="forbid")
 
-    instance_id: str = Field(default_factory=lambda: __import__("uuid").uuid4().hex)
+    instance_id: str = Field(default_factory=lambda: uuid.uuid4().hex)
     denom: Literal["pp", "gp", "ep", "sp", "cp"]
     count: int
     location: StorageLocation = Field(default_factory=lambda: StorageLocation(kind="carried"))

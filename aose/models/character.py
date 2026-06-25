@@ -51,9 +51,9 @@ class MagicItemInstance(BaseModel):
 
 class ContainerInstance(BaseModel):
     """A specific container the character owns — per-instance state, separate
-    from the catalog ``Container`` item.  Items inside ``contents`` are not in
-    ``CharacterSpec.inventory`` or ``CharacterSpec.stashed``; they live inside
-    the container and follow its location for weight purposes.
+    from the catalog ``Container`` item.  Items inside the container carry
+    ``location=StorageLocation(kind="container", id=<this instance_id>)`` in
+    ``CharacterSpec.items``; moving the container moves them for free.
     """
     model_config = ConfigDict(extra="forbid")
 
@@ -89,8 +89,8 @@ class ContainerInstance(BaseModel):
 
 class AnimalInstance(BaseModel):
     """A specific animal the character owns — per-instance state separate from
-    the catalog ``Animal``.  Acts as a top-level storage location: ``contents``
-    are loose item ids loaded onto the animal, never in ``inventory``."""
+    the catalog ``Animal``.  Acts as a top-level storage location: items carried
+    on it have ``location=StorageLocation(kind="animal", id=<this instance_id>)``."""
     model_config = ConfigDict(extra="forbid")
 
     instance_id: str                 # uuid4 hex
@@ -103,7 +103,7 @@ class AnimalInstance(BaseModel):
 
 class VehicleInstance(BaseModel):
     """A specific vehicle the character owns.  Acts as a top-level storage
-    location; ``contents`` are loose cargo ids."""
+    location; cargo items carry ``location=StorageLocation(kind="vehicle", id=<instance_id>)``."""
     model_config = ConfigDict(extra="forbid")
 
     instance_id: str
