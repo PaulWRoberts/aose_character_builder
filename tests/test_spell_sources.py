@@ -187,7 +187,7 @@ def test_can_cast_scroll_matches_caster_type(data):
     assert ss.can_cast_scroll(book, spec, data) is False
 
 
-# ── read_scroll (decipher with Read Magic) ───────────────────────────────────
+# ── decipher_source (decipher with Read Magic) ───────────────────────────────
 
 def _mu_with_read_magic_memorized(data):
     e = ClassEntry(class_id="magic_user", level=1, spellbook=["magic_user_read_magic"])
@@ -202,32 +202,32 @@ def _mu_with_read_magic_memorized(data):
     return spec, scroll.instance_id
 
 
-def test_read_scroll_burns_slot_and_unlocks(data):
+def test_decipher_scroll_burns_slot_and_unlocks(data):
     spec, iid = _mu_with_read_magic_memorized(data)
     assert ss.ready_read_magic_slot(spec, data) == (0, 0)
-    classes, sources = ss.read_scroll(spec, data, iid)
+    classes, sources = ss.decipher_source(spec, data, iid)
     assert classes[0].slots[0].spent is True          # the Read Magic cast is burned
     assert sources[0].unlocked is True
 
 
-def test_read_scroll_requires_memorized_read_magic(data):
+def test_decipher_requires_memorized_read_magic(data):
     scroll = ss.new_spell_source("scroll", "arcane", ["magic_user_sleep"], data)
     spec = _mu_spec(sources=[scroll])                  # no Read Magic memorized
     assert ss.ready_read_magic_slot(spec, data) is None
     with pytest.raises(ss.SpellSourceError):
-        ss.read_scroll(spec, data, scroll.instance_id)
+        ss.decipher_source(spec, data, scroll.instance_id)
 
 
-def test_read_scroll_rejects_divine_and_already_unlocked(data):
+def test_decipher_rejects_divine_and_already_unlocked(data):
     divine = ss.new_spell_source("scroll", "divine", ["cleric_cure_light_wounds"], data)
     spec, iid = _mu_with_read_magic_memorized(data)
     spec.spell_sources = [*spec.spell_sources, divine]
     with pytest.raises(ss.SpellSourceError):
-        ss.read_scroll(spec, data, divine.instance_id)         # divine needs no reading
-    classes, sources = ss.read_scroll(spec, data, iid)
+        ss.decipher_source(spec, data, divine.instance_id)     # divine needs no reading
+    classes, sources = ss.decipher_source(spec, data, iid)
     spec.classes, spec.spell_sources = classes, sources
     with pytest.raises(ss.SpellSourceError):
-        ss.read_scroll(spec, data, iid)                        # already unlocked
+        ss.decipher_source(spec, data, iid)                        # already unlocked
 
 
 # ── copy_spell ────────────────────────────────────────────────────────────────
@@ -242,6 +242,7 @@ class _FixedRng:
 
 def test_copy_success_adds_to_spellbook(data):
     src = ss.new_spell_source("scroll", "arcane", ["magic_user_magic_missile"], data)
+    src.unlocked = True
     entry = ClassEntry(class_id="magic_user", level=1, spellbook=[])
     cls = data.classes["magic_user"]
     new_entry, new_sources, ok = ss.copy_spell(
@@ -257,6 +258,7 @@ def test_copy_success_adds_to_spellbook(data):
 
 def test_copy_failure_burns_only_this_source(data):
     src = ss.new_spell_source("scroll", "arcane", ["magic_user_magic_missile"], data)
+    src.unlocked = True
     entry = ClassEntry(class_id="magic_user", level=1, spellbook=[])
     cls = data.classes["magic_user"]
     new_entry, new_sources, ok = ss.copy_spell(
@@ -370,7 +372,57 @@ def test_copy_rejects_divine_source_and_known_and_uncastable(data):
                       13, [div], div.instance_id, "faerie_fire", rng=_FixedRng(1))
     # already known
     src = ss.new_spell_source("scroll", "arcane", ["magic_user_sleep"], data)
+    src.unlocked = True
     known = ClassEntry(class_id="magic_user", level=1, spellbook=["magic_user_sleep"])
     with pytest.raises(ss.SpellSourceError):
         ss.copy_spell(known, cls, data, rs, 13, [src], src.instance_id,
                       "magic_user_sleep", rng=_FixedRng(1))
+
+
+# ── scroll copy requires decipher; spell book does not ──────────────────────
+
+def test_copyable_scroll_requires_unlock_spellbook_does_not(data):
+    """Arcane scrolls must be deciphered (Read Magic) before copying; a wizard
+    reads their own spell book freely — no unlock step is required."""
+    cls = data.classes["magic_user"]
+    entry = ClassEntry(class_id="magic_user", level=1)
+    rs = RuleSet(advanced_spell_books=True)
+    # Scroll: locked → empty; unlocked → copyable.
+    scroll = ss.new_spell_source("scroll", "arcane", ["magic_user_sleep"], data)
+    assert ss.copyable_spell_ids(scroll, entry, cls, data, rs) == set()
+    scroll.unlocked = True
+    assert "magic_user_sleep" in ss.copyable_spell_ids(scroll, entry, cls, data, rs)
+    # Spell book: copyable immediately (no decipher required).
+    book = ss.new_spell_source("spellbook", "arcane", ["magic_user_sleep"], data)
+    assert "magic_user_sleep" in ss.copyable_spell_ids(book, entry, cls, data, rs)
+
+
+# ── decipher_source works on spell books too ────────────────────────────────
+
+def test_decipher_spellbook_with_read_magic(data):
+    e = ClassEntry(class_id="magic_user", level=1, spellbook=["magic_user_read_magic"])
+    e = se.assign_slot(e, data.classes["magic_user"], data, level=1,
+                       spell_id="magic_user_read_magic")
+    book = ss.new_spell_source("spellbook", "arcane", ["magic_user_sleep"], data)
+    spec = CharacterSpec(
+        name="Mu", abilities={"STR": 10, "INT": 13, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
+        race_id="human", classes=[e], alignment="neutral", ruleset=RuleSet(),
+        spell_sources=[book],
+    )
+    classes, sources = ss.decipher_source(spec, data, book.instance_id)
+    assert classes[0].slots[0].spent is True       # the Read Magic cast is burned
+    assert sources[0].unlocked is True
+
+
+def test_decipher_rejects_divine_scroll(data):
+    e = ClassEntry(class_id="magic_user", level=1, spellbook=["magic_user_read_magic"])
+    e = se.assign_slot(e, data.classes["magic_user"], data, level=1,
+                       spell_id="magic_user_read_magic")
+    divine = ss.new_spell_source("scroll", "divine", ["cleric_cure_light_wounds"], data)
+    spec = CharacterSpec(
+        name="Mu", abilities={"STR": 10, "INT": 13, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
+        race_id="human", classes=[e], alignment="neutral", ruleset=RuleSet(),
+        spell_sources=[divine],
+    )
+    with pytest.raises(ss.SpellSourceError):
+        ss.decipher_source(spec, data, divine.instance_id)

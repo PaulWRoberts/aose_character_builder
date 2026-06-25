@@ -192,6 +192,10 @@ def test_cast_rejects_caster_type_mismatch(client):
 def test_copy_route_success(client):
     _save_mu(client, advanced=True)  # INT 13 from _save_mu
     src = _add_scroll(client, ["magic_user_sleep"])
+    # Arcane scrolls require deciphering before copying.
+    spec = load_character("mu", client._characters_dir)
+    spec.spell_sources[0] = spec.spell_sources[0].model_copy(update={"unlocked": True})
+    save_character("mu", spec, client._characters_dir)
     r = client.post("/character/mu/spell-sources/copy",
                     data={"instance_id": src.instance_id,
                           "class_id": "magic_user", "spell_id": "magic_user_sleep"})
@@ -244,6 +248,16 @@ def test_read_route_unlocks_scroll(client):
     spec = load_character("mu", client._characters_dir)
     assert spec.spell_sources[0].unlocked is True
     assert spec.classes[0].slots[0].spent is True
+
+
+def test_decipher_form_posts_to_read_route(client):
+    # The "Decipher (Read Magic)" form must target the registered /spell-sources/read
+    # route, not a non-existent /spell-sources/read-magic (which 404s).
+    _save_mu_with_read_magic(client)
+    r = client.get("/character/mu")
+    assert r.status_code == 200
+    assert "/spell-sources/read-magic" not in r.text
+    assert "/spell-sources/read" in r.text
 
 
 def test_read_route_rejects_divine_scroll(client):

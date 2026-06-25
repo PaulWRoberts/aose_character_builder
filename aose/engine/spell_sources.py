@@ -188,20 +188,22 @@ def ready_read_magic_slot(spec: CharacterSpec, data: GameData) -> tuple[int, int
     return None
 
 
-def read_scroll(spec: CharacterSpec, data: GameData, instance_id: str
-                ) -> tuple[list[ClassEntry], list[SpellSource]]:
-    """Decipher an arcane scroll: spend a memorized Read Magic cast and mark the
-    scroll ``unlocked``.  Returns updated (classes, spell_sources); inputs are not
-    mutated.  Raises if the document is not an un-deciphered arcane scroll, or no
-    Read Magic is memorized."""
+def decipher_source(spec: CharacterSpec, data: GameData, instance_id: str
+                    ) -> tuple[list[ClassEntry], list[SpellSource]]:
+    """Decipher an arcane document with Read Magic: spend a memorized Read Magic
+    cast and mark the document ``unlocked``.  Applies to arcane scrolls (magical
+    script) and arcane spell books (a captured grimoire only its owner can read
+    unaided).  Returns updated (classes, spell_sources); inputs are not mutated.
+    Raises if the document is not an un-deciphered arcane source, or no Read Magic
+    is memorized."""
     idx = _index(spec.spell_sources, instance_id)
     src = spec.spell_sources[idx]
     if src.location.kind != "carried":
-        raise SpellSourceError("you must be carrying the scroll to read it")
-    if src.kind != "scroll" or src.caster_type != "arcane":
-        raise SpellSourceError("only arcane scrolls are deciphered with Read Magic")
+        raise SpellSourceError("you must be carrying the document to read it")
+    if src.caster_type != "arcane":
+        raise SpellSourceError("only arcane documents are deciphered with Read Magic")
     if src.unlocked:
-        raise SpellSourceError("this scroll is already deciphered")
+        raise SpellSourceError("this document is already deciphered")
     found = ready_read_magic_slot(spec, data)
     if found is None:
         raise SpellSourceError("no memorized Read Magic available to read the scroll")
@@ -216,12 +218,18 @@ def read_scroll(spec: CharacterSpec, data: GameData, instance_id: str
 def copyable_spell_ids(source: SpellSource, entry: ClassEntry, cls: CharClass,
                        data: GameData, ruleset=None) -> set[str]:
     """Spell ids in ``source`` an arcane caster may attempt to copy right now:
-    arcane source, spell arcane-learnable for this class (on-list, accessible
+    carried, arcane, spell arcane-learnable for this class (on-list, accessible
     level — including level-0 cantrips when the rule is on — not already known),
-    and not already marked ``copy_failed`` on this source."""
+    and not already marked ``copy_failed`` on this source.
+
+    Arcane *scrolls* additionally require ``unlocked`` (the magical script is
+    unreadable until Read Magic is used).  Spell books can be read freely by
+    their owner — no decipher step is needed before copying."""
     if source.location.kind != "carried":
         return set()
     if source.caster_type != "arcane":
+        return set()
+    if source.kind == "scroll" and not source.unlocked:
         return set()
     learnable = {s.id for s in spell_engine.learnable_spells(entry, cls, data, ruleset)}
     return {
