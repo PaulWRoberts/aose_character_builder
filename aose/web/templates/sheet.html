@@ -1104,6 +1104,8 @@
 {% for j in group.treasure_jewellery %}{{ jewellery_modal(j, group, _char_url) }}{% endfor %}
 {% for cont in group.containers %}
 {% for coin_row in cont.stowed_coins %}{{ coin_modal(coin_row, {"kind": "container", "id": cont.instance_id}, _char_url) }}{% endfor %}
+{% for g in cont.stowed_gems %}{{ gem_modal(g, {"kind": "container", "id": cont.instance_id}, _char_url) }}{% endfor %}
+{% for j in cont.stowed_jewellery %}{{ jewellery_modal(j, {"kind": "container", "id": cont.instance_id}, _char_url) }}{% endfor %}
 {% endfor %}
 {% endif %}{% endfor %}
 

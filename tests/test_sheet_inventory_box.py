@@ -311,6 +311,36 @@ def test_container_view_shows_stowed_coins_and_magic(tmp_path):
     assert 'id="modal-magic-m1"' in body
 
 
+def test_container_stowed_gem_and_jewellery_modals_exist(tmp_path):
+    from aose.characters import save_character
+    from aose.models import (CharacterSpec, ClassEntry, ContainerInstance,
+                             GemStack, JewelleryPiece)
+    from aose.models.storage import StorageLocation
+    cont_loc = StorageLocation(kind="container", id="c1")
+    spec = CharacterSpec(
+        name="Hoarder",
+        abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
+        race_id="human", classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
+        alignment="neutral",
+        inventory=["backpack"],
+        containers=[ContainerInstance(instance_id="c1", catalog_id="backpack",
+                                      location=StorageLocation(kind="carried"))],
+        gems=[GemStack(instance_id="g1", value=50, count=3, label="emerald",
+                       location=cont_loc)],
+        jewellery=[JewelleryPiece(instance_id="j1", value=600, label="tiara",
+                                  location=cont_loc)],
+    )
+    app = _make_app(tmp_path)
+    save_character("tc-stow-treasure", spec, tmp_path / "characters")
+    body = TestClient(app, follow_redirects=False).get("/character/tc-stow-treasure").text
+    # Rows inside the container are clickable…
+    assert 'data-modal="modal-gem-g1"' in body
+    assert 'data-modal="modal-jewel-j1"' in body
+    # …and their modal overlays must actually be rendered (the reported bug)
+    assert 'id="modal-gem-g1"' in body
+    assert 'id="modal-jewel-j1"' in body
+
+
 # ── Task 10: magic/enchanted/ammo bucket by storage location ─────────────────
 
 # ── Task 14: shared macros — magic Move control + no bare buttons ─────────────
