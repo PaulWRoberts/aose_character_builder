@@ -1,12 +1,12 @@
 """Pure functions for equipping and unequipping items.
 
-``equipped: dict[str, str]`` is the single source of truth for worn/held gear:
-  * ``armor``     — body armour catalog id (unchanged)
-  * ``main_hand`` — a weapon (catalog id or enchanted instance id)
-  * ``off_hand``  — a shield OR an off-hand weapon (same id types)
+Equip state is per-instance: each ``ItemInstance`` carries an ``equip`` slot
+field (``"armor" | "main_hand" | "off_hand" | None``).  ``equip()`` and
+``unequip()`` mutate that field in place; ``validate_wield`` reads the live
+slot occupants from the spec's items list.
 
-``equip``/``unequip`` return the new ``equipped`` dict; no in-place mutation.
-``validate_wield`` is the single legality gate.
+``resolve_slot`` and the old dict-based signatures are kept temporarily for
+callers that have not yet been migrated (they will be removed in Task 23).
 """
 from __future__ import annotations
 
@@ -36,8 +36,7 @@ def hand_cost(item, *, gargantua_1h_2h: bool) -> int:
 
 
 def off_hand_eligible(weapon: Weapon) -> bool:
-    """House rule for a 'small' off-hand weapon: <=30cn, melee, and none of the
-    forbidden qualities."""
+    """<=30cn melee weapon with none of the forbidden qualities."""
     return (
         weapon.weight_cn <= 30
         and "melee" in weapon.quality_ids
@@ -47,7 +46,7 @@ def off_hand_eligible(weapon: Weapon) -> bool:
 
 def resolve_slot(value, data: GameData, enchanted):
     """Resolve a slot value to its concrete Weapon/Armor (catalog or enchanted),
-    or None for an empty/stale slot."""
+    or None for an empty/stale slot. Kept for unmigrated callers."""
     if not value:
         return None
     if value in data.items:
@@ -58,23 +57,65 @@ def resolve_slot(value, data: GameData, enchanted):
     return None
 
 
-def validate_wield(equipped: dict, data: GameData, enchanted, *,
-                   two_weapon: bool, eligible: bool,
-                   gargantua_1h_2h: bool) -> None:
-    """Raise WieldError unless the hand slots form a legal configuration.
-    Class allowances are checked separately by ``equip``; this gate is purely
-    the hand budget + baseline one-weapon rule + two-weapon-fighting rules."""
-    main = resolve_slot(equipped.get("main_hand"), data, enchanted)
-    off = resolve_slot(equipped.get("off_hand"), data, enchanted)
+def is_equippable(item) -> bool:
+    return isinstance(item, (Armor, Weapon))
 
+
+def is_stackable(item) -> bool:
+    return item is not None and not is_equippable(item)
+
+
+# ---------------------------------------------------------------------------
+# Instance-based accessors
+# ---------------------------------------------------------------------------
+
+def _find_equippable(spec, instance_id: str):
+    """The ItemInstance with this id in spec.items, or None."""
+    return next((i for i in spec.items if i.instance_id == instance_id), None)
+
+
+def _resolve_equippable(inst, data: GameData):
+    """Resolve an ItemInstance to its Weapon/Armor.
+    Plain → catalog item; enchanted → compose via resolve_instance."""
+    if inst.enchantment_id is None:
+        return data.items.get(inst.catalog_id)
+    return resolve_instance(inst, data)
+
+
+def equipped_instance(spec, slot: str):
+    """The ItemInstance occupying slot, or None."""
+    return next((i for i in spec.items if i.equip == slot), None)
+
+
+def equipped_ref(spec, slot: str) -> str | None:
+    """The catalog_id of the instance equipped in slot, or None."""
+    inst = equipped_instance(spec, slot)
+    return inst.catalog_id if inst is not None else None
+
+
+def slot_item(spec, slot: str, data: GameData):
+    """Resolved Weapon/Armor in slot, or None."""
+    inst = equipped_instance(spec, slot)
+    return _resolve_equippable(inst, data) if inst is not None else None
+
+
+def _clear_slot(spec, slot: str) -> None:
+    occ = equipped_instance(spec, slot)
+    if occ is not None:
+        occ.equip = None
+
+
+def validate_wield(spec, data: GameData, *, two_weapon: bool, eligible: bool,
+                   gargantua_1h_2h: bool) -> None:
+    """Raise WieldError unless the hand slots form a legal configuration."""
+    main = slot_item(spec, "main_hand", data)
+    off = slot_item(spec, "off_hand", data)
     if main is not None and not isinstance(main, Weapon):
         raise WieldError("Only a weapon may be held in the main hand")
-
     used = (hand_cost(main, gargantua_1h_2h=gargantua_1h_2h) if main else 0)
     used += (hand_cost(off, gargantua_1h_2h=gargantua_1h_2h) if off else 0)
     if used > 2:
         raise WieldError("Both hands are full")
-
     if isinstance(off, Weapon):
         if not two_weapon:
             raise WieldError("Two-weapon fighting is not enabled")
@@ -85,42 +126,30 @@ def validate_wield(equipped: dict, data: GameData, enchanted, *,
         if not off_hand_eligible(off):
             raise WieldError(f"{off.name!r} is not a valid off-hand weapon")
 
-def _count(seq, value) -> int:
-    return sum(1 for v in seq if v == value)
 
-
-def equip(item_id: str, *, inventory: list[str], equipped: dict[str, str],
-          enchanted, data: GameData,
-          slot: str | None = None,
+def equip(spec, instance_id: str, *, data: GameData, slot: str | None = None,
           two_weapon: bool = False, eligible: bool = False,
           gargantua_1h_2h: bool = False,
           allowed_weapons: "set[str] | str" = "all",
           allowed_armor: "set[str] | str" = "all",
-          allow_shields: bool = True) -> dict[str, str]:
-    """Equip one item into a slot. ``item_id`` is a catalog id (must be owned in
-    ``inventory``) or an enchanted instance id (must exist in ``enchanted``).
-    Body armour always goes to ``armor``; shields always to ``off_hand``; weapons
-    default to ``main_hand`` unless ``slot="off_hand"`` is passed. Returns the
-    new ``equipped`` dict. Raises ValueError/WieldError on any illegality."""
-    item = resolve_slot(item_id, data, enchanted)
+          allow_shields: bool = True) -> None:
+    """Equip the instance instance_id into its slot. Mutates instance.equip.
+    Raises ValueError/WieldError on any illegality."""
+    inst = _find_equippable(spec, instance_id)
+    if inst is None:
+        raise ValueError(f"Unknown or unowned item {instance_id!r}")
+    if inst.location.kind != "carried":
+        raise ValueError("Only carried items can be equipped")
+    item = _resolve_equippable(inst, data)
     if item is None:
-        raise ValueError(f"Unknown or unowned item {item_id!r}")
-
-    is_catalog = item_id in data.items
-    if is_catalog:
-        owned = _count(inventory, item_id)
-        if owned == 0:
-            raise ValueError(f"{item.name!r} is not in inventory")
-    else:
-        owned = 1  # enchanted instance: unique, count doesn't apply
-
-    new_eq = dict(equipped)
+        raise ValueError(f"{instance_id!r} cannot be resolved to an item")
 
     if isinstance(item, Armor) and not item.is_shield:
         if allowed_armor != "all" and base_armor_id(item) not in allowed_armor:
             raise ValueError(f"This class cannot use {item.name!r}")
-        new_eq["armor"] = item_id
-        return new_eq
+        _clear_slot(spec, "armor")
+        inst.equip = "armor"
+        return
 
     if isinstance(item, Armor) and item.is_shield:
         if not allow_shields:
@@ -136,29 +165,19 @@ def equip(item_id: str, *, inventory: list[str], equipped: dict[str, str],
     if target not in ("main_hand", "off_hand"):
         raise ValueError(f"Invalid hand slot {target!r}")
 
-    # Ownership: don't equip more catalog copies than owned across both hands.
-    if is_catalog:
-        in_other = sum(1 for s in ("main_hand", "off_hand")
-                       if s != target and new_eq.get(s) == item_id)
-        if in_other >= owned:
-            raise ValueError(f"All {owned} copies of {item.name!r} already equipped")
-
-    new_eq[target] = item_id
-    validate_wield(new_eq, data, enchanted, two_weapon=two_weapon,
-                   eligible=eligible, gargantua_1h_2h=gargantua_1h_2h)
-    return new_eq
+    _clear_slot(spec, target)
+    inst.equip = target
+    try:
+        validate_wield(spec, data, two_weapon=two_weapon, eligible=eligible,
+                       gargantua_1h_2h=gargantua_1h_2h)
+    except WieldError:
+        inst.equip = None
+        raise
 
 
-def unequip(item_id: str, *, equipped: dict[str, str]) -> dict[str, str]:
-    """Clear whichever slot holds ``item_id``. Raises ValueError if not equipped."""
-    new_eq = dict(equipped)
-    for slot, val in list(new_eq.items()):
-        if val == item_id:
-            del new_eq[slot]
-            return new_eq
-    raise ValueError(f"{item_id!r} is not equipped")
-
-
-def equipped_count(equipped: dict[str, str], item_id: str) -> int:
-    """How many copies of an item are currently in hand/body slots."""
-    return sum(1 for v in equipped.values() if v == item_id)
+def unequip(spec, instance_id: str) -> None:
+    """Clear the instance's equip slot. Raises ValueError if not equipped."""
+    inst = _find_equippable(spec, instance_id)
+    if inst is None or inst.equip is None:
+        raise ValueError(f"{instance_id!r} is not equipped")
+    inst.equip = None
