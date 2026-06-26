@@ -16,15 +16,15 @@ from pydantic import BaseModel, Field
 
 from aose.data.loader import GameData
 from aose.engine.dice import roll
-from aose.engine.equip import equip, hand_cost
+from aose.engine.equip import equip as equip_inst, hand_cost
 from aose.engine.proficiency import allowed_armor_ids, allowed_weapon_ids
-from aose.models import AmmoStack, Armor, CharacterSpec, Weapon
+from aose.models import Armor, CharacterSpec, Weapon
 
 
 class QuickKit(BaseModel):
-    inventory: list[str] = Field(default_factory=list)
-    equipped: dict[str, str] = Field(default_factory=dict)
-    ammo: list[AmmoStack] = Field(default_factory=list)
+    inventory: list[str] = Field(default_factory=list)    # catalog_ids (non-ammo, non-container)
+    equips: dict[str, str] = Field(default_factory=dict)  # slot -> catalog_id intentions
+    ammo: list[dict] = Field(default_factory=list)        # [{"base_id": str, "count": int}]
     gold: int = 0
 
 
@@ -44,8 +44,7 @@ def _apply_grants(grants: list[dict], kit: QuickKit, *,
         if "id" in g:
             kit.inventory.extend([g["id"]] * int(g.get("n", 1)))
         elif "ammo" in g:
-            kit.ammo.append(AmmoStack(instance_id=uuid.uuid4().hex,
-                                      base_id=g["ammo"], count=int(g.get("n", 1))))
+            kit.ammo.append({"base_id": g["ammo"], "count": int(g.get("n", 1))})
         elif "armor" in g:
             pending_armor.append(g["armor"])
         elif g.get("shield"):
@@ -86,29 +85,30 @@ def _roll_weapons(wspec: dict, tables: dict, kit: QuickKit, rng) -> None:
         _apply_grants(chosen, kit, pending_armor=pa, pending_shield=ps)
 
 
-def _equip_loadout(kit: QuickKit, pending_armor, pending_shield,
+def _equip_loadout(kit: QuickKit, pending_armor: list, pending_shield: list,
                    data: GameData) -> None:
-    """Equip rolled armour, then a main-hand weapon, then a shield if hands free.
-    All allowances are open here (kit is class-appropriate by construction)."""
+    """Record equip intentions in kit.equips (slot -> catalog_id).
+    apply_kit() does the actual per-instance equipping later."""
     for armor_id in pending_armor[:1]:
         kit.inventory.append(armor_id)
-        kit.equipped = equip(armor_id, inventory=kit.inventory,
-                             equipped=kit.equipped, enchanted=[], data=data)
+        item = data.items.get(armor_id)
+        if isinstance(item, Armor) and not item.is_shield:
+            kit.equips["armor"] = armor_id
+
     # main hand: first melee weapon, else first weapon present in inventory.
     weapons = [i for i in kit.inventory if isinstance(data.items.get(i), Weapon)]
-    melee = [i for i in weapons if "melee" in data.items[i].quality_ids]
+    melee = [i for i in weapons if data.items[i].melee]
     main = (melee or weapons or [None])[0]
     if main is not None:
-        kit.equipped = equip(main, inventory=kit.inventory,
-                             equipped=kit.equipped, enchanted=[], data=data)
+        kit.equips["main_hand"] = main
+
     # shield only if a hand remains free (main not two-handed).
     if pending_shield:
         kit.inventory.append("shield")
-        main_item = data.items.get(kit.equipped.get("main_hand"))
+        main_item = data.items.get(kit.equips.get("main_hand"))
         used = hand_cost(main_item, gargantua_1h_2h=False) if main_item else 0
         if used < 2:
-            kit.equipped = equip("shield", inventory=kit.inventory,
-                                 equipped=kit.equipped, enchanted=[], data=data)
+            kit.equips["off_hand"] = "shield"
 
 
 def _heuristic_armour_row(cls, data, tables, rng) -> list[dict]:
@@ -139,8 +139,7 @@ def _heuristic_weapons(cls, data, kit: QuickKit, rng) -> None:
         kit.inventory.append(wid)
         ammo = _LAUNCHER_AMMO.get(wid)
         if ammo:
-            kit.ammo.append(AmmoStack(instance_id=uuid.uuid4().hex,
-                                      base_id=ammo, count=20))
+            kit.ammo.append({"base_id": ammo, "count": 20})
 
     if allowed == "all":
         rows = tables["general"]
@@ -212,20 +211,50 @@ def roll_kit(class_id: str, data: GameData,
 
 def apply_kit(spec: CharacterSpec, kit: QuickKit, data: GameData) -> None:
     """Write a rolled kit onto a CharacterSpec. Container items are promoted to
-    ContainerInstances (carried) so granted gear is never a stuck loose string."""
-    from aose.models import CoinStack, Container
+    ContainerInstances; everything else becomes a flat ItemInstance in spec.items."""
+    from aose.models import CoinStack, Container, ItemInstance
+    from aose.models.storage import StorageLocation
     from aose.engine.shop import new_container_instance
-    loose: list[str] = []
-    new_containers: list = []
+    from aose.engine.equip import WieldError
+
+    CARRIED = StorageLocation(kind="carried")
+
+    # Build ItemInstances for each catalog_id in kit.inventory.
     for item_id in kit.inventory:
         item = data.items.get(item_id)
         if isinstance(item, Container):
-            new_containers.append(new_container_instance(item_id, data))
+            spec.containers.append(new_container_instance(item_id, data))
         else:
-            loose.append(item_id)
-    spec.inventory = loose
-    spec.equipped = dict(kit.equipped)
-    spec.ammo = list(kit.ammo)
-    spec.containers = [*spec.containers, *new_containers]
+            spec.items.append(ItemInstance(
+                instance_id=uuid.uuid4().hex,
+                catalog_id=item_id,
+                location=CARRIED,
+            ))
+
+    # Build ItemInstances for ammo grants.
+    for grant in kit.ammo:
+        spec.items.append(ItemInstance(
+            instance_id=uuid.uuid4().hex,
+            catalog_id=grant["base_id"],
+            count=grant["count"],
+            location=CARRIED,
+        ))
+
+    # Apply equip intentions: for each slot, find the first unequipped carried
+    # instance with the matching catalog_id and equip it.
+    for slot, catalog_id in kit.equips.items():
+        target_inst = next(
+            (i for i in spec.items
+             if i.catalog_id == catalog_id and i.location == CARRIED and i.equip is None),
+            None,
+        )
+        if target_inst is None:
+            continue
+        try:
+            equip_inst(spec, target_inst.instance_id, data=data,
+                       slot=slot if slot in ("main_hand", "off_hand") else None)
+        except (ValueError, WieldError):
+            pass
+
     if kit.gold > 0:
         spec.coins = [CoinStack(denom="gp", count=kit.gold)]

@@ -66,8 +66,8 @@ def active_modifiers(spec: CharacterSpec, data: GameData) -> list[Modifier]:
         if isinstance(catalog, MagicItem):
             out.extend(catalog.modifiers)
         out.extend(inst.extra_modifiers)
-    for inst in spec.enchanted:
-        if not inst.equipped:
+    for inst in spec.items:
+        if inst.enchantment_id is None or inst.equip is None:
             continue
         ench = data.enchantments.get(inst.enchantment_id)
         if ench is not None:

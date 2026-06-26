@@ -6,8 +6,7 @@ from aose.data.loader import GameData
 from aose.models import Ability, Armor, CharacterSpec, Modifier
 
 from .ability_mods import ability_modifier
-from .enchant import equipped_enchanted
-from .equip import resolve_slot
+from .equip import equipped_instance, slot_item
 from .features import all_modifiers
 from .magic import effective_abilities
 
@@ -62,11 +61,8 @@ class _ACComputation:
 def _has_worn_armor(spec: CharacterSpec, data: GameData) -> bool:
     """True when a body-armour item (not a shield) is equipped — mundane or
     enchanted.  Used to drop ``unarmored``-conditioned AC bonuses."""
-    armor_id = spec.equipped.get("armor")
-    item = data.items.get(armor_id) if armor_id else None
-    if isinstance(item, Armor) and not item.is_shield:
-        return True
-    return any(True for _ in equipped_enchanted(spec, data, "armor"))
+    item = slot_item(spec, "armor", data)
+    return isinstance(item, Armor) and not item.is_shield
 
 
 def _compute_ac(spec: CharacterSpec, data: GameData, *,
@@ -80,22 +76,17 @@ def _compute_ac(spec: CharacterSpec, data: GameData, *,
     base = UNARMORED_AC_DESCENDING
     base_source = "Unarmoured"
     if use_armor:
-        armor_id = spec.equipped.get("armor")
-        if armor_id and armor_id in data.items:
-            item = data.items[armor_id]
+        armor_inst = equipped_instance(spec, "armor")
+        if armor_inst is not None:
+            item = slot_item(spec, "armor", data)
             if isinstance(item, Armor) and not item.is_shield:
                 ac_desc = item.ac_descending
-                if (item.tailorable and not spec.armor_tailored
+                if (item.tailorable and not armor_inst.tailored
                         and item.untailored_ac_descending is not None):
                     ac_desc = item.untailored_ac_descending
                 cand = ac_desc - item.magic_bonus
                 if cand < base:
                     base, base_source = cand, item.name
-        # Enchanted armour: best-AC-wins (min descending) over mundane equipped.
-        for resolved in equipped_enchanted(spec, data, "armor"):
-            cand = resolved.ac_descending - resolved.magic_bonus
-            if cand < base:
-                base, base_source = cand, resolved.name
 
     # `ac set N` from ANY source is a literal descending base candidate; best
     # (lowest) wins. Evaluated OUTSIDE the use_armor gate so class-granted AC
@@ -109,7 +100,7 @@ def _compute_ac(spec: CharacterSpec, data: GameData, *,
     shield_bonus = 0
     has_shield = False
     if use_shield:
-        off_item = resolve_slot(spec.equipped.get("off_hand"), data, spec.enchanted)
+        off_item = slot_item(spec, "off_hand", data)
         if isinstance(off_item, Armor) and off_item.is_shield:
             shield_bonus = off_item.ac_bonus + off_item.magic_bonus
             has_shield = True

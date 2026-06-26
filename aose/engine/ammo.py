@@ -1,16 +1,18 @@
 """Ammunition engine — cycle-free core for ammo stacks, loading, and the
 magic-ammo bonus a loaded stack confers to its launcher.
 
-Imports only models, the loader, dice, and ``enchant`` (for compatibility +
-display name).  Mutators return a new list/dict (the ``enchant``/``magic`` style).
+Ammo is now a flat ItemInstance in spec.items (catalog_id = the ammo base id,
+enchantment_id optional, count >= 1).  The loaded-state lives on the weapon's
+ItemInstance: ``loaded_ammo_id`` is the instance_id of the loaded ammo item.
+
+buy/add/adjust helpers that operated on the old list[AmmoStack] are removed;
+shop.py handles those in the unified items bucket (Task 17).
 """
 from __future__ import annotations
 
-import uuid
-
 from aose.data.loader import GameData
 from aose.engine.enchant import is_compatible
-from aose.models import Ammunition, AmmoStack, ConditionalBonus, Weapon
+from aose.models import Ammunition, ConditionalBonus, Weapon
 from aose.models.storage import StorageLocation
 
 
@@ -39,89 +41,19 @@ def _ammo_base(base_id: str, data: GameData) -> Ammunition:
     return base
 
 
-def _find(stacks: list[AmmoStack], instance_id: str) -> int:
-    for i, s in enumerate(stacks):
-        if s.instance_id == instance_id:
-            return i
-    raise UnknownAmmo(f"No ammo stack {instance_id!r}")
-
-
-def _combine(stacks: list[AmmoStack], base_id: str, enchantment_id: str | None,
-             count: int, location: StorageLocation | None = None) -> list[AmmoStack]:
-    """Add ``count`` to an existing (base_id, enchantment_id, location) stack, or
-    append a fresh one at ``location`` (default carried)."""
-    loc = location or StorageLocation(kind="carried")
-    for i, s in enumerate(stacks):
-        if s.base_id == base_id and s.enchantment_id == enchantment_id and s.location == loc:
-            merged = s.model_copy(update={"count": s.count + count})
-            return [*stacks[:i], merged, *stacks[i + 1:]]
-    fresh = AmmoStack(instance_id=uuid.uuid4().hex, base_id=base_id,
-                      enchantment_id=enchantment_id, count=count, location=loc)
-    return [*stacks, fresh]
-
-
-def buy_ammo(stacks: list[AmmoStack], gold: int, base_id: str,
-             data: GameData) -> tuple[list[AmmoStack], int]:
-    """Purchase one bundle of mundane ammo: subtract cost, add ``bundle_count``."""
-    base = _ammo_base(base_id, data)
-    cost = int(base.cost_gp)
-    if gold < cost:
-        raise InsufficientGold(f"Need {cost} gp, have {gold}")
-    return _combine(stacks, base_id, None, base.bundle_count), gold - cost
-
-
-def add_free_ammo(stacks: list[AmmoStack], base_id: str,
-                  enchantment_id: str | None, data: GameData) -> list[AmmoStack]:
-    """GM grant.  Mundane (enchantment_id None) adds one bundle; magic adds 1
-    unit (count is adjusted up manually).  Validates compatibility."""
-    base = _ammo_base(base_id, data)
-    if enchantment_id is None:
-        return _combine(stacks, base_id, None, base.bundle_count)
-    ench = data.enchantments.get(enchantment_id)
-    if ench is None or ench.kind != "ammunition":
-        raise IncompatibleAmmo(f"{enchantment_id!r} is not an ammunition enchantment")
-    if not is_compatible(base, ench):
-        raise IncompatibleAmmo(f"{base_id!r} is not compatible with {enchantment_id!r}")
-    return _combine(stacks, base_id, enchantment_id, 1)
-
-
-def adjust_count(stacks: list[AmmoStack], instance_id: str, delta: int) -> list[AmmoStack]:
-    """Change a stack's count (clamped >= 0).  Count 0 removes the stack."""
-    idx = _find(stacks, instance_id)
-    new_count = max(0, stacks[idx].count + delta)
-    if new_count == 0:
-        return [*stacks[:idx], *stacks[idx + 1:]]
-    updated = stacks[idx].model_copy(update={"count": new_count})
-    return [*stacks[:idx], updated, *stacks[idx + 1:]]
-
-
-def remove_ammo(stacks: list[AmmoStack], instance_id: str) -> list[AmmoStack]:
-    idx = _find(stacks, instance_id)
-    return [*stacks[:idx], *stacks[idx + 1:]]
-
-
-def load(loaded: dict[str, str], weapon_key: str, instance_id: str) -> dict[str, str]:
-    return {**loaded, weapon_key: instance_id}
-
-
-def unload(loaded: dict[str, str], weapon_key: str) -> dict[str, str]:
-    return {k: v for k, v in loaded.items() if k != weapon_key}
-
-
-def loaded_stack(weapon_key: str, spec, data: GameData) -> AmmoStack | None:
-    """The AmmoStack loaded into ``weapon_key``, or None if nothing valid."""
-    iid = spec.loaded_ammo.get(weapon_key)
-    if iid is None:
+def loaded_stack(weapon_inst, spec, data: GameData):
+    """The ammo ItemInstance loaded into the weapon instance, or None."""
+    if weapon_inst is None:
         return None
-    for s in spec.ammo:
-        if s.instance_id == iid and s.count > 0:
-            return s
-    return None
+    ammo_id = getattr(weapon_inst, "loaded_ammo_id", None)
+    if ammo_id is None:
+        return None
+    return next((i for i in spec.items if i.instance_id == ammo_id and i.count > 0), None)
 
 
-def loaded_bonus(weapon_key: str, spec, data: GameData) -> tuple[int, ConditionalBonus | None]:
+def loaded_bonus(weapon_inst, spec, data: GameData) -> tuple[int, ConditionalBonus | None]:
     """The flat magic_bonus + conditional_bonus the loaded ammo confers."""
-    stack = loaded_stack(weapon_key, spec, data)
+    stack = loaded_stack(weapon_inst, spec, data)
     if stack is None or stack.enchantment_id is None:
         return 0, None
     ench = data.enchantments.get(stack.enchantment_id)
@@ -130,23 +62,24 @@ def loaded_bonus(weapon_key: str, spec, data: GameData) -> tuple[int, Conditiona
     return ench.magic_bonus, ench.conditional_bonus
 
 
-def is_unloaded(weapon_key: str, weapon: Weapon, spec, data: GameData) -> bool:
+def is_unloaded(weapon_inst, weapon: Weapon, spec, data: GameData) -> bool:
     """True for a launcher (accepts_ammo non-empty) with no valid loaded ammo."""
     if not weapon.accepts_ammo:
         return False
-    return loaded_stack(weapon_key, spec, data) is None
+    return loaded_stack(weapon_inst, spec, data) is None
 
 
-def resolve_ammo(stack: AmmoStack, data: GameData) -> dict:
-    """Display view: name (+ enchantment), magic_bonus, conditional_bonus."""
-    base = data.items.get(stack.base_id)
-    name = base.name if base else stack.base_id
+def resolve_ammo(inst, data: GameData) -> dict:
+    """Display view from an ammo ItemInstance: name (+ enchantment), magic_bonus,
+    conditional_bonus.  inst.catalog_id is the base ammo id."""
+    base = data.items.get(inst.catalog_id)
+    name = base.name if base else inst.catalog_id
     magic_bonus, conditional = 0, None
-    if stack.enchantment_id:
-        ench = data.enchantments.get(stack.enchantment_id)
+    if inst.enchantment_id:
+        ench = data.enchantments.get(inst.enchantment_id)
         if ench:
             name = ench.name_template.format(base=name)
             magic_bonus, conditional = ench.magic_bonus, ench.conditional_bonus
-    return {"instance_id": stack.instance_id, "name": name, "count": stack.count,
+    return {"instance_id": inst.instance_id, "name": name, "count": inst.count,
             "magic_bonus": magic_bonus, "conditional": conditional,
-            "base_id": stack.base_id, "enchantment_id": stack.enchantment_id}
+            "base_id": inst.catalog_id, "enchantment_id": inst.enchantment_id}

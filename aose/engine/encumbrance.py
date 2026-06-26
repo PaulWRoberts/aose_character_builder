@@ -131,31 +131,25 @@ def equipment_weight_cn(spec: CharacterSpec, data: GameData) -> int:
     Treasure (coins/gems/jewellery/scrolls/potions/rods/staves/wands) is NOT
     counted here — it lives in treasure_weight_cn and contributes directly."""
     from aose.models import Weapon, AdventuringGear
-    from aose.engine.enchant import resolve_instance
+    from aose.engine.enchant import resolve as _resolve_inst
+    from aose.engine.storage import items_at
+    from aose.models.storage import StorageLocation
 
+    CARRIED = StorageLocation(kind="carried")
     total = 0
     has_gear = False
-    for item_id in spec.inventory:
-        item = data.items.get(item_id)
+    for inst in items_at(spec, CARRIED):
+        item = _resolve_inst(inst, data)
         if item is None:
             continue
         if isinstance(item, Armor):
             total += int(item.weight_cn * item.weight_multiplier)
         elif isinstance(item, Weapon):
-            total += item.weight_cn
+            total += item.weight_cn * inst.count
         elif isinstance(item, AdventuringGear):
             has_gear = True          # weight ignored — folded into the flat 80
         else:
-            total += item.weight_cn  # poison, ammunition (0 cn), etc.
-
-    for inst in spec.enchanted:
-        if not _is_carried(inst):
-            continue
-        resolved = resolve_instance(inst, data)
-        if isinstance(resolved, Armor):
-            total += int(resolved.weight_cn * resolved.weight_multiplier)
-        elif isinstance(resolved, Weapon):
-            total += resolved.weight_cn
+            total += item.weight_cn * inst.count  # poison, ammunition (0 cn), etc.
 
     for mi in spec.magic_items:
         if not _is_carried(mi):
@@ -186,10 +180,8 @@ def equipment_weight_cn(spec: CharacterSpec, data: GameData) -> int:
 
 
 def armor_movement_class(spec: CharacterSpec, data: GameData) -> ArmorMovementClass:
-    armor_id = spec.equipped.get("armor")
-    if not armor_id:
-        return "none"
-    item = data.items.get(armor_id)
+    from aose.engine.equip import slot_item
+    item = slot_item(spec, "armor", data)
     if not isinstance(item, Armor) or item.is_shield:
         return "none"
     return item.movement_impact

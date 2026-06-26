@@ -388,7 +388,6 @@ def new_container_instance(catalog_id: str, data: GameData,
         instance_id=uuid.uuid4().hex,
         catalog_id=catalog_id,
         location=location,
-        contents=[],
     )
 
 

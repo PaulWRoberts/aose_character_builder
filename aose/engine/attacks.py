@@ -28,7 +28,7 @@ from aose.data.loader import GameData
 from aose.engine.ability_mods import ability_modifier
 from aose.engine.attack_bonus import thac0
 from aose.engine.ammo import is_unloaded, loaded_bonus, loaded_stack, resolve_ammo
-from aose.engine.equip import resolve_slot
+from aose.engine.equip import equipped_instance, resolve_slot, slot_item
 from aose.engine.features import all_modifiers, feature_weapons
 from aose.engine.magic import effective_abilities
 from aose.engine.proficiency import (
@@ -304,25 +304,25 @@ def attack_profiles(spec: CharacterSpec, data: GameData) -> list[AttackProfile]:
     base_thac0 = thac0(spec, data)
     mods = all_modifiers(spec, data)
 
-    def _ammo_args(weapon):
+    def _ammo_args(weapon, weapon_inst):
         if not weapon.accepts_ammo:
             return {}
-        a_bonus, a_cond = loaded_bonus(weapon.id, spec, data)
-        stack = loaded_stack(weapon.id, spec, data)
+        a_bonus, a_cond = loaded_bonus(weapon_inst, spec, data)
+        stack = loaded_stack(weapon_inst, spec, data)
         name = resolve_ammo(stack, data)["name"] if stack else None
         return {"ammo_bonus": a_bonus, "ammo_conditional": a_cond,
                 "ammo_name": name,
-                "unloaded": is_unloaded(weapon.id, weapon, spec, data)}
+                "unloaded": is_unloaded(weapon_inst, weapon, spec, data)}
 
-    main_w = resolve_slot(spec.equipped.get("main_hand"), data, spec.enchanted)
-    off_w = resolve_slot(spec.equipped.get("off_hand"), data, spec.enchanted)
+    main_w = slot_item(spec, "main_hand", data)
+    off_w = slot_item(spec, "off_hand", data)
     dual = isinstance(main_w, Weapon) and isinstance(off_w, Weapon)
     off_hand_free = off_w is None
 
     weapon_profiles: list[AttackProfile] = []
     for slot in ("main_hand", "off_hand"):
-        slot_id = spec.equipped.get(slot)
-        item = resolve_slot(slot_id, data, spec.enchanted)
+        inst = equipped_instance(spec, slot)
+        item = slot_item(spec, slot, data)
         if not isinstance(item, Weapon):
             continue
         g_atk, g_dmg = _atk_dmg(mods, melee=item.melee, ranged=item.ranged)
@@ -334,8 +334,9 @@ def attack_profiles(spec: CharacterSpec, data: GameData) -> list[AttackProfile]:
             else:
                 dual_penalty, hand = -4, "off"
         base = _profile_for(item, spec, data, 1, eff, base_thac0, g_atk, g_dmg,
-                            manageable_item_id=slot_id, dual_penalty=dual_penalty,
-                            **_ammo_args(item))
+                            manageable_item_id=(inst.instance_id if inst else None),
+                            dual_penalty=dual_penalty,
+                            **_ammo_args(item, inst))
         base = base.model_copy(update={"hand": hand})
         weapon_profiles.append(base)
         if off_hand_free:
