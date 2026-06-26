@@ -159,35 +159,6 @@ def grant_retainer_xp(retainer: Retainer, data: GameData, amount: int) -> None:
     leveling.grant_xp(retainer.spec, data, adjusted)
 
 
-def _find_retainer(pc_spec: CharacterSpec, retainer_id: str) -> Retainer:
-    for r in pc_spec.retainers:
-        if r.id == retainer_id:
-            return r
-    raise ValueError(f"No retainer with id {retainer_id!r}")
-
-
-def transfer_to_retainer(pc_spec: CharacterSpec, retainer_id: str,
-                         item_id: str, data: GameData) -> None:
-    """Move one copy of a loose PC inventory item onto the retainer. Source must
-    be the PC's loose inventory (unequip/unstash first, as elsewhere)."""
-    ret = _find_retainer(pc_spec, retainer_id)
-    if item_id not in pc_spec.inventory:
-        raise ValueError(f"{item_id!r} is not in your inventory")
-    pc_spec.inventory.remove(item_id)
-    ret.spec.inventory.append(item_id)
-
-
-def transfer_to_pc(pc_spec: CharacterSpec, retainer_id: str,
-                   item_id: str, data: GameData) -> None:
-    """Move one copy of a loose retainer inventory item back to the PC."""
-    ret = _find_retainer(pc_spec, retainer_id)
-    if item_id not in ret.spec.inventory:
-        raise ValueError(f"{item_id!r} is not in the retainer's inventory")
-    if item_id in ret.spec.equipped.values():
-        raise ValueError(f"{item_id!r} is equipped by the retainer; unequip first")
-    ret.spec.inventory.remove(item_id)
-    pc_spec.inventory.append(item_id)
-
 
 def promote_normal_human(retainer: Retainer, new_class_id: str, data: GameData,
                          rng: Optional[random.Random] = None) -> None:
