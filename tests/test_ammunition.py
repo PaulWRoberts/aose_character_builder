@@ -523,8 +523,8 @@ def test_wizard_ammo_carries_into_character(tmp_path):
     bow_iid = bow_raw[0]["instance_id"]
 
     # Equip the bow
-    r = client.post(f"/wizard/{draft_id}/equipment/equip",
-                    data={"instance_id": bow_iid})
+    r = client.post(f"/wizard/{draft_id}/inventory/equip",
+                    data={"category": "item", "instance_id": bow_iid})
     assert r.status_code == 303
 
     # Load ammo (weapon_key = bow instance_id)

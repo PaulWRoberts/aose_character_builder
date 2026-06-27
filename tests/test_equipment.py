@@ -177,10 +177,12 @@ def test_remove_modes_via_wizard(client):
     # Buy three ropes (1 gp each, bundle_count 1)
     for _ in range(3):
         client.post(f"/wizard/{draft_id}/equipment/buy", data={"item_id": "rope_50ft"})
+    draft = load_draft(draft_id, client._drafts_dir)
+    rope_iid = next(i["instance_id"] for i in draft.get("items", []) if i["catalog_id"] == "rope_50ft")
 
     # Drop one (no refund)
-    r = client.post(f"/wizard/{draft_id}/equipment/remove",
-                    data={"item_id": "rope_50ft", "mode": "drop"})
+    r = client.post(f"/wizard/{draft_id}/inventory/sell",
+                    data={"category": "item", "instance_id": rope_iid, "mode": "drop"})
     assert r.status_code == 303
     draft = load_draft(draft_id, client._drafts_dir)
     # rope_50ft is stackable: 3 buys → count=3, drop one → count=2 (still 1 instance)
@@ -188,11 +190,11 @@ def test_remove_modes_via_wizard(client):
     gold_after_drop = draft["gold"]
 
     # Sell next (half of 1 gp floors to 0)
-    client.post(f"/wizard/{draft_id}/equipment/remove",
-                data={"item_id": "rope_50ft", "mode": "sell"})
+    client.post(f"/wizard/{draft_id}/inventory/sell",
+                data={"category": "item", "instance_id": rope_iid, "mode": "sell"})
     # Refund the last (full price, bundle of 1)
-    client.post(f"/wizard/{draft_id}/equipment/remove",
-                data={"item_id": "rope_50ft", "mode": "refund"})
+    client.post(f"/wizard/{draft_id}/inventory/sell",
+                data={"category": "item", "instance_id": rope_iid, "mode": "refund"})
     draft = load_draft(draft_id, client._drafts_dir)
     assert not any(i["catalog_id"] == "rope_50ft" for i in draft.get("items", []))
     # 0 (drop) + 0 (sell floor) + 1 (refund) = +1 from drop point
@@ -272,9 +274,9 @@ def test_sheet_buy_rejects_when_short(client):
 
 def test_sheet_remove_modes(client):
     _seed_character(client, gold=0, inventory=["sword"])
-    # Refund returns full price
-    r = client.post("/character/test/equipment/remove",
-                    data={"item_id": "sword", "mode": "refund"})
+    # Refund returns full price (_seed_character sets instance_id == catalog_id)
+    r = client.post("/character/test/inventory/sell",
+                    data={"category": "item", "instance_id": "sword", "mode": "refund"})
     assert r.status_code == 303
     spec = load_character("test", client._characters_dir)
     assert _gp(spec) == 10

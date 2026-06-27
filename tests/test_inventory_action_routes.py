@@ -46,7 +46,6 @@ def test_equip_route_accepts_instance_id(client):
     assert load_character("hero", client._characters_dir).items[0].equip == "main_hand"
 
 
-@pytest.mark.skip(reason="enabled in Task 9 after old routes deleted")
 def test_old_equipment_equip_route_is_gone(client):
     _save_hero(client, [ItemInstance(
         instance_id="i1", catalog_id="sword",

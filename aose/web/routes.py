@@ -10,8 +10,7 @@ from aose.characters.storage import delete_character, list_character_ids, load_c
 from aose.models import Ammunition, CharacterSpec, ItemInstance
 from aose.engine import currency as _currency, dice, hp, spells as spell_engine
 from aose.engine.currency import CurrencyError
-from aose.engine.equip import WieldError, equip as _equip, unequip as _unequip
-from aose.engine.enchant import _kind_of_instance as _enchanted_kind
+from aose.engine.equip import WieldError
 from aose.engine.energy_drain import energy_drain as _energy_drain
 from aose.engine.leveling import (
     grant_xp as _grant_xp,
@@ -22,29 +21,15 @@ from aose.engine.leveling import (
 )
 from aose.engine.enchant import (
     IncompatibleBase,
-    NoCharges as _EnchNoCharges,
     UnknownEnchantment,
     add_free_enchanted as _add_free_enchanted,
-    remove as _remove_enchanted,
-    resolve_instance as _resolve_enchanted,
-    reset_charges as _reset_ench_charges,
-    set_note as _set_enchanted_note,
-    use_charge as _use_ench_charge,
 )
 from aose.engine.magic import (
-    NoCharges,
-    NotEquippable,
     UnknownMagicItem,
     add_free_magic_item,
     effective_abilities,
-    equip_magic as _equip_magic,
     needs_instance,
-    remove_magic as _remove_magic,
-    reset_charges as _reset_charges,
-    set_magic_note as _set_magic_note,
     set_temp_ability_modifier as _set_temp_ability_modifier,
-    unequip_magic as _unequip_magic,
-    use_charge as _use_charge,
 )
 from aose.engine.shop import (
     REMOVE_MODES,
@@ -56,8 +41,6 @@ from aose.engine.shop import (
     buy_container,
     buy_item as shop_buy_item,
     sell_container as shop_sell_container,
-    sell_from_stash as shop_sell_from_stash,
-    sell_item as shop_sell_item,
     shop_categories,
 )
 from aose.engine.features import one_handed_two_handed_weapons as _1h2h
@@ -800,59 +783,6 @@ async def equipment_add(request: Request, character_id: str,
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
-@router.post("/character/{character_id}/equipment/equip")
-async def equipment_equip(request: Request, character_id: str,
-                          instance_id: str = Form(...),
-                          slot: str | None = Form(None)):
-    spec = _load_spec_or_404(request, character_id)
-    data = request.app.state.game_data
-    classes = [data.classes[e.class_id] for e in spec.classes if e.class_id in data.classes]
-    try:
-        _equip(
-            spec, instance_id, data=data,
-            slot=slot,
-            two_weapon=spec.ruleset.two_weapon_fighting,
-            eligible=two_weapon_eligible(classes),
-            gargantua_1h_2h=_1h2h(spec, data),
-            allowed_weapons=allowed_weapon_ids(classes, data, spec.ruleset),
-            allowed_armor=allowed_armor_ids(classes, data),
-            allow_shields=shields_allowed(classes),
-        )
-    except (ValueError, WieldError) as e:
-        raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.state.characters_dir)
-    return RedirectResponse(f"/character/{character_id}", status_code=303)
-
-
-@router.post("/character/{character_id}/equipment/unequip")
-async def equipment_unequip(request: Request, character_id: str,
-                            instance_id: str = Form(...)):
-    spec = _load_spec_or_404(request, character_id)
-    try:
-        _unequip(spec, instance_id)
-    except ValueError as e:
-        raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.state.characters_dir)
-    return RedirectResponse(f"/character/{character_id}", status_code=303)
-
-
-@router.post("/character/{character_id}/equipment/remove")
-async def equipment_remove(request: Request, character_id: str,
-                           item_id: str = Form(...),
-                           mode: str = Form(...),
-                           from_state: str = Form("carried")):
-    spec = _load_spec_or_404(request, character_id)
-    game_data = request.app.state.game_data
-    try:
-        if from_state == "stashed":
-            shop_sell_from_stash(spec, item_id, mode, game_data)
-        else:
-            shop_sell_item(spec, item_id, mode, game_data)
-    except ValueError as e:
-        raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.state.characters_dir)
-    return RedirectResponse(f"/character/{character_id}", status_code=303)
-
 
 @router.post("/character/{character_id}/equipment/remove-container")
 async def equipment_remove_container(request: Request, character_id: str,
@@ -861,85 +791,6 @@ async def equipment_remove_container(request: Request, character_id: str,
     spec = _load_spec_or_404(request, character_id)
     try:
         shop_sell_container(spec, instance_id, mode, request.app.state.game_data)
-    except ValueError as e:
-        raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.state.characters_dir)
-    return RedirectResponse(f"/character/{character_id}", status_code=303)
-
-
-# ── Magic item actions ─────────────────────────────────────────────────────
-
-@router.post("/character/{character_id}/equipment/equip-magic")
-async def equipment_equip_magic(request: Request, character_id: str,
-                                instance_id: str = Form(...)):
-    spec = _load_spec_or_404(request, character_id)
-    try:
-        spec.magic_items = _equip_magic(spec.magic_items, instance_id, request.app.state.game_data)
-    except ValueError as e:
-        raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.state.characters_dir)
-    return RedirectResponse(f"/character/{character_id}", status_code=303)
-
-
-@router.post("/character/{character_id}/equipment/unequip-magic")
-async def equipment_unequip_magic(request: Request, character_id: str,
-                                  instance_id: str = Form(...)):
-    spec = _load_spec_or_404(request, character_id)
-    try:
-        spec.magic_items = _unequip_magic(spec.magic_items, instance_id)
-    except ValueError as e:
-        raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.state.characters_dir)
-    return RedirectResponse(f"/character/{character_id}", status_code=303)
-
-
-@router.post("/character/{character_id}/equipment/use-charge")
-async def equipment_use_charge(request: Request, character_id: str,
-                               instance_id: str = Form(...)):
-    spec = _load_spec_or_404(request, character_id)
-    try:
-        spec.magic_items = _use_charge(spec.magic_items, instance_id)
-    except ValueError as e:
-        raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.state.characters_dir)
-    return RedirectResponse(f"/character/{character_id}", status_code=303)
-
-
-@router.post("/character/{character_id}/equipment/reset-charges")
-async def equipment_reset_charges(request: Request, character_id: str,
-                                  instance_id: str = Form(...)):
-    spec = _load_spec_or_404(request, character_id)
-    try:
-        spec.magic_items = _reset_charges(spec.magic_items, instance_id)
-    except ValueError as e:
-        raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.state.characters_dir)
-    return RedirectResponse(f"/character/{character_id}", status_code=303)
-
-
-@router.post("/character/{character_id}/equipment/remove-magic")
-async def equipment_remove_magic(request: Request, character_id: str,
-                                 instance_id: str = Form(...),
-                                 mode: str = Form("drop")):
-    spec = _load_spec_or_404(request, character_id)
-    try:
-        spec.magic_items, new_gold = _remove_magic(
-            spec.magic_items, _get_gold(spec), instance_id, mode, request.app.state.game_data,
-        )
-        _set_gold(spec, new_gold)
-    except ValueError as e:
-        raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.state.characters_dir)
-    return RedirectResponse(f"/character/{character_id}", status_code=303)
-
-
-@router.post("/character/{character_id}/equipment/magic-note")
-async def equipment_magic_note(request: Request, character_id: str,
-                               instance_id: str = Form(...),
-                               note: str = Form("")):
-    spec = _load_spec_or_404(request, character_id)
-    try:
-        spec.magic_items = _set_magic_note(spec.magic_items, instance_id, note)
     except ValueError as e:
         raise HTTPException(400, str(e))
     save_character(character_id, spec, request.state.characters_dir)
@@ -956,91 +807,6 @@ async def equipment_add_enchanted(request: Request, character_id: str,
     try:
         _add_free_enchanted(spec, base_id, enchantment_id, request.app.state.game_data)
     except (UnknownEnchantment, IncompatibleBase, ValueError) as e:
-        raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.state.characters_dir)
-    return RedirectResponse(f"/character/{character_id}", status_code=303)
-
-
-@router.post("/character/{character_id}/equipment/equip-enchanted")
-async def equipment_equip_enchanted(request: Request, character_id: str,
-                                    instance_id: str = Form(...),
-                                    slot: str | None = Form(None)):
-    spec = _load_spec_or_404(request, character_id)
-    data = request.app.state.game_data
-    classes = [data.classes[e.class_id] for e in spec.classes if e.class_id in data.classes]
-    try:
-        _equip(
-            spec, instance_id, data=data,
-            slot=slot,
-            two_weapon=spec.ruleset.two_weapon_fighting,
-            eligible=two_weapon_eligible(classes),
-            gargantua_1h_2h=_1h2h(spec, data),
-            allowed_weapons=allowed_weapon_ids(classes, data, spec.ruleset),
-            allowed_armor=allowed_armor_ids(classes, data),
-            allow_shields=shields_allowed(classes),
-        )
-    except (ValueError, WieldError) as e:
-        raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.state.characters_dir)
-    return RedirectResponse(f"/character/{character_id}", status_code=303)
-
-
-@router.post("/character/{character_id}/equipment/unequip-enchanted")
-async def equipment_unequip_enchanted(request: Request, character_id: str,
-                                      instance_id: str = Form(...)):
-    spec = _load_spec_or_404(request, character_id)
-    try:
-        _unequip(spec, instance_id)
-    except ValueError as e:
-        raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.state.characters_dir)
-    return RedirectResponse(f"/character/{character_id}", status_code=303)
-
-
-@router.post("/character/{character_id}/equipment/enchanted/use-charge")
-async def equipment_enchanted_use_charge(request: Request, character_id: str,
-                                         instance_id: str = Form(...)):
-    spec = _load_spec_or_404(request, character_id)
-    try:
-        spec.items = _use_ench_charge(spec.items, instance_id)
-    except ValueError as e:
-        raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.state.characters_dir)
-    return RedirectResponse(f"/character/{character_id}", status_code=303)
-
-
-@router.post("/character/{character_id}/equipment/enchanted/reset-charges")
-async def equipment_enchanted_reset_charges(request: Request, character_id: str,
-                                            instance_id: str = Form(...)):
-    spec = _load_spec_or_404(request, character_id)
-    try:
-        spec.items = _reset_ench_charges(spec.items, instance_id)
-    except ValueError as e:
-        raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.state.characters_dir)
-    return RedirectResponse(f"/character/{character_id}", status_code=303)
-
-
-@router.post("/character/{character_id}/equipment/remove-enchanted")
-async def equipment_remove_enchanted(request: Request, character_id: str,
-                                     instance_id: str = Form(...)):
-    spec = _load_spec_or_404(request, character_id)
-    try:
-        spec.items = _remove_enchanted(spec.items, instance_id)
-    except ValueError as e:
-        raise HTTPException(400, str(e))
-    save_character(character_id, spec, request.state.characters_dir)
-    return RedirectResponse(f"/character/{character_id}", status_code=303)
-
-
-@router.post("/character/{character_id}/equipment/enchanted-note")
-async def equipment_enchanted_note(request: Request, character_id: str,
-                                   instance_id: str = Form(...),
-                                   note: str = Form("")):
-    spec = _load_spec_or_404(request, character_id)
-    try:
-        spec.items = _set_enchanted_note(spec.items, instance_id, note)
-    except ValueError as e:
         raise HTTPException(400, str(e))
     save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)

@@ -613,31 +613,6 @@ def buy_item(spec, item_id: str, data: GameData) -> None:
     ))
 
 
-def sell_item(spec, item_id: str, mode: str, data: GameData) -> None:
-    """Remove one bundle from carried spec.items; credit carried gp per mode."""
-    from aose.engine import storage as _storage
-    carried = StorageLocation(kind="carried")
-    inst = next((i for i in spec.items
-                 if i.catalog_id == item_id and i.location == carried
-                 and i.enchantment_id is None), None)
-    if inst is None:
-        raise ValueError(f"{item_id!r} not in carried items")
-    item = data.items.get(item_id)
-    bundle = _bundle_count(item)
-    remove_n = bundle if mode == "refund" else 1
-    if inst.count < remove_n:
-        raise ValueError(f"Cannot {mode} {item_id!r}: insufficient count {inst.count} < {remove_n}")
-    if inst.count <= remove_n:
-        inst.equip = None
-        inst.loaded_ammo_id = None
-        spec.items.remove(inst)
-    else:
-        inst.count -= remove_n
-    credit = _removal_gold(item_id, mode, data)
-    if credit:
-        _storage._add_coins(spec, "gp", credit, carried)
-
-
 def sell_container(spec, instance_id: str, mode: str, data: GameData) -> None:
     """Remove a container instance; credit carried gp per mode."""
     from aose.engine import storage as _storage
@@ -685,25 +660,3 @@ def sell_instance(spec, instance_id: str, mode: str, data: GameData) -> None:
     if credit:
         _storage._add_coins(spec, "gp", credit, StorageLocation(kind="carried"))
 
-
-def sell_from_stash(spec, item_id: str, mode: str, data: GameData) -> None:
-    """Remove one bundle from stashed spec.items; credit carried gp per mode."""
-    from aose.engine import storage as _storage
-    stashed = StorageLocation(kind="stashed")
-    inst = next((i for i in spec.items
-                 if i.catalog_id == item_id and i.location == stashed
-                 and i.enchantment_id is None), None)
-    if inst is None:
-        raise ValueError(f"{item_id!r} not in stashed items")
-    item = data.items.get(item_id)
-    bundle = _bundle_count(item)
-    remove_n = bundle if mode == "refund" else 1
-    if inst.count < remove_n:
-        raise ValueError(f"Cannot {mode} {item_id!r}: insufficient count {inst.count} < {remove_n}")
-    if inst.count <= remove_n:
-        spec.items.remove(inst)
-    else:
-        inst.count -= remove_n
-    credit = _removal_gold(item_id, mode, data)
-    if credit:
-        _storage._add_coins(spec, "gp", credit, StorageLocation(kind="carried"))

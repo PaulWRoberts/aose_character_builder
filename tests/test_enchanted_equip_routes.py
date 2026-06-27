@@ -84,8 +84,8 @@ def test_equip_enchanted_route_exists(client):
         items=[ItemInstance(instance_id="e1", catalog_id="sword",
                             enchantment_id="generic_plus_1")],
     )
-    r = client.post("/character/christopher/equipment/equip-enchanted",
-                    data={"instance_id": "e1"})
+    r = client.post("/character/christopher/inventory/equip",
+                    data={"category": "enchanted", "instance_id": "e1"})
     assert r.status_code == 303
 
 
@@ -99,8 +99,8 @@ def test_equip_enchanted_armor_rejected_for_disallowed_class(client):
         items=[ItemInstance(instance_id="e1", catalog_id="chain_mail",
                             enchantment_id="armour_plus_1")],
     )
-    r = client.post("/character/christopher/equipment/equip-enchanted",
-                    data={"instance_id": "e1"})
+    r = client.post("/character/christopher/inventory/equip",
+                    data={"category": "enchanted", "instance_id": "e1"})
     assert r.status_code == 400
     spec = _load(client)
     assert spec.items[0].equip is None
@@ -114,8 +114,8 @@ def test_equip_enchanted_weapon_rejected_for_disallowed_class(client):
         items=[ItemInstance(instance_id="e1", catalog_id="sword",
                             enchantment_id="generic_plus_1")],
     )
-    r = client.post("/character/christopher/equipment/equip-enchanted",
-                    data={"instance_id": "e1"})
+    r = client.post("/character/christopher/inventory/equip",
+                    data={"category": "enchanted", "instance_id": "e1"})
     assert r.status_code == 400
     spec = _load(client)
     assert not any(i.equip == "main_hand" for i in spec.items)
@@ -128,8 +128,8 @@ def test_equip_enchanted_armor_allowed_for_fighter(client):
         items=[ItemInstance(instance_id="e1", catalog_id="chain_mail",
                             enchantment_id="armour_plus_1")],
     )
-    r = client.post("/character/christopher/equipment/equip-enchanted",
-                    data={"instance_id": "e1"})
+    r = client.post("/character/christopher/inventory/equip",
+                    data={"category": "enchanted", "instance_id": "e1"})
     assert r.status_code == 303
     spec = _load(client)
     assert spec.items[0].equip is not None

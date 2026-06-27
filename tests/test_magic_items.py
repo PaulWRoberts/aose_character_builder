@@ -790,7 +790,7 @@ def test_equip_magic_non_equippable_400(tmp_path):
     client = _make_client(tmp_path)
     _seed_character(client)
     # A bogus instance_id raises UnknownMagicItem (subclass of ValueError) → 400.
-    r = client.post("/character/test/equipment/equip-magic", data={"instance_id": "nope"})
+    r = client.post("/character/test/inventory/equip", data={"category": "magic", "instance_id": "nope"})
     assert r.status_code == 400
 
 

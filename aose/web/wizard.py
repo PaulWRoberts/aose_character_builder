@@ -34,18 +34,11 @@ from aose.engine.dice import (
 from aose.engine.enchant import (
     _kind_of_instance as _enchanted_kind,
 )
-from aose.engine.equip import WieldError, equip as _equip, unequip as _unequip
-from aose.engine.features import one_handed_two_handed_weapons as _1h2h
+from aose.engine.equip import WieldError
 from aose.engine.feature_choices import ChoiceError, roll_choice, validate_choice
 from aose.engine.magic import (
     add_free_magic_item,
-    equip_magic as _equip_magic,
     needs_instance,
-    remove_magic as _remove_magic,
-    reset_charges as _reset_charges,
-    set_magic_note as _set_magic_note,
-    unequip_magic as _unequip_magic,
-    use_charge as _use_charge,
 )
 from aose.engine.proficiency import (
     allowed_armor_ids,
@@ -65,8 +58,6 @@ from aose.engine.shop import (
     add_free_item as shop_add_free_item,
     buy_item as shop_buy_item,
     roll_starting_gold,
-    sell_from_stash as shop_sell_from_stash,
-    sell_item as shop_sell_item,
     shop_categories,
 )
 from aose.models import (
@@ -1747,45 +1738,6 @@ async def post_equipment_add(request: Request, draft_id: str, item_id: str = For
     return _redirect(f"/wizard/{draft_id}/equipment")
 
 
-@router.post("/{draft_id}/equipment/equip")
-async def post_equipment_equip(request: Request, draft_id: str,
-                               instance_id: str = Form(...),
-                               slot: str | None = Form(None)):
-    draft = _load(request, draft_id)
-    data = request.app.state.game_data
-    classes = [data.classes[cid] for cid in _class_ids(draft) if cid in data.classes]
-    ruleset = _ruleset_of(draft)
-    spec = _draft_to_spec(draft, data)
-    try:
-        _equip(spec, instance_id,
-               data=data,
-               slot=slot,
-               two_weapon=ruleset.two_weapon_fighting,
-               eligible=two_weapon_eligible(classes),
-               allowed_weapons=allowed_weapon_ids(classes, data, ruleset),
-               allowed_armor=allowed_armor_ids(classes, data),
-               allow_shields=shields_allowed(classes))
-    except (ValueError, WieldError) as e:
-        raise HTTPException(400, str(e))
-    draft["items"] = [i.model_dump() for i in spec.items]
-    save_draft(draft_id, draft, _drafts_dir(request))
-    return _redirect(f"/wizard/{draft_id}/equipment")
-
-
-@router.post("/{draft_id}/equipment/unequip")
-async def post_equipment_unequip(request: Request, draft_id: str,
-                                 instance_id: str = Form(...)):
-    draft = _load(request, draft_id)
-    spec = _draft_to_spec(draft, request.app.state.game_data)
-    try:
-        _unequip(spec, instance_id)
-    except ValueError as e:
-        raise HTTPException(400, str(e))
-    draft["items"] = [i.model_dump() for i in spec.items]
-    save_draft(draft_id, draft, _drafts_dir(request))
-    return _redirect(f"/wizard/{draft_id}/equipment")
-
-
 @router.post("/{draft_id}/inventory/equip")
 async def wiz_inventory_equip(request: Request, draft_id: str,
                               category: str = Form(...), instance_id: str = Form(...),
@@ -2035,108 +1987,6 @@ async def wiz_ammo_remove(request: Request, draft_id: str,
             i.loaded_ammo_id = None
     spec.items.remove(ammo_inst)
     draft["items"] = [i.model_dump() for i in spec.items]
-    save_draft(draft_id, draft, _drafts_dir(request))
-    return _redirect(f"/wizard/{draft_id}/equipment")
-
-
-@router.post("/{draft_id}/equipment/equip-magic")
-async def wiz_equip_magic(request: Request, draft_id: str, instance_id: str = Form(...)):
-    draft = _load(request, draft_id)
-    try:
-        items = _equip_magic(_draft_magic(draft), instance_id, request.app.state.game_data)
-    except ValueError as e:
-        raise HTTPException(400, str(e))
-    draft["magic_items"] = [m.model_dump() for m in items]
-    save_draft(draft_id, draft, _drafts_dir(request))
-    return _redirect(f"/wizard/{draft_id}/equipment")
-
-
-@router.post("/{draft_id}/equipment/unequip-magic")
-async def wiz_unequip_magic(request: Request, draft_id: str, instance_id: str = Form(...)):
-    draft = _load(request, draft_id)
-    try:
-        items = _unequip_magic(_draft_magic(draft), instance_id)
-    except ValueError as e:
-        raise HTTPException(400, str(e))
-    draft["magic_items"] = [m.model_dump() for m in items]
-    save_draft(draft_id, draft, _drafts_dir(request))
-    return _redirect(f"/wizard/{draft_id}/equipment")
-
-
-@router.post("/{draft_id}/equipment/use-charge")
-async def wiz_use_charge(request: Request, draft_id: str, instance_id: str = Form(...)):
-    draft = _load(request, draft_id)
-    try:
-        items = _use_charge(_draft_magic(draft), instance_id)
-    except ValueError as e:
-        raise HTTPException(400, str(e))
-    draft["magic_items"] = [m.model_dump() for m in items]
-    save_draft(draft_id, draft, _drafts_dir(request))
-    return _redirect(f"/wizard/{draft_id}/equipment")
-
-
-@router.post("/{draft_id}/equipment/reset-charges")
-async def wiz_reset_charges(request: Request, draft_id: str, instance_id: str = Form(...)):
-    draft = _load(request, draft_id)
-    try:
-        items = _reset_charges(_draft_magic(draft), instance_id)
-    except ValueError as e:
-        raise HTTPException(400, str(e))
-    draft["magic_items"] = [m.model_dump() for m in items]
-    save_draft(draft_id, draft, _drafts_dir(request))
-    return _redirect(f"/wizard/{draft_id}/equipment")
-
-
-@router.post("/{draft_id}/equipment/remove-magic")
-async def wiz_remove_magic(request: Request, draft_id: str,
-                           instance_id: str = Form(...), mode: str = Form("drop")):
-    draft = _load(request, draft_id)
-    try:
-        items, gold = _remove_magic(
-            _draft_magic(draft), draft.get("gold", 0), instance_id, mode,
-            request.app.state.game_data,
-        )
-    except ValueError as e:
-        raise HTTPException(400, str(e))
-    draft["magic_items"] = [m.model_dump() for m in items]
-    draft["gold"] = gold
-    save_draft(draft_id, draft, _drafts_dir(request))
-    return _redirect(f"/wizard/{draft_id}/equipment")
-
-
-@router.post("/{draft_id}/equipment/magic-note")
-async def wiz_magic_note(request: Request, draft_id: str,
-                         instance_id: str = Form(...), note: str = Form("")):
-    draft = _load(request, draft_id)
-    try:
-        items = _set_magic_note(_draft_magic(draft), instance_id, note)
-    except ValueError as e:
-        raise HTTPException(400, str(e))
-    draft["magic_items"] = [m.model_dump() for m in items]
-    save_draft(draft_id, draft, _drafts_dir(request))
-    return _redirect(f"/wizard/{draft_id}/equipment")
-
-
-@router.post("/{draft_id}/equipment/remove")
-async def post_equipment_remove(request: Request, draft_id: str,
-                                item_id: str = Form(...),
-                                mode: str = Form(...),
-                                from_state: str = Form("carried")):
-    draft = _load(request, draft_id)
-    data = request.app.state.game_data
-    spec = _draft_to_spec(draft, data)
-    try:
-        if from_state == "stashed":
-            shop_sell_from_stash(spec, item_id, mode, data)
-        else:
-            shop_sell_item(spec, item_id, mode, data)
-    except ValueError as e:
-        raise HTTPException(400, str(e))
-    from aose.models.storage import StorageLocation as _SLrm
-    _carried_rm = _SLrm(kind="carried")
-    draft["items"] = [i.model_dump() for i in spec.items]
-    draft["gold"] = sum(c.count for c in spec.coins
-                        if c.denom == "gp" and c.location == _carried_rm)
     save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/equipment")
 

@@ -773,20 +773,20 @@ def test_enchanted_equip_charge_note_remove_roundtrip(tmp_path):
                 data={"base_id": "trident", "enchantment_id": "trident_fish_command"})
     spec = load_character("test", client._characters_dir)
     iid = _ench_items(spec)[0].instance_id
-    client.post("/character/test/equipment/equip-enchanted", data={"instance_id": iid})
+    client.post("/character/test/inventory/equip", data={"category": "enchanted", "instance_id": iid})
     spec = load_character("test", client._characters_dir)
     assert any(i.instance_id == iid and i.equip is not None for i in spec.items)
     start = _ench_items(spec)[0].charges_remaining
-    client.post("/character/test/equipment/enchanted/use-charge", data={"instance_id": iid})
+    client.post("/character/test/inventory/charge", data={"category": "enchanted", "instance_id": iid, "op": "use"})
     spec = load_character("test", client._characters_dir)
     assert _ench_items(spec)[0].charges_remaining == start - 1
-    client.post("/character/test/equipment/enchanted/reset-charges", data={"instance_id": iid})
-    client.post("/character/test/equipment/enchanted-note",
-                data={"instance_id": iid, "note": "from the deep"})
+    client.post("/character/test/inventory/charge", data={"category": "enchanted", "instance_id": iid, "op": "reset"})
+    client.post("/character/test/inventory/note",
+                data={"category": "enchanted", "instance_id": iid, "note": "from the deep"})
     spec = load_character("test", client._characters_dir)
     assert _ench_items(spec)[0].note == "from the deep"
-    client.post("/character/test/equipment/unequip-enchanted", data={"instance_id": iid})
-    client.post("/character/test/equipment/remove-enchanted", data={"instance_id": iid})
+    client.post("/character/test/inventory/unequip", data={"category": "enchanted", "instance_id": iid})
+    client.post("/character/test/inventory/sell", data={"category": "enchanted", "instance_id": iid, "mode": "drop"})
     spec = load_character("test", client._characters_dir)
     assert _ench_items(spec) == []
 

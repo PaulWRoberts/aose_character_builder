@@ -294,8 +294,8 @@ def test_sheet_equip_armor_updates_ac(client):
     spec_before = load_character("test", client._characters_dir)
     assert all(i.equip != "armor" for i in spec_before.items)
 
-    r = client.post("/character/test/equipment/equip",
-                    data={"instance_id": iid})
+    r = client.post("/character/test/inventory/equip",
+                    data={"category": "item", "instance_id": iid})
     assert r.status_code == 303
     spec = load_character("test", client._characters_dir)
     assert any(i.equip == "armor" and i.catalog_id == "chain_mail" for i in spec.items)
@@ -307,7 +307,7 @@ def test_sheet_equip_armor_updates_ac(client):
 def test_sheet_unequip_armor(client):
     iid = _iid()
     _seed(client, items=[_make_item("chain_mail", equip="armor", iid=iid)])
-    r = client.post("/character/test/equipment/unequip", data={"instance_id": iid})
+    r = client.post("/character/test/inventory/unequip", data={"category": "item", "instance_id": iid})
     assert r.status_code == 303
     spec = load_character("test", client._characters_dir)
     assert all(i.equip != "armor" for i in spec.items)
@@ -316,7 +316,7 @@ def test_sheet_unequip_armor(client):
 def test_sheet_equip_weapon_appends(client):
     iid = _iid()
     _seed(client, items=[_make_item("sword", iid=iid)])
-    r = client.post("/character/test/equipment/equip", data={"instance_id": iid})
+    r = client.post("/character/test/inventory/equip", data={"category": "item", "instance_id": iid})
     assert r.status_code == 303
     spec = load_character("test", client._characters_dir)
     assert any(i.equip == "main_hand" and i.catalog_id == "sword" for i in spec.items)
@@ -347,22 +347,22 @@ def test_sheet_inventory_shows_equipped_section(client):
 
 def test_sheet_equip_rejects_unknown_instance(client):
     _seed(client, items=[])
-    r = client.post("/character/test/equipment/equip",
-                    data={"instance_id": "no-such-id"})
+    r = client.post("/character/test/inventory/equip",
+                    data={"category": "item", "instance_id": "no-such-id"})
     assert r.status_code == 400
 
 
 def test_sheet_equip_rejects_non_equippable(client):
     iid = _iid()
     _seed(client, items=[_make_item("torch", iid=iid)])
-    r = client.post("/character/test/equipment/equip", data={"instance_id": iid})
+    r = client.post("/character/test/inventory/equip", data={"category": "item", "instance_id": iid})
     assert r.status_code == 400
 
 
 def test_sheet_unequip_rejects_unequipped(client):
     iid = _iid()
     _seed(client, items=[_make_item("sword", iid=iid)])  # not equipped
-    r = client.post("/character/test/equipment/unequip", data={"instance_id": iid})
+    r = client.post("/character/test/inventory/unequip", data={"category": "item", "instance_id": iid})
     assert r.status_code == 400
 
 
@@ -421,8 +421,8 @@ def test_wizard_equip_and_unequip(tmp_path):
     sword_iid = sword_items[0]["instance_id"]
 
     # Equip it by instance_id
-    r = client.post(f"/wizard/{draft_id}/equipment/equip",
-                    data={"instance_id": sword_iid})
+    r = client.post(f"/wizard/{draft_id}/inventory/equip",
+                    data={"category": "item", "instance_id": sword_iid})
     assert r.status_code == 303
     draft = load_draft(draft_id, tmp_path / "drafts")
     equipped_inst = next((i for i in draft.get("items", [])
@@ -430,16 +430,16 @@ def test_wizard_equip_and_unequip(tmp_path):
     assert equipped_inst and equipped_inst.get("equip") == "main_hand"
 
     # Unequip it
-    r = client.post(f"/wizard/{draft_id}/equipment/unequip",
-                    data={"instance_id": sword_iid})
+    r = client.post(f"/wizard/{draft_id}/inventory/unequip",
+                    data={"category": "item", "instance_id": sword_iid})
     draft = load_draft(draft_id, tmp_path / "drafts")
     equipped_inst = next((i for i in draft.get("items", [])
                          if i.get("instance_id") == sword_iid), None)
     assert equipped_inst and equipped_inst.get("equip") is None
 
     # Re-equip and finalize
-    client.post(f"/wizard/{draft_id}/equipment/equip",
-                data={"instance_id": sword_iid})
+    client.post(f"/wizard/{draft_id}/inventory/equip",
+                data={"category": "item", "instance_id": sword_iid})
     client.post(f"/wizard/{draft_id}/equipment")
     r = client.post(f"/wizard/{draft_id}/finalize")
     char_id = r.headers["location"].split("/")[-1]
