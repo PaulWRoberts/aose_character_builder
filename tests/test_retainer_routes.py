@@ -99,7 +99,7 @@ def test_retainer_hp_route(client):
 def test_retainer_equip_route(client):
     cid, rid = _save_char_with_retainer(client)
     resp = client.post(f"/character/{cid}/retainer/{rid}/equip",
-                       data={"item_id": "dagger"})
+                       data={"category": "item", "instance_id": "dag1"})
     assert resp.status_code == 303
     spec = load_character(cid, client._characters_dir)
     ret_items = spec.retainers[0].spec.items
@@ -109,15 +109,16 @@ def test_retainer_equip_route(client):
 def test_retainer_equip_missing_item_400(client):
     cid, rid = _save_char_with_retainer(client)
     resp = client.post(f"/character/{cid}/retainer/{rid}/equip",
-                       data={"item_id": "nonexistent"})
+                       data={"category": "item", "instance_id": "nonexistent_iid"})
     assert resp.status_code == 400
 
 
 def test_retainer_unequip_route(client):
     cid, rid = _save_char_with_retainer(client)
-    client.post(f"/character/{cid}/retainer/{rid}/equip", data={"item_id": "dagger"})
+    client.post(f"/character/{cid}/retainer/{rid}/equip",
+                data={"category": "item", "instance_id": "dag1"})
     resp = client.post(f"/character/{cid}/retainer/{rid}/unequip",
-                       data={"item_id": "dagger"})
+                       data={"category": "item", "instance_id": "dag1"})
     assert resp.status_code == 303
     spec = load_character(cid, client._characters_dir)
     ret_items = spec.retainers[0].spec.items
@@ -128,12 +129,13 @@ def test_retainer_unequip_route(client):
 def test_sheet_renders_retainer_equip_modals(client):
     cid, rid = _save_char_with_retainer(client)
     # equip the dagger so there is both an equipped row and (no) loose dagger
-    client.post(f"/character/{cid}/retainer/{rid}/equip", data={"item_id": "dagger"})
+    client.post(f"/character/{cid}/retainer/{rid}/equip",
+                data={"category": "item", "instance_id": "dag1"})
     resp = client.get(f"/character/{cid}")
     assert resp.status_code == 200
     html = resp.text
-    # equipped-item modal id present
-    assert f"modal-item-retainer-{rid}-eq-dagger" in html
+    # equipped-item modal id present (keyed by instance_id now, not catalog_id)
+    assert f"modal-item-retainer-{rid}-eq-dag1" in html
     # unequip action targets the retainer route
     assert f"/character/{cid}/retainer/{rid}/unequip" in html
 
@@ -202,3 +204,15 @@ def test_hire_rejects_level_above_race_cap(client):
         "name": "X", "class_id": "fighter", "level": "11",
         "race_id": "dwarf", "alignment": "neutral"})
     assert resp.status_code == 400
+
+
+def test_retainer_equip_accepts_instance_id(client):
+    """Retainer equip route accepts category+instance_id (dispatcher form)."""
+    cid, rid = _save_char_with_retainer(client)
+    # The helper adds a dagger with instance_id="dag1"
+    resp = client.post(f"/character/{cid}/retainer/{rid}/equip",
+                       data={"category": "item", "instance_id": "dag1"})
+    assert resp.status_code == 303
+    spec = load_character(cid, client._characters_dir)
+    ret_items = spec.retainers[0].spec.items
+    assert any(i.instance_id == "dag1" and i.equip == "main_hand" for i in ret_items)

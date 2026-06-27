@@ -360,6 +360,26 @@ def test_wizard_equipment_renders_with_a_container(client, tmp_path):
     assert "modal-container-" in r.text
 
 
+def test_wizard_equip_accepts_instance_id(client, tmp_path):
+    """Wizard /inventory/equip route accepts category+instance_id."""
+    draft_id = _start_draft(client)
+    _advance_to_equipment(client, tmp_path, draft_id)
+    # Inject a sword into the draft items
+    draft = load_draft(draft_id, tmp_path / "drafts")
+    iid = "sword_test_01"
+    draft.setdefault("items", []).append(
+        {"instance_id": iid, "catalog_id": "sword",
+         "location": {"kind": "carried"}}
+    )
+    save_draft(draft_id, draft, tmp_path / "drafts")
+    resp = client.post(f"/wizard/{draft_id}/inventory/equip",
+                       data={"category": "item", "instance_id": iid})
+    assert resp.status_code == 303
+    updated = load_draft(draft_id, tmp_path / "drafts")
+    equipped = [i for i in updated.get("items", []) if i.get("instance_id") == iid]
+    assert equipped and equipped[0].get("equip") == "main_hand"
+
+
 def test_bootstrap_skipped_when_characters_present(tmp_path):
     characters_dir = tmp_path / "characters"
     characters_dir.mkdir()

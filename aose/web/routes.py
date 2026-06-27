@@ -1989,17 +1989,11 @@ async def retainer_take(request: Request, character_id: str, retainer_id: str,
 
 @router.post("/character/{character_id}/retainer/{retainer_id}/unequip")
 async def retainer_unequip(request: Request, character_id: str, retainer_id: str,
-                           item_id: str = Form(...)):
+                           category: str = Form("item"), instance_id: str = Form(...)):
     spec = _load_spec_or_404(request, character_id)
-    ret = next((r for r in spec.retainers if r.id == retainer_id), None)
-    if ret is None:
-        raise HTTPException(404, "No such retainer")
+    owner = _SL(kind="retainer", id=retainer_id)
     try:
-        inst = next((i for i in ret.spec.items
-                     if i.catalog_id == item_id and i.equip is not None), None)
-        if inst is None:
-            raise ValueError(f"{item_id!r} is not equipped")
-        _unequip(ret.spec, inst.instance_id)
+        _ia.unequip_thing(spec, category, instance_id, owner=owner)
     except ValueError as e:
         raise HTTPException(400, str(e))
     save_character(character_id, spec, request.state.characters_dir)
@@ -2008,20 +2002,17 @@ async def retainer_unequip(request: Request, character_id: str, retainer_id: str
 
 @router.post("/character/{character_id}/retainer/{retainer_id}/equip")
 async def retainer_equip(request: Request, character_id: str, retainer_id: str,
-                         item_id: str = Form(...),
+                         category: str = Form("item"), instance_id: str = Form(...),
                          slot: str | None = Form(None)):
     spec = _load_spec_or_404(request, character_id)
     data = request.app.state.game_data
     ret = next((r for r in spec.retainers if r.id == retainer_id), None)
     if ret is None:
         raise HTTPException(404, "No such retainer")
+    owner = _SL(kind="retainer", id=retainer_id)
     try:
-        inst = next((i for i in ret.spec.items
-                     if i.catalog_id == item_id and i.equip is None), None)
-        if inst is None:
-            raise ValueError(f"{item_id!r} is not in retainer's inventory")
-        _equip(ret.spec, inst.instance_id, data=data, slot=slot,
-               two_weapon=ret.spec.ruleset.two_weapon_fighting)
+        _ia.equip_thing(spec, category, instance_id, data=data, owner=owner, slot=slot,
+                        two_weapon=ret.spec.ruleset.two_weapon_fighting)
     except (ValueError, WieldError) as e:
         raise HTTPException(400, str(e))
     save_character(character_id, spec, request.state.characters_dir)

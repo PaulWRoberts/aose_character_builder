@@ -1819,6 +1819,106 @@ async def post_equipment_unequip(request: Request, draft_id: str,
     return _redirect(f"/wizard/{draft_id}/equipment")
 
 
+@router.post("/{draft_id}/inventory/equip")
+async def wiz_inventory_equip(request: Request, draft_id: str,
+                              category: str = Form(...), instance_id: str = Form(...),
+                              slot: str | None = Form(None)):
+    from aose.engine import inventory_actions as _ia
+    draft = _load(request, draft_id)
+    data = request.app.state.game_data
+    classes = [data.classes[cid] for cid in _class_ids(draft) if cid in data.classes]
+    ruleset = _ruleset_of(draft)
+    spec = _draft_to_spec(draft, data)
+    try:
+        _ia.equip_thing(spec, category, instance_id, data=data, slot=slot,
+                        two_weapon=ruleset.two_weapon_fighting,
+                        eligible=two_weapon_eligible(classes),
+                        allowed_weapons=allowed_weapon_ids(classes, data, ruleset),
+                        allowed_armor=allowed_armor_ids(classes, data),
+                        allow_shields=shields_allowed(classes))
+    except (ValueError, WieldError) as e:
+        raise HTTPException(400, str(e))
+    draft["items"] = [i.model_dump() for i in spec.items]
+    draft["magic_items"] = [m.model_dump() for m in spec.magic_items]
+    save_draft(draft_id, draft, _drafts_dir(request))
+    return _redirect(f"/wizard/{draft_id}/equipment")
+
+
+@router.post("/{draft_id}/inventory/unequip")
+async def wiz_inventory_unequip(request: Request, draft_id: str,
+                                category: str = Form(...), instance_id: str = Form(...)):
+    from aose.engine import inventory_actions as _ia
+    draft = _load(request, draft_id)
+    spec = _draft_to_spec(draft, request.app.state.game_data)
+    try:
+        _ia.unequip_thing(spec, category, instance_id)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    draft["items"] = [i.model_dump() for i in spec.items]
+    draft["magic_items"] = [m.model_dump() for m in spec.magic_items]
+    save_draft(draft_id, draft, _drafts_dir(request))
+    return _redirect(f"/wizard/{draft_id}/equipment")
+
+
+@router.post("/{draft_id}/inventory/sell")
+async def wiz_inventory_sell(request: Request, draft_id: str,
+                             category: str = Form(...), instance_id: str = Form(...),
+                             mode: str = Form(...)):
+    from aose.engine import inventory_actions as _ia
+    from aose.models.storage import StorageLocation as _SLrm
+    draft = _load(request, draft_id)
+    data = request.app.state.game_data
+    spec = _draft_to_spec(draft, data)
+    try:
+        _ia.sell_thing(spec, category, instance_id, mode, data)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    _carried_rm = _SLrm(kind="carried")
+    draft["items"] = [i.model_dump() for i in spec.items]
+    draft["magic_items"] = [m.model_dump() for m in spec.magic_items]
+    draft["gold"] = sum(c.count for c in spec.coins
+                        if c.denom == "gp" and c.location == _carried_rm)
+    save_draft(draft_id, draft, _drafts_dir(request))
+    return _redirect(f"/wizard/{draft_id}/equipment")
+
+
+@router.post("/{draft_id}/inventory/charge")
+async def wiz_inventory_charge(request: Request, draft_id: str,
+                               category: str = Form(...), instance_id: str = Form(...),
+                               op: str = Form("use")):
+    from aose.engine import inventory_actions as _ia
+    draft = _load(request, draft_id)
+    spec = _draft_to_spec(draft, request.app.state.game_data)
+    try:
+        if op == "reset":
+            _ia.reset_charges_thing(spec, category, instance_id)
+        else:
+            _ia.use_charge_thing(spec, category, instance_id)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    draft["items"] = [i.model_dump() for i in spec.items]
+    draft["magic_items"] = [m.model_dump() for m in spec.magic_items]
+    save_draft(draft_id, draft, _drafts_dir(request))
+    return _redirect(f"/wizard/{draft_id}/equipment")
+
+
+@router.post("/{draft_id}/inventory/note")
+async def wiz_inventory_note(request: Request, draft_id: str,
+                             category: str = Form(...), instance_id: str = Form(...),
+                             note: str = Form("")):
+    from aose.engine import inventory_actions as _ia
+    draft = _load(request, draft_id)
+    spec = _draft_to_spec(draft, request.app.state.game_data)
+    try:
+        _ia.set_note_thing(spec, category, instance_id, note)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    draft["items"] = [i.model_dump() for i in spec.items]
+    draft["magic_items"] = [m.model_dump() for m in spec.magic_items]
+    save_draft(draft_id, draft, _drafts_dir(request))
+    return _redirect(f"/wizard/{draft_id}/equipment")
+
+
 @router.post("/{draft_id}/inventory/move")
 async def wiz_inventory_move(request: Request, draft_id: str):
     """Single movement front door for every owned thing in the wizard."""
