@@ -87,41 +87,52 @@ def test_freeform_armor_still_fails_open(data):
 
 # ── equip() enforcement tests ──────────────────────────────────────────────
 
-from aose.engine.equip import equip
+from aose.engine.equip import equip, equipped_ref
+from aose.models.character import CharacterSpec, ClassEntry, ItemInstance
+
+
+def _spec_with(catalog_id: str) -> CharacterSpec:
+    """A minimal spec owning a single carried instance of catalog_id."""
+    return CharacterSpec(
+        name="T", abilities={}, race_id="human",
+        classes=[ClassEntry(class_id="fighter")], alignment="neutral",
+        items=[ItemInstance(instance_id=f"t_{catalog_id}", catalog_id=catalog_id)],
+    )
 
 
 def test_equip_rejects_disallowed_weapon(data):
     # cleric: weapons limited; a sword is not allowed.
     allowed = allowed_weapon_ids([data.classes["cleric"]], data)
+    spec = _spec_with("sword")
     with pytest.raises(ValueError, match="cannot use"):
-        equip("sword", inventory=["sword"], equipped={}, enchanted=[], data=data,
-              allowed_weapons=allowed)
+        equip(spec, "t_sword", data=data, allowed_weapons=allowed)
 
 
 def test_equip_allows_allowed_weapon(data):
     allowed = allowed_weapon_ids([data.classes["cleric"]], data)
-    eq = equip("mace", inventory=["mace"], equipped={}, enchanted=[], data=data,
-               allowed_weapons=allowed)
-    assert eq["main_hand"] == "mace"
+    spec = _spec_with("mace")
+    equip(spec, "t_mace", data=data, allowed_weapons=allowed)
+    assert equipped_ref(spec, "main_hand") == "mace"
 
 
 def test_equip_rejects_disallowed_armor(data):
     allowed = allowed_armor_ids([data.classes["thief"]], data)  # leather only
+    spec = _spec_with("plate_mail")
     with pytest.raises(ValueError, match="cannot use"):
-        equip("plate_mail", inventory=["plate_mail"], equipped={}, enchanted=[],
-              data=data, allowed_armor=allowed)
+        equip(spec, "t_plate_mail", data=data, allowed_armor=allowed)
 
 
 def test_equip_rejects_shield_when_not_allowed(data):
+    spec = _spec_with("shield")
     with pytest.raises(ValueError, match="shield"):
-        equip("shield", inventory=["shield"], equipped={}, enchanted=[], data=data,
-              allow_shields=False)
+        equip(spec, "t_shield", data=data, allow_shields=False)
 
 
 def test_equip_unrestricted_by_default(data):
     # No allowance args → no enforcement.
-    eq = equip("sword", inventory=["sword"], equipped={}, enchanted=[], data=data)
-    assert eq["main_hand"] == "sword"
+    spec = _spec_with("sword")
+    equip(spec, "t_sword", data=data)
+    assert equipped_ref(spec, "main_hand") == "sword"
 
 
 # ── inventory_view class_allowed flag (drives the UI Equip button) ──────────

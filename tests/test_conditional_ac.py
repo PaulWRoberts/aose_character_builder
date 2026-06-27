@@ -4,6 +4,7 @@ from aose.data.loader import GameData
 from aose.engine import armor_class as ac
 from aose.engine.armor_class import ACBreakdown, ACModLine, armor_class, armor_class_detail
 from aose.models import CharacterSpec, ClassEntry, Modifier
+from tests._itemhelp import coerce_equipment
 
 _DATA_DIR = Path(__file__).parent.parent / "data"
 DATA = GameData.load(_DATA_DIR)
@@ -16,6 +17,7 @@ def _spec(race_id="human", class_id="fighter", level=1, **kw):
         alignment="neutral",
     )
     defaults.update(kw)
+    coerce_equipment(defaults)
     return CharacterSpec(
         name="T", classes=[ClassEntry(class_id=class_id, level=level, hp_rolls=[8])],
         **defaults,

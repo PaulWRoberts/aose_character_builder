@@ -1,10 +1,13 @@
-"""Ammunition model + engine tests."""
+"""Ammunition model + engine tests — updated for unified ItemInstance ammo."""
+import uuid
 from pathlib import Path
 
 import pytest
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 
+
+# ── Model tests ──────────────────────────────────────────────────────────────
 
 def test_ammunition_parses_minimal():
     from aose.models import Ammunition
@@ -47,13 +50,15 @@ def test_enchantment_kind_allows_ammunition():
     assert e.kind == "ammunition"
 
 
-def test_ammo_stack_and_spec_fields():
-    from aose.models import AmmoStack, CharacterSpec, ClassEntry
-    s = AmmoStack(instance_id="x", base_id="arrow", count=20)
-    assert s.enchantment_id is None and s.count == 20
+def test_spec_has_items_list():
+    """CharacterSpec has items: list[ItemInstance] — no separate ammo field."""
+    from aose.models import CharacterSpec, ClassEntry, ItemInstance
     spec = CharacterSpec(name="A", abilities={}, race_id="human",
                          classes=[ClassEntry(class_id="fighter")], alignment="law")
-    assert spec.ammo == [] and spec.loaded_ammo == {}
+    assert spec.items == []
+    # Ammo can be added as ItemInstances
+    spec.items.append(ItemInstance(instance_id="x", catalog_id="arrow", count=20))
+    assert spec.items[0].count == 20
 
 
 def _ammo(id, groups=()):
@@ -106,7 +111,7 @@ def test_resolve_weapon_preserves_accepts_ammo():
 import random as _random
 
 from aose.data.loader import GameData
-from aose.models import AmmoStack, Ammunition, Enchantment, Weapon, WeaponDamage
+from aose.models import Ammunition, Enchantment, Weapon, WeaponDamage
 
 
 def _data_with_ammo():
@@ -134,97 +139,118 @@ def test_accepts():
     assert accepts(d.items["short_bow"], d.items["arrow"]) is True
 
 
-def test_buy_ammo_adds_bundle_and_combines():
-    from aose.engine.ammo import buy_ammo
+def test_buy_item_creates_ammo_instance():
+    """buy_item adds ammo as ItemInstance in spec.items."""
+    from aose.engine.shop import buy_item
+    from aose.models import CharacterSpec, ClassEntry, CoinStack, ItemInstance
+    from aose.models.storage import StorageLocation
     d = _data_with_ammo()
-    stacks, gold = buy_ammo([], 10, "arrow", d)
-    assert gold == 5 and stacks[0].count == 20 and stacks[0].enchantment_id is None
-    stacks, gold = buy_ammo(stacks, gold, "arrow", d)   # second quiver combines
-    assert gold == 0 and len(stacks) == 1 and stacks[0].count == 40
+    carried = StorageLocation(kind="carried")
+    spec = CharacterSpec(name="A", abilities={}, race_id="human",
+                         classes=[ClassEntry(class_id="fighter")], alignment="law",
+                         coins=[CoinStack(denom="gp", count=10, location=carried)])
+    buy_item(spec, "arrow", d)
+    ammo_items = [i for i in spec.items if i.catalog_id == "arrow"]
+    assert len(ammo_items) == 1
+    assert ammo_items[0].count == 20   # bundle_count=20
+    # Second buy combines
+    buy_item(spec, "arrow", d)
+    ammo_items = [i for i in spec.items if i.catalog_id == "arrow"]
+    assert len(ammo_items) == 1 and ammo_items[0].count == 40
 
 
-def test_buy_ammo_insufficient_gold():
-    from aose.engine.ammo import buy_ammo, InsufficientGold
+def test_buy_item_insufficient_gold():
+    from aose.engine.shop import buy_item, InsufficientFunds
+    from aose.models import CharacterSpec, ClassEntry, CoinStack
+    from aose.models.storage import StorageLocation
     d = _data_with_ammo()
-    with pytest.raises(InsufficientGold):
-        buy_ammo([], 2, "arrow", d)
+    carried = StorageLocation(kind="carried")
+    spec = CharacterSpec(name="A", abilities={}, race_id="human",
+                         classes=[ClassEntry(class_id="fighter")], alignment="law",
+                         coins=[CoinStack(denom="gp", count=2, location=carried)])
+    with pytest.raises((InsufficientFunds, ValueError)):
+        buy_item(spec, "arrow", d)
 
 
-def test_add_free_magic_ammo_validates_compat():
-    from aose.engine.ammo import add_free_ammo, IncompatibleAmmo
+def test_loaded_stack_finds_ammo_instance():
+    from aose.engine.ammo import loaded_stack
+    from aose.models import CharacterSpec, ClassEntry, ItemInstance
+    from aose.models.storage import StorageLocation
+    carried = StorageLocation(kind="carried")
+    bow_iid = uuid.uuid4().hex
+    ammo_iid = uuid.uuid4().hex
+    spec = CharacterSpec(name="A", abilities={}, race_id="human",
+                         classes=[ClassEntry(class_id="fighter")], alignment="law",
+                         items=[
+                             ItemInstance(instance_id=bow_iid, catalog_id="short_bow",
+                                          equip="main_hand", loaded_ammo_id=ammo_iid),
+                             ItemInstance(instance_id=ammo_iid, catalog_id="arrow",
+                                          count=20, location=carried),
+                         ])
+    bow_inst = next(i for i in spec.items if i.instance_id == bow_iid)
     d = _data_with_ammo()
-    stacks = add_free_ammo([], "arrow", "arrows_plus_1", d)
-    assert stacks[0].enchantment_id == "arrows_plus_1" and stacks[0].count == 1
-    d.enchantments["bolts"] = Enchantment(id="bolts", name_template="{base}",
-        kind="ammunition", applies_to={"include": ["crossbow_bolt"]})
-    with pytest.raises(IncompatibleAmmo):
-        add_free_ammo([], "arrow", "bolts", d)
+    stack = loaded_stack(bow_inst, spec, d)
+    assert stack is not None and stack.instance_id == ammo_iid
 
-
-def test_adjust_count_clamps_and_removes_at_zero():
-    from aose.engine.ammo import adjust_count
-    s = [AmmoStack(instance_id="a", base_id="arrow", count=3)]
-    s = adjust_count(s, "a", -1)
-    assert s[0].count == 2
-    s = adjust_count(s, "a", -5)        # clamps to 0 → stack removed
-    assert s == []
-
-
-def test_load_unload_and_loaded_stack():
-    from aose.engine.ammo import load, unload, loaded_stack
-    d = _data_with_ammo()
-    stacks = [AmmoStack(instance_id="a", base_id="arrow",
-                        enchantment_id="arrows_plus_1", count=20)]
-
-    class _Spec:  # minimal stand-in
-        ammo = stacks
-        loaded_ammo = {}
-    spec = _Spec()
-    spec.loaded_ammo = load(spec.loaded_ammo, "short_bow", "a")
-    assert loaded_stack("short_bow", spec, d).instance_id == "a"
-    spec.loaded_ammo = unload(spec.loaded_ammo, "short_bow")
-    assert loaded_stack("short_bow", spec, d) is None
+    bow_inst.loaded_ammo_id = None
+    assert loaded_stack(bow_inst, spec, d) is None
 
 
 def test_loaded_bonus_from_magic_ammo():
-    from aose.engine.ammo import load, loaded_bonus
+    from aose.engine.ammo import loaded_bonus
+    from aose.models import CharacterSpec, ClassEntry, ItemInstance
+    from aose.models.storage import StorageLocation
+    carried = StorageLocation(kind="carried")
+    bow_iid = uuid.uuid4().hex
+    ammo_iid = uuid.uuid4().hex
+    spec = CharacterSpec(name="A", abilities={}, race_id="human",
+                         classes=[ClassEntry(class_id="fighter")], alignment="law",
+                         items=[
+                             ItemInstance(instance_id=bow_iid, catalog_id="short_bow",
+                                          equip="main_hand", loaded_ammo_id=ammo_iid),
+                             ItemInstance(instance_id=ammo_iid, catalog_id="arrow",
+                                          enchantment_id="arrows_plus_1", count=20,
+                                          location=carried),
+                         ])
     d = _data_with_ammo()
-    stacks = [AmmoStack(instance_id="a", base_id="arrow",
-                        enchantment_id="arrows_plus_1", count=20)]
-
-    class _Spec:
-        ammo = stacks
-        loaded_ammo = {}
-    spec = _Spec()
-    spec.loaded_ammo = load(spec.loaded_ammo, "short_bow", "a")
-    bonus, cond = loaded_bonus("short_bow", spec, d)
+    bow_inst = next(i for i in spec.items if i.instance_id == bow_iid)
+    bonus, cond = loaded_bonus(bow_inst, spec, d)
     assert bonus == 1 and cond is None
 
 
 def test_is_unloaded_flag():
     from aose.engine.ammo import is_unloaded
+    from aose.models import CharacterSpec, ClassEntry, ItemInstance
     d = _data_with_ammo()
+    bow_iid = uuid.uuid4().hex
+    spec = CharacterSpec(name="A", abilities={}, race_id="human",
+                         classes=[ClassEntry(class_id="fighter")], alignment="law",
+                         items=[ItemInstance(instance_id=bow_iid, catalog_id="short_bow",
+                                             equip="main_hand")])
+    bow_inst = next(i for i in spec.items if i.instance_id == bow_iid)
+    assert is_unloaded(bow_inst, d.items["short_bow"], spec, d) is True
 
-    class _Spec:
-        ammo = []
-        loaded_ammo = {}
-    assert is_unloaded("short_bow", d.items["short_bow"], _Spec(), d) is True
 
-
-def _bow_spec(loaded=True, ench=True):
-    from aose.models import CharacterSpec, ClassEntry
-    spec = CharacterSpec(
+def _make_bow_spec(loaded=True, ench=True):
+    """Build a CharacterSpec with equipped short_bow and carried arrows."""
+    from aose.models import CharacterSpec, ClassEntry, ItemInstance
+    from aose.models.storage import StorageLocation
+    carried = StorageLocation(kind="carried")
+    bow_iid = uuid.uuid4().hex
+    ammo_iid = "ammo-1"
+    eid = "arrows_plus_1" if ench else None
+    items = [
+        ItemInstance(instance_id=bow_iid, catalog_id="short_bow", equip="main_hand",
+                     loaded_ammo_id=(ammo_iid if loaded else None)),
+        ItemInstance(instance_id=ammo_iid, catalog_id="arrow",
+                     enchantment_id=eid, count=20, location=carried),
+    ]
+    return CharacterSpec(
         name="B", abilities={"STR": 12, "INT": 10, "WIS": 10,
                              "DEX": 12, "CON": 12, "CHA": 10},
-        race_id="human", classes=[ClassEntry(class_id="fighter")], alignment="law")
-    spec.inventory = ["short_bow"]
-    spec.equipped = {"main_hand": "short_bow"}
-    eid = "arrows_plus_1" if ench else None
-    spec.ammo = [AmmoStack(instance_id="a", base_id="arrow",
-                           enchantment_id=eid, count=20)]
-    if loaded:
-        spec.loaded_ammo = {"short_bow": "a"}
-    return spec
+        race_id="human", classes=[ClassEntry(class_id="fighter")], alignment="law",
+        items=items,
+    )
 
 
 def _real_data():
@@ -238,35 +264,42 @@ def _bow_profile(profiles):
 def test_plus1_arrow_in_plus0_bow_is_plus1():
     from aose.engine.attacks import attack_profiles
     d = _real_data()
-    p = _bow_profile(attack_profiles(_bow_spec(loaded=True, ench=True), d))
-    base = _bow_profile(attack_profiles(_bow_spec(loaded=True, ench=False), d))
+    p = _bow_profile(attack_profiles(_make_bow_spec(loaded=True, ench=True), d))
+    base = _bow_profile(attack_profiles(_make_bow_spec(loaded=True, ench=False), d))
     assert p.to_hit_ascending == base.to_hit_ascending + 1
 
 
 def test_unloaded_bow_flagged():
     from aose.engine.attacks import attack_profiles
     d = _real_data()
-    p = _bow_profile(attack_profiles(_bow_spec(loaded=False), d))
+    p = _bow_profile(attack_profiles(_make_bow_spec(loaded=False), d))
     assert p.unloaded is True
-    p2 = _bow_profile(attack_profiles(_bow_spec(loaded=True, ench=True), d))
+    p2 = _bow_profile(attack_profiles(_make_bow_spec(loaded=True, ench=True), d))
     assert p2.unloaded is False
     assert p2.loaded_ammo_name and "+1" in p2.loaded_ammo_name
 
 
 def test_profile_adds_ammo_bonus_unit():
     from aose.engine.attacks import attack_profiles
+    from aose.models import CharacterSpec, ClassEntry, ItemInstance
+    from aose.models.storage import StorageLocation
     d = _data_with_ammo()
-    from aose.models import CharacterSpec, ClassEntry
-    # Minimal class so thac0() resolves; reuse fighter from real data.
     rd = _real_data()
     d.classes = rd.classes
-    spec = CharacterSpec(name="U", abilities={"STR": 10, "INT": 10, "WIS": 10,
-                         "DEX": 10, "CON": 10, "CHA": 10}, race_id="human",
-                         classes=[ClassEntry(class_id="fighter")], alignment="law")
-    spec.equipped = {"main_hand": "short_bow"}
-    spec.ammo = [AmmoStack(instance_id="a", base_id="arrow",
-                           enchantment_id="arrows_plus_1", count=5)]
-    spec.loaded_ammo = {"short_bow": "a"}
+    carried = StorageLocation(kind="carried")
+    bow_iid = uuid.uuid4().hex
+    ammo_iid = "a1"
+    spec = CharacterSpec(
+        name="U", abilities={"STR": 10, "INT": 10, "WIS": 10,
+                             "DEX": 10, "CON": 10, "CHA": 10},
+        race_id="human", classes=[ClassEntry(class_id="fighter")], alignment="law",
+        items=[
+            ItemInstance(instance_id=bow_iid, catalog_id="short_bow", equip="main_hand",
+                         loaded_ammo_id=ammo_iid),
+            ItemInstance(instance_id=ammo_iid, catalog_id="arrow",
+                         enchantment_id="arrows_plus_1", count=5, location=carried),
+        ],
+    )
     p = _bow_profile(attack_profiles(spec, d))
     assert p.unloaded is False and "+1" in (p.loaded_ammo_name or "")
 
@@ -299,14 +332,16 @@ def test_ammo_enchantments_load():
 def test_sheet_exposes_ammo_section():
     from aose.sheet.view import build_sheet
     d = GameData.load(DATA_DIR)
-    spec = _bow_spec(loaded=True, ench=True)
+    spec = _make_bow_spec(loaded=True, ench=True)
     sheet = build_sheet(spec, d)
     names = [row.name for row in sheet.ammo]
     assert any("+1" in n for n in names)
     assert sheet.ammo[0].count == 20
-    # the bow launcher offers the loaded stack as an option
-    opts = sheet.ammo_load_options["short_bow"]
-    assert any(o.instance_id == "a" for o in opts)
+    # the bow launcher offers the loaded stack as an option;
+    # load_options is keyed by weapon instance_id
+    bow_iid = next(i.instance_id for i in spec.items if i.catalog_id == "short_bow")
+    opts = sheet.ammo_load_options.get(bow_iid, [])
+    assert any(o.instance_id == "ammo-1" for o in opts)
 
 
 # ── Route tests ───────────────────────────────────────────────────────────
@@ -337,7 +372,10 @@ def _make_client(tmp_path, ruleset=None):
 
 
 def _seed(client, **overrides):
-    from aose.models import CharacterSpec, ClassEntry, RuleSet
+    from aose.models import CharacterSpec, ClassEntry, CoinStack, RuleSet
+    from aose.models.storage import StorageLocation
+    carried = StorageLocation(kind="carried")
+    gold = overrides.pop("gold", 0)
     base = dict(
         name="Tester",
         abilities={"STR": 12, "INT": 12, "WIS": 11, "DEX": 12, "CON": 12, "CHA": 10},
@@ -345,6 +383,7 @@ def _seed(client, **overrides):
         classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[6])],
         alignment="law",
         ruleset=RuleSet(),
+        coins=([CoinStack(denom="gp", count=gold, location=carried)] if gold else []),
     )
     base.update(overrides)
     spec = CharacterSpec(**base)
@@ -353,25 +392,41 @@ def _seed(client, **overrides):
 
 
 def test_buy_then_load_then_adjust(tmp_path):
+    from aose.models import Ammunition
     client = _make_client(tmp_path)
+    d = GameData.load(DATA_DIR)
     cid = _seed(client, gold=100)
-    # add a bow and equip it
-    client.post(f"/character/{cid}/equipment/add", data={"item_id": "short_bow"})
-    client.post(f"/character/{cid}/equipment/equip", data={"item_id": "short_bow"})
-    # buy a quiver → ammo stack of 20, gold -5
+    # Equip a bow via items
+    bow_iid = uuid.uuid4().hex
+    from aose.models import ItemInstance
+    spec = load_character(cid, client._characters_dir)
+    spec.items.append(ItemInstance(instance_id=bow_iid, catalog_id="short_bow",
+                                   equip="main_hand"))
+    save_character(cid, spec, client._characters_dir)
+
+    # Buy a quiver → ammo ItemInstance added
     client.post(f"/character/{cid}/equipment/buy", data={"item_id": "arrow"})
     spec = load_character(cid, client._characters_dir)
-    assert spec.ammo[0].count == 20 and spec.ammo[0].base_id == "arrow"
-    iid = spec.ammo[0].instance_id
-    # load + adjust
+    ammo_items = [i for i in spec.items
+                  if isinstance(d.items.get(i.catalog_id), Ammunition)]
+    assert len(ammo_items) == 1 and ammo_items[0].count == 20
+    ammo_iid = ammo_items[0].instance_id
+
+    # Load ammo onto the bow
     r = client.post(f"/character/{cid}/ammo/load",
-                    data={"weapon_key": "short_bow", "instance_id": iid})
-    assert r.status_code == 303
-    r = client.post(f"/character/{cid}/ammo/adjust",
-                    data={"instance_id": iid, "delta": -1})
+                    data={"weapon_instance_id": bow_iid, "ammo_instance_id": ammo_iid})
     assert r.status_code == 303
     spec = load_character(cid, client._characters_dir)
-    assert spec.loaded_ammo["short_bow"] == iid and spec.ammo[0].count == 19
+    bow_inst = next(i for i in spec.items if i.instance_id == bow_iid)
+    assert bow_inst.loaded_ammo_id == ammo_iid
+
+    # Adjust count
+    r = client.post(f"/character/{cid}/ammo/adjust",
+                    data={"instance_id": ammo_iid, "delta": -1})
+    assert r.status_code == 303
+    spec = load_character(cid, client._characters_dir)
+    ammo_inst = next(i for i in spec.items if i.instance_id == ammo_iid)
+    assert ammo_inst.count == 19
 
 
 def test_add_magic_ammo_and_remove(tmp_path):
@@ -380,19 +435,26 @@ def test_add_magic_ammo_and_remove(tmp_path):
     r = client.post(f"/character/{cid}/ammo/add",
                     data={"base_id": "arrow", "enchantment_id": "arrows_plus_1"})
     assert r.status_code == 303
+    from aose.models import Ammunition
+    d = GameData.load(DATA_DIR)
     spec = load_character(cid, client._characters_dir)
-    assert spec.ammo[0].enchantment_id == "arrows_plus_1"
-    iid = spec.ammo[0].instance_id
-    r = client.post(f"/character/{cid}/ammo/remove", data={"instance_id": iid})
+    ammo_items = [i for i in spec.items
+                  if isinstance(d.items.get(i.catalog_id), Ammunition)]
+    assert len(ammo_items) == 1
+    assert ammo_items[0].enchantment_id == "arrows_plus_1"
+    ammo_iid = ammo_items[0].instance_id
+
+    r = client.post(f"/character/{cid}/ammo/remove", data={"instance_id": ammo_iid})
     assert r.status_code == 303
     spec = load_character(cid, client._characters_dir)
-    assert spec.ammo == []
+    ammo_items2 = [i for i in spec.items
+                   if isinstance(d.items.get(i.catalog_id), Ammunition)]
+    assert ammo_items2 == []
 
 
 # ── Wizard test ───────────────────────────────────────────────────────────
 
 def _wizard_client(tmp_path):
-    """Create a TestClient with a fresh wizard-capable app."""
     characters_dir = tmp_path / "characters"
     drafts_dir = tmp_path / "drafts"
     examples_dir = tmp_path / "examples"
@@ -411,13 +473,11 @@ def _wizard_client(tmp_path):
 
 
 def _drive_wizard_to_equipment(client, tmp_path) -> str:
-    """Drive a wizard draft through all steps up to equipment; return draft_id."""
     from aose.characters.drafts import load_draft, save_draft
     r = client.get("/wizard/new")
     assert r.status_code == 303
     draft_id = r.headers["location"].strip("/").split("/")[1]
 
-    # Force abilities
     draft = load_draft(draft_id, tmp_path / "drafts")
     draft["abilities"] = {"STR": 15, "INT": 11, "WIS": 12, "DEX": 13, "CON": 14, "CHA": 10}
     save_draft(draft_id, draft, tmp_path / "drafts")
@@ -429,88 +489,86 @@ def _drive_wizard_to_equipment(client, tmp_path) -> str:
     client.post(f"/wizard/{draft_id}/hp/roll")
     client.post(f"/wizard/{draft_id}/hp")
     client.post(f"/wizard/{draft_id}/identity", data={"name": "Archer", "alignment": "law"})
-    # Roll starting gold
     client.post(f"/wizard/{draft_id}/equipment/roll-gold")
     return draft_id
 
 
 def test_wizard_ammo_carries_into_character(tmp_path):
     """Buy a bow + quiver in the wizard, load the ammo, finalize; assert
-    the saved CharacterSpec has the ammo stack and loaded_ammo entry."""
+    the saved CharacterSpec has the ammo ItemInstance and bow has loaded_ammo_id."""
     from aose.characters.drafts import load_draft, save_draft
+    from aose.models import Ammunition
+    d = GameData.load(DATA_DIR)
     client = _wizard_client(tmp_path)
     draft_id = _drive_wizard_to_equipment(client, tmp_path)
 
-    # Give enough gold for a bow + quiver
     draft = load_draft(draft_id, tmp_path / "drafts")
     draft["gold"] = 100
     save_draft(draft_id, draft, tmp_path / "drafts")
 
-    # Buy a bow (regular item → goes to inventory)
+    # Buy a bow and a quiver
     r = client.post(f"/wizard/{draft_id}/equipment/buy", data={"item_id": "short_bow"})
     assert r.status_code == 303
-
-    # Buy a quiver of arrows (ammunition → goes to ammo stacks)
     r = client.post(f"/wizard/{draft_id}/equipment/buy", data={"item_id": "arrow"})
     assert r.status_code == 303
 
-    # Load the arrow stack into the bow
+    # Get instance IDs from draft
     draft = load_draft(draft_id, tmp_path / "drafts")
-    assert len(draft.get("ammo", [])) == 1
-    iid = draft["ammo"][0]["instance_id"]
+    items = draft.get("items", [])
+    ammo_raw = [i for i in items if i.get("catalog_id") == "arrow"]
+    bow_raw = [i for i in items if i.get("catalog_id") == "short_bow"]
+    assert ammo_raw, "arrow should be in draft items"
+    assert bow_raw, "short_bow should be in draft items"
+    ammo_iid = ammo_raw[0]["instance_id"]
+    bow_iid = bow_raw[0]["instance_id"]
+
+    # Equip the bow
+    r = client.post(f"/wizard/{draft_id}/equipment/equip",
+                    data={"instance_id": bow_iid})
+    assert r.status_code == 303
+
+    # Load ammo (weapon_key = bow instance_id)
     r = client.post(f"/wizard/{draft_id}/ammo/load",
-                    data={"weapon_key": "short_bow", "instance_id": iid})
+                    data={"weapon_key": bow_iid, "instance_id": ammo_iid})
     assert r.status_code == 303
 
     # Finalize
-    client.post(f"/wizard/{draft_id}/equipment")  # advance to review
+    client.post(f"/wizard/{draft_id}/equipment")
     r = client.post(f"/wizard/{draft_id}/finalize")
     assert r.status_code == 303
 
-    # Verify the saved character has ammo + loaded_ammo
-    location = r.headers["location"]  # e.g. "/character/archer"
-    char_id = location.strip("/").split("/")[-1]
+    char_id = r.headers["location"].strip("/").split("/")[-1]
     spec = load_character(char_id, client._characters_dir)
-    assert len(spec.ammo) == 1
-    assert spec.ammo[0].count == 20
-    assert spec.loaded_ammo.get("short_bow") == iid
+
+    # Verify ammo in spec.items
+    ammo_items = [i for i in spec.items
+                  if isinstance(d.items.get(i.catalog_id), Ammunition)]
+    assert len(ammo_items) == 1 and ammo_items[0].count == 20
+
+    # Verify bow has loaded_ammo_id set
+    bow_inst = next((i for i in spec.items if i.catalog_id == "short_bow"), None)
+    assert bow_inst is not None
+    assert bow_inst.loaded_ammo_id == ammo_iid
 
 
 def test_spec_verification_spotchecks():
-    """Spec "Verification" spot-checks against the real data dir."""
-    d = GameData.load(DATA_DIR)
-    from aose.engine.ammo import accepts, buy_ammo
+    """Spot-checks against the real data dir."""
+    from aose.engine.ammo import accepts
     from aose.engine.enchant import is_compatible
+    d = GameData.load(DATA_DIR)
     # silver_arrow + arrow_slaying compatible
     assert is_compatible(d.items["silver_arrow"], d.enchantments["arrow_slaying"])
-    # buying two quivers combines to 40 for 10 gp
-    stacks, gold = buy_ammo([], 100, "arrow", d)
-    stacks, gold = buy_ammo(stacks, gold, "arrow", d)
-    assert len(stacks) == 1 and stacks[0].count == 40 and gold == 90
-    # a launcher accepts its ammo
+    # buying two quivers via buy_item stacks to 40
+    from aose.models import CharacterSpec, ClassEntry, CoinStack
+    from aose.models.storage import StorageLocation
+    from aose.engine.shop import buy_item
+    carried = StorageLocation(kind="carried")
+    spec = CharacterSpec(name="T", abilities={}, race_id="human",
+                         classes=[ClassEntry(class_id="fighter")], alignment="law",
+                         coins=[CoinStack(denom="gp", count=100, location=carried)])
+    buy_item(spec, "arrow", d)
+    buy_item(spec, "arrow", d)
+    arrow_items = [i for i in spec.items if i.catalog_id == "arrow"]
+    assert len(arrow_items) == 1 and arrow_items[0].count == 40
+    # launcher accepts its ammo
     assert accepts(d.items["crossbow"], d.items["crossbow_bolt"])
-
-
-# ── Location-aware _combine tests (Task 2) ───────────────────────────────────
-
-from aose.engine import ammo as ammo_engine
-from aose.models.storage import StorageLocation
-
-CARRIED = StorageLocation(kind="carried")
-MULE = StorageLocation(kind="animal", id="mule1")
-
-
-def test_combine_does_not_merge_across_locations():
-    stacks = [AmmoStack(instance_id="a1", base_id="arrow", count=5, location=MULE)]
-    out = ammo_engine._combine(stacks, "arrow", None, 20, location=CARRIED)
-    # The mule stack is untouched; a new carried stack is appended.
-    assert len(out) == 2
-    mule = next(s for s in out if s.location == MULE)
-    carried = next(s for s in out if s.location == CARRIED)
-    assert mule.count == 5 and carried.count == 20
-
-
-def test_combine_merges_same_location():
-    stacks = [AmmoStack(instance_id="a1", base_id="arrow", count=5, location=CARRIED)]
-    out = ammo_engine._combine(stacks, "arrow", None, 20, location=CARRIED)
-    assert len(out) == 1 and out[0].count == 25

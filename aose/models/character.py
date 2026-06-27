@@ -66,9 +66,11 @@ class ContainerInstance(BaseModel):
     @classmethod
     def _migrate_legacy_location(cls, data):
         """Coerce old (state, location=person|animal|vehicle, location_id) into
-        a single StorageLocation."""
+        a single StorageLocation.  Also silently drops the old ``contents`` list
+        (items now live in CharacterSpec.items with a container location)."""
         if not isinstance(data, dict):
             return data
+        data.pop("contents", None)  # old shape had a contents list
         if "state" not in data and "location_id" not in data:
             return data  # already new shape (or default)
         state = data.pop("state", "carried")

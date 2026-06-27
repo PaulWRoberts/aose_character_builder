@@ -1,4 +1,5 @@
 import json
+import uuid
 from pathlib import Path
 
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
@@ -6,7 +7,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from aose.web.templating import make_templates
 
 from aose.characters.storage import delete_character, list_character_ids, load_character, save_character, slugify, unique_character_id
-from aose.models import CharacterSpec
+from aose.models import Ammunition, CharacterSpec, ItemInstance
 from aose.engine import currency as _currency, dice, hp, spells as spell_engine
 from aose.engine.currency import CurrencyError
 from aose.engine.equip import WieldError, equip as _equip, unequip as _unequip
@@ -24,12 +25,10 @@ from aose.engine.enchant import (
     NoCharges as _EnchNoCharges,
     UnknownEnchantment,
     add_free_enchanted as _add_free_enchanted,
-    equip as _equip_enchanted,
     remove as _remove_enchanted,
     resolve_instance as _resolve_enchanted,
     reset_charges as _reset_ench_charges,
     set_note as _set_enchanted_note,
-    unequip as _unequip_enchanted,
     use_charge as _use_ench_charge,
 )
 from aose.engine.magic import (
@@ -52,8 +51,8 @@ from aose.engine.shop import (
     InsufficientFunds,
     InsufficientGold,
     UnknownItem,
-    add_free as shop_add_free,
     add_free_container,
+    add_free_item as shop_add_free_item,
     buy_container,
     buy_item as shop_buy_item,
     inventory_view as shop_inventory_view,
@@ -61,17 +60,6 @@ from aose.engine.shop import (
     sell_from_stash as shop_sell_from_stash,
     sell_item as shop_sell_item,
     shop_categories,
-)
-from aose.engine.ammo import (
-    add_free_ammo as _add_free_ammo,
-    adjust_count as _adjust_ammo,
-    buy_ammo as _buy_ammo,
-    load as _load_ammo,
-    remove_ammo as _remove_ammo,
-    unload as _unload_ammo,
-    InsufficientGold as _AmmoInsufficientGold,
-    IncompatibleAmmo as _IncompatibleAmmo,
-    UnknownAmmo as _UnknownAmmo,
 )
 from aose.engine.features import one_handed_two_handed_weapons as _1h2h
 from aose.engine.proficiency import (
@@ -212,6 +200,23 @@ async def character_sheet(request: Request, character_id: str):
     classes = [game_data.classes[e.class_id] for e in spec.classes
                if e.class_id in game_data.classes]
     from aose.engine import storage as _storage
+    # Build old-style lists from spec.items for inventory_view
+    _inv_list: list[str] = []
+    _stash_list: list[str] = []
+    _eq_dict: dict[str, str] = {}
+    for _inst in spec.items:
+        if _inst.enchantment_id is not None:
+            continue
+        if isinstance(game_data.items.get(_inst.catalog_id), Ammunition):
+            continue
+        for _ in range(_inst.count):
+            if _inst.location.kind == "carried":
+                _inv_list.append(_inst.catalog_id)
+            elif _inst.location.kind == "stashed":
+                _stash_list.append(_inst.catalog_id)
+        if _inst.equip is not None:
+            _eq_dict[_inst.equip] = _inst.catalog_id
+    _enchanted_iids = {i.instance_id for i in spec.items if i.enchantment_id is not None}
     return templates.TemplateResponse(
         request, "sheet.html", {
             "sheet": sheet,
@@ -220,7 +225,7 @@ async def character_sheet(request: Request, character_id: str):
             "gold": _get_gold(spec),
             "gold_locked": True,
             "inventory_view": shop_inventory_view(
-                spec.inventory, spec.stashed, spec.equipped,
+                _inv_list, _stash_list, _eq_dict,
                 spec.containers, game_data,
                 allowed_weapons=allowed_weapon_ids(classes, game_data, spec.ruleset),
                 allowed_armor=allowed_armor_ids(classes, game_data),
@@ -228,9 +233,10 @@ async def character_sheet(request: Request, character_id: str):
                 two_weapon=spec.ruleset.two_weapon_fighting,
                 eligible=two_weapon_eligible(classes),
                 gargantua_1h_2h=_1h2h(spec, game_data),
+                spec=spec,
             ),
             "enchanted_rows": [v for v in sheet.magic_items
-                               if v.instance_id in {e.instance_id for e in spec.enchanted}],
+                               if v.instance_id in _enchanted_iids],
             "magic_acquisition": True,
             "enchant_choices": _enchant_choices(game_data, spec.ruleset),
             "shop": shop_categories(game_data, spec.ruleset),
@@ -486,7 +492,9 @@ async def set_armor_tailored(request: Request, character_id: str,
                              value: str = Form(...)):
     """Flip whether the equipped tailorable body armour is fitted to the wearer."""
     spec = _load_spec_or_404(request, character_id)
-    spec.armor_tailored = value.lower() in ("true", "1", "on", "yes")
+    armor_inst = next((i for i in spec.items if i.equip == "armor"), None)
+    if armor_inst is not None:
+        armor_inst.tailored = value.lower() in ("true", "1", "on", "yes")
     save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
@@ -689,10 +697,7 @@ async def equipment_buy(request: Request, character_id: str,
     item = game_data.items.get(item_id)
     from aose.models import Animal, Container, Vehicle
     try:
-        if isinstance(item, Ammunition):
-            spec.ammo, new_gold = _buy_ammo(spec.ammo, _get_gold(spec), item_id, game_data)
-            _set_gold(spec, new_gold)
-        elif isinstance(item, Container):
+        if isinstance(item, Container):
             spec.containers, new_gold = buy_container(
                 spec.containers, _get_gold(spec), item_id, game_data,
             )
@@ -711,7 +716,7 @@ async def equipment_buy(request: Request, character_id: str,
             _set_gold(spec, new_gold)
         else:
             shop_buy_item(spec, item_id, game_data)
-    except (UnknownItem, InsufficientFunds, InsufficientGold, _AmmoInsufficientGold, ValueError) as e:
+    except (UnknownItem, InsufficientFunds, InsufficientGold, ValueError) as e:
         raise HTTPException(400, str(e))
     save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
@@ -727,9 +732,7 @@ async def equipment_add(request: Request, character_id: str,
     item = game_data.items.get(item_id)
     from aose.models import Animal, Container, Vehicle
     try:
-        if isinstance(item, Ammunition):
-            spec.ammo = _add_free_ammo(spec.ammo, item_id, None, game_data)
-        elif needs_instance(item):
+        if needs_instance(item):
             spec.magic_items = add_free_magic_item(spec.magic_items, item_id, game_data)
         elif isinstance(item, Container):
             spec.containers = add_free_container(spec.containers, item_id, game_data)
@@ -738,8 +741,8 @@ async def equipment_add(request: Request, character_id: str,
         elif isinstance(item, Vehicle):
             spec.vehicles = companions_engine.add_free_vehicle(spec.vehicles, item_id, game_data)
         else:
-            spec.inventory = shop_add_free(spec.inventory, item_id, game_data)
-    except (UnknownItem, UnknownMagicItem, _UnknownAmmo, ValueError) as e:
+            shop_add_free_item(spec, item_id, game_data)
+    except (UnknownItem, UnknownMagicItem, ValueError) as e:
         raise HTTPException(400, str(e))
     save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
@@ -747,16 +750,14 @@ async def equipment_add(request: Request, character_id: str,
 
 @router.post("/character/{character_id}/equipment/equip")
 async def equipment_equip(request: Request, character_id: str,
-                          item_id: str = Form(...),
+                          instance_id: str = Form(...),
                           slot: str | None = Form(None)):
     spec = _load_spec_or_404(request, character_id)
     data = request.app.state.game_data
     classes = [data.classes[e.class_id] for e in spec.classes if e.class_id in data.classes]
     try:
-        spec.equipped = _equip(
-            item_id,
-            inventory=spec.inventory, equipped=spec.equipped,
-            enchanted=spec.enchanted, data=data,
+        _equip(
+            spec, instance_id, data=data,
             slot=slot,
             two_weapon=spec.ruleset.two_weapon_fighting,
             eligible=two_weapon_eligible(classes),
@@ -773,10 +774,10 @@ async def equipment_equip(request: Request, character_id: str,
 
 @router.post("/character/{character_id}/equipment/unequip")
 async def equipment_unequip(request: Request, character_id: str,
-                            item_id: str = Form(...)):
+                            instance_id: str = Form(...)):
     spec = _load_spec_or_404(request, character_id)
     try:
-        spec.equipped = _unequip(item_id, equipped=spec.equipped)
+        _unequip(spec, instance_id)
     except ValueError as e:
         raise HTTPException(400, str(e))
     save_character(character_id, spec, request.state.characters_dir)
@@ -901,8 +902,7 @@ async def equipment_add_enchanted(request: Request, character_id: str,
                                   enchantment_id: str = Form(...)):
     spec = _load_spec_or_404(request, character_id)
     try:
-        spec.enchanted = _add_free_enchanted(
-            spec.enchanted, base_id, enchantment_id, request.app.state.game_data)
+        _add_free_enchanted(spec, base_id, enchantment_id, request.app.state.game_data)
     except (UnknownEnchantment, IncompatibleBase, ValueError) as e:
         raise HTTPException(400, str(e))
     save_character(character_id, spec, request.state.characters_dir)
@@ -915,34 +915,18 @@ async def equipment_equip_enchanted(request: Request, character_id: str,
                                     slot: str | None = Form(None)):
     spec = _load_spec_or_404(request, character_id)
     data = request.app.state.game_data
-    inst = next((i for i in spec.enchanted if i.instance_id == instance_id), None)
-    if inst is None:
-        raise HTTPException(400, f"No enchanted instance {instance_id!r}")
-    kind = _enchanted_kind(inst, data)
     classes = [data.classes[e.class_id] for e in spec.classes if e.class_id in data.classes]
     try:
-        if kind == "armor":
-            # Body armour is flag-resident, not slot-resident, so it bypasses
-            # _equip's allowance gate — enforce the class armour allowance here.
-            allowed_armor = allowed_armor_ids(classes, data)
-            resolved = _resolve_enchanted(inst, data)
-            if (resolved is not None and allowed_armor != "all"
-                    and base_armor_id(resolved) not in allowed_armor):
-                raise ValueError(f"This class cannot use {resolved.name!r}")
-            spec.enchanted = _equip_enchanted(spec.enchanted, instance_id)
-        else:
-            spec.equipped = _equip(
-                instance_id,
-                inventory=spec.inventory, equipped=spec.equipped,
-                enchanted=spec.enchanted, data=data,
-                slot=slot,
-                two_weapon=spec.ruleset.two_weapon_fighting,
-                eligible=two_weapon_eligible(classes),
-                gargantua_1h_2h=_1h2h(spec, data),
-                allowed_weapons=allowed_weapon_ids(classes, data, spec.ruleset),
-                allowed_armor=allowed_armor_ids(classes, data),
-                allow_shields=shields_allowed(classes),
-            )
+        _equip(
+            spec, instance_id, data=data,
+            slot=slot,
+            two_weapon=spec.ruleset.two_weapon_fighting,
+            eligible=two_weapon_eligible(classes),
+            gargantua_1h_2h=_1h2h(spec, data),
+            allowed_weapons=allowed_weapon_ids(classes, data, spec.ruleset),
+            allowed_armor=allowed_armor_ids(classes, data),
+            allow_shields=shields_allowed(classes),
+        )
     except (ValueError, WieldError) as e:
         raise HTTPException(400, str(e))
     save_character(character_id, spec, request.state.characters_dir)
@@ -953,16 +937,8 @@ async def equipment_equip_enchanted(request: Request, character_id: str,
 async def equipment_unequip_enchanted(request: Request, character_id: str,
                                       instance_id: str = Form(...)):
     spec = _load_spec_or_404(request, character_id)
-    data = request.app.state.game_data
-    inst = next((i for i in spec.enchanted if i.instance_id == instance_id), None)
-    if inst is None:
-        raise HTTPException(400, f"No enchanted instance {instance_id!r}")
-    kind = _enchanted_kind(inst, data)
     try:
-        if kind == "armor":
-            spec.enchanted = _unequip_enchanted(spec.enchanted, instance_id)
-        else:
-            spec.equipped = _unequip(instance_id, equipped=spec.equipped)
+        _unequip(spec, instance_id)
     except ValueError as e:
         raise HTTPException(400, str(e))
     save_character(character_id, spec, request.state.characters_dir)
@@ -974,7 +950,7 @@ async def equipment_enchanted_use_charge(request: Request, character_id: str,
                                          instance_id: str = Form(...)):
     spec = _load_spec_or_404(request, character_id)
     try:
-        spec.enchanted = _use_ench_charge(spec.enchanted, instance_id)
+        spec.items = _use_ench_charge(spec.items, instance_id)
     except ValueError as e:
         raise HTTPException(400, str(e))
     save_character(character_id, spec, request.state.characters_dir)
@@ -986,7 +962,7 @@ async def equipment_enchanted_reset_charges(request: Request, character_id: str,
                                             instance_id: str = Form(...)):
     spec = _load_spec_or_404(request, character_id)
     try:
-        spec.enchanted = _reset_ench_charges(spec.enchanted, instance_id)
+        spec.items = _reset_ench_charges(spec.items, instance_id)
     except ValueError as e:
         raise HTTPException(400, str(e))
     save_character(character_id, spec, request.state.characters_dir)
@@ -998,7 +974,7 @@ async def equipment_remove_enchanted(request: Request, character_id: str,
                                      instance_id: str = Form(...)):
     spec = _load_spec_or_404(request, character_id)
     try:
-        spec.enchanted = _remove_enchanted(spec.enchanted, instance_id)
+        spec.items = _remove_enchanted(spec.items, instance_id)
     except ValueError as e:
         raise HTTPException(400, str(e))
     save_character(character_id, spec, request.state.characters_dir)
@@ -1011,7 +987,7 @@ async def equipment_enchanted_note(request: Request, character_id: str,
                                    note: str = Form("")):
     spec = _load_spec_or_404(request, character_id)
     try:
-        spec.enchanted = _set_enchanted_note(spec.enchanted, instance_id, note)
+        spec.items = _set_enchanted_note(spec.items, instance_id, note)
     except ValueError as e:
         raise HTTPException(400, str(e))
     save_character(character_id, spec, request.state.characters_dir)
@@ -1366,10 +1342,27 @@ async def rest_full_day(request: Request, character_id: str,
 async def ammo_add(request: Request, character_id: str,
                    base_id: str = Form(...), enchantment_id: str = Form("")):
     spec = _load_spec_or_404(request, character_id)
+    data = request.app.state.game_data
     try:
-        spec.ammo = _add_free_ammo(spec.ammo, base_id,
-                                   enchantment_id or None, request.app.state.game_data)
-    except (_UnknownAmmo, _IncompatibleAmmo, ValueError) as e:
+        if enchantment_id:
+            from aose.engine.enchant import is_compatible
+            base = data.items.get(base_id)
+            if not isinstance(base, Ammunition):
+                raise ValueError(f"{base_id!r} is not ammunition")
+            ench = data.enchantments.get(enchantment_id)
+            if ench is None:
+                raise ValueError(f"{enchantment_id!r} is not an enchantment")
+            if not is_compatible(base, ench):
+                raise ValueError(f"{base_id!r} is not compatible with {enchantment_id!r}")
+            spec.items.append(ItemInstance(
+                instance_id=uuid.uuid4().hex,
+                catalog_id=base_id,
+                enchantment_id=enchantment_id,
+                count=1,
+            ))
+        else:
+            shop_add_free_item(spec, base_id, data)
+    except ValueError as e:
         raise HTTPException(400, str(e))
     save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
@@ -1379,13 +1372,17 @@ async def ammo_add(request: Request, character_id: str,
 async def ammo_adjust(request: Request, character_id: str,
                       instance_id: str = Form(...), delta: int = Form(...)):
     spec = _load_spec_or_404(request, character_id)
-    try:
-        spec.ammo = _adjust_ammo(spec.ammo, instance_id, delta)
-    except _UnknownAmmo as e:
-        raise HTTPException(400, str(e))
-    # drop any load pointing at a now-removed stack
-    live = {s.instance_id for s in spec.ammo}
-    spec.loaded_ammo = {k: v for k, v in spec.loaded_ammo.items() if v in live}
+    inst = next((i for i in spec.items if i.instance_id == instance_id), None)
+    if inst is None:
+        raise HTTPException(400, f"No item {instance_id!r}")
+    new_count = inst.count + delta
+    if new_count <= 0:
+        spec.items = [i for i in spec.items if i.instance_id != instance_id]
+        for wi in spec.items:
+            if wi.loaded_ammo_id == instance_id:
+                wi.loaded_ammo_id = None
+    else:
+        inst.count = new_count
     save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
@@ -1394,30 +1391,41 @@ async def ammo_adjust(request: Request, character_id: str,
 async def ammo_remove(request: Request, character_id: str,
                       instance_id: str = Form(...)):
     spec = _load_spec_or_404(request, character_id)
-    try:
-        spec.ammo = _remove_ammo(spec.ammo, instance_id)
-    except _UnknownAmmo as e:
-        raise HTTPException(400, str(e))
-    live = {s.instance_id for s in spec.ammo}
-    spec.loaded_ammo = {k: v for k, v in spec.loaded_ammo.items() if v in live}
+    if not any(i.instance_id == instance_id for i in spec.items):
+        raise HTTPException(400, f"No item {instance_id!r}")
+    spec.items = [i for i in spec.items if i.instance_id != instance_id]
+    for wi in spec.items:
+        if wi.loaded_ammo_id == instance_id:
+            wi.loaded_ammo_id = None
     save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
 @router.post("/character/{character_id}/ammo/load")
 async def ammo_load(request: Request, character_id: str,
-                    weapon_key: str = Form(...), instance_id: str = Form(...)):
+                    weapon_instance_id: str = Form(...),
+                    ammo_instance_id: str = Form(...)):
     spec = _load_spec_or_404(request, character_id)
-    spec.loaded_ammo = _load_ammo(spec.loaded_ammo, weapon_key, instance_id)
+    weapon_inst = next((i for i in spec.items if i.instance_id == weapon_instance_id), None)
+    if weapon_inst is None:
+        raise HTTPException(400, f"No weapon {weapon_instance_id!r}")
+    ammo_inst = next((i for i in spec.items
+                      if i.instance_id == ammo_instance_id and i.count > 0), None)
+    if ammo_inst is None:
+        raise HTTPException(400, f"No ammo {ammo_instance_id!r}")
+    weapon_inst.loaded_ammo_id = ammo_instance_id
     save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
 @router.post("/character/{character_id}/ammo/unload")
 async def ammo_unload(request: Request, character_id: str,
-                      weapon_key: str = Form(...)):
+                      weapon_instance_id: str = Form(...)):
     spec = _load_spec_or_404(request, character_id)
-    spec.loaded_ammo = _unload_ammo(spec.loaded_ammo, weapon_key)
+    weapon_inst = next((i for i in spec.items if i.instance_id == weapon_instance_id), None)
+    if weapon_inst is None:
+        raise HTTPException(400, f"No weapon {weapon_instance_id!r}")
+    weapon_inst.loaded_ammo_id = None
     save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
@@ -1650,11 +1658,11 @@ async def animal_armor(request: Request, character_id: str, instance_id: str,
     data = request.app.state.game_data
     try:
         if armor_id == "":
-            spec.inventory, spec.animals = companions_engine.clear_armor(
-                spec.inventory, spec.animals, instance_id, data)
+            spec.items, spec.animals = companions_engine.clear_armor(
+                spec.items, spec.animals, instance_id, data)
         else:
-            spec.inventory, spec.animals = companions_engine.assign_armor(
-                spec.inventory, spec.animals, instance_id, armor_id, data)
+            spec.items, spec.animals = companions_engine.assign_armor(
+                spec.items, spec.animals, instance_id, armor_id, data)
     except ValueError as e:
         raise HTTPException(400, str(e))
     save_character(character_id, spec, request.state.characters_dir)
@@ -1666,8 +1674,8 @@ async def animal_unequip(request: Request, character_id: str, instance_id: str):
     spec = _load_spec_or_404(request, character_id)
     data = request.app.state.game_data
     try:
-        spec.inventory, spec.animals = companions_engine.clear_armor(
-            spec.inventory, spec.animals, instance_id, data)
+        spec.items, spec.animals = companions_engine.clear_armor(
+            spec.items, spec.animals, instance_id, data)
     except ValueError as e:
         raise HTTPException(400, str(e))
     save_character(character_id, spec, request.state.characters_dir)
@@ -1902,7 +1910,11 @@ async def retainer_unequip(request: Request, character_id: str, retainer_id: str
     if ret is None:
         raise HTTPException(404, "No such retainer")
     try:
-        ret.spec.equipped = _unequip(item_id, equipped=ret.spec.equipped)
+        inst = next((i for i in ret.spec.items
+                     if i.catalog_id == item_id and i.equip is not None), None)
+        if inst is None:
+            raise ValueError(f"{item_id!r} is not equipped")
+        _unequip(ret.spec, inst.instance_id)
     except ValueError as e:
         raise HTTPException(400, str(e))
     save_character(character_id, spec, request.state.characters_dir)
@@ -1919,13 +1931,12 @@ async def retainer_equip(request: Request, character_id: str, retainer_id: str,
     if ret is None:
         raise HTTPException(404, "No such retainer")
     try:
-        ret.spec.equipped = _equip(
-            item_id,
-            inventory=ret.spec.inventory, equipped=ret.spec.equipped,
-            enchanted=ret.spec.enchanted, data=data,
-            slot=slot,
-            two_weapon=ret.spec.ruleset.two_weapon_fighting,
-        )
+        inst = next((i for i in ret.spec.items
+                     if i.catalog_id == item_id and i.equip is None), None)
+        if inst is None:
+            raise ValueError(f"{item_id!r} is not in retainer's inventory")
+        _equip(ret.spec, inst.instance_id, data=data, slot=slot,
+               two_weapon=ret.spec.ruleset.two_weapon_fighting)
     except (ValueError, WieldError) as e:
         raise HTTPException(400, str(e))
     save_character(character_id, spec, request.state.characters_dir)

@@ -7,6 +7,7 @@ from aose.data.loader import GameData
 from aose.engine.equip import (
     hand_cost, off_hand_eligible, resolve_slot, validate_wield, WieldError,
 )
+from aose.models.character import CharacterSpec, ClassEntry, ItemInstance
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 
@@ -18,6 +19,20 @@ def data():
 
 def W(data, wid):
     return data.items[wid]
+
+
+def _spec(slots):
+    """A CharacterSpec whose items carry the given equip slots
+    (e.g. {"main_hand": "sword", "off_hand": "shield"})."""
+    items = [
+        ItemInstance(instance_id=f"t_{slot}", catalog_id=cid, equip=slot)
+        for slot, cid in slots.items()
+    ]
+    return CharacterSpec(
+        name="T", abilities={}, race_id="human",
+        classes=[ClassEntry(class_id="fighter")], alignment="neutral",
+        items=items,
+    )
 
 
 def test_hand_cost_basic(data):
@@ -53,42 +68,42 @@ def test_resolve_slot_catalog_and_missing(data):
 
 def test_validate_wield_baseline_legal(data):
     # 1H weapon + shield, rule off.
-    validate_wield({"main_hand": "sword", "off_hand": "shield"}, data, [],
+    validate_wield(_spec({"main_hand": "sword", "off_hand": "shield"}), data,
                    two_weapon=False, eligible=False, gargantua_1h_2h=False)
 
 
 def test_validate_wield_two_handed_blocks_shield(data):
     with pytest.raises(WieldError):
-        validate_wield({"main_hand": "two_handed_sword", "off_hand": "shield"},
-                       data, [], two_weapon=False, eligible=False,
+        validate_wield(_spec({"main_hand": "two_handed_sword", "off_hand": "shield"}),
+                       data, two_weapon=False, eligible=False,
                        gargantua_1h_2h=False)
 
 
 def test_validate_wield_gargantua_two_handed_plus_shield(data):
-    validate_wield({"main_hand": "battle_axe", "off_hand": "shield"}, data, [],
+    validate_wield(_spec({"main_hand": "battle_axe", "off_hand": "shield"}), data,
                    two_weapon=False, eligible=False, gargantua_1h_2h=True)
 
 
 def test_validate_wield_two_weapons_requires_rule_and_eligibility(data):
     slots = {"main_hand": "sword", "off_hand": "dagger"}
     with pytest.raises(WieldError):  # rule off
-        validate_wield(slots, data, [], two_weapon=False, eligible=True,
+        validate_wield(_spec(slots), data, two_weapon=False, eligible=True,
                        gargantua_1h_2h=False)
     with pytest.raises(WieldError):  # ineligible
-        validate_wield(slots, data, [], two_weapon=True, eligible=False,
+        validate_wield(_spec(slots), data, two_weapon=True, eligible=False,
                        gargantua_1h_2h=False)
     # rule on + eligible + eligible off-hand -> OK
-    validate_wield(slots, data, [], two_weapon=True, eligible=True,
+    validate_wield(_spec(slots), data, two_weapon=True, eligible=True,
                    gargantua_1h_2h=False)
 
 
 def test_validate_wield_off_hand_must_be_eligible_weapon(data):
     with pytest.raises(WieldError):
-        validate_wield({"main_hand": "sword", "off_hand": "club"}, data, [],
+        validate_wield(_spec({"main_hand": "sword", "off_hand": "club"}), data,
                        two_weapon=True, eligible=True, gargantua_1h_2h=False)
 
 
 def test_validate_wield_off_hand_weapon_needs_main(data):
     with pytest.raises(WieldError):
-        validate_wield({"off_hand": "dagger"}, data, [],
+        validate_wield(_spec({"off_hand": "dagger"}), data,
                        two_weapon=True, eligible=True, gargantua_1h_2h=False)

@@ -77,10 +77,8 @@ def test_container_instance_construct():
         instance_id="abc123",
         catalog_id="backpack",
         state="carried",
-        contents=["torch", "rope"],
     )
     assert inst.location.kind == "carried"
-    assert inst.contents == ["torch", "rope"]
 
 
 def test_character_spec_defaults_containers_empty():
@@ -123,7 +121,6 @@ def test_new_container_instance_validates_catalog_type():
     inst = new_container_instance("backpack", fake)
     assert inst.catalog_id == "backpack"
     assert inst.location.kind == "carried"
-    assert inst.contents == []
     assert len(inst.instance_id) >= 16  # uuid4 hex length
 
 
@@ -195,40 +192,81 @@ from aose.engine.storage import StorageError as _StowStorageError
 from aose.models.storage import StorageLocation
 
 
+from aose.models.character import ItemInstance as _ItemInstance
+
+_iid_ctr = [0]
+
+
+def _iid(prefix="i"):
+    _iid_ctr[0] += 1
+    return f"t_{prefix}_{_iid_ctr[0]}"
+
+
+def _items_at(spec, kind, container_id=None):
+    """Items in spec.items at the given location kind."""
+    return [i for i in spec.items
+            if i.location.kind == kind
+            and (container_id is None or i.location.id == container_id)]
+
+
 def _stow_spec_with(fake, inventory=None, container_contents=None, stashed=None):
     bp = _carried_backpack(fake)
-    if container_contents:
-        bp = bp.model_copy(update={"contents": container_contents})
+    items = []
+    for cid in (inventory or []):
+        items.append(_ItemInstance(instance_id=_iid(cid), catalog_id=cid))
+    for cid in (container_contents or []):
+        items.append(_ItemInstance(
+            instance_id=_iid(cid), catalog_id=cid,
+            location=StorageLocation(kind="container", id=bp.instance_id),
+        ))
+    for cid in (stashed or []):
+        items.append(_ItemInstance(
+            instance_id=_iid(cid), catalog_id=cid,
+            location=StorageLocation(kind="stashed"),
+        ))
     spec = CharacterSpec(
         name="T",
         abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
         race_id="human",
         classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[6])],
         alignment="neutral",
-        inventory=list(inventory or []),
-        stashed=list(stashed or []),
+        items=items,
         containers=[bp],
     )
     return spec, bp
+
+
+def _carried_iid(spec, catalog_id):
+    """Return the instance_id of the first carried item with the given catalog_id."""
+    return next(i.instance_id for i in spec.items
+                if i.catalog_id == catalog_id and i.location.kind == "carried")
+
+
+def _container_iid(spec, container_id, catalog_id):
+    """Return the instance_id of the first item in container with the given catalog_id."""
+    return next(i.instance_id for i in spec.items
+                if i.catalog_id == catalog_id
+                and i.location.kind == "container"
+                and i.location.id == container_id)
 
 
 def test_stow_moves_item_from_inventory_into_container():
     fake = _fake_container_data()
     spec, bp = _stow_spec_with(fake, inventory=["torch"])
     cont_loc = StorageLocation(kind="container", id=bp.instance_id)
-    _stow_storage.move_thing(spec, "item", "torch", cont_loc,
-                             src=StorageLocation(kind="carried"), data=fake)
-    assert spec.inventory == []
-    assert spec.containers[0].contents == ["torch"]
+    torch_iid = _carried_iid(spec, "torch")
+    _stow_storage.move_thing(spec, "item", torch_iid, cont_loc, data=fake)
+    assert _items_at(spec, "carried") == []
+    assert [i.catalog_id for i in _items_at(spec, "container", bp.instance_id)] == ["torch"]
 
 
 def test_stow_rejects_unknown_container():
     fake = _fake_container_data()
     spec, _ = _stow_spec_with(fake, inventory=["torch"])
     bad_loc = StorageLocation(kind="container", id="missing-id")
+    torch_iid = _carried_iid(spec, "torch")
     with pytest.raises(_StowStorageError):
-        _stow_storage.move_thing(spec, "item", "torch", bad_loc,
-                                 src=StorageLocation(kind="carried"), data=fake)
+        _stow_storage.move_thing(spec, "item", torch_iid, bad_loc, data=fake)
 
 
 def test_stow_rejects_item_not_in_inventory():
@@ -236,8 +274,7 @@ def test_stow_rejects_item_not_in_inventory():
     spec, bp = _stow_spec_with(fake, inventory=[])
     cont_loc = StorageLocation(kind="container", id=bp.instance_id)
     with pytest.raises(_StowStorageError):
-        _stow_storage.move_thing(spec, "item", "torch", cont_loc,
-                                 src=StorageLocation(kind="carried"), data=fake)
+        _stow_storage.move_thing(spec, "item", "no-such-iid", cont_loc, data=fake)
 
 
 def test_stow_capacity_full_raises():
@@ -246,58 +283,60 @@ def test_stow_capacity_full_raises():
     spec, bp = _stow_spec_with(fake, inventory=["torch"],
                                container_contents=["torch"] * 20)
     cont_loc = StorageLocation(kind="container", id=bp.instance_id)
+    torch_iid = _carried_iid(spec, "torch")
     with pytest.raises(_StowStorageError, match="full"):
-        _stow_storage.move_thing(spec, "item", "torch", cont_loc,
-                                 src=StorageLocation(kind="carried"), data=fake)
+        _stow_storage.move_thing(spec, "item", torch_iid, cont_loc, data=fake)
 
 
 def test_take_out_from_carried_container_returns_to_inventory():
     fake = _fake_container_data()
     spec, bp = _stow_spec_with(fake, container_contents=["torch"])
     cont_loc = StorageLocation(kind="container", id=bp.instance_id)
-    _stow_storage.move_thing(spec, "item", "torch", StorageLocation(kind="carried"),
-                             src=cont_loc, data=fake)
-    assert "torch" in spec.inventory
-    assert spec.containers[0].contents == []
+    torch_iid = _container_iid(spec, bp.instance_id, "torch")
+    _stow_storage.move_thing(spec, "item", torch_iid, StorageLocation(kind="carried"),
+                             data=fake)
+    assert any(i.catalog_id == "torch" and i.location.kind == "carried" for i in spec.items)
+    assert _items_at(spec, "container", bp.instance_id) == []
 
 
 def test_take_out_from_stashed_container_returns_to_stashed_list():
     fake = _fake_container_data()
-    bp = new_container_instance("backpack", fake, state="stashed").model_copy(
-        update={"contents": ["torch", "torch"]}
-    )
+    bp = new_container_instance("backpack", fake, state="stashed")
     spec = CharacterSpec(
         name="T",
         abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
         race_id="human",
         classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[6])],
         alignment="neutral",
-        inventory=[], containers=[bp],
+        containers=[bp],
+        items=[
+            _ItemInstance(instance_id="t_t1", catalog_id="torch",
+                          location=StorageLocation(kind="container", id=bp.instance_id)),
+            _ItemInstance(instance_id="t_t2", catalog_id="torch",
+                          location=StorageLocation(kind="container", id=bp.instance_id)),
+        ],
     )
     cont_loc = StorageLocation(kind="container", id=bp.instance_id)
-    _stow_storage.move_thing(spec, "item", "torch", StorageLocation(kind="stashed"),
-                             src=cont_loc, data=fake)
-    assert spec.stashed == ["torch"]
-    assert spec.inventory == []
-    assert spec.containers[0].contents == ["torch"]
+    _stow_storage.move_thing(spec, "item", "t_t1", StorageLocation(kind="stashed"), data=fake)
+    assert any(i.catalog_id == "torch" and i.location.kind == "stashed" for i in spec.items)
+    assert _items_at(spec, "carried") == []
+    assert len(_items_at(spec, "container", bp.instance_id)) == 1
 
 
 def test_take_out_unknown_container_raises():
     fake = _fake_container_data()
     spec, _ = _stow_spec_with(fake, inventory=[])
-    bad_loc = StorageLocation(kind="container", id="missing-id")
     with pytest.raises(_StowStorageError):
-        _stow_storage.move_thing(spec, "item", "torch", StorageLocation(kind="carried"),
-                                 src=bad_loc, data=fake)
+        _stow_storage.move_thing(spec, "item", "no-such-iid",
+                                 StorageLocation(kind="carried"), data=fake)
 
 
 def test_take_out_item_not_in_container_raises():
     fake = _fake_container_data()
     spec, bp = _stow_spec_with(fake, inventory=[])
-    cont_loc = StorageLocation(kind="container", id=bp.instance_id)
     with pytest.raises(_StowStorageError):
-        _stow_storage.move_thing(spec, "item", "torch", StorageLocation(kind="carried"),
-                                 src=cont_loc, data=fake)
+        _stow_storage.move_thing(spec, "item", "no-such-iid",
+                                 StorageLocation(kind="carried"), data=fake)
 
 
 def test_stash_container_flips_state():
@@ -305,7 +344,7 @@ def test_stash_container_flips_state():
     spec, bp = _stow_spec_with(fake)
     _stow_storage.move_container(spec, bp.instance_id, StorageLocation(kind="stashed"))
     assert spec.containers[0].location.kind == "stashed"
-    assert spec.containers[0].contents == []
+    assert _items_at(spec, "container", bp.instance_id) == []
 
 
 def test_unstash_container_reverses():
@@ -317,7 +356,7 @@ def test_unstash_container_reverses():
         race_id="human",
         classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[6])],
         alignment="neutral",
-        inventory=[], containers=[bp],
+        containers=[bp],
     )
     _stow_storage.move_container(spec, bp.instance_id, StorageLocation(kind="carried"))
     assert spec.containers[0].location.kind == "carried"
@@ -337,13 +376,15 @@ def test_unstash_container_unknown_raises():
         _stow_storage.move_container(spec, "missing-id", StorageLocation(kind="carried"))
 
 
-from aose.engine.shop import ContainerNotEmpty, remove_container
+from aose.engine.shop import ContainerNotEmpty, remove_container, sell_container
 
 
 def test_remove_container_drop_with_contents():
     fake = _fake_container_data()
-    bp = _carried_backpack(fake).model_copy(update={"contents": ["torch", "torch"]})
-    containers, gold = remove_container([bp], 0, bp.instance_id, "drop", fake)
+    bp = _carried_backpack(fake)
+    spec, _ = _stow_spec_with(fake, container_contents=["torch", "torch"])
+    bp2 = spec.containers[0]
+    containers, gold = remove_container([bp2], 0, bp2.instance_id, "drop", fake)
     assert containers == []
     assert gold == 0  # drop refunds nothing
 
@@ -365,16 +406,16 @@ def test_remove_container_refund_empty_returns_full_cost():
 
 def test_remove_container_sell_non_empty_raises():
     fake = _fake_container_data()
-    bp = _carried_backpack(fake).model_copy(update={"contents": ["torch"]})
+    spec, bp = _stow_spec_with(fake, container_contents=["torch"])
     with pytest.raises(ContainerNotEmpty):
-        remove_container([bp], 0, bp.instance_id, "sell", fake)
+        sell_container(spec, bp.instance_id, "sell", fake)
 
 
 def test_remove_container_refund_non_empty_raises():
     fake = _fake_container_data()
-    bp = _carried_backpack(fake).model_copy(update={"contents": ["torch"]})
+    spec, bp = _stow_spec_with(fake, container_contents=["torch"])
     with pytest.raises(ContainerNotEmpty):
-        remove_container([bp], 0, bp.instance_id, "refund", fake)
+        sell_container(spec, bp.instance_id, "refund", fake)
 
 
 def test_remove_container_unknown_raises():
@@ -392,11 +433,11 @@ def test_remove_container_bad_mode_raises():
 
 def test_inventory_view_splits_loose_and_containers():
     fake = _fake_container_data()
-    bp = _carried_backpack(fake).model_copy(update={"contents": ["torch"]})
     from aose.engine.shop import inventory_view
+    spec, bp = _stow_spec_with(fake, inventory=["torch"], container_contents=["torch"])
     view = inventory_view(
         inventory=["torch"], stashed=[], equipped={},
-        containers=[bp], data=fake,
+        containers=[bp], data=fake, spec=spec,
     )
     # The loose torch shows up in carried; the contained torch shows up
     # under the container, not in carried.
@@ -420,23 +461,42 @@ def test_inventory_view_container_weight_with_multiplier():
         item_type="container", cost_gp=0, weight_cn=0, capacity_cn=10000,
         weight_multiplier=0.06,
     )
-    bag = new_container_instance("boh", fake).model_copy(
-        update={"contents": ["torch"] * 100}  # 100 * 20 = 2000 cn raw
-    )
     from aose.engine.shop import inventory_view
-    view = inventory_view([], [], {}, [bag], fake)
+    bag = new_container_instance("boh", fake)
+    torches = [_ItemInstance(
+        instance_id=_iid("torch"), catalog_id="torch",
+        location=StorageLocation(kind="container", id=bag.instance_id),
+        count=100,
+    )]
+    spec = CharacterSpec(
+        name="T",
+        abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
+        race_id="human",
+        classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[6])],
+        alignment="neutral",
+        containers=[bag], items=torches,
+    )
+    view = inventory_view([], [], {}, [bag], fake, spec=spec)
     cv = view.containers[0]
-    assert cv.used_cn == 2000
-    assert cv.effective_weight_cn == int(0.06 * 2000)  # 120
+    assert cv.used_cn == 100 * 20  # 100 torches × 20 cn each
+    assert cv.effective_weight_cn == int(0.06 * 100 * 20)  # 120
 
 
 def test_inventory_view_stashed_container_zero_effective_weight():
     fake = _fake_container_data()
-    bp = new_container_instance("backpack", fake, state="stashed").model_copy(
-        update={"contents": ["torch"]}
-    )
     from aose.engine.shop import inventory_view
-    view = inventory_view([], [], {}, [bp], fake)
+    bp = new_container_instance("backpack", fake, state="stashed")
+    spec = CharacterSpec(
+        name="T",
+        abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
+        race_id="human",
+        classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[6])],
+        alignment="neutral",
+        containers=[bp],
+        items=[_ItemInstance(instance_id=_iid("torch"), catalog_id="torch",
+                             location=StorageLocation(kind="container", id=bp.instance_id))],
+    )
+    view = inventory_view([], [], {}, [bp], fake, spec=spec)
     cv = view.containers[0]
     assert cv.state == "stashed"
     # effective_weight is only meaningful when carried; stashed = 0
@@ -457,9 +517,8 @@ def test_carried_weight_includes_carried_container_own_weight(data):
         weight_multiplier=1.0,
     )
     spec = _minimal_spec(ruleset=RuleSet(encumbrance="detailed"))
-    spec.containers = [ContainerInstance(
-        instance_id="x", catalog_id="backpack", state="carried", contents=[],
-    )]
+    spec.containers = [ContainerInstance(instance_id="x", catalog_id="backpack",
+                                         location=StorageLocation(kind="carried"))]
     assert carried_weight_cn(spec, test_data) == 80
 
 
@@ -475,10 +534,14 @@ def test_carried_weight_includes_contents_via_multiplier(data):
         weight_multiplier=1.0,
     )
     spec = _minimal_spec(ruleset=RuleSet(encumbrance="detailed"))
-    spec.containers = [ContainerInstance(
-        instance_id="x", catalog_id="backpack", state="carried",
-        contents=["dagger", "dagger"],
-    )]
+    spec.containers = [ContainerInstance(instance_id="x", catalog_id="backpack",
+                                         location=StorageLocation(kind="carried"))]
+    spec.items = [
+        _ItemInstance(instance_id="d1", catalog_id="dagger",
+                      location=StorageLocation(kind="container", id="x")),
+        _ItemInstance(instance_id="d2", catalog_id="dagger",
+                      location=StorageLocation(kind="container", id="x")),
+    ]
     assert carried_weight_cn(spec, test_data) == 80 + 20
 
 
@@ -491,10 +554,14 @@ def test_stashed_container_contributes_zero(data):
         item_type="container", cost_gp=5, weight_cn=80, capacity_cn=400,
     )
     spec = _minimal_spec(ruleset=RuleSet(encumbrance="detailed"))
-    spec.containers = [ContainerInstance(
-        instance_id="x", catalog_id="backpack", state="stashed",
-        contents=["torch", "torch"],
-    )]
+    spec.containers = [ContainerInstance(instance_id="x", catalog_id="backpack",
+                                         location=StorageLocation(kind="stashed"))]
+    spec.items = [
+        _ItemInstance(instance_id="t1", catalog_id="torch",
+                      location=StorageLocation(kind="container", id="x")),
+        _ItemInstance(instance_id="t2", catalog_id="torch",
+                      location=StorageLocation(kind="container", id="x")),
+    ]
     assert carried_weight_cn(spec, test_data) == 0
 
 
@@ -510,18 +577,23 @@ def test_bag_of_holding_at_full_weighs_600(data):
         weight_multiplier=0.06,
     )
     spec = _minimal_spec(ruleset=RuleSet(encumbrance="detailed"))
-    spec.containers = [ContainerInstance(
-        instance_id="x", catalog_id="boh", state="carried",
-        contents=["dagger"] * 1000,
-    )]
+    spec.containers = [ContainerInstance(instance_id="x", catalog_id="boh",
+                                         location=StorageLocation(kind="carried"))]
+    spec.items = [
+        _ItemInstance(instance_id=f"d{i}", catalog_id="dagger",
+                      location=StorageLocation(kind="container", id="x"))
+        for i in range(1000)
+    ]
     assert carried_weight_cn(spec, test_data) == int(0.06 * 10000)
 
 
 def test_equip_rejects_container_catalog_item():
     from aose.engine.equip import equip
     fake = _fake_container_data()
+    spec = _minimal_spec()
+    spec.items = [_ItemInstance(instance_id="bp1", catalog_id="backpack")]
     with pytest.raises(ValueError, match="not equippable"):
-        equip("backpack", inventory=["backpack"], equipped={}, enchanted=[], data=fake)
+        equip(spec, "bp1", data=fake)
 
 
 def test_containers_yaml_loads(data):
@@ -573,14 +645,42 @@ def _make_client(tmp_path, ruleset=None):
     return client
 
 
+from aose.models.storage import CoinStack as _CoinStack
+
+
 def _seed_character(client, gold=100, inventory=None, containers=None) -> str:
+    coins = [_CoinStack(denom="gp", count=gold)] if gold else []
+    items = [_ItemInstance(instance_id=_iid(cid), catalog_id=cid)
+             for cid in (inventory or [])]
     spec = _minimal_spec(
-        gold=gold,
-        inventory=list(inventory or []),
+        coins=coins,
+        items=items,
         containers=list(containers or []),
     )
     save_character("test", spec, client._characters_dir)
     return "test"
+
+
+def _carried_items(spec):
+    """Catalog IDs of non-enchanted carried items."""
+    return [i.catalog_id for i in spec.items
+            if i.location.kind == "carried" and i.enchantment_id is None]
+
+
+def _container_items(spec, container_iid):
+    """Catalog IDs of items in the named container."""
+    return [i.catalog_id for i in spec.items
+            if i.location.kind == "container" and i.location.id == container_iid]
+
+
+def _spec_iid(spec, catalog_id, kind="carried", container_id=None):
+    """Instance id of the first item at the given location with given catalog id."""
+    return next(
+        i.instance_id for i in spec.items
+        if i.catalog_id == catalog_id
+        and i.location.kind == kind
+        and (container_id is None or i.location.id == container_id)
+    )
 
 
 def test_sheet_buy_creates_container_instance(tmp_path):
@@ -590,8 +690,8 @@ def test_sheet_buy_creates_container_instance(tmp_path):
     assert r.status_code == 303
     spec = load_character("test", client._characters_dir)
     assert _gp(spec) == 15  # 20 - 5
-    # Container is in spec.containers, NOT in inventory
-    assert spec.inventory == []
+    # Container is in spec.containers, NOT in items
+    assert _carried_items(spec) == []
     assert len(spec.containers) == 1
     assert spec.containers[0].catalog_id == "backpack"
     assert spec.containers[0].location.kind == "carried"
@@ -615,7 +715,7 @@ def test_sheet_buy_regular_item_still_uses_inventory(tmp_path):
     r = client.post("/character/test/equipment/buy", data={"item_id": "sword"})
     assert r.status_code == 303
     spec = load_character("test", client._characters_dir)
-    assert spec.inventory == ["sword"]
+    assert any(i.catalog_id == "sword" and i.location.kind == "carried" for i in spec.items)
     assert spec.containers == []
 
 
@@ -694,12 +794,13 @@ def test_sheet_stow_endpoint(tmp_path):
     _seed_character(client, gold=0, inventory=["torch"])
     client.post("/character/test/equipment/add", data={"item_id": "backpack"})
     spec = load_character("test", client._characters_dir)
-    instance_id = spec.containers[0].instance_id
-    r = _move_into_container(client, "test", instance_id, "torch")
+    bp_iid = spec.containers[0].instance_id
+    torch_iid = _spec_iid(spec, "torch")
+    r = _move_into_container(client, "test", bp_iid, torch_iid)
     assert r.status_code == 303
     spec = load_character("test", client._characters_dir)
-    assert spec.inventory == []
-    assert spec.containers[0].contents == ["torch"]
+    assert _carried_items(spec) == []
+    assert _container_items(spec, bp_iid) == ["torch"]
 
 
 def test_sheet_take_out_endpoint(tmp_path):
@@ -707,14 +808,18 @@ def test_sheet_take_out_endpoint(tmp_path):
     _seed_character(client)
     client.post("/character/test/equipment/add", data={"item_id": "backpack"})
     spec = load_character("test", client._characters_dir)
-    instance_id = spec.containers[0].instance_id
+    bp_iid = spec.containers[0].instance_id
     client.post("/character/test/equipment/add", data={"item_id": "torch"})
-    _move_into_container(client, "test", instance_id, "torch")
-    r = _take_out_of_container(client, "test", instance_id, "torch")
+    spec = load_character("test", client._characters_dir)
+    torch_iid = _spec_iid(spec, "torch")
+    _move_into_container(client, "test", bp_iid, torch_iid)
+    spec = load_character("test", client._characters_dir)
+    torch_iid = _spec_iid(spec, "torch", kind="container", container_id=bp_iid)
+    r = _take_out_of_container(client, "test", bp_iid, torch_iid)
     assert r.status_code == 303
     spec = load_character("test", client._characters_dir)
-    assert spec.inventory == ["torch"]
-    assert spec.containers[0].contents == []
+    assert any(i.catalog_id == "torch" and i.location.kind == "carried" for i in spec.items)
+    assert _container_items(spec, bp_iid) == []
 
 
 def test_sheet_stow_rejects_full_container(tmp_path):
@@ -722,15 +827,40 @@ def test_sheet_stow_rejects_full_container(tmp_path):
     _seed_character(client)
     client.post("/character/test/equipment/add", data={"item_id": "sack_small"})
     spec = load_character("test", client._characters_dir)
-    instance_id = spec.containers[0].instance_id
+    sack_iid = spec.containers[0].instance_id
     # 20 daggers at 10 cn = 200 cn = sack_small capacity
     for _ in range(20):
         client.post("/character/test/equipment/add", data={"item_id": "dagger"})
-        _move_into_container(client, "test", instance_id, "dagger")
+        spec = load_character("test", client._characters_dir)
+        dag_iid = _spec_iid(spec, "dagger")
+        _move_into_container(client, "test", sack_iid, dag_iid)
     client.post("/character/test/equipment/add", data={"item_id": "dagger"})
-    r = _move_into_container(client, "test", instance_id, "dagger")
+    spec = load_character("test", client._characters_dir)
+    dag_iid = _spec_iid(spec, "dagger")
+    r = _move_into_container(client, "test", sack_iid, dag_iid)
     assert r.status_code == 400
     assert "full" in r.text.lower()
+
+
+def _wiz_carried_items(draft):
+    return [i["catalog_id"] for i in draft.get("items", [])
+            if i.get("location", {}).get("kind") == "carried"
+            and i.get("enchantment_id") is None]
+
+
+def _wiz_container_items(draft, container_iid):
+    return [i["catalog_id"] for i in draft.get("items", [])
+            if i.get("location", {}).get("kind") == "container"
+            and i.get("location", {}).get("id") == container_iid]
+
+
+def _wiz_iid(draft, catalog_id, kind="carried", container_id=None):
+    return next(
+        i["instance_id"] for i in draft.get("items", [])
+        if i.get("catalog_id") == catalog_id
+        and i.get("location", {}).get("kind") == kind
+        and (container_id is None or i.get("location", {}).get("id") == container_id)
+    )
 
 
 def test_wizard_stow_endpoint(tmp_path):
@@ -739,12 +869,13 @@ def test_wizard_stow_endpoint(tmp_path):
     client.post(f"/wizard/{draft_id}/equipment/add", data={"item_id": "backpack"})
     client.post(f"/wizard/{draft_id}/equipment/add", data={"item_id": "torch"})
     draft = load_draft(draft_id, client._drafts_dir)
-    instance_id = draft["containers"][0]["instance_id"]
-    r = _wiz_move_into_container(client, draft_id, instance_id, "torch")
+    bp_iid = draft["containers"][0]["instance_id"]
+    torch_iid = _wiz_iid(draft, "torch")
+    r = _wiz_move_into_container(client, draft_id, bp_iid, torch_iid)
     assert r.status_code == 303
     draft = load_draft(draft_id, client._drafts_dir)
-    assert draft["inventory"] == []
-    assert draft["containers"][0]["contents"] == ["torch"]
+    assert _wiz_carried_items(draft) == []
+    assert _wiz_container_items(draft, bp_iid) == ["torch"]
 
 
 def test_wizard_take_out_endpoint(tmp_path):
@@ -753,13 +884,17 @@ def test_wizard_take_out_endpoint(tmp_path):
     client.post(f"/wizard/{draft_id}/equipment/add", data={"item_id": "backpack"})
     client.post(f"/wizard/{draft_id}/equipment/add", data={"item_id": "torch"})
     draft = load_draft(draft_id, client._drafts_dir)
-    instance_id = draft["containers"][0]["instance_id"]
-    _wiz_move_into_container(client, draft_id, instance_id, "torch")
-    r = _wiz_take_out_of_container(client, draft_id, instance_id, "torch")
+    bp_iid = draft["containers"][0]["instance_id"]
+    torch_iid = _wiz_iid(draft, "torch")
+    _wiz_move_into_container(client, draft_id, bp_iid, torch_iid)
+    draft = load_draft(draft_id, client._drafts_dir)
+    torch_iid = _wiz_iid(draft, "torch", kind="container", container_id=bp_iid)
+    r = _wiz_take_out_of_container(client, draft_id, bp_iid, torch_iid)
     assert r.status_code == 303
     draft = load_draft(draft_id, client._drafts_dir)
-    assert draft["inventory"] == ["torch"]
-    assert draft["containers"][0]["contents"] == []
+    assert any(i.get("catalog_id") == "torch" and i.get("location", {}).get("kind") == "carried"
+               for i in draft.get("items", []))
+    assert _wiz_container_items(draft, bp_iid) == []
 
 
 def _move_container_route(client, char_id, instance_id, dest_kind):
@@ -822,16 +957,18 @@ def test_sheet_remove_container_drop_clears_contents(tmp_path):
     _seed_character(client, gold=0)
     client.post("/character/test/equipment/add", data={"item_id": "backpack"})
     spec = load_character("test", client._characters_dir)
-    instance_id = spec.containers[0].instance_id
+    bp_iid = spec.containers[0].instance_id
     client.post("/character/test/equipment/add", data={"item_id": "torch"})
-    _move_into_container(client, "test", instance_id, "torch")
+    spec = load_character("test", client._characters_dir)
+    torch_iid = _spec_iid(spec, "torch")
+    _move_into_container(client, "test", bp_iid, torch_iid)
     r = client.post("/character/test/equipment/remove-container", data={
-        "instance_id": instance_id, "mode": "drop",
+        "instance_id": bp_iid, "mode": "drop",
     })
     assert r.status_code == 303
     spec = load_character("test", client._characters_dir)
     assert spec.containers == []
-    assert spec.inventory == []
+    assert _carried_items(spec) == []
     assert _gp(spec) == 0
 
 
@@ -840,11 +977,13 @@ def test_sheet_remove_container_sell_non_empty_returns_400(tmp_path):
     _seed_character(client)
     client.post("/character/test/equipment/add", data={"item_id": "backpack"})
     spec = load_character("test", client._characters_dir)
-    instance_id = spec.containers[0].instance_id
+    bp_iid = spec.containers[0].instance_id
     client.post("/character/test/equipment/add", data={"item_id": "torch"})
-    _move_into_container(client, "test", instance_id, "torch")
+    spec = load_character("test", client._characters_dir)
+    torch_iid = _spec_iid(spec, "torch")
+    _move_into_container(client, "test", bp_iid, torch_iid)
     r = client.post("/character/test/equipment/remove-container", data={
-        "instance_id": instance_id, "mode": "sell",
+        "instance_id": bp_iid, "mode": "sell",
     })
     assert r.status_code == 400
 
@@ -884,15 +1023,16 @@ def test_wizard_remove_container_drop_clears_contents(tmp_path):
     client.post(f"/wizard/{draft_id}/equipment/add", data={"item_id": "backpack"})
     client.post(f"/wizard/{draft_id}/equipment/add", data={"item_id": "torch"})
     draft = load_draft(draft_id, client._drafts_dir)
-    instance_id = draft["containers"][0]["instance_id"]
-    _wiz_move_into_container(client, draft_id, instance_id, "torch")
+    bp_iid = draft["containers"][0]["instance_id"]
+    torch_iid = _wiz_iid(draft, "torch")
+    _wiz_move_into_container(client, draft_id, bp_iid, torch_iid)
     r = client.post(f"/wizard/{draft_id}/equipment/remove-container", data={
-        "instance_id": instance_id, "mode": "drop",
+        "instance_id": bp_iid, "mode": "drop",
     })
     assert r.status_code == 303
     draft = load_draft(draft_id, client._drafts_dir)
     assert draft["containers"] == []
-    assert draft["inventory"] == []
+    assert _wiz_carried_items(draft) == []
 
 
 def test_wizard_single_move_route_moves_item(tmp_path):
@@ -901,16 +1041,17 @@ def test_wizard_single_move_route_moves_item(tmp_path):
     client.post(f"/wizard/{draft_id}/equipment/add", data={"item_id": "torch"})
     client.post(f"/wizard/{draft_id}/equipment/add", data={"item_id": "backpack"})
     draft = load_draft(draft_id, client._drafts_dir)
-    instance_id = draft["containers"][0]["instance_id"]
+    bp_iid = draft["containers"][0]["instance_id"]
+    torch_iid = _wiz_iid(draft, "torch")
     r = client.post(f"/wizard/{draft_id}/inventory/move", data={
-        "category": "item", "item_id": "torch",
+        "category": "item", "item_id": torch_iid,
         "src_kind": "carried", "src_id": "",
-        "dest_kind": "container", "dest_id": instance_id,
+        "dest_kind": "container", "dest_id": bp_iid,
     })
     assert r.status_code == 303
     draft = load_draft(draft_id, client._drafts_dir)
-    assert "torch" not in draft["inventory"]
-    assert "torch" in draft["containers"][0]["contents"]
+    assert _wiz_carried_items(draft) == []
+    assert _wiz_container_items(draft, bp_iid) == ["torch"]
 
 
 def test_wizard_old_move_item_route_is_gone(tmp_path):
@@ -1022,9 +1163,11 @@ def test_sheet_renders_container_contents_after_stow(tmp_path):
     _seed_character(client)
     client.post("/character/test/equipment/add", data={"item_id": "backpack"})
     spec = load_character("test", client._characters_dir)
-    instance_id = spec.containers[0].instance_id
+    bp_iid = spec.containers[0].instance_id
     client.post("/character/test/equipment/add", data={"item_id": "torch"})
-    _move_into_container(client, "test", instance_id, "torch")
+    spec = load_character("test", client._characters_dir)
+    torch_iid = _spec_iid(spec, "torch")
+    _move_into_container(client, "test", bp_iid, torch_iid)
     r = client.get("/character/test")
     assert "Torch" in r.text  # item appears in rendered container contents
 
@@ -1041,10 +1184,12 @@ def test_wizard_containers_persist_through_finalize(tmp_path):
 
     client.post(f"/wizard/{draft_id}/equipment/buy", data={"item_id": "backpack"})
     draft = load_draft(draft_id, client._drafts_dir)
-    instance_id = draft["containers"][0]["instance_id"]
+    bp_iid = draft["containers"][0]["instance_id"]
     # Add a torch and stow it inside
     client.post(f"/wizard/{draft_id}/equipment/add", data={"item_id": "torch"})
-    _wiz_move_into_container(client, draft_id, instance_id, "torch")
+    draft = load_draft(draft_id, client._drafts_dir)
+    torch_iid = _wiz_iid(draft, "torch")
+    _wiz_move_into_container(client, draft_id, bp_iid, torch_iid)
 
     # Submit equipment step, then finalize
     client.post(f"/wizard/{draft_id}/equipment")
@@ -1056,7 +1201,7 @@ def test_wizard_containers_persist_through_finalize(tmp_path):
     # The bug being regression-tested: containers were silently dropped.
     assert len(spec.containers) == 1, "containers must survive finalization"
     assert spec.containers[0].catalog_id == "backpack"
-    assert spec.containers[0].contents == ["torch"]
+    assert _container_items(spec, bp_iid) == ["torch"]
 
 
 def test_sheet_container_row_collapse_button_present(tmp_path):
@@ -1072,9 +1217,11 @@ def test_sheet_print_only_lists_container_contents(tmp_path):
     _seed_character(client)
     client.post("/character/test/equipment/add", data={"item_id": "backpack"})
     spec = load_character("test", client._characters_dir)
-    instance_id = spec.containers[0].instance_id
+    bp_iid = spec.containers[0].instance_id
     client.post("/character/test/equipment/add", data={"item_id": "torch"})
-    _move_into_container(client, "test", instance_id, "torch")
+    spec = load_character("test", client._characters_dir)
+    torch_iid = _spec_iid(spec, "torch")
+    _move_into_container(client, "test", bp_iid, torch_iid)
     r = client.get("/character/test")
     # The print-only block names the container and its contents
     assert "Backpack" in r.text

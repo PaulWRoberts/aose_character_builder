@@ -453,10 +453,10 @@ def test_ac_ring_of_protection(data):
 
 def test_ac_chain_mail_plus_1(data):
     from aose.engine.armor_class import armor_class
+    from aose.models import ItemInstance
     d = _with_magic(data)
     spec = _minimal_spec(abilities={"STR": 12, "INT": 12, "WIS": 11, "DEX": 10, "CON": 12, "CHA": 10})
-    spec.inventory = ["chain_mail_plus_1"]
-    spec.equipped = {"armor": "chain_mail_plus_1"}
+    spec.items.append(ItemInstance(instance_id="cmp1", catalog_id="chain_mail_plus_1", equip="armor"))
     desc, asc = armor_class(spec, d)
     assert desc == 4   # 5 - 1
     assert asc == 15
@@ -464,21 +464,21 @@ def test_ac_chain_mail_plus_1(data):
 
 def test_ac_shield_plus_1_two_points(data):
     from aose.engine.armor_class import armor_class
+    from aose.models import ItemInstance
     d = _with_magic(data)
     spec = _minimal_spec(abilities={"STR": 12, "INT": 12, "WIS": 11, "DEX": 10, "CON": 12, "CHA": 10})
-    spec.inventory = ["shield_plus_1"]
-    spec.equipped = {"off_hand": "shield_plus_1"}
+    spec.items.append(ItemInstance(instance_id="shp1", catalog_id="shield_plus_1", equip="off_hand"))
     desc, _ = armor_class(spec, d)
     assert desc == 9 - 2  # unarmored 9, shield bonus 1 + magic 1
 
 
 def test_ac_chain_and_ring_stack(data):
     from aose.engine.armor_class import armor_class
+    from aose.models import ItemInstance
     d = _with_magic(data)
     spec = _equip_magic_spec(d, "ring_of_protection",
                              abilities={"STR": 12, "INT": 12, "WIS": 11, "DEX": 10, "CON": 12, "CHA": 10})
-    spec.inventory = ["chain_mail_plus_1"]
-    spec.equipped = {"armor": "chain_mail_plus_1"}
+    spec.items.append(ItemInstance(instance_id="cmp1", catalog_id="chain_mail_plus_1", equip="armor"))
     desc, _ = armor_class(spec, d)
     assert desc == 4 - 1  # chain+1 base 4, ring -1
 
@@ -577,9 +577,9 @@ def test_thac0_set_max_leaves_better_untouched(data):
 
 
 def _weapon_spec(data, weapon_id, **kwargs):
+    from aose.models import ItemInstance
     spec = _minimal_spec(**kwargs)
-    spec.inventory = [weapon_id]
-    spec.equipped = {"main_hand": weapon_id}
+    spec.items.append(ItemInstance(instance_id=weapon_id, catalog_id=weapon_id, equip="main_hand"))
     return spec
 
 
@@ -653,8 +653,9 @@ def test_variable_weapon_damage_with_magic(data):
 def test_magic_armour_half_weight(data):
     from aose.engine.encumbrance import carried_weight_cn
     d = _with_magic(data)
+    from aose.models import ItemInstance
     spec = _minimal_spec(ruleset=RuleSet(encumbrance="detailed"))
-    spec.inventory = ["chain_mail_plus_1"]   # 400 cn × 0.5
+    spec.items.append(ItemInstance(instance_id="cmp1", catalog_id="chain_mail_plus_1"))
     assert carried_weight_cn(spec, d) == 200
 
 
@@ -715,8 +716,9 @@ def test_magic_items_view_lists_instance_and_inventory(data):
         item_type="gear", cost_gp=0, weight_cn=10, magic=True,
         description="Restores HP.",
     )
+    from aose.models import ItemInstance
     spec = _minimal_spec()
-    spec.inventory = ["potion_of_healing"]
+    spec.items.append(ItemInstance(instance_id="pot1", catalog_id="potion_of_healing"))
     spec.magic_items = add_free_magic_item([], "ring_of_protection", d)
     spec.magic_items = equip_magic(spec.magic_items, spec.magic_items[0].instance_id, d)
     sheet = build_sheet(spec, d)
@@ -740,7 +742,7 @@ def test_magic_items_view_public_helper(data):
     spec.magic_items = add_free_magic_item([], "ring_of_protection", d)
     spec.magic_items = equip_magic(spec.magic_items, spec.magic_items[0].instance_id, d)
     # Call the public helper directly
-    views = magic_items_view(spec.magic_items, spec.inventory, d)
+    views = magic_items_view(spec.magic_items, [i.catalog_id for i in spec.items], d)
     assert len(views) == 1
     assert views[0].name == "Ring of Protection"
     assert views[0].instance_id is not None

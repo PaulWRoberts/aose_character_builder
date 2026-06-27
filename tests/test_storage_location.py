@@ -100,14 +100,14 @@ def test_container_new_shape_uses_storage_location():
 
 
 def test_container_legacy_state_location_coerced():
-    # old shape: state + location(person/animal/vehicle) + location_id
+    # old shape: state + location(person/animal/vehicle) + location_id + contents
+    # contents silently dropped (now tracked via CharacterSpec.items)
     c = ContainerInstance.model_validate({
         "instance_id": "c1", "catalog_id": "backpack",
         "state": "stashed", "location": "person", "location_id": None,
         "contents": ["torch"],
     })
     assert c.location == StorageLocation(kind="stashed")
-    assert c.contents == ["torch"]
 
 
 def test_container_legacy_on_animal_coerced():

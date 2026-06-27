@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 
 from aose.data.loader import GameData
-from aose.models import CharacterSpec, ClassEntry, RuleSet
+from aose.models import CharacterSpec, ClassEntry, ItemInstance, RuleSet
 from aose.sheet.view import build_sheet
 
 DATA_DIR = Path(__file__).parent.parent / "data"
@@ -217,7 +217,7 @@ def test_sheet_renders_inline_detail_rows(tmp_path):
         name="Arcanist",
         abilities={"STR": 9, "INT": 16, "WIS": 9, "DEX": 12, "CON": 10, "CHA": 9},
         race_id="human", classes=[e2], alignment="neutral",
-        inventory=["dagger"],  # gives at least one item row
+        items=[ItemInstance(instance_id="t_dagger", catalog_id="dagger")],  # one item row
     )
     save_character("arcanist", spec, characters_dir)
 

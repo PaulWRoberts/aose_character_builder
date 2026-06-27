@@ -62,7 +62,7 @@ def test_animal_group_renders_barding_in_equipped():
 
 
 def test_retainer_group_renders_equipped_gear():
-    from aose.models import CharacterSpec, ClassEntry, Retainer
+    from aose.models import CharacterSpec, ClassEntry, ItemInstance, Retainer
     from aose.sheet.view import build_inventory_groups
     npc = CharacterSpec(
         name="Hireling",
@@ -70,7 +70,7 @@ def test_retainer_group_renders_equipped_gear():
         race_id="human",
         classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[5])],
         alignment="neutral",
-        inventory=["dagger"], equipped={"main_hand": "dagger"},
+        items=[ItemInstance(instance_id="dagger", catalog_id="dagger", equip="main_hand")],
     )
     spec = _base_spec(retainers=[Retainer(id="r1", spec=npc, loyalty=7)])
     groups = build_inventory_groups(spec, DATA)
@@ -117,14 +117,16 @@ def test_off_hand_flags_off_when_rule_disabled():
 def test_top_level_groups_include_carried_and_carriers(data):
     from aose.models import AnimalInstance, CharacterSpec, CoinStack
     from aose.sheet.view import build_sheet
-    spec = CharacterSpec.model_validate(dict(
+    from aose.models import ItemInstance
+    spec = CharacterSpec(
         name="T", abilities={"STR": 10, "DEX": 10, "CON": 10, "INT": 10,
                              "WIS": 10, "CHA": 10},
         race_id="human", classes=[{"class_id": "fighter", "level": 1}],
         alignment="neutral",
-        inventory=["torch"], coins=[CoinStack(denom="gp", count=5)],
+        items=[ItemInstance(instance_id="torch", catalog_id="torch")],
+        coins=[CoinStack(denom="gp", count=5)],
         animals=[AnimalInstance(instance_id="a1", catalog_id="mule")],
-    ))
+    )
     sheet = build_sheet(spec, data)
     kinds = {g.kind for g in sheet.inventory_groups}
     assert "carried" in kinds and "stashed" in kinds and "animal" in kinds
@@ -149,13 +151,14 @@ def test_wealth_total_on_sheet(data):
 def test_carried_equipped_attacks_mirror_pc_attacks(data):
     from aose.models import CharacterSpec, ClassEntry
     from aose.sheet.view import build_inventory_groups
+    from aose.models import ItemInstance
     spec = CharacterSpec(
         name="Hero",
         abilities={"STR": 13, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
         race_id="human",
         classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
         alignment="neutral",
-        inventory=["sword"], equipped={"main_hand": "sword"},
+        items=[ItemInstance(instance_id="sword", catalog_id="sword", equip="main_hand")],
     )
     carried = next(g for g in build_inventory_groups(spec, data) if g.kind == "carried")
     assert carried.equipped_attacks, "PC carried group should expose weapon attack rows"
@@ -163,7 +166,7 @@ def test_carried_equipped_attacks_mirror_pc_attacks(data):
 
 
 def test_retainer_equipped_attacks_computed_from_npc_spec(data):
-    from aose.models import CharacterSpec, ClassEntry, Retainer
+    from aose.models import CharacterSpec, ClassEntry, ItemInstance, Retainer
     from aose.sheet.view import build_inventory_groups
     npc = CharacterSpec(
         name="Hireling",
@@ -171,7 +174,7 @@ def test_retainer_equipped_attacks_computed_from_npc_spec(data):
         race_id="human",
         classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[5])],
         alignment="neutral",
-        inventory=["dagger"], equipped={"main_hand": "dagger"},
+        items=[ItemInstance(instance_id="dagger", catalog_id="dagger", equip="main_hand")],
     )
     spec = _base_spec(retainers=[Retainer(id="r1", spec=npc, loyalty=7)])
     retainer = next(g for g in build_inventory_groups(spec, data) if g.kind == "retainer")

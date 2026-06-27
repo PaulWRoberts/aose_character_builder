@@ -71,17 +71,19 @@ back-navigation links (or a 🔒 when a roll has locked an earlier step).
 
 ## Storage shapes
 
-- `CharacterSpec.equipped`: `dict[str, str]` — slots `armor`, `main_hand`, `off_hand`
-  (`equipped_weapons: list[str]` retired; all held items go through named slots)
-- `inventory`: `list[str]` — duplicates count toward inventory size
-- Off-hand weapon requires `two_weapon_fighting` rule + `two_weapon_eligible` + passes
+- `items: list[ItemInstance]` — unified flat list replacing `inventory`/`stashed`/
+  `equipped`/`ammo`/`enchanted`. Each `ItemInstance` carries:
+  - `instance_id: str` (uuid4 hex, required — no default)
+  - `catalog_id: str` — references `GameData.items`
+  - `location: StorageLocation` (default `carried`); `kind ∈ {carried, stashed, animal, vehicle, container}`
+  - `equip: str | None` — `"armor"`, `"main_hand"`, or `"off_hand"` when worn/wielded
+  - `count: int` — stack size (stackable items auto-merge on buy/add)
+  - `enchantment_id: str | None` — non-None makes it an enchanted item
+  - `loaded_ammo_id: str | None` — ranged weapon with loaded ammo
+- Off-hand weapon requires `two_weapon_fighting` rule + `two_weapon_eligible` +
   `off_hand_eligible`; total hand cost (via `hand_cost`) ≤ 2
-- Equipped items live *inside* `inventory` — weight is counted once
-- `stashed`, `containers`, gems/jewellery each have their own shapes
-  — see `docs/ARCHITECTURE.md`
-- `magic_items: list[MagicItemInstance]` / `enchanted: list[EnchantedInstance]` /
-  `ammo: list[AmmoStack]` / `spell_sources: list[SpellSource]` — each instance carries
-  `location: StorageLocation` (default Carried); movement goes through
+- `magic_items: list[MagicItemInstance]` / `spell_sources: list[SpellSource]` — each
+  carries `location: StorageLocation` (default Carried); movement goes through
   `storage.move_thing` + `POST /inventory/move`. Cast/decipher/copy on spell sources
   require `location.kind == "carried"`.
 - `coins`: `list[CoinStack]` — each `CoinStack(denom, count, location: StorageLocation)`

@@ -25,7 +25,7 @@ def test_heuristic_armour_respects_class_allowance():
         if cid in DATA.quick_equipment.get("classes", {}):
             continue
         kit = qe.roll_kit(cid, DATA, rng=random.Random(3))
-        armor_id = kit.equipped.get("armor")
+        armor_id = kit.equips.get("armor")
         if armor_id:
             allowed = allowed_armor_ids([cls], DATA)
             assert allowed == "all" or armor_id in allowed, f"{cid}: {armor_id}"

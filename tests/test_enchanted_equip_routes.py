@@ -6,6 +6,7 @@ Covers three reported bugs:
   2. Equipping an enchanted item bypassed class weapon/armour allowances.
   3. An equipped item's Move control offered the PC's own carried bucket.
 """
+import uuid
 from pathlib import Path
 
 import pytest
@@ -15,9 +16,10 @@ from aose.characters import load_character, save_character
 from aose.models import (
     CharacterSpec,
     ClassEntry,
-    EnchantedInstance,
+    ItemInstance,
     MagicItemInstance,
 )
+from aose.models.storage import StorageLocation
 from aose.web.app import create_app
 
 DATA_DIR = Path(__file__).parent.parent / "data"
@@ -38,17 +40,18 @@ def client(tmp_path):
     return c
 
 
-def _save(client, *, class_id="fighter", inventory=None, equipped=None,
-          enchanted=None, magic_items=None):
+def _iid():
+    return uuid.uuid4().hex
+
+
+def _save(client, *, class_id="fighter", items=None, magic_items=None):
     spec = CharacterSpec(
         name="Christopher",
         abilities={"STR": 12, "INT": 12, "WIS": 12, "DEX": 12, "CON": 12, "CHA": 12},
         race_id="human",
         classes=[ClassEntry(class_id=class_id, level=1, hp_rolls=[8])],
         alignment="neutral",
-        inventory=inventory or [],
-        equipped=equipped or {},
-        enchanted=enchanted or [],
+        items=items or [],
         magic_items=magic_items or [],
     )
     save_character("christopher", spec, client._characters_dir)
@@ -64,8 +67,8 @@ def _load(client):
 def test_equip_forms_do_not_double_equipment_segment(client):
     _save(
         client,
-        enchanted=[EnchantedInstance(instance_id="e1", base_id="sword",
-                                     enchantment_id="generic_plus_1")],
+        items=[ItemInstance(instance_id="e1", catalog_id="sword",
+                            enchantment_id="generic_plus_1")],
         magic_items=[MagicItemInstance(
             instance_id="m1", catalog_id="amulet_of_protection_against_possession")],
     )
@@ -78,8 +81,8 @@ def test_equip_enchanted_route_exists(client):
     """The route the modal posts to must resolve (not 404)."""
     _save(
         client,
-        enchanted=[EnchantedInstance(instance_id="e1", base_id="sword",
-                                     enchantment_id="generic_plus_1")],
+        items=[ItemInstance(instance_id="e1", catalog_id="sword",
+                            enchantment_id="generic_plus_1")],
     )
     r = client.post("/character/christopher/equipment/equip-enchanted",
                     data={"instance_id": "e1"})
@@ -93,14 +96,14 @@ def test_equip_enchanted_armor_rejected_for_disallowed_class(client):
     _save(
         client,
         class_id="magic_user",
-        enchanted=[EnchantedInstance(instance_id="e1", base_id="chain_mail",
-                                     enchantment_id="armour_plus_1")],
+        items=[ItemInstance(instance_id="e1", catalog_id="chain_mail",
+                            enchantment_id="armour_plus_1")],
     )
     r = client.post("/character/christopher/equipment/equip-enchanted",
                     data={"instance_id": "e1"})
     assert r.status_code == 400
     spec = _load(client)
-    assert spec.enchanted[0].equipped is False
+    assert spec.items[0].equip is None
 
 
 def test_equip_enchanted_weapon_rejected_for_disallowed_class(client):
@@ -108,26 +111,28 @@ def test_equip_enchanted_weapon_rejected_for_disallowed_class(client):
     _save(
         client,
         class_id="magic_user",
-        enchanted=[EnchantedInstance(instance_id="e1", base_id="sword",
-                                     enchantment_id="generic_plus_1")],
+        items=[ItemInstance(instance_id="e1", catalog_id="sword",
+                            enchantment_id="generic_plus_1")],
     )
     r = client.post("/character/christopher/equipment/equip-enchanted",
                     data={"instance_id": "e1"})
     assert r.status_code == 400
-    assert _load(client).equipped.get("main_hand") != "e1"
+    spec = _load(client)
+    assert not any(i.equip == "main_hand" for i in spec.items)
 
 
 def test_equip_enchanted_armor_allowed_for_fighter(client):
     _save(
         client,
         class_id="fighter",
-        enchanted=[EnchantedInstance(instance_id="e1", base_id="chain_mail",
-                                     enchantment_id="armour_plus_1")],
+        items=[ItemInstance(instance_id="e1", catalog_id="chain_mail",
+                            enchantment_id="armour_plus_1")],
     )
     r = client.post("/character/christopher/equipment/equip-enchanted",
                     data={"instance_id": "e1"})
     assert r.status_code == 303
-    assert _load(client).enchanted[0].equipped is True
+    spec = _load(client)
+    assert spec.items[0].equip is not None
 
 
 # ── Bug 3: an equipped item must not offer its own carried bucket ───────────
@@ -142,8 +147,8 @@ def test_enchanted_armor_modal_hides_equip_when_disallowed(client):
     _save(
         client,
         class_id="magic_user",
-        enchanted=[EnchantedInstance(instance_id="e1", base_id="chain_mail",
-                                     enchantment_id="armour_plus_1")],
+        items=[ItemInstance(instance_id="e1", catalog_id="chain_mail",
+                            enchantment_id="armour_plus_1")],
     )
     r = client.get("/character/christopher")
     modal = _ench_modal(r.text, "e1")
@@ -155,8 +160,8 @@ def test_enchanted_weapon_modal_hides_equip_when_disallowed(client):
     _save(
         client,
         class_id="magic_user",
-        enchanted=[EnchantedInstance(instance_id="e1", base_id="sword",
-                                     enchantment_id="generic_plus_1")],
+        items=[ItemInstance(instance_id="e1", catalog_id="sword",
+                            enchantment_id="generic_plus_1")],
     )
     r = client.get("/character/christopher")
     modal = _ench_modal(r.text, "e1")
@@ -168,8 +173,8 @@ def test_enchanted_armor_modal_shows_equip_when_allowed(client):
     _save(
         client,
         class_id="fighter",
-        enchanted=[EnchantedInstance(instance_id="e1", base_id="chain_mail",
-                                     enchantment_id="armour_plus_1")],
+        items=[ItemInstance(instance_id="e1", catalog_id="chain_mail",
+                            enchantment_id="armour_plus_1")],
     )
     r = client.get("/character/christopher")
     modal = _ench_modal(r.text, "e1")
@@ -178,16 +183,17 @@ def test_enchanted_armor_modal_shows_equip_when_allowed(client):
 
 
 def test_equipped_item_move_excludes_own_carried_bucket(client):
+    war_hammer_iid = _iid()
     _save(
         client,
         class_id="fighter",
-        inventory=["war_hammer"],
-        equipped={"main_hand": "war_hammer"},
+        items=[ItemInstance(instance_id=war_hammer_iid, catalog_id="war_hammer",
+                            equip="main_hand")],
     )
     r = client.get("/character/christopher")
     assert r.status_code == 200
     # Slice out just the equipped item's modal.
-    start = r.text.index('id="modal-item-equipped-war_hammer"')
+    start = r.text.index(f'id="modal-item-equipped-{war_hammer_iid}"')
     nxt = r.text.find('class="overlay modal"', start + 1)
     modal = r.text[start:nxt if nxt != -1 else len(r.text)]
     assert "Move to" in modal                      # the Move control rendered

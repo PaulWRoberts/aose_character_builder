@@ -16,8 +16,9 @@ from aose.engine.dice import roll
 from aose.engine.shop import InsufficientGold, REMOVE_MODES, UnknownItem
 from aose.models import (
     Animal, AnimalInstance, AnimalArmor, CharacterSpec, Container,
-    Vehicle, VehicleInstance,
+    ItemInstance, Vehicle, VehicleInstance,
 )
+from aose.models.storage import StorageLocation as _SL
 
 
 class LoadError(ValueError):
@@ -135,45 +136,44 @@ def _find_animal(animals, instance_id):
     return idx
 
 
-def assign_armor(inventory: list[str], animals: list[AnimalInstance],
+def assign_armor(items: list[ItemInstance], animals: list[AnimalInstance],
                  instance_id: str, armor_id: str, data: GameData
-                 ) -> tuple[list[str], list[AnimalInstance]]:
-    """Move an AnimalArmor from inventory onto the animal. Validates fit."""
+                 ) -> tuple[list[ItemInstance], list[AnimalInstance]]:
+    """Move an AnimalArmor from the PC's items onto the animal. Validates fit."""
     idx = _find_animal(animals, instance_id)
     animal = animals[idx]
     armor = _require(data, armor_id, AnimalArmor, "animal armour")
     catalog = data.items[animal.catalog_id]
     if armor_id not in catalog.armor_fits:
         raise ValueError(f"{armor.name} does not fit {catalog.name}")
-    if armor_id not in inventory:
+    _carried = _SL(kind="carried")
+    armor_inst = next((i for i in items
+                       if i.catalog_id == armor_id and i.location == _carried), None)
+    if armor_inst is None:
         raise ValueError(f"{armor_id!r} is not in inventory")
-    new_inv = list(inventory)
-    new_inv.remove(armor_id)
-    # return any previously worn armour to inventory first
+    new_items = [i for i in items if i is not armor_inst]
     if animal.armor_id:
-        new_inv.append(animal.armor_id)
+        new_items.append(ItemInstance(instance_id=uuid.uuid4().hex,
+                                      catalog_id=animal.armor_id, location=_carried))
     updated = animal.model_copy(update={"armor_id": armor_id})
-    return new_inv, [*animals[:idx], updated, *animals[idx + 1:]]
+    return new_items, [*animals[:idx], updated, *animals[idx + 1:]]
 
 
-def clear_armor(inventory: list[str], animals: list[AnimalInstance],
+def clear_armor(items: list[ItemInstance], animals: list[AnimalInstance],
                 instance_id: str, data: GameData
-                ) -> tuple[list[str], list[AnimalInstance]]:
+                ) -> tuple[list[ItemInstance], list[AnimalInstance]]:
     idx = _find_animal(animals, instance_id)
     animal = animals[idx]
-    new_inv = list(inventory)
+    new_items = list(items)
     if animal.armor_id:
-        new_inv.append(animal.armor_id)
+        new_items.append(ItemInstance(instance_id=uuid.uuid4().hex,
+                                      catalog_id=animal.armor_id,
+                                      location=_SL(kind="carried")))
     updated = animal.model_copy(update={"armor_id": None})
-    return new_inv, [*animals[:idx], updated, *animals[idx + 1:]]
+    return new_items, [*animals[:idx], updated, *animals[idx + 1:]]
 
 
 # ── Load / unload ──────────────────────────────────────────────────────────
-
-def _items_weight(item_ids: list[str], data: GameData) -> int:
-    return sum((data.items[i].weight_cn if i in data.items else 0)
-               for i in item_ids)
-
 
 def animal_capacity(animal: AnimalInstance, data: GameData) -> int | None:
     """Encumbered max-load cap (the hard ceiling). None when the animal is not
@@ -182,10 +182,14 @@ def animal_capacity(animal: AnimalInstance, data: GameData) -> int | None:
     return catalog.max_load_encumbered_cn
 
 
-def animal_load_cn(animal: AnimalInstance, data: GameData) -> int:
-    """Worn barding weight + loaded contents weight."""
-    worn = data.items[animal.armor_id].weight_cn if animal.armor_id else 0
-    return worn + _items_weight(animal.contents, data)
+def animal_load_cn(spec, animal: AnimalInstance, data: GameData) -> int:
+    """Worn barding weight + items loaded on the animal."""
+    from aose.engine.storage import location_load_cn
+    from aose.models.storage import StorageLocation
+    worn = (data.items[animal.armor_id].weight_cn
+            if animal.armor_id and animal.armor_id in data.items else 0)
+    loc = StorageLocation(kind="animal", id=animal.instance_id)
+    return worn + location_load_cn(spec, loc, data)
 
 
 def _find_vehicle(vehicles, instance_id):
@@ -203,8 +207,12 @@ def vehicle_capacity(vehicle: VehicleInstance, data: GameData) -> int:
     return catalog.cargo_capacity_cn
 
 
-def vehicle_load_cn(vehicle: VehicleInstance, data: GameData) -> int:
-    return _items_weight(vehicle.contents, data)
+def vehicle_load_cn(spec, vehicle: VehicleInstance, data: GameData) -> int:
+    """Total weight of items loaded in the vehicle."""
+    from aose.engine.storage import location_load_cn
+    from aose.models.storage import StorageLocation
+    loc = StorageLocation(kind="vehicle", id=vehicle.instance_id)
+    return location_load_cn(spec, loc, data)
 
 
 # ── Container-on-carrier ───────────────────────────────────────────────────

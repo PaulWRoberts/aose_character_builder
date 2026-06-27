@@ -5,7 +5,7 @@ import pytest
 
 from aose.data.loader import GameData
 from aose.engine.attacks import attack_profiles
-from aose.models import Ability, CharacterSpec, ClassEntry, RuleSet
+from aose.models import Ability, CharacterSpec, ClassEntry, ItemInstance, RuleSet
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 
@@ -16,18 +16,19 @@ def data():
 
 
 def _fighter(data, weapon_ids, *, variable):
-    equipped = {}
     slots = ("main_hand", "off_hand")
-    for i, wid in enumerate(weapon_ids[:2]):
-        equipped[slots[i]] = wid
+    items = []
+    for i, wid in enumerate(weapon_ids):
+        slot = slots[i] if i < 2 else None
+        items.append(ItemInstance(instance_id=f"t_{i}_{wid}", catalog_id=wid,
+                                  equip=slot))
     return CharacterSpec(
         name="T",
         abilities={a: 10 for a in Ability},
         race_id="human",
         classes=[ClassEntry(class_id="fighter", xp=0)],
         alignment="neutral",
-        inventory=list(weapon_ids),
-        equipped=equipped,
+        items=items,
         ruleset=RuleSet(variable_weapon_damage=variable),
     )
 

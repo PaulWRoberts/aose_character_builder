@@ -5,7 +5,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 from aose.characters import load_character, save_character
-from aose.models import CharacterSpec, ClassEntry, RuleSet
+from aose.models import CharacterSpec, ClassEntry, RuleSet, CoinStack, ItemInstance
+from aose.models.storage import StorageLocation
 from aose.web.app import create_app
 
 DATA_DIR = Path(__file__).parent.parent / "data"
@@ -33,7 +34,7 @@ def _save_char(client) -> str:
         race_id="human",
         classes=[ClassEntry(class_id="fighter", level=3, hp_rolls=[8, 8, 8])],
         alignment="neutral",
-        gold=50,
+        coins=[CoinStack(denom="gp", count=50)],
     )
     save_character("boss", spec, client._characters_dir)
     return "boss"
@@ -75,8 +76,7 @@ def _save_char_with_retainer(client) -> tuple[str, str]:
     ret = retainers_engine.generate_retainer(
         name="Sten", class_ids=["fighter"], level=1, race_id="human",
         alignment="neutral", hiring_spec=pc, data=data)
-    ret.spec.equipped = {}
-    ret.spec.inventory = ["dagger"]
+    ret.spec.items.append(ItemInstance(instance_id="dag1", catalog_id="dagger"))
     pc.retainers = [ret]
     save_character("boss", pc, client._characters_dir)
     return "boss", ret.id
@@ -102,7 +102,8 @@ def test_retainer_equip_route(client):
                        data={"item_id": "dagger"})
     assert resp.status_code == 303
     spec = load_character(cid, client._characters_dir)
-    assert spec.retainers[0].spec.equipped.get("main_hand") == "dagger"
+    ret_items = spec.retainers[0].spec.items
+    assert any(i.catalog_id == "dagger" and i.equip == "main_hand" for i in ret_items)
 
 
 def test_retainer_equip_missing_item_400(client):
@@ -119,8 +120,9 @@ def test_retainer_unequip_route(client):
                        data={"item_id": "dagger"})
     assert resp.status_code == 303
     spec = load_character(cid, client._characters_dir)
-    assert "dagger" not in spec.retainers[0].spec.equipped.values()
-    assert "dagger" in spec.retainers[0].spec.inventory
+    ret_items = spec.retainers[0].spec.items
+    assert not any(i.catalog_id == "dagger" and i.equip is not None for i in ret_items)
+    assert any(i.catalog_id == "dagger" and i.location.kind == "carried" for i in ret_items)
 
 
 def test_sheet_renders_retainer_equip_modals(client):
@@ -160,7 +162,9 @@ def _save_char_rs(client, ruleset) -> str:
         abilities={"STR": 12, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 13},
         race_id="human",
         classes=[ClassEntry(class_id="fighter", level=11, hp_rolls=[8] * 9)],
-        alignment="neutral", gold=50, ruleset=ruleset,
+        alignment="neutral",
+        coins=[CoinStack(denom="gp", count=50)],
+        ruleset=ruleset,
     )
     save_character("boss", spec, client._characters_dir)
     return "boss"

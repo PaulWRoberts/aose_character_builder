@@ -3,7 +3,7 @@ from pathlib import Path
 from aose.characters.storage import slugify, unique_character_id
 from aose.data.loader import GameData
 from aose.engine import storage
-from aose.models import CharacterSpec, ClassEntry, CoinStack, GemStack, ContainerInstance
+from aose.models import CharacterSpec, ClassEntry, CoinStack, GemStack, ContainerInstance, ItemInstance
 from aose.models.storage import StorageLocation
 
 DATA = GameData.load(Path("data"))
@@ -61,8 +61,8 @@ def test_location_load_cn_sums_loose_and_coins_at_a_container():
     sword_cn = DATA.items["sword"].weight_cn
     spec = _spec(
         containers=[ContainerInstance(instance_id="c1", catalog_id="backpack",
-                                      location=StorageLocation(kind="carried"),
-                                      contents=["sword"])],
+                                      location=StorageLocation(kind="carried"))],
+        items=[ItemInstance(instance_id="sw1", catalog_id="sword", location=here)],
         coins=[CoinStack(denom="gp", count=7, location=here)],
         gems=[GemStack(instance_id="g1", value=50, count=3, label="", location=here)],
     )

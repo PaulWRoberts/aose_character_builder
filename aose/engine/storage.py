@@ -246,6 +246,13 @@ def _clear_equip_state(inst) -> None:
     inst.loaded_ammo_id = None
 
 
+def _clear_weapon_loads(spec, ammo_iid: str) -> None:
+    """Clear loaded_ammo_id on any weapon whose ammo instance was removed/moved away."""
+    for i in spec.items:
+        if i.loaded_ammo_id == ammo_iid:
+            i.loaded_ammo_id = None
+
+
 def _find_world_list(pc: CharacterSpec, inst) -> list:
     for r in pc.retainers:
         if inst in r.spec.items:
@@ -341,9 +348,11 @@ def move_item(spec: CharacterSpec, instance_id: str, dest: StorageLocation,
     if resident is not None:
         resident.count += src_inst.count
         spec.items.remove(src_inst)
+        _clear_weapon_loads(spec, src_inst.instance_id)
     else:
         if dest.kind != "carried":
             _clear_equip_state(src_inst)
+            _clear_weapon_loads(spec, src_inst.instance_id)
         src_inst.location = dest
 
 

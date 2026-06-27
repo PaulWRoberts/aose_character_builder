@@ -1,4 +1,5 @@
 """Tests for the equip/unequip flow and the attack-profile engine."""
+import uuid
 from pathlib import Path
 
 import pytest
@@ -7,9 +8,8 @@ from fastapi.testclient import TestClient
 from aose.characters import load_character, save_character, save_settings
 from aose.data.loader import GameData
 from aose.engine.attacks import attack_profiles
-from aose.engine.equip import equip, equipped_count, unequip
-from aose.engine.shop import inventory_rows
-from aose.models import CharacterSpec, ClassEntry, RuleSet
+from aose.engine.equip import equip, unequip
+from aose.models import CharacterSpec, ClassEntry, ItemInstance, RuleSet
 from aose.web.app import create_app
 
 PROJECT_ROOT = Path(__file__).parent.parent
@@ -46,121 +46,145 @@ def client(tmp_path):
 
 
 def _modal_html(body: str, modal_id: str) -> str:
-    """Return just the HTML of the overlay whose id is `modal_id`.
-
-    The sheet renders per-item modals AND the management drawer (which keeps
-    Drop/Sell/Refund), so destructive-action assertions must be scoped to a
-    single modal, not the whole page."""
+    """Return just the HTML of the overlay whose id is `modal_id`."""
     start = body.index(f'id="{modal_id}"')
     nxt = body.find('class="overlay', start + 10)
     return body[start:nxt if nxt != -1 else len(body)]
 
 
-def _spec(abilities=None, inventory=None, equipped=None,
-          ruleset=None, weapon_proficiencies=None, weapon_specialisations=None):
+def _iid():
+    return uuid.uuid4().hex
+
+
+def _make_item(catalog_id, equip=None, count=1, iid=None, enchantment_id=None):
+    return ItemInstance(
+        instance_id=iid or _iid(),
+        catalog_id=catalog_id,
+        equip=equip,
+        count=count,
+        enchantment_id=enchantment_id,
+    )
+
+
+def _spec(abilities=None, items=None, ruleset=None,
+          weapon_proficiencies=None, weapon_specialisations=None,
+          # Legacy convenience: auto-build items from catalog_ids
+          inventory=None, equipped=None):
+    """Build a test CharacterSpec.  Either pass ``items`` directly or use
+    ``inventory`` (list of catalog_ids) + ``equipped`` (slot→catalog_id dict)
+    as a convenience shorthand."""
+    if items is None:
+        built = []
+        eq = dict(equipped or {})
+        inv = list(inventory or [])
+        for slot, cid in eq.items():
+            built.append(_make_item(cid, equip=slot))
+            if cid in inv:
+                inv.remove(cid)
+        for cid in inv:
+            built.append(_make_item(cid))
+        items = built
     return CharacterSpec(
         name="Thorin",
         abilities=abilities or {"STR": 16, "INT": 10, "WIS": 11, "DEX": 12, "CON": 14, "CHA": 9},
         race_id="dwarf",
         classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[7])],
         alignment="law",
-        inventory=list(inventory or []),
-        equipped=dict(equipped or {}),
+        items=items,
         weapon_proficiencies=list(weapon_proficiencies or []),
         weapon_specialisations=list(weapon_specialisations or []),
         ruleset=ruleset or RuleSet(),
     )
 
 
-def _seed(client, **kwargs) -> str:
-    spec = _spec(**kwargs)
+def _seed(client, items=None, inventory=None, equipped=None, **kwargs) -> tuple[str, CharacterSpec]:
+    spec = _spec(items=items, inventory=inventory, equipped=equipped, **kwargs)
     save_character("test", spec, client._characters_dir)
-    return "test"
+    return "test", spec
 
 
 # ════════════════════════════════════════════════════════════════════════════
-# Engine: equip / unequip
+# Engine: equip / unequip (new instance-based API)
 # ════════════════════════════════════════════════════════════════════════════
 
 def test_equip_armor_takes_armor_slot(data):
-    eq = equip("chain_mail", inventory=["chain_mail"], equipped={}, enchanted=[], data=data)
-    assert eq == {"armor": "chain_mail"}
+    iid = _iid()
+    spec = _spec(items=[_make_item("chain_mail", iid=iid)])
+    equip(spec, iid, data=data)
+    assert spec.items[0].equip == "armor"
 
 
 def test_equip_shield_takes_off_hand_slot(data):
-    eq = equip("shield", inventory=["shield"], equipped={}, enchanted=[], data=data)
-    assert eq == {"off_hand": "shield"}
+    iid = _iid()
+    spec = _spec(items=[_make_item("shield", iid=iid)])
+    equip(spec, iid, data=data)
+    assert spec.items[0].equip == "off_hand"
 
 
 def test_equip_armor_replaces_existing_armor(data):
-    eq = equip("plate_mail", inventory=["plate_mail"],
-               equipped={"armor": "leather_armor"}, enchanted=[], data=data)
-    assert eq == {"armor": "plate_mail"}
+    old_iid = _iid()
+    new_iid = _iid()
+    spec = _spec(items=[
+        _make_item("leather_armor", equip="armor", iid=old_iid),
+        _make_item("plate_mail", iid=new_iid),
+    ])
+    equip(spec, new_iid, data=data)
+    assert next(i for i in spec.items if i.instance_id == new_iid).equip == "armor"
+    assert next(i for i in spec.items if i.instance_id == old_iid).equip is None
 
 
 def test_equip_weapon_goes_to_main_hand(data):
-    eq = equip("sword", inventory=["sword"], equipped={}, enchanted=[], data=data)
-    assert eq == {"main_hand": "sword"}
+    iid = _iid()
+    spec = _spec(items=[_make_item("sword", iid=iid)])
+    equip(spec, iid, data=data)
+    assert spec.items[0].equip == "main_hand"
 
 
 def test_equip_second_dagger_goes_to_off_hand_with_two_weapon(data):
-    eq = equip("dagger", inventory=["dagger", "dagger"],
-               equipped={"main_hand": "dagger"}, enchanted=[], data=data,
-               slot="off_hand", two_weapon=True, eligible=True)
-    assert eq == {"main_hand": "dagger", "off_hand": "dagger"}
+    iid1 = _iid()
+    iid2 = _iid()
+    spec = _spec(items=[
+        _make_item("dagger", equip="main_hand", iid=iid1),
+        _make_item("dagger", iid=iid2),
+    ], ruleset=RuleSet(two_weapon_fighting=True))
+    equip(spec, iid2, data=data, slot="off_hand",
+          two_weapon=True, eligible=True)
+    assert next(i for i in spec.items if i.instance_id == iid2).equip == "off_hand"
 
 
-def test_equip_blocks_past_inventory_count(data):
-    with pytest.raises(ValueError, match="already equipped"):
-        equip("dagger", inventory=["dagger"], equipped={"main_hand": "dagger"},
-              enchanted=[], data=data, slot="off_hand",
-              two_weapon=True, eligible=True)
-
-
-def test_equip_rejects_unowned(data):
-    with pytest.raises(ValueError, match="not in inventory"):
-        equip("sword", inventory=[], equipped={}, enchanted=[], data=data)
+def test_equip_rejects_unknown_instance(data):
+    spec = _spec(items=[_make_item("chain_mail")])
+    with pytest.raises(ValueError):
+        equip(spec, "no-such-id", data=data)
 
 
 def test_equip_rejects_unequippable(data):
+    iid = _iid()
+    spec = _spec(items=[_make_item("torch", iid=iid)])
     with pytest.raises(ValueError, match="not equippable"):
-        equip("torch", inventory=["torch"], equipped={}, enchanted=[], data=data)
+        equip(spec, iid, data=data)
 
 
 def test_unequip_armor(data):
-    eq = unequip("chain_mail", equipped={"armor": "chain_mail"})
-    assert eq == {}
+    iid = _iid()
+    spec = _spec(items=[_make_item("chain_mail", equip="armor", iid=iid)])
+    unequip(spec, iid)
+    assert spec.items[0].equip is None
 
 
 def test_unequip_weapon_from_main_hand(data):
-    eq = unequip("dagger", equipped={"main_hand": "dagger"})
-    assert eq == {}
+    iid = _iid()
+    spec = _spec(items=[_make_item("dagger", equip="main_hand", iid=iid)])
+    unequip(spec, iid)
+    assert spec.items[0].equip is None
 
 
 def test_unequip_unowned_raises(data):
+    spec = _spec(items=[])
     with pytest.raises(ValueError, match="not equipped"):
-        unequip("sword", equipped={})
+        unequip(spec, "no-such-id")
 
 
-def test_equipped_count_aggregates_across_slots():
-    assert equipped_count({"main_hand": "dagger", "off_hand": "dagger"}, "dagger") == 2
-    assert equipped_count({"armor": "leather_armor"}, "leather_armor") == 1
-    assert equipped_count({}, "sword") == 0
-
-
-# ── Inventory rows carry equippable + equipped_count ──────────────────────
-
-def test_inventory_rows_marks_weapons_as_equippable(data):
-    rows = inventory_rows(["sword", "torch"], data, {})
-    by_id = {r.id: r for r in rows}
-    assert by_id["sword"].equippable is True
-    assert by_id["torch"].equippable is False
-
-
-def test_inventory_rows_counts_equipped_copies(data):
-    rows = inventory_rows(["dagger", "dagger"], data, {"main_hand": "dagger"})
-    assert rows[0].equipped_count == 1
-    assert rows[0].count == 2
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -168,7 +192,6 @@ def test_inventory_rows_counts_equipped_copies(data):
 # ════════════════════════════════════════════════════════════════════════════
 
 def test_no_weapons_yields_empty_profile_list(data):
-    # Unarmed is always prepended; "no weapons" means only the Unarmed profile.
     profiles = attack_profiles(_spec(), data)
     weapons = [p for p in profiles if not p.unarmed]
     assert weapons == []
@@ -177,34 +200,28 @@ def test_no_weapons_yields_empty_profile_list(data):
 
 
 def test_melee_weapon_adds_str_mod_to_to_hit_and_damage(data):
-    # STR 16 → +2 mod, Fighter L1 THAC0 = 19
     all_profiles = attack_profiles(
-        _spec(inventory=["sword"], equipped={"main_hand": "sword"}),
-        data,
-    )
+        _spec(inventory=["sword"], equipped={"main_hand": "sword"}), data)
     weapons = [p for p in all_profiles if not p.unarmed]
     assert len(weapons) == 1
     p = weapons[0]
     assert p.name == "Sword"
     assert p.melee is True
-    assert p.to_hit_thac0 == 17        # 19 - 2 (STR)
-    assert p.to_hit_ascending == 2     # 0 + 2 (STR)
-    assert "1d6" in p.damage           # default rule
-    assert p.damage.endswith("+2")     # STR mod to damage
+    assert p.to_hit_thac0 == 17
+    assert p.to_hit_ascending == 2
+    assert "1d6" in p.damage
+    assert p.damage.endswith("+2")
 
 
 def test_ranged_weapon_uses_dex_mod_for_to_hit_only(data):
-    # DEX 12 → +0 mod, so no change vs base THAC0 19
     all_profiles = attack_profiles(
-        _spec(inventory=["short_bow"], equipped={"main_hand": "short_bow"}),
-        data,
-    )
+        _spec(inventory=["short_bow"], equipped={"main_hand": "short_bow"}), data)
     weapons = [p for p in all_profiles if not p.unarmed]
     p = weapons[0]
     assert p.melee is False
     assert p.ranged is True
     assert p.to_hit_thac0 == 19
-    assert p.damage == "1d6"  # no STR mod for ranged weapons
+    assert p.damage == "1d6"
     assert p.range_ft == (50, 100, 150)
 
 
@@ -212,9 +229,7 @@ def test_ranged_weapon_with_high_dex(data):
     abilities = {"STR": 10, "INT": 10, "WIS": 10, "DEX": 18, "CON": 10, "CHA": 10}
     all_profiles = attack_profiles(
         _spec(abilities=abilities, inventory=["short_bow"], equipped={"main_hand": "short_bow"}),
-        data,
-    )
-    # DEX 18 → +3 mod; get the ranged weapon, not Unarmed
+        data)
     bow = next(p for p in all_profiles if p.weapon_id == "short_bow")
     assert bow.to_hit_thac0 == 16
     assert bow.to_hit_ascending == 3
@@ -223,10 +238,7 @@ def test_ranged_weapon_with_high_dex(data):
 def test_variable_damage_rule_swaps_damage_die(data):
     all_profiles = attack_profiles(
         _spec(inventory=["sword"], equipped={"main_hand": "sword"},
-              ruleset=RuleSet(variable_weapon_damage=True)),
-        data,
-    )
-    # Sword variable damage is 1d8, plus STR +2
+              ruleset=RuleSet(variable_weapon_damage=True)), data)
     sword = next(p for p in all_profiles if p.weapon_id == "sword")
     assert sword.damage == "1d8+2"
 
@@ -235,12 +247,9 @@ def test_non_proficiency_applies_martial_penalty(data):
     all_profiles = attack_profiles(
         _spec(inventory=["sword"], equipped={"main_hand": "sword"},
               ruleset=RuleSet(weapon_proficiency=True),
-              weapon_proficiencies=["hand_axe"]),  # not "sword"
-        data,
-    )
+              weapon_proficiencies=["hand_axe"]), data)
     sword = next(p for p in all_profiles if p.weapon_id == "sword")
     assert sword.proficient is False
-    # base 19, STR +2, martial penalty -2 → 19 - 2 - (-2) = 19
     assert sword.to_hit_thac0 == 19
 
 
@@ -248,12 +257,10 @@ def test_proficient_user_takes_no_penalty(data):
     all_profiles = attack_profiles(
         _spec(inventory=["sword"], equipped={"main_hand": "sword"},
               ruleset=RuleSet(weapon_proficiency=True),
-              weapon_proficiencies=["sword"]),
-        data,
-    )
+              weapon_proficiencies=["sword"]), data)
     sword = next(p for p in all_profiles if p.weapon_id == "sword")
     assert sword.proficient is True
-    assert sword.to_hit_thac0 == 17  # STR mod applied, no penalty
+    assert sword.to_hit_thac0 == 17
 
 
 def test_specialisation_adds_plus_one_to_hit_and_damage(data):
@@ -261,24 +268,17 @@ def test_specialisation_adds_plus_one_to_hit_and_damage(data):
         _spec(inventory=["sword"], equipped={"main_hand": "sword"},
               ruleset=RuleSet(weapon_proficiency=True, variable_weapon_damage=True),
               weapon_proficiencies=["sword"],
-              weapon_specialisations=["sword"]),
-        data,
-    )
+              weapon_specialisations=["sword"]), data)
     sword = next(p for p in all_profiles if p.weapon_id == "sword")
     assert sword.specialised is True
-    # base 19, STR +2, spec +1 → 19 - 2 - 1 = 16
     assert sword.to_hit_thac0 == 16
-    # sword variable 1d8, STR +2, spec +1 → 1d8+3
     assert sword.damage == "1d8+3"
 
 
 def test_two_hand_slots_produce_two_profiles(data):
-    # With new slot model each equipped slot generates its own profile.
     all_profiles = attack_profiles(
         _spec(inventory=["dagger", "dagger"],
-              equipped={"main_hand": "dagger", "off_hand": "dagger"}),
-        data,
-    )
+              equipped={"main_hand": "dagger", "off_hand": "dagger"}), data)
     weapons = [p for p in all_profiles if not p.unarmed]
     assert len(weapons) == 2
     assert all(w.name == "Dagger" for w in weapons)
@@ -289,81 +289,80 @@ def test_two_hand_slots_produce_two_profiles(data):
 # ════════════════════════════════════════════════════════════════════════════
 
 def test_sheet_equip_armor_updates_ac(client):
-    _seed(client, inventory=["chain_mail"])
-    # Unarmored AC starts at 9 (with DEX 12 = no mod)
+    iid = _iid()
+    _seed(client, items=[_make_item("chain_mail", iid=iid)])
     spec_before = load_character("test", client._characters_dir)
-    assert "armor" not in spec_before.equipped
+    assert all(i.equip != "armor" for i in spec_before.items)
 
-    r = client.post("/character/test/equipment/equip", data={"item_id": "chain_mail"})
+    r = client.post("/character/test/equipment/equip",
+                    data={"instance_id": iid})
     assert r.status_code == 303
     spec = load_character("test", client._characters_dir)
-    assert spec.equipped == {"armor": "chain_mail"}
+    assert any(i.equip == "armor" and i.catalog_id == "chain_mail" for i in spec.items)
 
-    # Now visit sheet — AC should show chain mail's value (5)
     r = client.get("/character/test")
     assert "Chain Mail" in r.text
 
 
 def test_sheet_unequip_armor(client):
-    _seed(client, inventory=["chain_mail"], equipped={"armor": "chain_mail"})
-    r = client.post("/character/test/equipment/unequip", data={"item_id": "chain_mail"})
+    iid = _iid()
+    _seed(client, items=[_make_item("chain_mail", equip="armor", iid=iid)])
+    r = client.post("/character/test/equipment/unequip", data={"instance_id": iid})
     assert r.status_code == 303
     spec = load_character("test", client._characters_dir)
-    assert "armor" not in spec.equipped
+    assert all(i.equip != "armor" for i in spec.items)
 
 
 def test_sheet_equip_weapon_appends(client):
-    _seed(client, inventory=["sword"])
-    r = client.post("/character/test/equipment/equip", data={"item_id": "sword"})
+    iid = _iid()
+    _seed(client, items=[_make_item("sword", iid=iid)])
+    r = client.post("/character/test/equipment/equip", data={"instance_id": iid})
     assert r.status_code == 303
     spec = load_character("test", client._characters_dir)
-    assert spec.equipped.get("main_hand") == "sword"
+    assert any(i.equip == "main_hand" and i.catalog_id == "sword" for i in spec.items)
 
 
 def test_sheet_attack_profiles_appear_when_weapon_equipped(client):
-    _seed(client, inventory=["sword"], equipped={"main_hand": "sword"})
+    iid = _iid()
+    _seed(client, items=[_make_item("sword", equip="main_hand", iid=iid)])
     r = client.get("/character/test")
     assert "Attacks" in r.text
     assert "Sword" in r.text
-    # STR 16 → +2 mod; THAC0 19 - 2 = 17
     assert "17" in r.text
 
 
 def test_sheet_shows_unarmed_when_no_weapons_equipped(client):
-    # Unarmed is always the first profile; even with no equipped weapons the
-    # Attacks section renders with "Unarmed" rather than a "No weapons" message.
-    _seed(client, inventory=["sword"])  # owned but not equipped
+    _seed(client, items=[_make_item("sword")])
     r = client.get("/character/test")
     assert "Unarmed" in r.text
 
 
 def test_sheet_inventory_shows_equipped_section(client):
-    """Equipped inventory items appear in their own ``Equipped`` subsection
-    of the inventory table — the new three-state split (equipped / carried /
-    stashed) replaces the old per-row badge.  The unequip form is the
-    actionable signal."""
-    _seed(client, inventory=["sword"], equipped={"main_hand": "sword"})
+    iid = _iid()
+    _seed(client, items=[_make_item("sword", equip="main_hand", iid=iid)])
     r = client.get("/character/test")
-    # Accordion pane uses subhead divs; unequip form lives in the item modal.
     assert "Equipped" in r.text
     assert 'action="/character/test/equipment/unequip"' in r.text
 
 
-def test_sheet_equip_rejects_unowned_item(client):
-    _seed(client, inventory=[])
-    r = client.post("/character/test/equipment/equip", data={"item_id": "sword"})
+def test_sheet_equip_rejects_unknown_instance(client):
+    _seed(client, items=[])
+    r = client.post("/character/test/equipment/equip",
+                    data={"instance_id": "no-such-id"})
     assert r.status_code == 400
 
 
 def test_sheet_equip_rejects_non_equippable(client):
-    _seed(client, inventory=["torch"])
-    r = client.post("/character/test/equipment/equip", data={"item_id": "torch"})
+    iid = _iid()
+    _seed(client, items=[_make_item("torch", iid=iid)])
+    r = client.post("/character/test/equipment/equip", data={"instance_id": iid})
     assert r.status_code == 400
 
 
 def test_sheet_unequip_rejects_unequipped(client):
-    _seed(client, inventory=["sword"])
-    r = client.post("/character/test/equipment/unequip", data={"item_id": "sword"})
+    iid = _iid()
+    _seed(client, items=[_make_item("sword", iid=iid)])  # not equipped
+    r = client.post("/character/test/equipment/unequip", data={"instance_id": iid})
     assert r.status_code == 400
 
 
@@ -372,17 +371,15 @@ def test_sheet_unequip_rejects_unequipped(client):
 # ════════════════════════════════════════════════════════════════════════════
 
 def test_ac_drops_with_armor_and_shield(client):
-    """Sheet AC reflects both armor and shield equips."""
-    # Unarmored AC = 9 (DEX 12 = +0).  Chain mail base = 5, shield = -1 = 4 desc.
-    _seed(client, inventory=["chain_mail", "shield"],
-          equipped={"armor": "chain_mail", "off_hand": "shield"})
+    _seed(client, items=[
+        _make_item("chain_mail", equip="armor"),
+        _make_item("shield", equip="off_hand"),
+    ])
     r = client.get("/character/test")
-    # New zine sheet uses "Armour Class" (UK spelling) label in the combat group.
     assert "Armour Class" in r.text
-    # Pull out the AC region and verify the value (4 desc = chain mail 5 - shield 1).
     idx = r.text.index("Armour Class")
     snippet = r.text[idx:idx + 400]
-    assert "4" in snippet  # descending AC value
+    assert "4" in snippet
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -412,151 +409,157 @@ def test_wizard_equip_and_unequip(tmp_path):
     client.post(f"/wizard/{draft_id}/identity", data={"name": "Tester", "alignment": "law"})
     client.get(f"/wizard/{draft_id}/equipment")
 
-    # Force lots of gold
     draft = load_draft(draft_id, tmp_path / "drafts")
     draft["gold"] = 200
     save_draft(draft_id, draft, tmp_path / "drafts")
     client.post(f"/wizard/{draft_id}/equipment/buy", data={"item_id": "sword"})
 
-    # Equip it
-    r = client.post(f"/wizard/{draft_id}/equipment/equip", data={"item_id": "sword"})
+    # Get the instance_id for the sword
+    draft = load_draft(draft_id, tmp_path / "drafts")
+    sword_items = [i for i in draft.get("items", []) if i.get("catalog_id") == "sword"]
+    assert sword_items, "sword should be in draft items after buy"
+    sword_iid = sword_items[0]["instance_id"]
+
+    # Equip it by instance_id
+    r = client.post(f"/wizard/{draft_id}/equipment/equip",
+                    data={"instance_id": sword_iid})
     assert r.status_code == 303
     draft = load_draft(draft_id, tmp_path / "drafts")
-    assert draft["equipped"].get("main_hand") == "sword"
+    equipped_inst = next((i for i in draft.get("items", [])
+                         if i.get("instance_id") == sword_iid), None)
+    assert equipped_inst and equipped_inst.get("equip") == "main_hand"
 
     # Unequip it
-    r = client.post(f"/wizard/{draft_id}/equipment/unequip", data={"item_id": "sword"})
+    r = client.post(f"/wizard/{draft_id}/equipment/unequip",
+                    data={"instance_id": sword_iid})
     draft = load_draft(draft_id, tmp_path / "drafts")
-    assert "main_hand" not in draft.get("equipped", {})
+    equipped_inst = next((i for i in draft.get("items", [])
+                         if i.get("instance_id") == sword_iid), None)
+    assert equipped_inst and equipped_inst.get("equip") is None
 
-    # Finalize — equipped state should make it into the spec
-    client.post(f"/wizard/{draft_id}/equipment/equip", data={"item_id": "sword"})
+    # Re-equip and finalize
+    client.post(f"/wizard/{draft_id}/equipment/equip",
+                data={"instance_id": sword_iid})
     client.post(f"/wizard/{draft_id}/equipment")
     r = client.post(f"/wizard/{draft_id}/finalize")
     char_id = r.headers["location"].split("/")[-1]
     spec = load_character(char_id, tmp_path / "characters")
-    assert spec.equipped.get("main_hand") == "sword"
+    assert any(i.equip == "main_hand" and i.catalog_id == "sword" for i in spec.items)
 
 
 def test_plain_equipped_weapon_has_manageable_item_id(data):
-    spec = CharacterSpec(
-        name="W", abilities={"STR": 13, "INT": 10, "WIS": 10, "DEX": 11, "CON": 12, "CHA": 9},
-        race_id="human", alignment="neutral",
-        classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
-        inventory=["sword"], equipped={"main_hand": "sword"},
-    )
+    iid = _iid()
+    spec = _spec(items=[_make_item("sword", equip="main_hand", iid=iid)])
     profiles = attack_profiles(spec, data)
     sword = next(p for p in profiles if p.weapon_id == "sword")
-    assert sword.manageable_item_id == "sword"
+    assert sword.manageable_item_id == iid
     unarmed = next(p for p in profiles if p.unarmed)
     assert unarmed.manageable_item_id is None
 
 
 def test_equipped_row_carries_item_id(data):
     from aose.sheet.view import _equipped
-    spec = CharacterSpec(
-        name="A", abilities={"STR": 13, "INT": 10, "WIS": 10, "DEX": 11, "CON": 12, "CHA": 9},
-        race_id="human", alignment="neutral",
-        classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
-        inventory=["plate_mail"], equipped={"armor": "plate_mail"},
-    )
+    iid = _iid()
+    spec = _spec(items=[_make_item("plate_mail", equip="armor", iid=iid)])
     rows = _equipped(spec, data)
-    assert rows[0].item_id == "plate_mail"
+    assert rows[0].item_id == iid
 
 
 def test_sheet_carried_and_stashed_items_are_clickable(tmp_path, data):
-    from aose.characters import save_character
+    from aose.models.storage import StorageLocation
     client = _make_client(tmp_path)
+    rope_iid = _iid()
+    torch_iid = _iid()
     spec = CharacterSpec(
         name="Packrat",
         abilities={"STR": 11, "INT": 10, "WIS": 10, "DEX": 11, "CON": 12, "CHA": 9},
         race_id="human", alignment="neutral",
         classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
-        inventory=["rope_50ft"], stashed=["torch"],
+        items=[
+            ItemInstance(instance_id=rope_iid, catalog_id="rope_50ft"),
+            ItemInstance(instance_id=torch_iid, catalog_id="torch",
+                         location=StorageLocation(kind="stashed")),
+        ],
     )
     save_character("packrat", spec, client._characters_dir)
     body = client.get("/character/packrat").text
 
-    assert 'data-modal="modal-item-carried-rope_50ft"' in body
-    assert 'id="modal-item-carried-rope_50ft"' in body
-    assert 'data-modal="modal-item-stashed-torch"' in body
-    assert 'id="modal-item-stashed-torch"' in body
-    # Both carried and stashed modals use act_move → /inventory/move with src_kind set.
-    # (Drop/Sell/Refund are drawer-only — see test_sheet_item_modal_shows_properties_and_no_destructive_actions.)
+    assert f'data-modal="modal-item-carried-{rope_iid}"' in body
+    assert f'id="modal-item-carried-{rope_iid}"' in body
+    assert f'data-modal="modal-item-stashed-{torch_iid}"' in body
+    assert f'id="modal-item-stashed-{torch_iid}"' in body
     assert "/character/packrat/inventory/move" in body
-    assert 'value="stashed"' in body  # act_move src_kind for the stashed-item move-form
+    assert 'value="stashed"' in body
 
 
 def test_sheet_equipped_items_are_clickable(tmp_path, data):
-    from aose.characters import save_character
     client = _make_client(tmp_path)
+    sword_iid = _iid()
+    armor_iid = _iid()
     spec = CharacterSpec(
         name="Sir Click",
         abilities={"STR": 13, "INT": 10, "WIS": 10, "DEX": 11, "CON": 12, "CHA": 9},
         race_id="human", alignment="neutral",
         classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
-        inventory=["sword", "plate_mail"],
-        equipped={"main_hand": "sword", "armor": "plate_mail"},
+        items=[
+            ItemInstance(instance_id=sword_iid, catalog_id="sword", equip="main_hand"),
+            ItemInstance(instance_id=armor_iid, catalog_id="plate_mail", equip="armor"),
+        ],
     )
     save_character("sir-click", spec, client._characters_dir)
     body = client.get("/character/sir-click").text
 
-    # Equipped weapon (plain) and equipped armour both trigger and render modals.
-    assert 'data-modal="modal-item-equipped-sword"' in body
-    assert 'id="modal-item-equipped-sword"' in body
-    assert 'data-modal="modal-item-equipped-plate_mail"' in body
-    assert 'id="modal-item-equipped-plate_mail"' in body
-    # The equipped modal offers Unequip.
+    assert f'data-modal="modal-item-equipped-{sword_iid}"' in body
+    assert f'id="modal-item-equipped-{sword_iid}"' in body
+    assert f'data-modal="modal-item-equipped-{armor_iid}"' in body
+    assert f'id="modal-item-equipped-{armor_iid}"' in body
     assert "/character/sir-click/equipment/unequip" in body
-    # Unarmed is never a trigger.
     assert 'data-modal="modal-item-equipped-unarmed"' not in body
 
 
 def test_sheet_item_modal_shows_properties_and_no_destructive_actions(tmp_path, data):
-    from aose.characters import save_character
     client = _make_client(tmp_path)
+    sword_iid = _iid()
     spec = CharacterSpec(
         name="Modal",
         abilities={"STR": 11, "INT": 10, "WIS": 10, "DEX": 11, "CON": 12, "CHA": 9},
         race_id="human", alignment="neutral",
         classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
-        inventory=["sword"], equipped={"main_hand": "sword"},
+        items=[ItemInstance(instance_id=sword_iid, catalog_id="sword", equip="main_hand")],
     )
     save_character("modal", spec, client._characters_dir)
     body = client.get("/character/modal").text
 
-    modal = _modal_html(body, "modal-item-equipped-sword")
-    # Properties from item_card() (detail_card stats) are present.
+    modal = _modal_html(body, f"modal-item-equipped-{sword_iid}")
     assert "Damage" in modal
     assert "Weight" in modal
-    # Safe management action present...
     assert "/character/modal/equipment/unequip" in modal
-    # ...but destructive shop actions are NOT in the modal.
     assert 'value="drop"' not in modal
     assert 'value="sell"' not in modal
     assert 'value="refund"' not in modal
 
 
 def test_equipped_launcher_modal_has_load_control(tmp_path, data):
-    from aose.characters import save_character
-    from aose.models import AmmoStack
+    from aose.models.storage import StorageLocation
     client = _make_client(tmp_path)
+    bow_iid = _iid()
+    ammo_iid = _iid()
     spec = CharacterSpec(
         name="Archer",
         abilities={"STR": 11, "INT": 10, "WIS": 10, "DEX": 13, "CON": 12, "CHA": 9},
         race_id="human", alignment="neutral",
         classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
-        inventory=["short_bow"], equipped={"main_hand": "short_bow"},
-        ammo=[AmmoStack(instance_id="q1", base_id="arrow", count=20)],
+        items=[
+            ItemInstance(instance_id=bow_iid, catalog_id="short_bow", equip="main_hand"),
+            ItemInstance(instance_id=ammo_iid, catalog_id="arrow", count=20),
+        ],
     )
     save_character("archer", spec, client._characters_dir)
     body = client.get("/character/archer").text
 
-    modal = _modal_html(body, "modal-item-equipped-short_bow")
-    # Load control: posts to the ammo/load route with the weapon key + a stack option.
+    modal = _modal_html(body, f"modal-item-equipped-{bow_iid}")
     assert "/character/archer/ammo/load" in modal
-    assert 'name="weapon_key" value="short_bow"' in modal
-    assert 'value="q1"' in modal          # the loadable stack instance
+    assert f'value="{ammo_iid}"' in modal
     assert "/character/archer/ammo/unload" in modal
 
 
@@ -565,17 +568,14 @@ def test_equipped_launcher_modal_has_load_control(tmp_path, data):
 # ════════════════════════════════════════════════════════════════════════════
 
 def test_dual_wield_applies_minus_2_and_minus_4(data):
-    # Fighter (STR prime): sword main, dagger off. Rule on.
     spec = _spec(inventory=["sword", "dagger"],
                  equipped={"main_hand": "sword", "off_hand": "dagger"},
                  ruleset=RuleSet(two_weapon_fighting=True))
     profs = {p.name: p for p in attack_profiles(spec, data)}
     sword = profs["Sword"]
     dagger = profs["Dagger"]
-    # Compare against the same weapon used solo (no dual penalty).
     solo = _spec(inventory=["sword"], equipped={"main_hand": "sword"})
     sword_solo = {p.name: p for p in attack_profiles(solo, data)}["Sword"]
-    # Main hand takes -2, off hand takes -4.
     assert sword.to_hit_ascending == sword_solo.to_hit_ascending - 2
     assert sword.hand == "main"
     assert dagger.hand == "off"
@@ -583,7 +583,6 @@ def test_dual_wield_applies_minus_2_and_minus_4(data):
 
 
 def test_no_penalty_without_dual_wield(data):
-    # Sword + shield: off hand has a shield (not a weapon) — no dual penalty.
     spec = _spec(inventory=["sword", "shield"],
                  equipped={"main_hand": "sword", "off_hand": "shield"})
     sword = {p.name: p for p in attack_profiles(spec, data)}["Sword"]
@@ -594,7 +593,6 @@ def test_no_penalty_without_dual_wield(data):
 
 
 def test_versatile_two_handed_variant_suppressed_with_off_hand_occupied(data):
-    # Bastard sword (versatile) + shield: off hand occupied → no 2H variant.
     spec = _spec(inventory=["bastard_sword", "shield"],
                  equipped={"main_hand": "bastard_sword", "off_hand": "shield"},
                  ruleset=RuleSet(variable_weapon_damage=True))
@@ -603,7 +601,6 @@ def test_versatile_two_handed_variant_suppressed_with_off_hand_occupied(data):
 
 
 def test_versatile_two_handed_variant_present_when_off_hand_free(data):
-    # Bastard sword alone: off hand free → 2H variant appears.
     spec = _spec(inventory=["bastard_sword"], equipped={"main_hand": "bastard_sword"},
                  ruleset=RuleSet(variable_weapon_damage=True))
     names = [p.name for p in attack_profiles(spec, data)]

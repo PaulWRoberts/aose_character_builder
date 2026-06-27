@@ -322,19 +322,21 @@ def _advance_to_equipment(client, tmp_path, draft_id):
 def test_wizard_use_as_container_promotes_loose_backpack(client, tmp_path):
     draft_id = _start_draft(client)
     _advance_to_equipment(client, tmp_path, draft_id)
-    # Inject a loose backpack directly (bypassing the add route, which already
-    # promotes Container items; this simulates a backpack arriving as a plain
-    # inventory string, e.g. from an old draft or a future route).
+    # Inject a loose backpack directly into the items list (bypassing the add
+    # route, which already promotes Container items).
     draft = load_draft(draft_id, tmp_path / "drafts")
-    draft["inventory"] = ["backpack"]
+    draft.setdefault("items", []).append(
+        {"instance_id": "bp_test", "catalog_id": "backpack",
+         "location": {"kind": "carried"}}
+    )
     save_draft(draft_id, draft, tmp_path / "drafts")
     # Promote the loose backpack to a container instance
     r = client.post(f"/wizard/{draft_id}/inventory/use-as-container",
                     data={"owner_kind": "carried", "item_id": "backpack"})
     assert r.status_code == 303
     draft = load_draft(draft_id, tmp_path / "drafts")
-    # Loose backpack gone; a container instance promoted
-    assert "backpack" not in draft.get("inventory", [])
+    # Loose backpack gone from items; a container instance promoted
+    assert not any(i.get("catalog_id") == "backpack" for i in draft.get("items", []))
     assert any(c.get("catalog_id") == "backpack" for c in draft.get("containers", []))
 
 
@@ -346,7 +348,10 @@ def test_wizard_equipment_renders_with_a_container(client, tmp_path):
     # The inventory box (and its container modals) only render once gold is rolled.
     client.post(f"/wizard/{draft_id}/equipment/roll-gold")
     draft = load_draft(draft_id, tmp_path / "drafts")
-    draft["inventory"] = ["backpack"]
+    draft.setdefault("items", []).append(
+        {"instance_id": "bp_test", "catalog_id": "backpack",
+         "location": {"kind": "carried"}}
+    )
     save_draft(draft_id, draft, tmp_path / "drafts")
     client.post(f"/wizard/{draft_id}/inventory/use-as-container",
                 data={"owner_kind": "carried", "item_id": "backpack"})

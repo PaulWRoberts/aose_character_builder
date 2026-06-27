@@ -469,7 +469,7 @@
           <h4>Carried</h4>
           <ul>
             {% for row in inventory_view.carried %}
-            <li class="clickable" data-modal="modal-item-carried-{{ row.id }}"><span>{{ row.name }}{% if row.count > 1 %} ×{{ row.count }}{% endif %}</span><span class="q">{% if row.weight_cn is defined %}{{ row.weight_cn }}{% endif %} cn</span></li>
+            <li class="clickable" data-modal="modal-item-carried-{{ row.instance_id or row.id }}"><span>{{ row.name }}{% if row.count > 1 %} ×{{ row.count }}{% endif %}</span><span class="q">{% if row.weight_cn is defined %}{{ row.weight_cn }}{% endif %} cn</span></li>
             {% endfor %}
             {# Carried containers #}
             {% for c in inventory_view.containers %}
@@ -511,7 +511,7 @@
           <h4>Stashed <span style="font-weight:400;color:var(--faint);font-size:9px">no weight</span></h4>
           <ul>
             {% for row in inventory_view.stashed %}
-            <li class="clickable" data-modal="modal-item-stashed-{{ row.id }}"><span>{{ row.name }}{% if row.count > 1 %} ×{{ row.count }}{% endif %}</span><span class="q">—</span></li>
+            <li class="clickable" data-modal="modal-item-stashed-{{ row.instance_id or row.id }}"><span>{{ row.name }}{% if row.count > 1 %} ×{{ row.count }}{% endif %}</span><span class="q">—</span></li>
             {% endfor %}
             {# Stashed coins — line items #}
             {% if _sg %}{% for coin in _sg.coins %}
@@ -954,8 +954,8 @@
 {% for row in inventory_view.carried %}{{ item_modal(row, "carried", "carried", target_url_prefix) }}{% endfor %}
 {% for row in inventory_view.stashed %}{{ item_modal(row, "stashed", "stashed", target_url_prefix) }}{% endfor %}
 {% for row in inventory_view.equipped %}
-{%- set lo = ammo_load_options.get(row.id) -%}
-{%- set atk = sheet.attacks | selectattr('manageable_item_id', 'equalto', row.id) | first -%}
+{%- set lo = ammo_load_options.get(row.instance_id) -%}
+{%- set atk = sheet.attacks | selectattr('manageable_item_id', 'equalto', row.instance_id) | first -%}
 {{ item_modal(row, "equipped", "equipped", target_url_prefix, load_options=lo, attack=atk) }}
 {% endfor %}
 

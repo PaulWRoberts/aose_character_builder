@@ -19,6 +19,7 @@ from aose.engine.encumbrance import (
 from aose.models import CharacterSpec, ClassEntry, CoinStack, RuleSet
 from aose.sheet.view import build_sheet
 from aose.web.app import create_app
+from tests._itemhelp import coerce_equipment
 
 PROJECT_ROOT = Path(__file__).parent.parent
 DATA_DIR = PROJECT_ROOT / "data"
@@ -29,17 +30,22 @@ def data():
     return GameData.load(DATA_DIR)
 
 
-def _spec(race_id="human", inventory=None, equipped=None, encumbrance="basic"):
-    return CharacterSpec(
+def _spec(race_id="human", inventory=None, equipped=None, encumbrance="basic", **kw):
+    kwargs = dict(
         name="Tester",
         abilities={"STR": 12, "INT": 12, "WIS": 11, "DEX": 12, "CON": 12, "CHA": 10},
         race_id=race_id,
         classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[6])],
         alignment="law",
-        inventory=list(inventory or []),
-        equipped=dict(equipped or {}),
         ruleset=RuleSet(encumbrance=encumbrance),
     )
+    kwargs.update(kw)
+    if inventory is not None:
+        kwargs["inventory"] = list(inventory)
+    if equipped is not None:
+        kwargs["equipped"] = dict(equipped)
+    coerce_equipment(kwargs)
+    return CharacterSpec(**kwargs)
 
 
 # â"€â"€ carried_weight_cn â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
@@ -503,7 +509,8 @@ def test_magic_on_a_mule_does_not_count_toward_carried(data):
 
 
 def test_enchanted_on_mule_does_not_count_toward_carried(data):
-    from aose.models import AnimalInstance, EnchantedInstance
+    from aose.models import AnimalInstance
+    from aose.models.character import ItemInstance
     from aose.models.storage import StorageLocation
     mule_loc = StorageLocation(kind="animal", id="mule1")
     spec = CharacterSpec(
@@ -512,12 +519,11 @@ def test_enchanted_on_mule_does_not_count_toward_carried(data):
         race_id="human", classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
         alignment="neutral",
         animals=[AnimalInstance(instance_id="mule1", catalog_id="mule")],
-        enchanted=[EnchantedInstance(instance_id="e1", base_id="sword",
-                                     enchantment_id="generic_plus_1",
-                                     location=mule_loc)],
+        items=[ItemInstance(instance_id="e1", catalog_id="sword",
+                            enchantment_id="generic_plus_1", location=mule_loc)],
     )
     carried_on_mule = carried_weight_cn(spec, data)
-    spec.enchanted[0].location = StorageLocation(kind="carried")
+    spec.items[0].location = StorageLocation(kind="carried")
     assert carried_weight_cn(spec, data) > carried_on_mule
 
 
@@ -525,6 +531,7 @@ def test_carried_container_weight_uses_location_load_cn(data):
     from aose.engine import storage
     from aose.engine.encumbrance import equipment_weight_cn
     from aose.models import ContainerInstance, CoinStack
+    from aose.models.character import ItemInstance
     from aose.models.storage import StorageLocation
     here = StorageLocation(kind="container", id="c1")
     spec = CharacterSpec(
@@ -532,8 +539,8 @@ def test_carried_container_weight_uses_location_load_cn(data):
         race_id="human", classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
         alignment="neutral",
         containers=[ContainerInstance(instance_id="c1", catalog_id="backpack",
-                                      location=StorageLocation(kind="carried"),
-                                      contents=["sword"])],
+                                      location=StorageLocation(kind="carried"))],
+        items=[ItemInstance(instance_id="t_sword", catalog_id="sword", location=here)],
         coins=[CoinStack(denom="gp", count=10, location=here)],
     )
     raw = storage.location_load_cn(spec, here, data)

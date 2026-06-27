@@ -131,14 +131,22 @@ def test_cc3_armor_loads(data, aid, expected):
 
 
 def test_leather_user_can_equip_padded_not_studded(data):
-    from aose.engine.equip import equip
+    from aose.engine.equip import equip, equipped_ref
+    from aose.models import CharacterSpec, ClassEntry, ItemInstance
     thief = data.classes["thief"]
     allowed = allowed_armor_ids([thief], data)
-    inv = ["padded_armor", "studded_leather"]
-    eq = equip("padded_armor", inventory=inv, equipped={}, enchanted=[], data=data, allowed_armor=allowed)
-    assert eq["armor"] == "padded_armor"
+    spec = CharacterSpec(
+        name="T", abilities={}, race_id="human",
+        classes=[ClassEntry(class_id="thief")], alignment="neutral",
+        items=[
+            ItemInstance(instance_id="t_padded", catalog_id="padded_armor"),
+            ItemInstance(instance_id="t_studded", catalog_id="studded_leather"),
+        ],
+    )
+    equip(spec, "t_padded", data=data, allowed_armor=allowed)
+    assert equipped_ref(spec, "armor") == "padded_armor"
     with pytest.raises(ValueError):
-        equip("studded_leather", inventory=inv, equipped={}, enchanted=[], data=data, allowed_armor=allowed)
+        equip(spec, "t_studded", data=data, allowed_armor=allowed)
 
 
 def test_full_plate_is_tailorable(data):

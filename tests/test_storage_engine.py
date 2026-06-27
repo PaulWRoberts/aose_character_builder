@@ -2,7 +2,7 @@ import pytest
 from aose.engine import storage
 from aose.engine.currency import CurrencyError
 from aose.models import (CharacterSpec, CoinStack, ContainerInstance,
-                         AnimalInstance, GemStack, JewelleryPiece)
+                         AnimalInstance, GemStack, JewelleryPiece, ItemInstance)
 from aose.models.storage import StorageLocation
 
 
@@ -17,74 +17,80 @@ def _spec(**extra):
     return CharacterSpec.model_validate(base)
 
 
-# ── 6a: loose_list ────────────────────────────────────────────────────────────
+def _item(iid, catalog_id, kind="carried", loc_id=None, count=1):
+    loc = StorageLocation(kind=kind, id=loc_id) if loc_id else StorageLocation(kind=kind)
+    return ItemInstance(instance_id=iid, catalog_id=catalog_id, location=loc, count=count)
+
+
+# ── 6a: items_at (replaces loose_list) ───────────────────────────────────────
 
 def test_loose_list_for_carried_is_inventory():
-    spec = _spec(inventory=["torch"])
-    assert storage.loose_list(spec, StorageLocation(kind="carried")) is spec.inventory
+    spec = _spec(items=[_item("t1", "torch", "carried")])
+    result = storage.items_at(spec, StorageLocation(kind="carried"))
+    assert len(result) == 1 and result[0].catalog_id == "torch"
 
 
 def test_loose_list_for_stashed_is_stashed():
-    spec = _spec(stashed=["rope"])
-    assert storage.loose_list(spec, StorageLocation(kind="stashed")) is spec.stashed
+    spec = _spec(items=[_item("r1", "rope", "stashed")])
+    result = storage.items_at(spec, StorageLocation(kind="stashed"))
+    assert len(result) == 1 and result[0].catalog_id == "rope"
 
 
 def test_loose_list_for_container_is_its_contents():
-    c = ContainerInstance(instance_id="c1", catalog_id="backpack", contents=["torch"])
-    spec = _spec(containers=[c])
-    got = storage.loose_list(spec, StorageLocation(kind="container", id="c1"))
-    assert got is spec.containers[0].contents
+    c = ContainerInstance(instance_id="c1", catalog_id="backpack")
+    spec = _spec(containers=[c], items=[_item("t1", "torch", "container", "c1")])
+    result = storage.items_at(spec, StorageLocation(kind="container", id="c1"))
+    assert len(result) == 1 and result[0].catalog_id == "torch"
 
 
 def test_loose_list_for_animal_is_its_contents():
-    a = AnimalInstance(instance_id="a1", catalog_id="mule", contents=["sack"])
-    spec = _spec(animals=[a])
-    assert storage.loose_list(spec, StorageLocation(kind="animal", id="a1")) is spec.animals[0].contents
+    a = AnimalInstance(instance_id="a1", catalog_id="mule")
+    spec = _spec(animals=[a], items=[_item("s1", "sack", "animal", "a1")])
+    result = storage.items_at(spec, StorageLocation(kind="animal", id="a1"))
+    assert len(result) == 1 and result[0].catalog_id == "sack"
 
 
 def test_loose_list_unknown_id_raises():
     spec = _spec()
-    with pytest.raises(storage.StorageError):
-        storage.loose_list(spec, StorageLocation(kind="animal", id="nope"))
+    # items_at returns empty list for unknown location — no error
+    assert storage.items_at(spec, StorageLocation(kind="animal", id="nope")) == []
 
 
 # ── 6b: move_item ─────────────────────────────────────────────────────────────
 
 def test_move_item_carried_to_stashed():
-    spec = _spec(inventory=["torch", "rope"])
-    storage.move_item(spec, "torch",
-                      StorageLocation(kind="carried"), StorageLocation(kind="stashed"))
-    assert spec.inventory == ["rope"]
-    assert spec.stashed == ["torch"]
+    spec = _spec(items=[_item("t1", "torch"), _item("r1", "rope")])
+    storage.move_item(spec, "t1", StorageLocation(kind="stashed"))
+    assert not any(i.instance_id == "t1" and i.location.kind == "carried" for i in spec.items)
+    assert any(i.instance_id == "t1" and i.location.kind == "stashed" for i in spec.items)
 
 
 def test_move_item_into_container():
     c = ContainerInstance(instance_id="c1", catalog_id="backpack")
-    spec = _spec(inventory=["torch"], containers=[c])
-    storage.move_item(spec, "torch",
-                      StorageLocation(kind="carried"),
-                      StorageLocation(kind="container", id="c1"))
-    assert spec.inventory == []
-    assert spec.containers[0].contents == ["torch"]
+    spec = _spec(containers=[c], items=[_item("t1", "torch")])
+    storage.move_item(spec, "t1", StorageLocation(kind="container", id="c1"))
+    assert spec.items[0].location == StorageLocation(kind="container", id="c1")
 
 
 def test_move_item_not_at_source_raises():
-    spec = _spec(inventory=["torch"])
+    spec = _spec(items=[_item("t1", "torch")])
     with pytest.raises(storage.StorageError):
-        storage.move_item(spec, "rope",
-                          StorageLocation(kind="carried"), StorageLocation(kind="stashed"))
+        storage.move_item(spec, "no-such-iid", StorageLocation(kind="stashed"))
 
 
 # ── 6c: move_container ────────────────────────────────────────────────────────
 
 def test_move_container_to_vehicle_carries_contents():
     from aose.models import VehicleInstance
-    c = ContainerInstance(instance_id="c1", catalog_id="backpack", contents=["torch"])
+    c = ContainerInstance(instance_id="c1", catalog_id="backpack")
     v = VehicleInstance(instance_id="v1", catalog_id="cart", hull_max=10)
-    spec = _spec(containers=[c], vehicles=[v])
+    # Item "inside" container via location
+    spec = _spec(containers=[c], vehicles=[v],
+                 items=[_item("t1", "torch", "container", "c1")])
     storage.move_container(spec, "c1", StorageLocation(kind="vehicle", id="v1"))
     assert spec.containers[0].location == StorageLocation(kind="vehicle", id="v1")
-    assert spec.containers[0].contents == ["torch"]   # contents follow for free
+    # Item still references container c1 — implicitly follows
+    assert spec.items[0].location == StorageLocation(kind="container", id="c1")
 
 
 def test_move_container_rejects_container_destination():

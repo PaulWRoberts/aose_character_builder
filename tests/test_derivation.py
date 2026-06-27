@@ -4,7 +4,7 @@ import pytest
 
 from aose.data.loader import GameData
 from aose.engine import ability_mods, armor_class, attack_bonus, hp, saves
-from aose.models import CharacterSpec, ClassEntry
+from aose.models import CharacterSpec, ClassEntry, ItemInstance
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 
@@ -15,6 +15,10 @@ def data():
 
 
 def make_spec(con=14, dex=12, hp_rolls=(5,), level=1, equipped=None):
+    items = [
+        ItemInstance(instance_id=f"t_{slot}", catalog_id=cid, equip=slot)
+        for slot, cid in (equipped or {}).items()
+    ]
     return CharacterSpec(
         name="Thorin",
         abilities={
@@ -24,7 +28,7 @@ def make_spec(con=14, dex=12, hp_rolls=(5,), level=1, equipped=None):
         race_id="dwarf",
         classes=[ClassEntry(class_id="fighter", level=level, hp_rolls=list(hp_rolls))],
         alignment="law",
-        equipped=equipped or {},
+        items=items,
     )
 
 

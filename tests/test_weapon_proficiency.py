@@ -318,9 +318,10 @@ def test_sheet_proficiency_view_empty_when_rule_off(data):
 
 
 def test_sheet_lists_qualities_reference_for_equipped_weapons(data):
+    from aose.models import ItemInstance
     spec = _base_spec(
-        inventory=["sword"],
-        equipped={"main_hand": "sword"},
+        items=[ItemInstance(instance_id="t_sword", catalog_id="sword",
+                            equip="main_hand")],
         ruleset=RuleSet(weapon_proficiency=True),
         weapon_proficiencies=["sword"],
     )
@@ -350,9 +351,9 @@ def test_enchanted_weapon_uses_base_weapon_proficiency(data):
         weapon_proficiencies=["short_sword"],
         weapon_specialisations=["short_sword"],
     )
-    spec.enchanted = add_free_enchanted([], "short_sword", "sword_plus_1_prof", d)
-    iid = spec.enchanted[0].instance_id
-    spec.equipped = equip_slot(iid, inventory=[], equipped={}, enchanted=spec.enchanted, data=d)
+    add_free_enchanted(spec, "short_sword", "sword_plus_1_prof", d)
+    iid = spec.items[-1].instance_id
+    equip_slot(spec, iid, data=d)
     profiles = attack_profiles(spec, d)
     ench_prof = next(p for p in profiles if p.name.startswith("Short Sword +1"))
     assert ench_prof.proficient is True

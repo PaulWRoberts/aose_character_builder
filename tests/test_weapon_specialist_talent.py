@@ -2,7 +2,7 @@ from pathlib import Path
 
 from aose.data.loader import GameData
 from aose.engine.attacks import attack_profiles
-from aose.models import CharacterSpec, ClassEntry, RuleSet
+from aose.models import CharacterSpec, ClassEntry, ItemInstance, RuleSet
 
 DATA = GameData.load(Path(__file__).parent.parent / "data")
 
@@ -13,8 +13,8 @@ def _spec(rule_combat=True, rule_prof=False):
         race_id="human", classes=[ClassEntry(class_id="fighter", level=1)],
         alignment="neutral",
         ruleset=RuleSet(combat_talents=rule_combat, weapon_proficiency=rule_prof),
-        equipped={"main_hand": "sword"},
-        inventory=["sword"],
+        items=[ItemInstance(instance_id="t_sword", catalog_id="sword",
+                            equip="main_hand")],
         weapon_specialisations=["sword"],
     )
 

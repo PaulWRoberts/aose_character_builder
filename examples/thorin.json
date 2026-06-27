@@ -14,12 +14,12 @@
       "class_id": "fighter",
       "level": 1,
       "xp": 0,
-      "hp_rolls": [7]
+      "hp_rolls": [
+        7
+      ]
     }
   ],
   "alignment": "law",
-  "inventory": [],
-  "equipped": {},
   "secondary_skill": null,
   "weapon_proficiencies": [],
   "weapon_specialisations": [],
@@ -32,5 +32,6 @@
     "separate_race_class": true,
     "variable_weapon_damage": false,
     "encumbrance": "basic"
-  }
+  },
+  "items": []
 }

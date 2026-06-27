@@ -29,7 +29,7 @@ from aose.engine.features import is_race_as_class, open_doors_category_bonus, se
 from aose.engine.initiative import initiative_detail
 from aose.engine.innate import innate_abilities as _innate_abilities
 from aose.engine.magic import active_modifiers, apply_modifiers, effective_abilities
-from aose.models import Ability, CharacterSpec, MagicItem, MagicItemInstance, RuleSet
+from aose.models import Ability, Ammunition, CharacterSpec, MagicItem, MagicItemInstance, RuleSet
 
 ABILITY_ORDER = [Ability.STR, Ability.INT, Ability.WIS, Ability.DEX, Ability.CON, Ability.CHA]
 
@@ -613,7 +613,8 @@ def magic_items_view(
 
 def _magic_items(spec: CharacterSpec, data: GameData) -> list[MagicItemView]:
     """Thin wrapper — delegates to the public ``magic_items_view`` helper."""
-    return magic_items_view(spec.magic_items, spec.inventory, data)
+    inv = [i.catalog_id for i in spec.items if i.location.kind == "carried"]
+    return magic_items_view(spec.magic_items, inv, data)
 
 
 def enchanted_items_view(enchanted, data: GameData,
@@ -649,11 +650,11 @@ def enchanted_items_view(enchanted, data: GameData,
         summary += [_summarize_modifier(m) for m in inst.extra_modifiers]
         views.append(MagicItemView(
             instance_id=inst.instance_id,
-            catalog_id=inst.base_id,
+            catalog_id=inst.catalog_id,
             name=name,
             description=ench.description if ench is not None else None,
             equippable=True,
-            equipped=inst.equipped,
+            equipped=inst.equip is not None,
             charges_remaining=inst.charges_remaining,
             charges_max=inst.charges_max,
             note=inst.note,
@@ -737,16 +738,18 @@ def _equipped(spec: CharacterSpec, data: GameData) -> list[EquippedRow]:
     """Worn items (armour / shield / barding) only. Weapon slots render as
     attack profiles, not as worn rows — including them double-renders the weapon."""
     rows: list[EquippedRow] = []
-    for slot, item_id in spec.equipped.items():
-        if slot in _WEAPON_SLOTS:
+    for inst in spec.items:
+        if inst.equip is None or inst.equip in _WEAPON_SLOTS:
             continue
-        name = data.items[item_id].name if item_id in data.items else item_id
-        rows.append(EquippedRow(slot=slot, item_name=name, item_id=item_id))
+        item = data.items.get(inst.catalog_id)
+        name = item.name if item is not None else inst.catalog_id
+        rows.append(EquippedRow(slot=inst.equip, item_name=name, item_id=inst.instance_id))
     return rows
 
 
 def _inventory(spec: CharacterSpec, data: GameData) -> list[str]:
-    return [data.items[i].name if i in data.items else i for i in spec.inventory]
+    return [data.items[i.catalog_id].name if i.catalog_id in data.items else i.catalog_id
+            for i in spec.items if i.location.kind == "carried"]
 
 
 def _enabled_optional_rules(rs: RuleSet) -> list[str]:
@@ -797,8 +800,8 @@ def _weapon_qualities_reference(spec: CharacterSpec, data: GameData) -> list[Wea
     from aose.models import Weapon
 
     present: set[str] = set()
-    for wid in set(spec.inventory) | set(spec.equipped.values()):
-        item = data.items.get(wid)
+    for inst in spec.items:
+        item = data.items.get(inst.catalog_id)
         if isinstance(item, Weapon):
             present.update(item.quality_ids)
     refs = [
@@ -1207,22 +1210,21 @@ def valuables_view(spec: CharacterSpec) -> ValuablesView:
 
 
 def ammo_view(spec, data: GameData) -> tuple[list[AmmoRow], dict[str, list[AmmoOption]]]:
-    """Build ammo rows and per-launcher load options.  ``spec`` may be a
-    ``CharacterSpec`` or a draft-like object that has ``.ammo``,
-    ``.loaded_ammo``, and ``.equipped``."""
+    """Build ammo rows and per-launcher load options from ``spec.items``."""
     from aose.engine.ammo import accepts, resolve_ammo
-    from aose.models import Ammunition, Weapon
+    from aose.models import Weapon
+
+    ammo_items = [i for i in spec.items if isinstance(data.items.get(i.catalog_id), Ammunition)]
 
     ammo_rows = []
-    for s in spec.ammo:
-        view = resolve_ammo(s, data)
-        base = data.items.get(s.base_id)
+    for inst in ammo_items:
+        base = data.items.get(inst.catalog_id)
+        v = resolve_ammo(inst, data)
         ammo_rows.append(AmmoRow(
-            instance_id=s.instance_id, name=view["name"],
-            count=s.count, magic=s.enchantment_id is not None,
+            instance_id=inst.instance_id, name=v["name"],
+            count=inst.count, magic=inst.enchantment_id is not None,
             detail=item_card(base) if base is not None else None))
 
-    # Build per-launcher load options from attack profiles
     attacks = attack_profiles(spec, data)
     load_options: dict[str, list[AmmoOption]] = {}
     for prof in attacks:
@@ -1230,14 +1232,14 @@ def ammo_view(spec, data: GameData) -> tuple[list[AmmoRow], dict[str, list[AmmoO
         if weapon is None or not isinstance(weapon, Weapon) or not weapon.accepts_ammo:
             continue
         opts = []
-        for s in spec.ammo:
-            base = data.items.get(s.base_id)
+        for inst in ammo_items:
+            base = data.items.get(inst.catalog_id)
             if isinstance(base, Ammunition) and accepts(weapon, base):
-                v = resolve_ammo(s, data)
-                opts.append(AmmoOption(instance_id=s.instance_id, name=v["name"],
-                                       count=s.count))
-        if opts:
-            load_options[prof.weapon_id] = opts
+                v = resolve_ammo(inst, data)
+                opts.append(AmmoOption(instance_id=inst.instance_id, name=v["name"],
+                                       count=inst.count))
+        if opts and prof.manageable_item_id:
+            load_options[prof.manageable_item_id] = opts
 
     return ammo_rows, load_options
 
@@ -1268,8 +1270,8 @@ def _labeled_ability_mods(spec: CharacterSpec, data: GameData) -> list[tuple]:
         item_mods = list(catalog.modifiers) if isinstance(catalog, MagicItem) else []
         item_mods += list(inst.extra_modifiers)
         out += [(m, m.source or name) for m in item_mods if m.target.startswith("ability:")]
-    for inst in spec.enchanted:
-        if not inst.equipped:
+    for inst in spec.items:
+        if inst.equip is None or inst.enchantment_id is None:
             continue
         ench = data.enchantments.get(inst.enchantment_id)
         name = getattr(ench, "name", inst.enchantment_id)
@@ -1364,9 +1366,11 @@ def _retainer_cards(spec: CharacterSpec, data: GameData) -> list:
         race_name = data.races[r.spec.race_id].name if r.spec.race_id in data.races else ""
         descriptor = ("0-level Normal Human" if is_nh
                       else f"{race_name} {cls.name} {entry.level}".strip() if cls else "")
-        equipped_names = {slot: data.items[i].name
-                         for slot, i in r.spec.equipped.items() if i in data.items}
-        inv_rows = [_build_row(i, n, data) for i, n in Counter(r.spec.inventory).items()]
+        equipped_names = {inst.equip: data.items[inst.catalog_id].name
+                         for inst in r.spec.items
+                         if inst.equip is not None and inst.catalog_id in data.items}
+        inv_rows = [_build_row(i.catalog_id, i.count, data)
+                    for i in r.spec.items if i.location.kind == "carried"]
         inv_rows.sort(key=lambda x: x.name)
         cards.append(RetainerCard(
             id=r.id, name=r.spec.name, descriptor=descriptor, is_normal_human=is_nh,
@@ -1429,9 +1433,12 @@ def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevel
             for j in spec.jewellery if j.location == loc
         ]
 
-    def _container_views_from(source: list, loc: StorageLocation) -> list[ContainerView]:
-        """Build ContainerView list from ``source`` (spec.containers or retainer.spec.containers)."""
+    def _container_views_from(source: list, loc: StorageLocation,
+                              owner_items=None) -> list[ContainerView]:
+        """Build ContainerView list; owner_items defaults to spec.items for PC,
+        pass retainer.spec.items for retainer containers."""
         from aose.engine.ammo import resolve_ammo
+        items_list = owner_items if owner_items is not None else spec.items
         views = []
         for c in source:
             if c.location != loc:
@@ -1440,25 +1447,31 @@ def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevel
             if not isinstance(catalog, _Container):
                 continue
             here = StorageLocation(kind="container", id=c.instance_id)
-            rows_by_id: Counter = Counter(c.contents)
+            container_items = [i for i in items_list if i.location == here]
+            plain_items = [i for i in container_items
+                           if i.enchantment_id is None
+                           and not isinstance(data.items.get(i.catalog_id), Ammunition)]
             content_rows = sorted(
-                [_build_row(i, n, data) for i, n in rows_by_id.items()],
+                [_build_row(i.catalog_id, i.count, data) for i in plain_items],
                 key=lambda r: r.name,
             )
             raw_used = sum(
-                (data.items[x].weight_cn if x in data.items else 0)
-                for x in c.contents
+                (data.items.get(i.catalog_id).weight_cn  # type: ignore[union-attr]
+                 if data.items.get(i.catalog_id) else 0) * i.count
+                for i in container_items
             )
+            ammo_here = [i for i in container_items
+                         if isinstance(data.items.get(i.catalog_id), Ammunition)]
             stowed_ammo_rows = []
-            for s in spec.ammo:
-                if s.location == here:
-                    v = resolve_ammo(s, data)
-                    base = data.items.get(s.base_id)
-                    stowed_ammo_rows.append(AmmoRow(
-                        instance_id=s.instance_id, name=v["name"],
-                        count=s.count, magic=s.enchantment_id is not None,
-                        detail=item_card(base) if base is not None else None,
-                    ))
+            for inst in ammo_here:
+                v = resolve_ammo(inst, data)
+                base = data.items.get(inst.catalog_id)
+                stowed_ammo_rows.append(AmmoRow(
+                    instance_id=inst.instance_id, name=v["name"],
+                    count=inst.count, magic=inst.enchantment_id is not None,
+                    detail=item_card(base) if base is not None else None,
+                ))
+            ench_here = [i for i in container_items if i.enchantment_id is not None]
             views.append(ContainerView(
                 instance_id=c.instance_id, catalog_id=c.catalog_id,
                 name=catalog.name, state=loc.kind,
@@ -1476,40 +1489,56 @@ def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevel
                 stowed_magic=magic_items_view(
                     [mi for mi in spec.magic_items if mi.location == here], [], data),
                 stowed_enchanted=enchanted_items_view(
-                    [inst for inst in spec.enchanted if inst.location == here], data,
-                    _pc_aw, _pc_aa, _pc_as),
+                    ench_here, data, _pc_aw, _pc_aa, _pc_as),
                 stowed_ammo=stowed_ammo_rows,
                 stowed_spell_sources=spell_sources_view(spec, data, here),
             ))
         return views
 
-    def _carrier_container_views(loc: StorageLocation) -> list[ContainerView]:
-        return _container_views_from(spec.containers, loc)
+    def _carrier_container_views(loc: StorageLocation, owner_items=None) -> list[ContainerView]:
+        return _container_views_from(spec.containers, loc, owner_items)
 
-    # The existing inventory_view gives us equipped/loose split + carried/stashed containers.
-    inv_view = inventory_view(spec.inventory, spec.stashed, spec.equipped,
-                              spec.containers, data)
+    def _plain_items_at(items_list, kind: str) -> list:
+        """Non-enchanted, non-ammo items at location kind."""
+        return [i for i in items_list
+                if i.location.kind == kind
+                and i.enchantment_id is None
+                and not isinstance(data.items.get(i.catalog_id), Ammunition)]
+
+    def _enchanted_at(items_list, loc: StorageLocation) -> list:
+        return [i for i in items_list if i.enchantment_id is not None and i.location == loc]
+
+    def _ammo_rows_at(ammo_by_iid: dict, items_list, loc: StorageLocation) -> list:
+        return [ammo_by_iid[i.instance_id]
+                for i in items_list
+                if isinstance(data.items.get(i.catalog_id), Ammunition)
+                and i.location == loc and i.instance_id in ammo_by_iid]
+
+    # Build inventory_view from spec.items for equipped/loose row objects
+    _inv_ids = [cid for i in _plain_items_at(spec.items, "carried")
+                for cid in [i.catalog_id] * i.count]
+    _stash_ids = [cid for i in _plain_items_at(spec.items, "stashed")
+                  for cid in [i.catalog_id] * i.count]
+    _equip_dict = {i.equip: i.catalog_id
+                   for i in spec.items if i.equip is not None and i.enchantment_id is None}
+    inv_view = inventory_view(_inv_ids, _stash_ids, _equip_dict,
+                              spec.containers, data, _pc_aw, _pc_aa, _pc_as, spec=spec)
     groups: list[TopLevelGroup] = []
 
     # ── Carried ───────────────────────────────────────────────────────────────
     carried_loc = StorageLocation(kind="carried")
     pc_attacks = attack_profiles(spec, data)
     pc_worn = _equipped(spec, data)
-    # Build ammo index once; bucket per location below
     all_ammo_rows, _ = ammo_view(spec, data)
     _ammo_by_iid = {r.instance_id: r for r in all_ammo_rows}
-    # Carried: instances at carried_loc; plain-inventory magic items are implicitly carried
     carried_magic_insts = [mi for mi in spec.magic_items if mi.location == carried_loc]
-    all_carried_magic = magic_items_view(carried_magic_insts, spec.inventory, data)
+    all_carried_magic = magic_items_view(carried_magic_insts, [], data)
     pc_magic_equipped = [mi for mi in all_carried_magic if mi.equipped]
     pc_magic_unequipped = [mi for mi in all_carried_magic if not mi.equipped]
     pc_enchanted = enchanted_items_view(
-        [inst for inst in spec.enchanted if inst.location == carried_loc], data,
-        _pc_aw, _pc_aa, _pc_as)
+        _enchanted_at(spec.items, carried_loc), data, _pc_aw, _pc_aa, _pc_as)
     pc_spell_sources = spell_sources_view(spec, data, carried_loc)
-    pc_ammo = [_ammo_by_iid[s.instance_id]
-               for s in spec.ammo if s.location == carried_loc
-               and s.instance_id in _ammo_by_iid]
+    pc_ammo = _ammo_rows_at(_ammo_by_iid, spec.items, carried_loc)
     groups.append(TopLevelGroup(
         kind="carried", label=spec.name,
         caps=OwnerCaps(has_equipped=True, can_wield=True, can_stash=True,
@@ -1544,11 +1573,8 @@ def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevel
         magic_items=magic_items_view(
             [mi for mi in spec.magic_items if mi.location == stashed_loc], [], data),
         enchanted=enchanted_items_view(
-            [inst for inst in spec.enchanted if inst.location == stashed_loc], data,
-            _pc_aw, _pc_aa, _pc_as),
-        ammo=[_ammo_by_iid[s.instance_id]
-              for s in spec.ammo if s.location == stashed_loc
-              and s.instance_id in _ammo_by_iid],
+            _enchanted_at(spec.items, stashed_loc), data, _pc_aw, _pc_aa, _pc_as),
+        ammo=_ammo_rows_at(_ammo_by_iid, spec.items, stashed_loc),
         spell_sources=spell_sources_view(spec, data, stashed_loc),
     ))
 
@@ -1557,7 +1583,8 @@ def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevel
         animal_loc = StorageLocation(kind="animal", id=animal.instance_id)
         catalog = data.items.get(animal.catalog_id)
         label = animal.name or (catalog.name if catalog else animal.catalog_id)
-        count: Counter = Counter(animal.contents)
+        animal_plain = _plain_items_at(spec.items, "animal")
+        animal_plain = [i for i in animal_plain if i.location == animal_loc]
         barding = [_build_row(animal.armor_id, 1, data)] if animal.armor_id else []
         barding_worn = (
             [EquippedRow(slot="barding",
@@ -1572,7 +1599,7 @@ def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevel
                            bucket_label="Carried"),
             has_equipped=bool(barding_worn), equipped=barding,
             equipped_worn=barding_worn,
-            loose=sorted([_build_row(i, n, data) for i, n in count.items()],
+            loose=sorted([_build_row(i.catalog_id, i.count, data) for i in animal_plain],
                          key=lambda r: r.name),
             coins=_coin_rows(animal_loc),
             treasure_gems=_gem_rows(animal_loc),
@@ -1581,11 +1608,8 @@ def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevel
             magic_items=magic_items_view(
                 [mi for mi in spec.magic_items if mi.location == animal_loc], [], data),
             enchanted=enchanted_items_view(
-                [inst for inst in spec.enchanted if inst.location == animal_loc], data,
-                _pc_aw, _pc_aa, _pc_as),
-            ammo=[_ammo_by_iid[s.instance_id]
-                  for s in spec.ammo if s.location == animal_loc
-                  and s.instance_id in _ammo_by_iid],
+                _enchanted_at(spec.items, animal_loc), data, _pc_aw, _pc_aa, _pc_as),
+            ammo=_ammo_rows_at(_ammo_by_iid, spec.items, animal_loc),
             spell_sources=spell_sources_view(spec, data, animal_loc),
         ))
 
@@ -1594,12 +1618,15 @@ def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevel
         vehicle_loc = StorageLocation(kind="vehicle", id=vehicle.instance_id)
         catalog = data.items.get(vehicle.catalog_id)
         label = vehicle.name or (catalog.name if catalog else vehicle.catalog_id)
-        count = Counter(vehicle.contents)
+        vehicle_plain = [i for i in spec.items
+                         if i.location == vehicle_loc
+                         and i.enchantment_id is None
+                         and not isinstance(data.items.get(i.catalog_id), Ammunition)]
         groups.append(TopLevelGroup(
             kind="vehicle", id=vehicle.instance_id, label=label,
             caps=OwnerCaps(has_equipped=False, can_wield=False, can_stash=False,
                            bucket_label="Stowed"),
-            loose=sorted([_build_row(i, n, data) for i, n in count.items()],
+            loose=sorted([_build_row(i.catalog_id, i.count, data) for i in vehicle_plain],
                          key=lambda r: r.name),
             coins=_coin_rows(vehicle_loc),
             treasure_gems=_gem_rows(vehicle_loc),
@@ -1608,11 +1635,8 @@ def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevel
             magic_items=magic_items_view(
                 [mi for mi in spec.magic_items if mi.location == vehicle_loc], [], data),
             enchanted=enchanted_items_view(
-                [inst for inst in spec.enchanted if inst.location == vehicle_loc], data,
-                _pc_aw, _pc_aa, _pc_as),
-            ammo=[_ammo_by_iid[s.instance_id]
-                  for s in spec.ammo if s.location == vehicle_loc
-                  and s.instance_id in _ammo_by_iid],
+                _enchanted_at(spec.items, vehicle_loc), data, _pc_aw, _pc_aa, _pc_as),
+            ammo=_ammo_rows_at(_ammo_by_iid, spec.items, vehicle_loc),
             spell_sources=spell_sources_view(spec, data, vehicle_loc),
         ))
 
@@ -1620,26 +1644,30 @@ def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevel
     for retainer in spec.retainers:
         ret_carried = StorageLocation(kind="carried")
         ret_stashed = StorageLocation(kind="stashed")
-        count = Counter(retainer.spec.inventory)
+        ret_items = retainer.spec.items
         ret_coins = [CoinRow(denom=s.denom, count=s.count)
                      for s in retainer.spec.coins
                      if s.location == ret_carried and s.count > 0]
-        ret_equipped = [_build_row(iid, 1, data)
-                        for iid in retainer.spec.equipped.values()]
         ret_attacks = attack_profiles(retainer.spec, data)
         ret_worn = [
-            EquippedRow(slot=slot,
-                        item_name=(data.items[iid].name if iid in data.items else iid),
-                        item_id=iid)
-            for slot, iid in retainer.spec.equipped.items()
-            if slot != "main_hand"   # main-hand weapon shown as an attack row
+            EquippedRow(slot=inst.equip,
+                        item_name=(data.items[inst.catalog_id].name
+                                   if inst.catalog_id in data.items else inst.catalog_id),
+                        item_id=inst.catalog_id)
+            for inst in ret_items
+            if inst.equip is not None and inst.equip not in _WEAPON_SLOTS
         ]
+        ret_equipped = [_build_row(inst.catalog_id, 1, data)
+                        for inst in ret_items if inst.equip is not None]
         ret_containers = (
-            _container_views_from(retainer.spec.containers, ret_carried) +
-            _container_views_from(retainer.spec.containers, ret_stashed)
+            _container_views_from(retainer.spec.containers, ret_carried, ret_items) +
+            _container_views_from(retainer.spec.containers, ret_stashed, ret_items)
         )
         ret_all_ammo, _ = ammo_view(retainer.spec, data)
         ret_ammo_by_iid = {r.instance_id: r for r in ret_all_ammo}
+        ret_plain_carried = _plain_items_at(ret_items, "carried")
+        ret_loose = sorted([_build_row(i.catalog_id, i.count, data) for i in ret_plain_carried],
+                           key=lambda r: r.name)
         groups.append(TopLevelGroup(
             kind="retainer", id=retainer.id, label=retainer.spec.name,
             caps=OwnerCaps(has_equipped=bool(ret_attacks or ret_worn),
@@ -1648,19 +1676,15 @@ def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevel
             has_equipped=bool(ret_attacks or ret_worn), equipped=ret_equipped,
             equipped_attacks=ret_attacks,
             equipped_worn=ret_worn,
-            loose=sorted([_build_row(i, n, data) for i, n in count.items()],
-                         key=lambda r: r.name),
+            loose=ret_loose,
             coins=ret_coins,
             containers=ret_containers,
             magic_items=magic_items_view(
                 [mi for mi in retainer.spec.magic_items if mi.location == ret_carried],
-                retainer.spec.inventory, data),
+                [], data),
             enchanted=enchanted_items_view(
-                [inst for inst in retainer.spec.enchanted if inst.location == ret_carried],
-                data),
-            ammo=[ret_ammo_by_iid[s.instance_id]
-                  for s in retainer.spec.ammo if s.location == ret_carried
-                  and s.instance_id in ret_ammo_by_iid],
+                _enchanted_at(ret_items, ret_carried), data),
+            ammo=_ammo_rows_at(ret_ammo_by_iid, ret_items, ret_carried),
             spell_sources=spell_sources_view(retainer.spec, data, ret_carried),
         ))
 
@@ -1797,8 +1821,8 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
     ]
     ammo_rows, ammo_options = ammo_view(spec, data)
 
-    _armor_id = spec.equipped.get("armor")
-    _armor_item = data.items.get(_armor_id) if _armor_id else None
+    _armor_inst = next((i for i in spec.items if i.equip == "armor"), None)
+    _armor_item = data.items.get(_armor_inst.catalog_id) if _armor_inst else None
     _armor_tailorable = bool(getattr(_armor_item, "tailorable", False))
 
     return CharacterSheet(
@@ -1865,7 +1889,8 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
         proficiencies=_proficiency_view(spec, data),
         weapon_proficiency_active=spec.ruleset.weapon_proficiency,
         weapon_qualities_reference=_weapon_qualities_reference(spec, data),
-        magic_items=_magic_items(spec, data) + enchanted_items_view(spec.enchanted, data),
+        magic_items=_magic_items(spec, data) + enchanted_items_view(
+            [i for i in spec.items if i.enchantment_id is not None], data),
         spells=spells_view(spec, data),
         spellbook=spellbook_view(spec, data),
         mental_powers=mental_powers_view(spec, data),
@@ -1893,7 +1918,7 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
             spec.ruleset.encumbrance, ""
         ),
         armor_tailorable=_armor_tailorable,
-        armor_tailored=spec.armor_tailored,
+        armor_tailored=(_armor_inst.tailored if _armor_inst is not None else True),
         pending_rest_heal=spec.pending_rest_heal,
         strict_mode=spec.ruleset.strict_mode,
         **_level_choice_extras(spec, data),

@@ -31,19 +31,8 @@ from aose.engine.dice import (
     roll_first_level_hp,
     roll_hp,
 )
-from aose.engine.ammo import (
-    buy_ammo,
-    load as _load_ammo,
-    unload as _unload_ammo,
-    adjust_count as _adjust_ammo,
-    remove_ammo as _remove_ammo,
-    InsufficientGold as _AmmoInsufficientGold,
-    UnknownAmmo as _UnknownAmmo,
-)
 from aose.engine.enchant import (
     _kind_of_instance as _enchanted_kind,
-    equip as _equip_enchanted,
-    unequip as _unequip_enchanted,
 )
 from aose.engine.equip import WieldError, equip as _equip, unequip as _unequip
 from aose.engine.features import one_handed_two_handed_weapons as _1h2h
@@ -70,33 +59,26 @@ from aose.engine.proficiency import (
 )
 from aose.engine.shop import (
     ContainerView,
-    InsufficientGold,
+    InsufficientFunds,
     REMOVE_MODES,
-    TopLevelGroup,
     UnknownItem,
-    add_free as shop_add_free,
-    add_free_container,
-    buy as shop_buy,
-    buy_container,
+    add_free_item as shop_add_free_item,
+    buy_item as shop_buy_item,
     inventory_view,
-    remove as shop_remove,
-    remove_container as shop_remove_container,
-    remove_from_stash as shop_remove_from_stash,
     roll_starting_gold,
+    sell_from_stash as shop_sell_from_stash,
+    sell_item as shop_sell_item,
     shop_categories,
 )
 from aose.models import (
     Ability,
-    AmmoStack,
-    Ammunition,
     CharacterSpec,
     ClassEntry,
     ContainerInstance,
-    EnchantedInstance,
+    ItemInstance,
     MagicItemInstance,
     RuleSet,
 )
-from aose.sheet.view import magic_items_view
 from aose.engine.sources import (
     content_enabled,
     class_available,
@@ -415,16 +397,17 @@ def _apply_rule_changes(draft: dict[str, Any], old_rs: RuleSet, new_rs: RuleSet,
 
     # Equipment clears apply regardless of how far through the wizard the draft is.
     if old_rs.two_weapon_fighting and not new_rs.two_weapon_fighting and data is not None:
-        equipped = draft.get("equipped", {})
-        off_id = equipped.get("off_hand")
-        if off_id:
-            from aose.engine.equip import resolve_slot as _resolve_slot
-            from aose.models import EnchantedInstance as _EI, Weapon as _W
-            enchanted = [_EI.model_validate(e) for e in draft.get("enchanted", [])]
-            if isinstance(_resolve_slot(off_id, data, enchanted), _W):
-                new_eq = dict(equipped)
-                del new_eq["off_hand"]
-                draft["equipped"] = new_eq
+        from aose.models import Weapon as _W
+        items = [ItemInstance.model_validate(i) for i in draft.get("items", [])]
+        changed = False
+        for inst in items:
+            if inst.equip == "off_hand":
+                base = data.items.get(inst.catalog_id)
+                if isinstance(base, _W):
+                    inst.equip = None
+                    changed = True
+        if changed:
+            draft["items"] = [i.model_dump() for i in items]
 
     if "abilities" not in draft:
         return
@@ -1640,48 +1623,29 @@ def _draft_magic(draft: dict[str, Any]) -> list[MagicItemInstance]:
     return [MagicItemInstance.model_validate(m) for m in draft.get("magic_items", [])]
 
 
-def _draft_ammo(draft: dict[str, Any]) -> list[AmmoStack]:
-    return [AmmoStack.model_validate(a) for a in draft.get("ammo", [])]
-
-
 def _equipment_context(draft: dict[str, Any], game_data) -> dict:
     """Build the rendering context for the equipment partial — shared between
     the wizard equipment step and the live character sheet."""
-    inventory = draft.get("inventory", [])
-    stashed = draft.get("stashed", [])
-    equipped = draft.get("equipped", {})
-    containers = [
-        ContainerInstance.model_validate(c) for c in draft.get("containers", [])
-    ]
     classes = [game_data.classes[cid] for cid in _class_ids(draft)
                if cid in game_data.classes]
-    # Build ammo load-options for item modals (equipped launchers)
-    ammo_stacks = _draft_ammo(draft)
-    from aose.engine.ammo import accepts, resolve_ammo
-    from aose.sheet.view import AmmoOption
-
-    # Load options keyed by weapon_id for each equipped launcher (from hand slots)
-    from aose.models import Ammunition as _Ammunition, Weapon as _Weapon
-    load_options = {}
-    for slot_id in set(v for k, v in equipped.items() if k in ("main_hand", "off_hand")):
-        weapon = game_data.items.get(slot_id)
-        if not isinstance(weapon, _Weapon) or not weapon.accepts_ammo:
-            continue
-        opts = []
-        for s in ammo_stacks:
-            base = game_data.items.get(s.base_id)
-            if isinstance(base, _Ammunition) and accepts(weapon, base):
-                v = resolve_ammo(s, game_data)
-                opts.append(AmmoOption(instance_id=s.instance_id, name=v["name"],
-                                       count=s.count))
-        if opts:
-            load_options[slot_id] = opts
 
     draft_id = draft.get("_draft_id", "")
 
     # Build inventory_groups for the box (carried + stashed only; no carriers/retainers).
-    from aose.sheet.view import build_inventory_groups as _big
+    from aose.sheet.view import build_inventory_groups as _big, AmmoOption
     from aose.engine import storage as _storage
+    from aose.engine.ammo import accepts, resolve_ammo
+    from aose.models import Ammunition as _Ammunition, Weapon as _Weapon
+    load_options: dict = {}
+    inventory_groups = []
+    _move_targets: list = [
+        {"kind": "carried", "id": None, "label": "Carried"},
+        {"kind": "stashed", "id": None, "label": "Stashed"},
+    ]
+    _inv: list[str] = []
+    _stash: list[str] = []
+    _equip: dict[str, str] = {}
+    _containers: list[ContainerInstance] = []
     try:
         _spec = _draft_to_spec(draft, game_data)
         inventory_groups = [
@@ -1689,18 +1653,47 @@ def _equipment_context(draft: dict[str, Any], game_data) -> dict:
             if g.kind in ("carried", "stashed")
         ]
         _move_targets = _storage.move_targets(_spec, game_data)
+
+        # Build old-style lists from spec.items for inventory_view
+        _containers = list(_spec.containers)
+        for inst in _spec.items:
+            if inst.enchantment_id is not None:
+                continue
+            base = game_data.items.get(inst.catalog_id)
+            if isinstance(base, _Ammunition):
+                continue  # ammo shown separately
+            for _ in range(inst.count):
+                if inst.location.kind == "carried":
+                    _inv.append(inst.catalog_id)
+                elif inst.location.kind == "stashed":
+                    _stash.append(inst.catalog_id)
+            if inst.equip is not None:
+                _equip[inst.equip] = inst.catalog_id
+
+        # Build ammo load-options for equipped launchers (keyed by weapon instance_id)
+        for inst in _spec.items:
+            if inst.equip not in ("main_hand", "off_hand"):
+                continue
+            weapon = game_data.items.get(inst.catalog_id)
+            if not isinstance(weapon, _Weapon) or not weapon.accepts_ammo:
+                continue
+            opts = []
+            for ammo_inst in _spec.items:
+                base = game_data.items.get(ammo_inst.catalog_id)
+                if isinstance(base, _Ammunition) and accepts(weapon, base):
+                    v = resolve_ammo(ammo_inst, game_data)
+                    opts.append(AmmoOption(instance_id=ammo_inst.instance_id,
+                                           name=v["name"], count=ammo_inst.count))
+            if opts:
+                load_options[inst.instance_id] = opts
     except Exception:
-        inventory_groups = []
-        _move_targets = [
-            {"kind": "carried", "id": None, "label": "Carried"},
-            {"kind": "stashed", "id": None, "label": "Stashed"},
-        ]
+        pass
 
     return {
         "gold": draft.get("gold", 0),
         "gold_locked": draft.get("gold_locked", False),
         "inventory_view": inventory_view(
-            inventory, stashed, equipped, containers, game_data,
+            _inv, _stash, _equip, _containers, game_data,
             allowed_weapons=allowed_weapon_ids(classes, game_data, _ruleset_of(draft)),
             allowed_armor=allowed_armor_ids(classes, game_data),
             allow_shields=shields_allowed(classes),
@@ -1739,7 +1732,6 @@ async def post_equipment_roll_gold(request: Request, draft_id: str):
     if draft.get("gold_locked"):
         raise HTTPException(400, "Starting gold is already rolled and locked.")
     draft["gold"] = roll_starting_gold()
-    draft.setdefault("inventory", [])
     # Strict locks immediately; otherwise the first purchase locks it (buy route).
     draft["gold_locked"] = _ruleset_of(draft).strict_mode
     save_draft(draft_id, draft, _drafts_dir(request))
@@ -1750,31 +1742,17 @@ async def post_equipment_roll_gold(request: Request, draft_id: str):
 async def post_equipment_buy(request: Request, draft_id: str, item_id: str = Form(...)):
     draft = _load(request, draft_id)
     data = request.app.state.game_data
-    item = data.items.get(item_id)
-    from aose.models import Container
     try:
-        if isinstance(item, Ammunition):
-            new_ammo, new_gold = buy_ammo(
-                _draft_ammo(draft), draft.get("gold", 0), item_id, data,
-            )
-            draft["ammo"] = [a.model_dump() for a in new_ammo]
-            draft["gold"] = new_gold
-        elif isinstance(item, Container):
-            containers_raw = draft.get("containers", [])
-            containers = [ContainerInstance.model_validate(c) for c in containers_raw]
-            new_containers, new_gold = buy_container(
-                containers, draft.get("gold", 0), item_id, data,
-            )
-            draft["containers"] = [c.model_dump() for c in new_containers]
-            draft["gold"] = new_gold
-        else:
-            new_inventory, new_gold = shop_buy(
-                draft.get("inventory", []), draft.get("gold", 0), item_id, data,
-            )
-            draft["inventory"] = new_inventory
-            draft["gold"] = new_gold
+        spec = _draft_to_spec(draft, data)
+        shop_buy_item(spec, item_id, data)
+        draft["items"] = [i.model_dump() for i in spec.items]
+        draft["containers"] = [c.model_dump() for c in spec.containers]
+        from aose.models.storage import StorageLocation as _SL
+        _carried = _SL(kind="carried")
+        draft["gold"] = sum(c.count for c in spec.coins
+                            if c.denom == "gp" and c.location == _carried)
         draft["gold_locked"] = True  # first purchase locks the starting-gold roll
-    except (UnknownItem, InsufficientGold, _AmmoInsufficientGold, ValueError) as e:
+    except (UnknownItem, InsufficientFunds, ValueError) as e:
         raise HTTPException(400, str(e))
     save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/equipment")
@@ -1787,18 +1765,15 @@ async def post_equipment_add(request: Request, draft_id: str, item_id: str = For
     draft = _load(request, draft_id)
     data = request.app.state.game_data
     item = data.items.get(item_id)
-    from aose.models import Container
     try:
         if needs_instance(item):
             magic_items = add_free_magic_item(_draft_magic(draft), item_id, data)
             draft["magic_items"] = [m.model_dump() for m in magic_items]
-        elif isinstance(item, Container):
-            containers_raw = draft.get("containers", [])
-            containers = [ContainerInstance.model_validate(c) for c in containers_raw]
-            new_containers = add_free_container(containers, item_id, data)
-            draft["containers"] = [c.model_dump() for c in new_containers]
         else:
-            draft["inventory"] = shop_add_free(draft.get("inventory", []), item_id, data)
+            spec = _draft_to_spec(draft, data)
+            shop_add_free_item(spec, item_id, data)
+            draft["items"] = [i.model_dump() for i in spec.items]
+            draft["containers"] = [c.model_dump() for c in spec.containers]
     except (UnknownItem, ValueError) as e:
         raise HTTPException(400, str(e))
     save_draft(draft_id, draft, _drafts_dir(request))
@@ -1807,42 +1782,39 @@ async def post_equipment_add(request: Request, draft_id: str, item_id: str = For
 
 @router.post("/{draft_id}/equipment/equip")
 async def post_equipment_equip(request: Request, draft_id: str,
-                               item_id: str = Form(...),
+                               instance_id: str = Form(...),
                                slot: str | None = Form(None)):
     draft = _load(request, draft_id)
     data = request.app.state.game_data
     classes = [data.classes[cid] for cid in _class_ids(draft) if cid in data.classes]
     ruleset = _ruleset_of(draft)
-    enchanted_raw = draft.get("enchanted", [])
-    from aose.models import EnchantedInstance as _EI
-    enchanted = [_EI.model_validate(e) for e in enchanted_raw]
+    spec = _draft_to_spec(draft, data)
     try:
-        draft["equipped"] = _equip(
-            item_id,
-            inventory=draft.get("inventory", []),
-            equipped=draft.get("equipped", {}),
-            enchanted=enchanted,
-            data=data,
-            slot=slot,
-            two_weapon=ruleset.two_weapon_fighting,
-            eligible=two_weapon_eligible(classes),
-            allowed_weapons=allowed_weapon_ids(classes, data, ruleset),
-            allowed_armor=allowed_armor_ids(classes, data),
-            allow_shields=shields_allowed(classes),
-        )
+        _equip(spec, instance_id,
+               data=data,
+               slot=slot,
+               two_weapon=ruleset.two_weapon_fighting,
+               eligible=two_weapon_eligible(classes),
+               allowed_weapons=allowed_weapon_ids(classes, data, ruleset),
+               allowed_armor=allowed_armor_ids(classes, data),
+               allow_shields=shields_allowed(classes))
     except (ValueError, WieldError) as e:
         raise HTTPException(400, str(e))
+    draft["items"] = [i.model_dump() for i in spec.items]
     save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/equipment")
 
 
 @router.post("/{draft_id}/equipment/unequip")
-async def post_equipment_unequip(request: Request, draft_id: str, item_id: str = Form(...)):
+async def post_equipment_unequip(request: Request, draft_id: str,
+                                 instance_id: str = Form(...)):
     draft = _load(request, draft_id)
+    spec = _draft_to_spec(draft, request.app.state.game_data)
     try:
-        draft["equipped"] = _unequip(item_id, equipped=draft.get("equipped", {}))
+        _unequip(spec, instance_id)
     except ValueError as e:
         raise HTTPException(400, str(e))
+    draft["items"] = [i.model_dump() for i in spec.items]
     save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/equipment")
 
@@ -1875,19 +1847,18 @@ async def wiz_inventory_move(request: Request, draft_id: str):
                             data=request.app.state.game_data)
     except (KeyError, _storage.StorageError) as e:
         raise HTTPException(400, str(e))
+    from aose.models.storage import StorageLocation as _SL2
+    _carried2 = _SL2(kind="carried")
     draft.update({
-        "inventory": spec.inventory,
-        "stashed": spec.stashed,
+        "items": [i.model_dump() for i in spec.items],
         "containers": [c.model_dump() for c in spec.containers],
         "coins": [s.model_dump() for s in spec.coins],
         "gems": [g.model_dump() for g in spec.gems],
         "jewellery": [j.model_dump() for j in spec.jewellery],
-        "ammo": [a.model_dump() for a in spec.ammo],
-        "loaded_ammo": spec.loaded_ammo,
         "magic_items": [m.model_dump() for m in spec.magic_items],
-        "enchanted": [e.model_dump() for e in spec.enchanted],
         "spell_sources": [s.model_dump() for s in spec.spell_sources],
-        "equipped": spec.equipped,
+        "gold": sum(c.count for c in spec.coins
+                    if c.denom == "gp" and c.location == _carried2),
     })
     save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/equipment")
@@ -1897,18 +1868,19 @@ async def wiz_inventory_move(request: Request, draft_id: str):
 async def equipment_remove_container(request: Request, draft_id: str,
                                      instance_id: str = Form(...),
                                      mode: str = Form(...)):
+    from aose.engine.shop import sell_container as _sell_container
+    from aose.models.storage import StorageLocation as _SLrc
+    _carried_rc = _SLrc(kind="carried")
     draft = _load(request, draft_id)
-    containers = [ContainerInstance.model_validate(c)
-                  for c in draft.get("containers", [])]
+    data = request.app.state.game_data
+    spec = _draft_to_spec(draft, data)
     try:
-        new_containers, new_gold = shop_remove_container(
-            containers, draft.get("gold", 0), instance_id, mode,
-            request.app.state.game_data,
-        )
+        _sell_container(spec, instance_id, mode, data)
     except ValueError as e:
         raise HTTPException(400, str(e))
-    draft["containers"] = [c.model_dump() for c in new_containers]
-    draft["gold"] = new_gold
+    draft["containers"] = [c.model_dump() for c in spec.containers]
+    draft["gold"] = sum(c.count for c in spec.coins
+                        if c.denom == "gp" and c.location == _carried_rc)
     save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/equipment")
 
@@ -1928,8 +1900,7 @@ async def wiz_use_as_container(request: Request, draft_id: str):
         _storage.use_as_container(spec, owner, item_id, request.app.state.game_data)
     except (ValueError, _storage.StorageError) as e:
         raise HTTPException(400, str(e))
-    draft["inventory"] = list(spec.inventory)
-    draft["stashed"] = list(spec.stashed)
+    draft["items"] = [i.model_dump() for i in spec.items]
     draft["containers"] = [c.model_dump() for c in spec.containers]
     save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/equipment")
@@ -1938,8 +1909,14 @@ async def wiz_use_as_container(request: Request, draft_id: str):
 @router.post("/{draft_id}/ammo/load")
 async def wiz_ammo_load(request: Request, draft_id: str,
                         weapon_key: str = Form(...), instance_id: str = Form(...)):
+    """weapon_key is the weapon's instance_id; instance_id is the ammo instance_id."""
     draft = _load(request, draft_id)
-    draft["loaded_ammo"] = _load_ammo(dict(draft.get("loaded_ammo", {})), weapon_key, instance_id)
+    spec = _draft_to_spec(draft, request.app.state.game_data)
+    weapon_inst = next((i for i in spec.items if i.instance_id == weapon_key), None)
+    if weapon_inst is None:
+        raise HTTPException(400, f"Weapon {weapon_key!r} not found")
+    weapon_inst.loaded_ammo_id = instance_id
+    draft["items"] = [i.model_dump() for i in spec.items]
     save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/equipment")
 
@@ -1947,8 +1924,14 @@ async def wiz_ammo_load(request: Request, draft_id: str,
 @router.post("/{draft_id}/ammo/unload")
 async def wiz_ammo_unload(request: Request, draft_id: str,
                           weapon_key: str = Form(...)):
+    """weapon_key is the weapon's instance_id."""
     draft = _load(request, draft_id)
-    draft["loaded_ammo"] = _unload_ammo(dict(draft.get("loaded_ammo", {})), weapon_key)
+    spec = _draft_to_spec(draft, request.app.state.game_data)
+    weapon_inst = next((i for i in spec.items if i.instance_id == weapon_key), None)
+    if weapon_inst is None:
+        raise HTTPException(400, f"Weapon {weapon_key!r} not found")
+    weapon_inst.loaded_ammo_id = None
+    draft["items"] = [i.model_dump() for i in spec.items]
     save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/equipment")
 
@@ -1957,13 +1940,17 @@ async def wiz_ammo_unload(request: Request, draft_id: str,
 async def wiz_ammo_adjust(request: Request, draft_id: str,
                           instance_id: str = Form(...), delta: int = Form(...)):
     draft = _load(request, draft_id)
-    try:
-        new_ammo = _adjust_ammo(_draft_ammo(draft), instance_id, delta)
-    except _UnknownAmmo as e:
-        raise HTTPException(400, str(e))
-    draft["ammo"] = [a.model_dump() for a in new_ammo]
-    live = {a["instance_id"] for a in draft["ammo"]}
-    draft["loaded_ammo"] = {k: v for k, v in draft.get("loaded_ammo", {}).items() if v in live}
+    spec = _draft_to_spec(draft, request.app.state.game_data)
+    ammo_inst = next((i for i in spec.items if i.instance_id == instance_id), None)
+    if ammo_inst is None:
+        raise HTTPException(400, f"Ammo {instance_id!r} not found")
+    ammo_inst.count = max(0, ammo_inst.count + delta)
+    if ammo_inst.count == 0:
+        for i in spec.items:
+            if i.loaded_ammo_id == instance_id:
+                i.loaded_ammo_id = None
+        spec.items.remove(ammo_inst)
+    draft["items"] = [i.model_dump() for i in spec.items]
     save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/equipment")
 
@@ -1972,13 +1959,15 @@ async def wiz_ammo_adjust(request: Request, draft_id: str,
 async def wiz_ammo_remove(request: Request, draft_id: str,
                           instance_id: str = Form(...)):
     draft = _load(request, draft_id)
-    try:
-        new_ammo = _remove_ammo(_draft_ammo(draft), instance_id)
-    except _UnknownAmmo as e:
-        raise HTTPException(400, str(e))
-    draft["ammo"] = [a.model_dump() for a in new_ammo]
-    live = {a["instance_id"] for a in draft["ammo"]}
-    draft["loaded_ammo"] = {k: v for k, v in draft.get("loaded_ammo", {}).items() if v in live}
+    spec = _draft_to_spec(draft, request.app.state.game_data)
+    ammo_inst = next((i for i in spec.items if i.instance_id == instance_id), None)
+    if ammo_inst is None:
+        raise HTTPException(400, f"Ammo {instance_id!r} not found")
+    for i in spec.items:
+        if i.loaded_ammo_id == instance_id:
+            i.loaded_ammo_id = None
+    spec.items.remove(ammo_inst)
+    draft["items"] = [i.model_dump() for i in spec.items]
     save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/equipment")
 
@@ -2068,24 +2057,19 @@ async def post_equipment_remove(request: Request, draft_id: str,
                                 from_state: str = Form("carried")):
     draft = _load(request, draft_id)
     data = request.app.state.game_data
+    spec = _draft_to_spec(draft, data)
     try:
         if from_state == "stashed":
-            new_stashed, new_gold = shop_remove_from_stash(
-                draft.get("stashed", []), draft.get("gold", 0), item_id, mode, data,
-            )
-            draft["stashed"] = new_stashed
-            draft["gold"] = new_gold
+            shop_sell_from_stash(spec, item_id, mode, data)
         else:
-            new_inv, new_gold, new_eq = shop_remove(
-                draft.get("inventory", []), draft.get("gold", 0),
-                item_id, mode, data,
-                draft.get("equipped", {}),
-            )
-            draft["inventory"] = new_inv
-            draft["gold"] = new_gold
-            draft["equipped"] = new_eq
+            shop_sell_item(spec, item_id, mode, data)
     except ValueError as e:
         raise HTTPException(400, str(e))
+    from aose.models.storage import StorageLocation as _SLrm
+    _carried_rm = _SLrm(kind="carried")
+    draft["items"] = [i.model_dump() for i in spec.items]
+    draft["gold"] = sum(c.count for c in spec.coins
+                        if c.denom == "gp" and c.location == _carried_rm)
     save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/equipment")
 
@@ -2095,7 +2079,6 @@ async def post_equipment_continue(request: Request, draft_id: str):
     """Advance from Equipment to Review.  Locks the gold roll even if the
     user didn't buy anything — they've explicitly chosen to stop shopping."""
     draft = _load(request, draft_id)
-    draft.setdefault("inventory", [])
     draft.setdefault("gold_locked", True)
     save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/review")
@@ -2120,6 +2103,10 @@ def _draft_to_spec(draft: dict[str, Any], data) -> CharacterSpec:
                    spellbook=list(books.get(cid, [])))
         for i, cid in enumerate(ids)
     ]
+    from aose.models import CoinStack
+    from aose.models.storage import StorageLocation as _SLdts
+    _carried_dts = _SLdts(kind="carried")
+    gold = draft.get("gold", 0)
     return CharacterSpec(
         name=draft["name"],
         abilities=_creation_abilities(draft, data),
@@ -2131,21 +2118,14 @@ def _draft_to_spec(draft: dict[str, Any], data) -> CharacterSpec:
         weapon_proficiencies=list((draft.get("proficiencies") or {}).get("weapons", [])),
         weapon_specialisations=list((draft.get("proficiencies") or {}).get("specialisations", [])),
         feature_choices=dict(draft.get("feature_choices", {})),
-        gold=draft.get("gold", 0),
-        inventory=list(draft.get("inventory", [])),
-        stashed=list(draft.get("stashed", [])),
-        equipped=dict(draft.get("equipped", {})),
+        items=[ItemInstance.model_validate(i) for i in draft.get("items", [])],
         containers=[
             ContainerInstance.model_validate(c) for c in draft.get("containers", [])
         ],
         magic_items=[
             MagicItemInstance.model_validate(m) for m in draft.get("magic_items", [])
         ],
-        enchanted=[
-            EnchantedInstance.model_validate(e) for e in draft.get("enchanted", [])
-        ],
-        ammo=[AmmoStack.model_validate(a) for a in draft.get("ammo", [])],
-        loaded_ammo=dict(draft.get("loaded_ammo", {})),
+        coins=([CoinStack(denom="gp", count=gold, location=_carried_dts)] if gold else []),
         ruleset=ruleset,
     )
 

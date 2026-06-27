@@ -103,10 +103,10 @@ def _minimal_spec(**overrides):
 
 
 def test_enchanted_instance_defaults():
-    from aose.models import EnchantedInstance
-    inst = EnchantedInstance(instance_id="i1", base_id="long_sword",
-                             enchantment_id="plus_1")
-    assert inst.equipped is False
+    from aose.models.character import ItemInstance
+    inst = ItemInstance(instance_id="i1", catalog_id="long_sword",
+                        enchantment_id="plus_1")
+    assert inst.equip is None
     assert inst.charges_max is None
     assert inst.charges_remaining is None
     assert inst.extra_modifiers == []
@@ -115,16 +115,18 @@ def test_enchanted_instance_defaults():
 
 def test_character_spec_defaults_enchanted_empty():
     spec = _minimal_spec()
-    assert spec.enchanted == []
+    assert [i for i in spec.items if i.enchantment_id is not None] == []
 
 
 def test_character_spec_accepts_enchanted():
-    from aose.models import EnchantedInstance
-    spec = _minimal_spec(enchanted=[
-        EnchantedInstance(instance_id="i1", base_id="long_sword",
-                          enchantment_id="plus_1", equipped=True),
+    from aose.models.character import ItemInstance
+    spec = _minimal_spec(items=[
+        ItemInstance(instance_id="i1", catalog_id="long_sword",
+                     enchantment_id="plus_1", equip="main_hand"),
     ])
-    assert spec.enchanted[0].equipped is True
+    enchanted = [i for i in spec.items if i.enchantment_id is not None]
+    assert len(enchanted) == 1
+    assert enchanted[0].equip == "main_hand"
 
 
 def test_loader_reads_enchantments(tmp_path):
@@ -167,10 +169,11 @@ def test_mundane_shield_ac_bonus_from_data(data):
 
 def test_mundane_shield_still_minus_one_ac(data):
     from aose.engine.armor_class import armor_class
-    spec = _minimal_spec(abilities={"STR": 12, "INT": 12, "WIS": 11,
-                                    "DEX": 10, "CON": 12, "CHA": 10})
-    spec.inventory = ["shield"]
-    spec.equipped = {"off_hand": "shield"}
+    from aose.models.character import ItemInstance
+    spec = _minimal_spec(
+        abilities={"STR": 12, "INT": 12, "WIS": 11, "DEX": 10, "CON": 12, "CHA": 10},
+        items=[ItemInstance(instance_id="t_shield", catalog_id="shield", equip="off_hand")],
+    )
     desc, _ = armor_class(spec, data)
     assert desc == 8   # unarmoured 9, shield bonus 1
 
@@ -331,9 +334,9 @@ def test_new_enchanted_instance_validates_compat():
     from aose.engine.enchant import new_enchanted_instance, IncompatibleBase
     d = _lifecycle_data()
     inst = new_enchanted_instance("short_sword", "sword_plus_1", d)
-    assert inst.base_id == "short_sword"
+    assert inst.catalog_id == "short_sword"
     assert inst.enchantment_id == "sword_plus_1"
-    assert inst.equipped is False
+    assert inst.equip is None
     assert len(inst.instance_id) >= 16
     with pytest.raises(IncompatibleBase):
         new_enchanted_instance("battle_axe", "sword_plus_1", d)  # axe vs sword-only
@@ -358,43 +361,46 @@ def test_new_enchanted_instance_unknown_raises():
 
 
 def test_add_equip_unequip_remove_roundtrip():
-    from aose.engine.enchant import (
-        add_free_enchanted, equip, unequip, remove, set_note)
+    from aose.engine.enchant import add_free_enchanted, remove, set_note
+    from aose.engine.equip import equip as _slot_equip, unequip as _slot_unequip
     d = _lifecycle_data()
-    items = add_free_enchanted([], "short_sword", "sword_plus_1", d)
-    iid = items[0].instance_id
-    items = equip(items, iid)
-    assert items[0].equipped is True
-    items = unequip(items, iid)
-    assert items[0].equipped is False
-    items = set_note(items, iid, "hoard")
-    assert items[0].note == "hoard"
-    items = remove(items, iid)
-    assert items == []
+    spec = _minimal_spec()
+    add_free_enchanted(spec, "short_sword", "sword_plus_1", d)
+    iid = spec.items[0].instance_id
+    _slot_equip(spec, iid, data=d)
+    assert spec.items[0].equip is not None
+    _slot_unequip(spec, iid)
+    assert spec.items[0].equip is None
+    spec.items = set_note(spec.items, iid, "hoard")
+    assert spec.items[0].note == "hoard"
+    spec.items = remove(spec.items, iid)
+    assert spec.items == []
 
 
 def test_use_and_reset_charges():
     from aose.engine.enchant import (
         add_free_enchanted, use_charge, reset_charges, NoCharges)
     d = _lifecycle_data()
-    items = add_free_enchanted([], "short_sword", "charged_trident", d)
-    iid = items[0].instance_id
-    start = items[0].charges_remaining
+    spec = _minimal_spec()
+    add_free_enchanted(spec, "short_sword", "charged_trident", d)
+    iid = spec.items[0].instance_id
+    start = spec.items[0].charges_remaining
     for _ in range(start):
-        items = use_charge(items, iid)
-    assert items[0].charges_remaining == 0
+        spec.items = use_charge(spec.items, iid)
+    assert spec.items[0].charges_remaining == 0
     with pytest.raises(NoCharges):
-        use_charge(items, iid)
-    items = reset_charges(items, iid)
-    assert items[0].charges_remaining == start
+        use_charge(spec.items, iid)
+    spec.items = reset_charges(spec.items, iid)
+    assert spec.items[0].charges_remaining == start
 
 
 def test_equipped_enchanted_resolves_by_kind():
-    from aose.engine.enchant import add_free_enchanted, equip, equipped_enchanted
+    from aose.engine.enchant import add_free_enchanted, equipped_enchanted
+    from aose.engine.equip import equip as _slot_equip
     d = _lifecycle_data()
-    items = add_free_enchanted([], "short_sword", "sword_plus_1", d)
-    items = equip(items, items[0].instance_id)
-    spec = _minimal_spec(enchanted=items)
+    spec = _minimal_spec()
+    add_free_enchanted(spec, "short_sword", "sword_plus_1", d)
+    _slot_equip(spec, spec.items[0].instance_id, data=d)
     weapons = equipped_enchanted(spec, d, "weapon")
     assert len(weapons) == 1
     assert weapons[0].magic_bonus == 1
@@ -404,16 +410,17 @@ def test_equipped_enchanted_resolves_by_kind():
 def test_active_modifiers_collect_enchanted_passives(data):
     import copy
     from aose.engine.magic import active_modifiers
-    from aose.engine.enchant import add_free_enchanted, equip
+    from aose.engine.enchant import add_free_enchanted
+    from aose.engine.equip import equip as _slot_equip
     from aose.models import Enchantment, Modifier
     d = copy.deepcopy(data)
     d.enchantments["luck_blade_t9"] = Enchantment(
         id="luck_blade_t9", name_template="{base} of Luck", kind="weapon",
         applies_to={"include": ["any_weapon"]}, magic_bonus=1,
         modifiers=[Modifier(target="save:all", op="add", value=1)])
-    items = add_free_enchanted([], "short_sword", "luck_blade_t9", d)
-    items = equip(items, items[0].instance_id)
-    spec = _minimal_spec(enchanted=items)
+    spec = _minimal_spec()
+    add_free_enchanted(spec, "short_sword", "luck_blade_t9", d)
+    _slot_equip(spec, spec.items[0].instance_id, data=d)
     mods = active_modifiers(spec, d)
     assert any(m.target == "save:all" for m in mods)
 
@@ -428,24 +435,23 @@ def test_active_modifiers_ignore_unequipped_enchanted(data):
         id="luck_blade_t9b", name_template="{base} of Luck", kind="weapon",
         applies_to={"include": ["any_weapon"]},
         modifiers=[Modifier(target="save:all", op="add", value=1)])
-    items = add_free_enchanted([], "short_sword", "luck_blade_t9b", d)  # not equipped
-    spec = _minimal_spec(enchanted=items)
+    spec = _minimal_spec()
+    add_free_enchanted(spec, "short_sword", "luck_blade_t9b", d)  # not equipped
     assert active_modifiers(spec, d) == []
 
 
 def _equip_one_enchanted(d, base_id, ench_id, **spec_kwargs):
-    from aose.engine.enchant import add_free_enchanted, equip as _ench_equip
+    from aose.engine.enchant import add_free_enchanted
     from aose.engine.equip import equip as _slot_equip
     from aose.models import Armor
     spec = _minimal_spec(**spec_kwargs)
-    spec.enchanted = add_free_enchanted([], base_id, ench_id, d)
-    inst = spec.enchanted[0]
+    add_free_enchanted(spec, base_id, ench_id, d)
+    iid = spec.items[0].instance_id
     base_item = d.items.get(base_id)
     if isinstance(base_item, Armor) and not base_item.is_shield:
-        spec.enchanted = _ench_equip(spec.enchanted, inst.instance_id)
+        _slot_equip(spec, iid, data=d, slot="armor")
     else:
-        spec.equipped = _slot_equip(inst.instance_id, inventory=[],
-                                    equipped={}, enchanted=spec.enchanted, data=d)
+        _slot_equip(spec, iid, data=d)
     return spec
 
 
@@ -491,8 +497,8 @@ def test_ac_best_base_wins_mundane_vs_enchanted(data):
     spec = _equip_one_enchanted(
         d, "chain_mail", "armour_plus_1_t10b",
         abilities={"STR": 12, "INT": 12, "WIS": 11, "DEX": 10, "CON": 12, "CHA": 10})
-    spec.inventory = ["leather_armor"]
-    spec.equipped = {"armor": "leather_armor"}   # worse base
+    from aose.models.character import ItemInstance
+    spec.items.append(ItemInstance(instance_id="t_leather", catalog_id="leather_armor", equip="armor"))
     desc, _ = armor_class(spec, d)
     assert desc == 4   # enchanted chain base wins over leather 7
 
@@ -530,7 +536,7 @@ def test_unequipped_enchanted_weapon_absent_from_attacks(data):
         id="sword_plus_1_t11b", name_template="{base} +1", kind="weapon",
         applies_to={"include": ["sword"]}, magic_bonus=1)
     spec = _minimal_spec()
-    spec.enchanted = add_free_enchanted([], "short_sword", "sword_plus_1_t11b", d)  # not equipped
+    add_free_enchanted(spec, "short_sword", "sword_plus_1_t11b", d)  # not equipped
     names = {p.name for p in attack_profiles(spec, d)}
     assert not any(n.startswith("Short Sword +1") for n in names)
 
@@ -546,7 +552,7 @@ def test_enchanted_weapon_weight_counts(data):
         applies_to={"include": ["sword"]}, magic_bonus=1)
     spec = _minimal_spec(ruleset=RuleSet(encumbrance="detailed"))
     base_weight = d.items["short_sword"].weight_cn
-    spec.enchanted = add_free_enchanted([], "short_sword", "sword_plus_1_t12", d)
+    add_free_enchanted(spec, "short_sword", "sword_plus_1_t12", d)
     assert carried_weight_cn(spec, d) == base_weight
 
 
@@ -560,7 +566,7 @@ def test_enchanted_armour_half_weight(data):
         id="armour_plus_1_t12", name_template="{base} +1", kind="armor",
         applies_to={"include": ["any_armour"]}, magic_bonus=1)
     spec = _minimal_spec(ruleset=RuleSet(encumbrance="detailed"))
-    spec.enchanted = add_free_enchanted([], "chain_mail", "armour_plus_1_t12", d)
+    add_free_enchanted(spec, "chain_mail", "armour_plus_1_t12", d)
     assert carried_weight_cn(spec, d) == 200   # 400 × 0.5
 
 
@@ -596,7 +602,8 @@ def test_resolved_enchanted_weapon_keeps_base_for_proficiency(data):
 def test_enchanted_items_view_rows(data):
     import copy
     from aose.sheet.view import enchanted_items_view
-    from aose.engine.enchant import add_free_enchanted, equip
+    from aose.engine.enchant import add_free_enchanted
+    from aose.engine.equip import equip as _slot_equip
     from aose.models import Enchantment
     d = copy.deepcopy(data)
     d.enchantments["luck_blade_t14"] = Enchantment(
@@ -604,12 +611,15 @@ def test_enchanted_items_view_rows(data):
         applies_to={"include": ["sword"]}, magic_bonus=1,
         modifiers=[{"target": "save:all", "op": "add", "value": 1}],
         description="Lucky.")
-    items = add_free_enchanted([], "short_sword", "luck_blade_t14", d)
-    items = equip(items, items[0].instance_id)
-    rows = enchanted_items_view(items, d)
+    spec = _minimal_spec()
+    add_free_enchanted(spec, "short_sword", "luck_blade_t14", d)
+    iid = spec.items[0].instance_id
+    _slot_equip(spec, iid, data=d)
+    enchanted_insts = [i for i in spec.items if i.enchantment_id is not None]
+    rows = enchanted_items_view(enchanted_insts, d)
     assert len(rows) == 1
     row = rows[0]
-    assert row.instance_id == items[0].instance_id
+    assert row.instance_id == iid
     assert row.name == "Short Sword of Luck"
     assert row.equipped is True
     assert row.equippable is True
@@ -620,15 +630,16 @@ def test_enchanted_items_view_rows(data):
 def test_build_sheet_includes_enchanted_rows(data):
     import copy
     from aose.sheet.view import build_sheet
-    from aose.engine.enchant import add_free_enchanted, equip
+    from aose.engine.enchant import add_free_enchanted
+    from aose.engine.equip import equip as _slot_equip
     from aose.models import Enchantment
     d = copy.deepcopy(data)
     d.enchantments["sword_plus_1_t14"] = Enchantment(
         id="sword_plus_1_t14", name_template="{base} +1", kind="weapon",
         applies_to={"include": ["sword"]}, magic_bonus=1)
     spec = _minimal_spec()
-    spec.enchanted = add_free_enchanted([], "short_sword", "sword_plus_1_t14", d)
-    spec.enchanted = equip(spec.enchanted, spec.enchanted[0].instance_id)
+    add_free_enchanted(spec, "short_sword", "sword_plus_1_t14", d)
+    _slot_equip(spec, spec.items[0].instance_id, data=d)
     sheet = build_sheet(spec, d)
     assert any(v.name == "Short Sword +1" for v in sheet.magic_items)
 
@@ -668,9 +679,10 @@ def test_add_enchanted_creates_instance(tmp_path):
                     data={"base_id": "short_sword", "enchantment_id": "sword_plus_1"})
     assert r.status_code == 303
     spec = load_character("test", client._characters_dir)
-    assert len(spec.enchanted) == 1
-    assert spec.enchanted[0].base_id == "short_sword"
-    assert spec.enchanted[0].enchantment_id == "sword_plus_1"
+    enchanted = [i for i in spec.items if i.enchantment_id is not None]
+    assert len(enchanted) == 1
+    assert enchanted[0].catalog_id == "short_sword"
+    assert enchanted[0].enchantment_id == "sword_plus_1"
 
 
 def test_add_enchanted_incompatible_400(tmp_path):
@@ -747,7 +759,11 @@ def test_wizard_finalize_roundtrips_enchanted_empty(tmp_path):
     assert r.status_code == 303
     char_id = r.headers["location"].rsplit("/", 1)[-1]
     spec = load_character(char_id, client._characters_dir)
-    assert spec.enchanted == []
+    assert [i for i in spec.items if i.enchantment_id is not None] == []
+
+
+def _ench_items(spec):
+    return [i for i in spec.items if i.enchantment_id is not None]
 
 
 def test_enchanted_equip_charge_note_remove_roundtrip(tmp_path):
@@ -756,23 +772,23 @@ def test_enchanted_equip_charge_note_remove_roundtrip(tmp_path):
     client.post("/character/test/equipment/add-enchanted",
                 data={"base_id": "trident", "enchantment_id": "trident_fish_command"})
     spec = load_character("test", client._characters_dir)
-    iid = spec.enchanted[0].instance_id
+    iid = _ench_items(spec)[0].instance_id
     client.post("/character/test/equipment/equip-enchanted", data={"instance_id": iid})
     spec = load_character("test", client._characters_dir)
-    assert iid in spec.equipped.values()
-    start = spec.enchanted[0].charges_remaining
+    assert any(i.instance_id == iid and i.equip is not None for i in spec.items)
+    start = _ench_items(spec)[0].charges_remaining
     client.post("/character/test/equipment/enchanted/use-charge", data={"instance_id": iid})
     spec = load_character("test", client._characters_dir)
-    assert spec.enchanted[0].charges_remaining == start - 1
+    assert _ench_items(spec)[0].charges_remaining == start - 1
     client.post("/character/test/equipment/enchanted/reset-charges", data={"instance_id": iid})
     client.post("/character/test/equipment/enchanted-note",
                 data={"instance_id": iid, "note": "from the deep"})
     spec = load_character("test", client._characters_dir)
-    assert spec.enchanted[0].note == "from the deep"
+    assert _ench_items(spec)[0].note == "from the deep"
     client.post("/character/test/equipment/unequip-enchanted", data={"instance_id": iid})
     client.post("/character/test/equipment/remove-enchanted", data={"instance_id": iid})
     spec = load_character("test", client._characters_dir)
-    assert spec.enchanted == []
+    assert _ench_items(spec) == []
 
 
 def test_enchant_choices_filter_by_source():

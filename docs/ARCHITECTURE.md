@@ -440,20 +440,27 @@ Illusionist/Magic-user/Thief). New languages: `hephaestan`, `language_of_wolves`
 
 ## Inventory, containers & encumbrance
 
-- **Inventory shapes** — `inventory: list[str]` (duplicates count toward size);
-  `equipped: dict[str, str]` — slots `armor` (body armour), `main_hand` (weapon),
-  `off_hand` (shield or off-hand weapon). `equipped_weapons: list[str]` is retired;
-  all held items go through named slots. A weapon is equippable into `main_hand` when
-  a copy exists in inventory and the slot is empty (or into `off_hand` with the
-  `two_weapon_fighting` rule on, the character is `two_weapon_eligible`, and the
-  weapon passes `off_hand_eligible`). Hand budget: each item costs 1 or 2 hands
-  (`hand_cost`); total cannot exceed 2. Gargantua's `one_handed_two_handed_melee`
-  feature flag reduces two-handed melee weapons to 1 hand. Equipped items live
-  *inside* `inventory` — weight is counted once. `armor_tailored: bool = True` on
-  `CharacterSpec` tracks whether the equipped tailorable armour (full plate) is
-  fitted to the wearer — if False, `armor_class.py` uses
-  `Armor.untailored_ac_descending` instead. `stashed: list[str]` is off-person
-  (no weight). Sheet renders Equipped / Carried / Stashed.
+- **Inventory shapes** — `CharacterSpec.items: list[ItemInstance]` is the single
+  flat list for all owned gear (plain, enchanted, and ammo). Each `ItemInstance`
+  carries: `instance_id: str` (uuid4 hex), `catalog_id: str`, `location:
+  StorageLocation` (default `carried`), `equip: str | None` (`"armor"`,
+  `"main_hand"`, `"off_hand"`), `count: int`, `enchantment_id: str | None` (non-None
+  → enchanted item), `loaded_ammo_id: str | None` (ranged weapon with loaded ammo).
+  The old `inventory: list[str]` / `stashed: list[str]` / `equipped: dict[str, str]`
+  / `loaded_ammo: dict` / `armor_tailored: bool` / `spec.enchanted` / `spec.ammo`
+  side-tables are gone — equip-state, stack count, and location are fields on the
+  instance. `armor_tailored` is now `ItemInstance.tailored: bool = True` on the
+  body-armour instance. A weapon is equippable into `main_hand` when an instance with
+  that `catalog_id` exists at `carried` and the slot is empty (or into `off_hand` with
+  the `two_weapon_fighting` rule + `two_weapon_eligible` + `off_hand_eligible`). Hand
+  budget: each item costs 1 or 2 hands (`hand_cost`); total cannot exceed 2. Gargantua's
+  `one_handed_two_handed_melee` feature flag reduces two-handed melee weapons to 1 hand.
+  Equip/unequip/validation go through `aose/engine/equip.py` (`equip()`, `unequip()`,
+  `validate_wield()`). Slot accessors: `equipped_instance(spec, slot)`, `slot_item(spec,
+  slot, data)`, `equipped_ref(spec)`. Old saves (with `inventory`/`stashed`/`equipped`
+  etc.) are coerced at load time in `aose/characters/migrate_items.py` (needs `GameData`,
+  so runs in `load_character`/`load_draft`, not in a model validator). Sheet renders
+  Equipped / Carried / Stashed by location.
 - **StorageLocation** — `aose/models/storage.py` defines `StorageLocation(kind, id)`
   (`LocationKind = Literal["carried","stashed","animal","vehicle","container"]`) as a
   frozen pointer to where a value-stack (coins/gems/jewellery) or a container lives.
@@ -487,12 +494,13 @@ Illusionist/Magic-user/Thief). New languages: `hephaestan`, `language_of_wolves`
   sheet) and `POST /wizard/{id}/inventory/move` (wizard). Imports only models +
   currency — no cycle risk. `encumbrance` ↔ `storage` cross-imports stay
   function-local to avoid cycles.
-- **Stackable gear** — `AdventuringGear.bundle_count: int = 1`. `buy()` grants
-  `bundle_count` units for one price; `add_free()` always grants one. Sell removes
-  1 unit, returns `int((cost_gp / bundle_count) / 2)`; refund removes a full stack,
-  returns `cost_gp`. Gear data is book-faithful; the encumbrance engine uses a flat
-  **80 cn** for any `AdventuringGear` item, so per-item `weight_cn` is dead data
-  and is not fabricated.
+- **Stackable gear** — `AdventuringGear.bundle_count: int = 1`. `buy_item()` grants
+  `bundle_count` units for one price (auto-merges into an existing carried stack);
+  `add_free_item()` grants one bundle free. Sell removes 1 unit, returns
+  `int((cost_gp / bundle_count) / 2)`; refund removes a full bundle, returns
+  `cost_gp`. Gear data is book-faithful; the encumbrance engine uses a flat **80 cn**
+  for any `AdventuringGear` item, so per-item `weight_cn` is dead data and is not
+  fabricated.
 - **Encumbrance** (`aose/engine/encumbrance.py`) — two AOSE-faithful modes.
   **Basic** = `_BASIC_TABLE{(armour_cls, carrying_treasure)} → move` (over-1600
   treasure → immobile; `CharacterSpec.carrying_treasure` toggle). **Detailed** =
@@ -521,8 +529,9 @@ Illusionist/Magic-user/Thief). New languages: `hephaestan`, `language_of_wolves`
 - **Shop spend** — `shop.spend(spec, cost_gp)` debits **Carried** coins only,
   lowest-denomination-first. Tries exact payment first; if unavailable, pays the
   smallest whole-gp overshoot and returns change in gp. Raises `InsufficientFunds`
-  (HTTP 400) when total carried value < cost. `buy_item`/`sell_item`/etc. are
-  spec-mutating wrappers over the existing pure list logic.
+  (HTTP 400) when total carried value < cost. `buy_item`/`add_free_item`/`sell_item`/
+  `sell_from_stash`/`sell_container` are spec-mutating helpers that operate on
+  `spec.items` (and `spec.containers` for containers).
 - **Treasure weight** — gems 1 cn, jewellery 10 cn (**Carried only** — stashed /
   on-carrier treasure adds zero to PC encumbrance). Carried treasure magic items:
   potions 10 / wands 10 / rods 20 / staves 40 / scrolls 1, derived by category +

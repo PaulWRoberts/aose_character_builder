@@ -149,12 +149,14 @@ def test_ac_set_modifier_shows_in_unarmored_display():
 
 def _barbarian(level, *, dex=10, **kw):
     from aose.models import CharacterSpec, ClassEntry
+    from tests._itemhelp import coerce_equipment
     base = dict(
         name="B", abilities={"STR": 13, "INT": 10, "WIS": 10, "DEX": dex, "CON": 13, "CHA": 10},
         race_id="human", classes=[ClassEntry(class_id="barbarian", level=level, hp_rolls=[8])],
         alignment="neutral",
     )
     base.update(kw)
+    coerce_equipment(base)
     return CharacterSpec(**base)
 
 
@@ -174,12 +176,13 @@ def test_barbarian_agile_ac_dropped_when_armoured():
     from aose.engine.armor_class import armor_class
     # With chain_mail worn, the unarmored-conditioned bonus drops: a barbarian
     # L4 in chainmail has the same AC as a fighter L1 in the same chainmail.
-    from aose.models import CharacterSpec, ClassEntry
+    from aose.models import CharacterSpec, ClassEntry, ItemInstance
     barb = _barbarian(4, equipped={"armor": "chain_mail"})
     fighter = CharacterSpec(
         name="F", abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
         race_id="human", classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
-        alignment="neutral", equipped={"armor": "chain_mail"},
+        alignment="neutral",
+        items=[ItemInstance(instance_id="t_chain", catalog_id="chain_mail", equip="armor")],
     )
     assert armor_class(barb, DATA)[0] == armor_class(fighter, DATA)[0]
 
@@ -199,12 +202,13 @@ def _profiles(spec):
 
 
 def test_halfling_missile_bonus_applies_to_ranged_only():
-    from aose.models import CharacterSpec, ClassEntry
+    from aose.models import CharacterSpec, ClassEntry, ItemInstance
     # Halfling fighter, STR/DEX 10 (+0). short_bow is ranged; unarmed is melee.
     spec = CharacterSpec(
         name="H", abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
         race_id="halfling", classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
-        alignment="neutral", inventory=["short_bow"], equipped={"main_hand": "short_bow"},
+        alignment="neutral",
+        items=[ItemInstance(instance_id="t_bow", catalog_id="short_bow", equip="main_hand")],
     )
     profs = _profiles(spec)
     assert profs["short_bow"].to_hit_ascending == 1   # +1 missile bonus
@@ -213,10 +217,12 @@ def test_halfling_missile_bonus_applies_to_ranged_only():
 
 def test_non_halfling_has_no_missile_bonus():
     from aose.models import CharacterSpec, ClassEntry
+    from aose.models.character import ItemInstance
     spec = CharacterSpec(
         name="Hu", abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
         race_id="human", classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
-        alignment="neutral", inventory=["short_bow"], equipped={"main_hand": "short_bow"},
+        alignment="neutral",
+        items=[ItemInstance(instance_id="t_bow", catalog_id="short_bow", equip="main_hand")],
     )
     assert _profiles(spec)["short_bow"].to_hit_ascending == 0
 
@@ -226,10 +232,12 @@ def test_classic_halfling_missile_bonus_not_doubled():
     # The grant lives on the halfling *class* (self-contained); the race is not
     # read for race-as-class, so the bonus applies exactly once.
     from aose.models import CharacterSpec, ClassEntry
+    from aose.models.character import ItemInstance
     spec = CharacterSpec(
         name="Hc", abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
         race_id="halfling", classes=[ClassEntry(class_id="halfling", level=1, hp_rolls=[6])],
-        alignment="neutral", inventory=["short_bow"], equipped={"main_hand": "short_bow"},
+        alignment="neutral",
+        items=[ItemInstance(instance_id="t_bow", catalog_id="short_bow", equip="main_hand")],
     )
     assert _profiles(spec)["short_bow"].to_hit_ascending == 1   # +1, not +2
 

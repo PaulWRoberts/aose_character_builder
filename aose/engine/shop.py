@@ -43,6 +43,7 @@ class ShopCategory(BaseModel):
 
 class InventoryRow(BaseModel):
     id: str
+    instance_id: str = ""        # ItemInstance.instance_id — empty for rows built without spec
     name: str
     description: str = ""        # catalog description (for the per-item detail modal)
     count: int
@@ -236,7 +237,8 @@ def inventory_view(inventory: list[str], stashed: list[str],
                    allow_shields: bool = True,
                    two_weapon: bool = False,
                    eligible: bool = False,
-                   gargantua_1h_2h: bool = False) -> InventoryView:
+                   gargantua_1h_2h: bool = False,
+                   spec=None) -> InventoryView:
     """Three-section split of the character's loose items, plus a parallel
     ``containers`` list with each instance's contents already grouped.
 
@@ -257,6 +259,21 @@ def inventory_view(inventory: list[str], stashed: list[str],
                           two_weapon=two_weapon, eligible=eligible,
                           off_full=off_full)
 
+    # Build catalog_id → instance_id lookups from spec.items (non-enchanted plain items)
+    _iid_carried: dict[str, str] = {}
+    _iid_stashed: dict[str, str] = {}
+    _iid_equipped: dict[str, str] = {}
+    if spec is not None:
+        for _i in spec.items:
+            if _i.enchantment_id is not None:
+                continue
+            if _i.location.kind == "carried" and _i.catalog_id not in _iid_carried:
+                _iid_carried[_i.catalog_id] = _i.instance_id
+            elif _i.location.kind == "stashed" and _i.catalog_id not in _iid_stashed:
+                _iid_stashed[_i.catalog_id] = _i.instance_id
+            if _i.equip is not None and _i.catalog_id not in _iid_equipped:
+                _iid_equipped[_i.catalog_id] = _i.instance_id
+
     equipped_count: Counter[str] = Counter()
     for v in equipped.values():
         equipped_count[v] += 1
@@ -270,11 +287,14 @@ def inventory_view(inventory: list[str], stashed: list[str],
         eq_n = min(equipped_count[item_id], total)
         carried_n = total - eq_n
         if eq_n:
-            eq_rows.append(row(item_id, eq_n))
+            r = row(item_id, eq_n)
+            eq_rows.append(r.model_copy(update={"instance_id": _iid_equipped.get(item_id, "")}))
         if carried_n:
-            carried_rows.append(row(item_id, carried_n))
+            r = row(item_id, carried_n)
+            carried_rows.append(r.model_copy(update={"instance_id": _iid_carried.get(item_id, "")}))
 
-    stashed_rows = [row(i, n) for i, n in stash_count.items()]
+    stashed_rows = [row(i, n).model_copy(update={"instance_id": _iid_stashed.get(i, "")})
+                    for i, n in stash_count.items()]
 
     container_views: list[ContainerView] = []
     for c in containers:
@@ -283,13 +303,12 @@ def inventory_view(inventory: list[str], stashed: list[str],
         catalog = data.items.get(c.catalog_id)
         if not isinstance(catalog, Container):
             continue   # stale catalog id; surface as zero-state
-        rows_by_id: Counter[str] = Counter(c.contents)
-        content_rows = [_build_row(i, n, data) for i, n in rows_by_id.items()]
+        from aose.engine.storage import items_at, location_load_cn
+        cont_loc = StorageLocation(kind="container", id=c.instance_id)
+        content_items = items_at(spec, cont_loc) if spec is not None else []
+        content_rows = [_build_row(i.catalog_id, i.count, data) for i in content_items]
         content_rows.sort(key=lambda r: r.name)
-        raw_used = sum(
-            (data.items[x].weight_cn if x in data.items else 0)
-            for x in c.contents
-        )
+        raw_used = location_load_cn(spec, cont_loc, data) if spec is not None else 0
         loc_kind = c.location.kind
         effective = (
             catalog.weight_cn + int(catalog.weight_multiplier * raw_used)
@@ -433,10 +452,7 @@ def remove_container(containers: list[ContainerInstance], gold: int,
         raise UnknownContainer(f"No container with id {instance_id!r}")
     target = containers[idx]
 
-    if mode in ("sell", "refund") and target.contents:
-        raise ContainerNotEmpty(
-            f"Cannot {mode} a container with contents — empty it first"
-        )
+    # Caller must ensure the container is empty before selling/refunding.
 
     catalog = data.items.get(target.catalog_id)
     cost = int(catalog.cost_gp) if catalog else 0
@@ -454,32 +470,6 @@ def _bundle_count(item) -> int:
     """Units granted per purchase. Only AdventuringGear carries a bundle;
     every other item type behaves as a single unit."""
     return getattr(item, "bundle_count", 1)
-
-
-def buy(inventory: list[str], gold: int, item_id: str,
-        data: GameData) -> tuple[list[str], int]:
-    """Append ``item_id`` to ``inventory`` and deduct its ``cost_gp`` from
-    ``gold``.  Returns the new (inventory, gold) — does NOT mutate the inputs.
-    Raises ``InsufficientGold`` or ``UnknownItem`` as appropriate."""
-    if item_id not in data.items:
-        raise UnknownItem(f"No item with id {item_id!r}")
-    item = data.items[item_id]
-    cost = int(item.cost_gp)  # rounded down for the gold balance
-    if gold < cost:
-        raise InsufficientGold(
-            f"Cannot afford {item.name}: {cost} gp required, {gold} on hand"
-        )
-    return ([*inventory, *([item_id] * _bundle_count(item))], gold - cost)
-
-
-def add_free(inventory: list[str], item_id: str,
-             data: GameData) -> list[str]:
-    """Append ``item_id`` to ``inventory`` without changing gold — for items
-    granted by the GM, found as loot, or otherwise acquired off-ledger.
-    The complement of the ``drop`` removal mode."""
-    if item_id not in data.items:
-        raise UnknownItem(f"No item with id {item_id!r}")
-    return [*inventory, item_id]
 
 
 REMOVE_MODES = ("drop", "sell", "refund")
@@ -500,78 +490,6 @@ def _removal_gold(item_id: str, mode: str, data: GameData) -> int:
         return int(cost)
     # sell: per-unit, halved, floored
     return int((cost / _bundle_count(item)) / 2)
-
-
-def remove(inventory: list[str], gold: int, item_id: str, mode: str,
-           data: GameData,
-           equipped: dict[str, str] | None = None,
-           ) -> tuple[list[str], int, dict[str, str]]:
-    """Remove one instance of ``item_id`` from inventory.  ``mode`` controls
-    the gold refund:
-
-    * ``drop``   — no refund (you threw it away)
-    * ``sell``   — per-unit half price (rounded down; may be 0)
-    * ``refund`` — remove a full bundle_count stack, return full cost
-
-    If the dropped instance was equipped, its slot is freed automatically.
-    Pass ``equipped`` to enable that cleanup — optional for backward compat.
-    """
-    if item_id not in inventory:
-        raise ValueError(f"{item_id!r} not in inventory")
-    if mode not in REMOVE_MODES:
-        raise ValueError(f"Unknown remove mode {mode!r}; want one of {REMOVE_MODES}")
-
-    item = data.items.get(item_id)
-    bundle = _bundle_count(item)
-
-    new_inv = list(inventory)
-    if mode == "refund" and bundle > 1:
-        if new_inv.count(item_id) < bundle:
-            raise ValueError(
-                f"Cannot refund {item_id!r}: need a full stack of {bundle}"
-            )
-        for _ in range(bundle):
-            new_inv.remove(item_id)
-    else:
-        new_inv.remove(item_id)
-
-    new_eq = dict(equipped or {})
-
-    # If removal pushed equipped count past remaining inventory, free a slot.
-    remaining = new_inv.count(item_id)
-    eq_uses = sum(1 for v in new_eq.values() if v == item_id)
-    while eq_uses > remaining:
-        for slot, eid in list(new_eq.items()):
-            if eid == item_id:
-                del new_eq[slot]
-                break
-        else:
-            break
-        eq_uses -= 1
-
-    return new_inv, gold + _removal_gold(item_id, mode, data), new_eq
-
-
-def remove_from_stash(stashed: list[str], gold: int, item_id: str, mode: str,
-                      data: GameData) -> tuple[list[str], int]:
-    """Drop / sell / refund a stashed item.  Refund removes a full bundle."""
-    if item_id not in stashed:
-        raise ValueError(f"{item_id!r} not in stash")
-    if mode not in REMOVE_MODES:
-        raise ValueError(f"Unknown remove mode {mode!r}; want one of {REMOVE_MODES}")
-    item = data.items.get(item_id)
-    bundle = _bundle_count(item)
-    new_stashed = list(stashed)
-    if mode == "refund" and bundle > 1:
-        if new_stashed.count(item_id) < bundle:
-            raise ValueError(
-                f"Cannot refund {item_id!r}: need a full stack of {bundle}"
-            )
-        for _ in range(bundle):
-            new_stashed.remove(item_id)
-    else:
-        new_stashed.remove(item_id)
-    return new_stashed, gold + _removal_gold(item_id, mode, data)
 
 
 # ── Coin-based spend (Task 10) ──────────────────────────────────────────────
@@ -639,29 +557,99 @@ def spend(spec, cost_gp: int) -> None:
         _storage._add_coins(spec, "gp", change_cp // 100, carried)
 
 
+def add_free_item(spec, item_id: str, data: GameData) -> None:
+    """Add one bundle of ``item_id`` to carried spec.items without spending gold."""
+    from aose.engine.equip import is_stackable
+    from aose.models import ItemInstance
+    if item_id not in data.items:
+        raise UnknownItem(f"No item with id {item_id!r}")
+    item = data.items[item_id]
+    carried = StorageLocation(kind="carried")
+    if isinstance(item, Container):
+        spec.containers.append(new_container_instance(item_id, data))
+        return
+    count = _bundle_count(item)
+    if is_stackable(item):
+        existing = next((i for i in spec.items
+                         if i.catalog_id == item_id and i.location == carried
+                         and i.enchantment_id is None), None)
+        if existing is not None:
+            existing.count += count
+            return
+    spec.items.append(ItemInstance(
+        instance_id=uuid.uuid4().hex,
+        catalog_id=item_id,
+        count=count,
+        location=carried,
+    ))
+
+
 def buy_item(spec, item_id: str, data: GameData) -> None:
-    """Buy one bundle of ``item_id`` onto carried inventory, spending carried coins."""
+    """Buy one bundle of ``item_id`` onto carried spec.items, spending carried coins."""
+    from aose.engine.equip import is_stackable
+    from aose.models import ItemInstance
     if item_id not in data.items:
         raise UnknownItem(f"No item with id {item_id!r}")
     item = data.items[item_id]
     spend(spec, int(item.cost_gp))
-    spec.inventory.extend([item_id] * _bundle_count(item))
+    carried = StorageLocation(kind="carried")
+    if isinstance(item, Container):
+        spec.containers.append(new_container_instance(item_id, data))
+        return
+    count = _bundle_count(item)
+    if is_stackable(item):
+        existing = next((i for i in spec.items
+                         if i.catalog_id == item_id and i.location == carried
+                         and i.enchantment_id is None), None)
+        if existing is not None:
+            existing.count += count
+            return
+    spec.items.append(ItemInstance(
+        instance_id=uuid.uuid4().hex,
+        catalog_id=item_id,
+        count=count,
+        location=carried,
+    ))
 
 
 def sell_item(spec, item_id: str, mode: str, data: GameData) -> None:
-    """Remove one instance from carried inventory; credit carried gp per mode."""
+    """Remove one bundle from carried spec.items; credit carried gp per mode."""
     from aose.engine import storage as _storage
-    new_inv, credit, new_eq = remove(spec.inventory, 0, item_id, mode, data, spec.equipped)
-    spec.inventory[:] = new_inv
-    spec.equipped.clear()
-    spec.equipped.update(new_eq)
+    carried = StorageLocation(kind="carried")
+    inst = next((i for i in spec.items
+                 if i.catalog_id == item_id and i.location == carried
+                 and i.enchantment_id is None), None)
+    if inst is None:
+        raise ValueError(f"{item_id!r} not in carried items")
+    item = data.items.get(item_id)
+    bundle = _bundle_count(item)
+    remove_n = bundle if mode == "refund" else 1
+    if inst.count < remove_n:
+        raise ValueError(f"Cannot {mode} {item_id!r}: insufficient count {inst.count} < {remove_n}")
+    if inst.count <= remove_n:
+        inst.equip = None
+        inst.loaded_ammo_id = None
+        spec.items.remove(inst)
+    else:
+        inst.count -= remove_n
+    credit = _removal_gold(item_id, mode, data)
     if credit:
-        _storage._add_coins(spec, "gp", credit, StorageLocation(kind="carried"))
+        _storage._add_coins(spec, "gp", credit, carried)
 
 
 def sell_container(spec, instance_id: str, mode: str, data: GameData) -> None:
     """Remove a container instance; credit carried gp per mode."""
     from aose.engine import storage as _storage
+    from aose.models.storage import StorageLocation as _SL
+    if mode in ("sell", "refund"):
+        cont_loc = _SL(kind="container", id=instance_id)
+        if any(getattr(i, "location", None) == cont_loc for i in (
+            spec.items + spec.magic_items + spec.spell_sources +
+            list(spec.gems) + list(spec.jewellery)
+        )):
+            raise ContainerNotEmpty(
+                f"Cannot {mode} a container with contents — empty it first"
+            )
     src_coll, _ = _storage._find_container_anywhere(spec, instance_id)
     new_containers, credit = remove_container(src_coll, 0, instance_id, mode, data)
     src_coll[:] = new_containers
@@ -670,9 +658,23 @@ def sell_container(spec, instance_id: str, mode: str, data: GameData) -> None:
 
 
 def sell_from_stash(spec, item_id: str, mode: str, data: GameData) -> None:
-    """Remove one stashed item; credit carried gp per mode."""
+    """Remove one bundle from stashed spec.items; credit carried gp per mode."""
     from aose.engine import storage as _storage
-    new_stash, credit = remove_from_stash(spec.stashed, 0, item_id, mode, data)
-    spec.stashed[:] = new_stash
+    stashed = StorageLocation(kind="stashed")
+    inst = next((i for i in spec.items
+                 if i.catalog_id == item_id and i.location == stashed
+                 and i.enchantment_id is None), None)
+    if inst is None:
+        raise ValueError(f"{item_id!r} not in stashed items")
+    item = data.items.get(item_id)
+    bundle = _bundle_count(item)
+    remove_n = bundle if mode == "refund" else 1
+    if inst.count < remove_n:
+        raise ValueError(f"Cannot {mode} {item_id!r}: insufficient count {inst.count} < {remove_n}")
+    if inst.count <= remove_n:
+        spec.items.remove(inst)
+    else:
+        inst.count -= remove_n
+    credit = _removal_gold(item_id, mode, data)
     if credit:
         _storage._add_coins(spec, "gp", credit, StorageLocation(kind="carried"))

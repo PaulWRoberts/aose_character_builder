@@ -4,7 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from aose.models import (AnimalInstance, CharacterSpec, ClassEntry, CoinStack,
-                         ContainerInstance, Retainer)
+                         ContainerInstance, ItemInstance, Retainer)
 from aose.models.storage import StorageLocation
 from aose.web.app import create_app
 
@@ -28,19 +28,23 @@ def _spec():
         name="Hireling",
         abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
         race_id="human", classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[5])],
-        alignment="neutral", inventory=["dagger"], equipped={"main_hand": "dagger"},
+        alignment="neutral",
+        items=[ItemInstance(instance_id="dagger", catalog_id="dagger")],
     )
     return CharacterSpec(
         name="Boxtest",
         abilities={"STR": 13, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
         race_id="human", classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
         alignment="neutral",
-        inventory=["torch", "sword"], equipped={"main_hand": "sword"},
+        items=[
+            ItemInstance(instance_id="sword", catalog_id="sword", equip="main_hand"),
+            ItemInstance(instance_id="torch", catalog_id="torch",
+                         location=StorageLocation(kind="container", id="c1")),
+        ],
         coins=[CoinStack(denom="gp", count=5,
                          location=StorageLocation(kind="animal", id="a1"))],
         animals=[AnimalInstance(instance_id="a1", catalog_id="mule")],
         containers=[ContainerInstance(instance_id="c1", catalog_id="backpack",
-                                      contents=["torch"],
                                       location=StorageLocation(kind="animal", id="a1"))],
         retainers=[Retainer(id="r1", spec=npc, loyalty=7)],
         other_possessions=["bronze key"],
@@ -185,7 +189,7 @@ def test_attack_rows_have_expected_fields():
         race_id="human",
         classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
         alignment="neutral",
-        inventory=["sword"], equipped={"main_hand": "sword"},
+        items=[ItemInstance(instance_id="sword", catalog_id="sword", equip="main_hand")],
     )
     profiles = attack_profiles(spec, data)
     sword_profiles = [p for p in profiles if p.weapon_id == "sword"]
@@ -212,7 +216,10 @@ def _treasure_spec():
         abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
         race_id="human", classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
         alignment="neutral",
-        inventory=["torch", "sword"], equipped={"main_hand": "sword"},
+        items=[
+            ItemInstance(instance_id="torch", catalog_id="torch"),
+            ItemInstance(instance_id="sword", catalog_id="sword", equip="main_hand"),
+        ],
         coins=[CoinStack(denom="gp", count=12,
                          location=StorageLocation(kind="carried"))],
         gems=[GemStack(instance_id="g1", value=100, count=2, label="ruby",
@@ -296,7 +303,6 @@ def test_container_view_shows_stowed_coins_and_magic(tmp_path):
         abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
         race_id="human", classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
         alignment="neutral",
-        inventory=["backpack"],
         containers=[ContainerInstance(instance_id="c1", catalog_id="backpack",
                                       location=StorageLocation(kind="carried"))],
         coins=[CoinStack(denom="gp", count=7, location=cont_loc)],
@@ -322,7 +328,6 @@ def test_container_stowed_gem_and_jewellery_modals_exist(tmp_path):
         abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
         race_id="human", classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
         alignment="neutral",
-        inventory=["backpack"],
         containers=[ContainerInstance(instance_id="c1", catalog_id="backpack",
                                       location=StorageLocation(kind="carried"))],
         gems=[GemStack(instance_id="g1", value=50, count=3, label="emerald",
@@ -404,12 +409,14 @@ def test_no_bare_button_in_inventory_action_rows(tmp_path):
 def test_wielded_weapon_not_in_equipped_worn():
     from pathlib import Path
     from aose.data.loader import GameData
+    from aose.models import ItemInstance
     from aose.sheet.view import build_inventory_groups
     data = GameData.load(Path("data"))
     spec = CharacterSpec(
         name="W", abilities={"STR": 12, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
         race_id="human", classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
-        alignment="neutral", inventory=["sword"], equipped={"main_hand": "sword"},
+        alignment="neutral",
+        items=[ItemInstance(instance_id="sw1", catalog_id="sword", equip="main_hand")],
     )
     groups = build_inventory_groups(spec, data)
     pc = next(g for g in groups if g.kind == "carried")

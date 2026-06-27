@@ -55,7 +55,7 @@ def test_apply_kit_routes_containers_to_instances():
                          alignment="neutral")
     kit = QuickKit(inventory=["backpack", "torch", "torch"])
     apply_kit(spec, kit, DATA)
-    assert "backpack" not in spec.inventory            # promoted out of loose
-    assert spec.inventory.count("torch") == 2          # non-containers stay
+    assert not any(i.catalog_id == "backpack" for i in spec.items)   # promoted out of loose
+    assert sum(1 for i in spec.items if i.catalog_id == "torch") == 2  # non-containers stay
     assert [c.catalog_id for c in spec.containers] == ["backpack"]
     assert isinstance(DATA.items["backpack"], Container)  # guard the fixture id

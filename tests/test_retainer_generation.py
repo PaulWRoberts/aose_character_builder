@@ -25,7 +25,7 @@ def test_generate_fighter_retainer():
     assert len(ret.spec.classes[0].hp_rolls) == 2     # one per level
     assert all(v == 10 for k, v in ret.spec.abilities.items()
                if k not in ("STR",))                  # baseline 10 except bumps
-    assert ret.spec.inventory                         # quick-equipment kit applied
+    assert ret.spec.items or ret.spec.containers       # quick-equipment kit applied
     assert ret.loyalty == 9                            # human CHA13 base 8, +1 human = 9
     assert ret.spec.ruleset == pc.ruleset             # inherited snapshot
 

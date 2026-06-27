@@ -17,15 +17,15 @@ def test_fighter_kit_has_basics_armour_and_two_weapons():
     assert kit.inventory.count("iron_rations") >= 1
     assert 3 <= kit.gold <= 18
     # armour equipped from the d6 table
-    armor_id = kit.equipped.get("armor")
+    armor_id = kit.equips.get("armor")
     assert isinstance(DATA.items[armor_id], Armor)
     # a main-hand weapon was chosen
-    assert isinstance(DATA.items[kit.equipped["main_hand"]], Weapon)
+    assert isinstance(DATA.items[kit.equips["main_hand"]], Weapon)
 
 
 def test_magic_user_kit_no_armour_has_dagger():
     kit = qe.roll_kit("magic_user", DATA, rng=random.Random(1))
-    assert "armor" not in kit.equipped
+    assert "armor" not in kit.equips
     assert "dagger" in kit.inventory
 
 
@@ -43,7 +43,7 @@ def test_ranged_weapon_yields_ammo_stack():
         launchers = {"short_bow", "crossbow", "sling"} & set(kit.inventory)
         if launchers:
             assert kit.ammo, f"launcher {launchers} but no ammo (seed {seed})"
-            assert kit.ammo[0].count == 20
+            assert kit.ammo[0]["count"] == 20
             return
     raise AssertionError("no launcher rolled in 50 seeds")
 
@@ -52,11 +52,9 @@ def test_two_handed_main_leaves_off_hand_empty():
     # polearm is two-handed; when it's the main hand, no shield should be equipped
     for seed in range(50):
         kit = qe.roll_kit("fighter", DATA, rng=random.Random(seed))
-        main = kit.equipped.get("main_hand")
+        main = kit.equips.get("main_hand")
         if main and "two_handed" in DATA.items[main].quality_ids:
-            assert "off_hand" not in kit.equipped or \
-                   DATA.items[DATA.items and kit.equipped.get("off_hand")] is None
-            assert kit.equipped.get("off_hand") != "shield"
+            assert kit.equips.get("off_hand") != "shield"
             return
 
 
@@ -69,10 +67,19 @@ def test_apply_kit_writes_onto_spec():
     kit = qe.roll_kit("fighter", DATA, rng=random.Random(1))
     qe.apply_kit(spec, kit, DATA)
     # apply_kit routes Container items to spec.containers; verify all items placed.
-    all_placed = sorted(spec.inventory + [c.catalog_id for c in spec.containers])
-    assert all_placed == sorted(kit.inventory)
-    assert spec.equipped == kit.equipped
-    assert spec.ammo == kit.ammo
+    from collections import Counter
+    ammo_ids = {g["base_id"] for g in kit.ammo}
+    placed = Counter(i.catalog_id for i in spec.items if i.catalog_id not in ammo_ids)
+    placed.update(c.catalog_id for c in spec.containers)
+    assert placed == Counter(kit.inventory)
+    # Equip intentions were applied
+    for slot, cid in kit.equips.items():
+        assert any(i.catalog_id == cid and i.equip == slot for i in spec.items), \
+            f"slot {slot} not equipped with {cid}"
+    # Ammo grants landed in spec.items
+    for grant in kit.ammo:
+        assert any(i.catalog_id == grant["base_id"] for i in spec.items), \
+            f"ammo {grant['base_id']} not in spec.items"
     carried_gp = next((s.count for s in spec.coins
                        if s.denom == "gp" and s.location.kind == "carried"), 0)
     assert carried_gp == kit.gold

@@ -6,8 +6,6 @@ shop.InventoryRow / detail.item_card; imports only models + engine helpers.
 """
 from __future__ import annotations
 
-from collections import Counter
-
 from pydantic import BaseModel
 
 from aose.data.loader import GameData
@@ -15,6 +13,7 @@ from aose.engine import companions, monster_stats as ms
 from aose.engine.detail import DetailCard, item_card
 from aose.engine.shop import InventoryRow, _build_row
 from aose.models import Animal, AnimalArmor, CharacterSpec, Vehicle
+from aose.models.storage import StorageLocation
 
 
 class AnimalCard(BaseModel):
@@ -84,17 +83,21 @@ class CompanionsBlock(BaseModel):
     max_retainers: int = 0
 
 
-def _content_rows(item_ids: list[str], data: GameData) -> list[InventoryRow]:
-    rows = [_build_row(i, n, data) for i, n in Counter(item_ids).items()]
+def _content_rows(spec, loc, data: GameData) -> list[InventoryRow]:
+    from aose.engine.storage import items_at
+    rows = [_build_row(inst.catalog_id, inst.count, data)
+            for inst in items_at(spec, loc)]
     rows.sort(key=lambda r: r.name)
     return rows
 
 
-def _armor_options(catalog: Animal, inventory: list[str],
-                   data: GameData) -> list[tuple[str, str]]:
+def _armor_options(catalog: Animal, spec, data: GameData) -> list[tuple[str, str]]:
+    from aose.models.storage import StorageLocation
+    carried = StorageLocation(kind="carried")
+    carried_ids = {i.catalog_id for i in spec.items if i.location == carried}
     out = []
     for aid in catalog.armor_fits:
-        if aid in inventory and aid in data.items:
+        if aid in carried_ids and aid in data.items:
             out.append((aid, data.items[aid].name))
     return out
 
@@ -121,10 +124,12 @@ def companions_block(spec: CharacterSpec, data: GameData) -> CompanionsBlock | N
             hp_current=max(0, catalog.hp - inst.hp_damage), hp_max=catalog.hp,
             movement=catalog.movement, morale=catalog.morale,
             traits=catalog.traits, armor_id=inst.armor_id,
-            armor_options=_armor_options(catalog, spec.inventory, data),
-            load_used=companions.animal_load_cn(inst, data),
+            armor_options=_armor_options(catalog, spec, data),
+            load_used=companions.animal_load_cn(spec, inst, data),
             load_capacity=companions.animal_capacity(inst, data),
-            contents=_content_rows(inst.contents, data),
+            contents=_content_rows(spec,
+                                   StorageLocation(kind="animal", id=inst.instance_id),
+                                   data),
             magic_note=inst.magic_note, detail=item_card(catalog),
         ))
 
@@ -139,12 +144,14 @@ def companions_block(spec: CharacterSpec, data: GameData) -> CompanionsBlock | N
             ac_descending=catalog.ac, ac_ascending=ms.ascending_ac(catalog.ac),
             hull_current=max(0, inst.hull_max - inst.hull_damage),
             hull_max=inst.hull_max,
-            cargo_used=companions.vehicle_load_cn(inst, data),
+            cargo_used=companions.vehicle_load_cn(spec, inst, data),
             cargo_capacity=companions.vehicle_capacity(inst, data),
             extra_animals=inst.extra_animals,
             has_extra=catalog.cargo_capacity_extra_cn is not None,
             required_animals=catalog.required_animals,
-            contents=_content_rows(inst.contents, data),
+            contents=_content_rows(spec,
+                                   StorageLocation(kind="vehicle", id=inst.instance_id),
+                                   data),
             detail=item_card(catalog),
         ))
 

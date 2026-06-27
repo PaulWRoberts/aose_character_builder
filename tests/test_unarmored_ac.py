@@ -3,6 +3,7 @@ from pathlib import Path
 from aose.data.loader import GameData
 from aose.engine.armor_class import armor_class, unarmored_ac
 from aose.models import CharacterSpec, ClassEntry
+from tests._itemhelp import coerce_equipment
 
 DATA = GameData.load(Path(__file__).parent.parent / "data")
 
@@ -16,6 +17,7 @@ def _spec(**kw):
         alignment="neutral",
     )
     base.update(kw)
+    coerce_equipment(base)
     return CharacterSpec(**base)
 
 

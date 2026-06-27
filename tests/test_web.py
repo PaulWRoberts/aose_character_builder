@@ -326,7 +326,7 @@ def test_ammo_modal_shows_properties_and_count_adjust(tmp_path):
     from pathlib import Path
     from fastapi.testclient import TestClient
     from aose.characters import save_character
-    from aose.models import CharacterSpec, ClassEntry, AmmoStack
+    from aose.models import CharacterSpec, ClassEntry, ItemInstance
     from aose.web.app import create_app
 
     characters_dir = tmp_path / "characters"
@@ -342,7 +342,7 @@ def test_ammo_modal_shows_properties_and_count_adjust(tmp_path):
         abilities={"STR": 11, "INT": 10, "WIS": 10, "DEX": 11, "CON": 12, "CHA": 9},
         race_id="human", classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
         alignment="neutral",
-        ammo=[AmmoStack(instance_id="a1", base_id="arrow", count=20)],
+        items=[ItemInstance(instance_id="a1", catalog_id="arrow", count=20)],
     )
     save_character("fletch", spec, characters_dir)
     body = TestClient(app, follow_redirects=False).get("/character/fletch").text

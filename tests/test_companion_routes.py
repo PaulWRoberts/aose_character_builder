@@ -5,7 +5,9 @@ import pytest
 from fastapi.testclient import TestClient
 
 from aose.characters import load_character, save_character
-from aose.models import AnimalInstance, CharacterSpec, ClassEntry, VehicleInstance
+from aose.models import (AnimalInstance, CharacterSpec, ClassEntry, CoinStack,
+                         ItemInstance, VehicleInstance)
+from aose.models.storage import StorageLocation
 from aose.web.app import create_app
 
 
@@ -31,17 +33,18 @@ def client(tmp_path):
     return c
 
 
-def _save_char(client, *, gold=500.0, animals=None, vehicles=None, inventory=None):
+def _save_char(client, *, gold=500.0, animals=None, vehicles=None, items=None):
+    coins = [CoinStack(denom="gp", count=int(gold))] if gold else []
     spec = CharacterSpec(
         name="Finn",
         abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
         race_id="human",
         classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
         alignment="neutral",
-        gold=gold,
+        coins=coins,
         animals=animals or [],
         vehicles=vehicles or [],
-        inventory=inventory or [],
+        items=items or [],
     )
     save_character("finn", spec, client._characters_dir)
     return spec
@@ -108,26 +111,30 @@ def test_animal_hp_heal(client):
 
 
 def test_animal_load_and_unload(client):
-    _save_char(client, inventory=["torch"], animals=[
-        AnimalInstance(instance_id="a1", catalog_id="mule"),
-    ])
+    _save_char(client,
+               items=[ItemInstance(instance_id="torch1", catalog_id="torch")],
+               animals=[AnimalInstance(instance_id="a1", catalog_id="mule")])
+    # Load torch onto animal
     r = client.post("/character/finn/inventory/move", data={
-        "category": "item", "item_id": "torch",
+        "category": "item", "item_id": "torch1",
         "src_kind": "carried", "dest_kind": "animal", "dest_id": "a1",
     })
     assert r.status_code == 303
     spec = load_character("finn", client._characters_dir)
-    assert "torch" not in spec.inventory
-    assert "torch" in spec.animals[0].contents
+    assert not any(i.instance_id == "torch1" and i.location.kind == "carried"
+                   for i in spec.items)
+    assert any(i.instance_id == "torch1" and i.location.kind == "animal"
+               for i in spec.items)
 
+    # Unload torch back to carried
     r = client.post("/character/finn/inventory/move", data={
-        "category": "item", "item_id": "torch",
+        "category": "item", "item_id": "torch1",
         "src_kind": "animal", "src_id": "a1", "dest_kind": "carried",
     })
     assert r.status_code == 303
     spec = load_character("finn", client._characters_dir)
-    assert "torch" in spec.inventory
-    assert "torch" not in spec.animals[0].contents
+    assert any(i.instance_id == "torch1" and i.location.kind == "carried"
+               for i in spec.items)
 
 
 # ── Shop buy dispatch (generic /equipment/buy) ─────────────────────────────
@@ -138,7 +145,8 @@ def test_equipment_buy_animal_creates_instance_not_inventory(client):
     assert r.status_code == 303
     spec = load_character("finn", client._characters_dir)
     assert len(spec.animals) == 1, "buying an animal in the shop must create a roster instance"
-    assert "mule" not in spec.inventory, "an animal must never land in carried inventory"
+    assert not any(i.catalog_id == "mule" and i.location.kind == "carried"
+                   for i in spec.items), "an animal must never land in carried inventory"
 
 
 def test_equipment_buy_vehicle_creates_instance_not_inventory(client):
@@ -148,7 +156,8 @@ def test_equipment_buy_vehicle_creates_instance_not_inventory(client):
     spec = load_character("finn", client._characters_dir)
     assert len(spec.vehicles) == 1, "buying a vehicle in the shop must create a roster instance"
     assert spec.vehicles[0].hull_max >= 1, "vehicle instance must resolve hull_max at purchase"
-    assert "cart" not in spec.inventory, "a vehicle must never land in carried inventory"
+    assert not any(i.catalog_id == "cart" and i.location.kind == "carried"
+                   for i in spec.items), "a vehicle must never land in carried inventory"
 
 
 # ── Vehicle routes ─────────────────────────────────────────────────────────
@@ -196,26 +205,30 @@ def test_vehicle_hull_damage(client):
 
 
 def test_vehicle_load_and_unload(client):
-    _save_char(client, inventory=["torch"], vehicles=[
-        VehicleInstance(instance_id="v1", catalog_id="cart", hull_max=4),
-    ])
+    _save_char(client,
+               items=[ItemInstance(instance_id="torch1", catalog_id="torch")],
+               vehicles=[VehicleInstance(instance_id="v1", catalog_id="cart", hull_max=4)])
+    # Load torch onto vehicle
     r = client.post("/character/finn/inventory/move", data={
-        "category": "item", "item_id": "torch",
+        "category": "item", "item_id": "torch1",
         "src_kind": "carried", "dest_kind": "vehicle", "dest_id": "v1",
     })
     assert r.status_code == 303
     spec = load_character("finn", client._characters_dir)
-    assert "torch" not in spec.inventory
-    assert "torch" in spec.vehicles[0].contents
+    assert not any(i.instance_id == "torch1" and i.location.kind == "carried"
+                   for i in spec.items)
+    assert any(i.instance_id == "torch1" and i.location.kind == "vehicle"
+               for i in spec.items)
 
+    # Unload torch back to carried
     r = client.post("/character/finn/inventory/move", data={
-        "category": "item", "item_id": "torch",
+        "category": "item", "item_id": "torch1",
         "src_kind": "vehicle", "src_id": "v1", "dest_kind": "carried",
     })
     assert r.status_code == 303
     spec = load_character("finn", client._characters_dir)
-    assert "torch" in spec.inventory
-    assert "torch" not in spec.vehicles[0].contents
+    assert any(i.instance_id == "torch1" and i.location.kind == "carried"
+               for i in spec.items)
 
 
 def test_animal_unequip_returns_barding_to_inventory(client):
@@ -226,4 +239,5 @@ def test_animal_unequip_returns_barding_to_inventory(client):
     assert resp.status_code == 303
     spec = load_character("finn", client._characters_dir)
     assert spec.animals[0].armor_id is None
-    assert "horse_barding" in spec.inventory
+    assert any(i.catalog_id == "horse_barding" and i.location.kind == "carried"
+               for i in spec.items)
