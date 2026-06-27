@@ -477,6 +477,91 @@ async def inventory_move(request: Request, character_id: str):
     return RedirectResponse(f"/character/{character_id}", status_code=303)
 
 
+from aose.engine import inventory_actions as _ia
+
+
+def _equip_gates(spec, data):
+    classes = [data.classes[e.class_id] for e in spec.classes if e.class_id in data.classes]
+    return dict(
+        two_weapon=spec.ruleset.two_weapon_fighting,
+        eligible=two_weapon_eligible(classes),
+        gargantua_1h_2h=_1h2h(spec, data),
+        allowed_weapons=allowed_weapon_ids(classes, data, spec.ruleset),
+        allowed_armor=allowed_armor_ids(classes, data),
+        allow_shields=shields_allowed(classes),
+    )
+
+
+@router.post("/character/{character_id}/inventory/equip")
+async def inventory_equip(request: Request, character_id: str,
+                          category: str = Form(...), instance_id: str = Form(...),
+                          slot: str | None = Form(None)):
+    spec = _load_spec_or_404(request, character_id)
+    data = request.app.state.game_data
+    try:
+        _ia.equip_thing(spec, category, instance_id, data=data, slot=slot,
+                        **_equip_gates(spec, data))
+    except (ValueError, WieldError) as e:
+        raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/inventory/unequip")
+async def inventory_unequip(request: Request, character_id: str,
+                            category: str = Form(...), instance_id: str = Form(...)):
+    spec = _load_spec_or_404(request, character_id)
+    try:
+        _ia.unequip_thing(spec, category, instance_id)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/inventory/sell")
+async def inventory_sell(request: Request, character_id: str,
+                         category: str = Form(...), instance_id: str = Form(...),
+                         mode: str = Form(...)):
+    spec = _load_spec_or_404(request, character_id)
+    data = request.app.state.game_data
+    try:
+        _ia.sell_thing(spec, category, instance_id, mode, data)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/inventory/charge")
+async def inventory_charge(request: Request, character_id: str,
+                           category: str = Form(...), instance_id: str = Form(...),
+                           op: str = Form("use")):
+    spec = _load_spec_or_404(request, character_id)
+    try:
+        if op == "reset":
+            _ia.reset_charges_thing(spec, category, instance_id)
+        else:
+            _ia.use_charge_thing(spec, category, instance_id)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/inventory/note")
+async def inventory_note(request: Request, character_id: str,
+                         category: str = Form(...), instance_id: str = Form(...),
+                         note: str = Form("")):
+    spec = _load_spec_or_404(request, character_id)
+    try:
+        _ia.set_note_thing(spec, category, instance_id, note)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
 @router.post("/character/{character_id}/carrying-treasure")
 async def set_carrying_treasure(request: Request, character_id: str,
                                 value: str = Form(...)):
