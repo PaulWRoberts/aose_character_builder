@@ -44,6 +44,7 @@ class ShopCategory(BaseModel):
 class InventoryRow(BaseModel):
     id: str
     instance_id: str = ""        # ItemInstance.instance_id — empty for rows built without spec
+    category: str = "item"       # "item" | "enchanted" — drives the action macro
     name: str
     description: str = ""        # catalog description (for the per-item detail modal)
     count: int

@@ -1,3 +1,4 @@
+import uuid
 from pathlib import Path
 
 import pytest
@@ -191,3 +192,24 @@ def test_animal_barding_in_equipped_worn(data):
     animal = next(g for g in build_inventory_groups(spec, data) if g.kind == "animal")
     assert animal.equipped_worn, "animal barding should appear as a worn row"
     assert any(getattr(r, "item_id", None) == "dog_armour" for r in animal.equipped_worn)
+
+
+# ── per-instance row tests ───────────────────────────────────────────────────
+
+def test_two_identical_weapons_render_as_two_rows_with_distinct_ids():
+    from aose.models import CharacterSpec, ClassEntry, ItemInstance
+    from aose.models.storage import StorageLocation
+    from aose.sheet.view import build_inventory_groups
+    ids = [uuid.uuid4().hex, uuid.uuid4().hex]
+    spec = _base_spec(items=[
+        ItemInstance(instance_id=ids[0], catalog_id="mace", count=1,
+                     location=StorageLocation(kind="carried")),
+        ItemInstance(instance_id=ids[1], catalog_id="mace", count=1,
+                     location=StorageLocation(kind="carried")),
+    ])
+    groups = build_inventory_groups(spec, DATA)
+    carried = next(g for g in groups if g.kind == "carried")
+    mace_rows = [r for r in carried.loose if r.id == "mace"]
+    assert len(mace_rows) == 2
+    assert {r.instance_id for r in mace_rows} == set(ids)
+    assert all(r.category == "item" for r in mace_rows)

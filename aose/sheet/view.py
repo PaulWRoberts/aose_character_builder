@@ -1395,6 +1395,43 @@ def _with_retainers(block, spec: CharacterSpec, data: GameData, class_options=No
     return block
 
 
+def _item_rows_at(spec, loc, data, aw, aa, ash, *, two_weapon, eligible, gargantua):
+    """Per-instance InventoryRows for plain items at ``loc``.  One row per
+    ItemInstance (equippables stay distinct; stackables are already one merged
+    instance).  Each row carries its real instance_id + category='item'."""
+    from aose.engine.shop import _build_row
+    off_full = any(i.equip == "off_hand" for i in spec.items)
+    rows = []
+    for inst in spec.items:
+        if inst.enchantment_id is not None or inst.location != loc:
+            continue
+        if isinstance(data.items.get(inst.catalog_id), Ammunition):
+            continue
+        if inst.equip is not None:
+            continue   # equipped rows are built separately
+        r = _build_row(inst.catalog_id, inst.count, data, aw, aa, ash,
+                       two_weapon=two_weapon, eligible=eligible, off_full=off_full)
+        rows.append(r.model_copy(update={"instance_id": inst.instance_id,
+                                         "category": "item"}))
+    rows.sort(key=lambda r: r.name)
+    return rows
+
+
+def _equipped_item_rows(spec, data, aw, aa, ash, *, two_weapon, eligible, gargantua):
+    """Per-instance InventoryRows for equipped plain items (slot occupants)."""
+    from aose.engine.shop import _build_row
+    rows = []
+    for inst in spec.items:
+        if inst.equip is None or inst.enchantment_id is not None:
+            continue
+        r = _build_row(inst.catalog_id, inst.count, data, aw, aa, ash,
+                       two_weapon=two_weapon, eligible=eligible)
+        rows.append(r.model_copy(update={"instance_id": inst.instance_id,
+                                         "category": "item"}))
+    rows.sort(key=lambda r: r.name)
+    return rows
+
+
 def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevelGroup]:
     """Build the top-level inventory groups for the sheet (Carried, Stashed, each
     carrier/retainer).  Each group contains equipped rows, loose rows, coin rows,
@@ -1413,7 +1450,12 @@ def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevel
         return (allowed_weapon_ids(cls, data, owner.ruleset),
                 allowed_armor_ids(cls, data), shields_allowed(cls))
 
+    from aose.engine.proficiency import two_weapon_eligible as _twe
+    from aose.engine.features import one_handed_two_handed_weapons as _oth
     _pc_aw, _pc_aa, _pc_as = _owner_allowances(spec)
+    _pc_classes = [data.classes[e.class_id] for e in spec.classes if e.class_id in data.classes]
+    _pc_eligible = _twe(_pc_classes)
+    _pc_gargantua = _oth(spec, data)
 
     def _coin_rows(loc: StorageLocation) -> list[CoinRow]:
         return [CoinRow(denom=s.denom, count=s.count)
@@ -1514,19 +1556,17 @@ def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevel
                 if isinstance(data.items.get(i.catalog_id), Ammunition)
                 and i.location == loc and i.instance_id in ammo_by_iid]
 
-    # Build inventory_view from spec.items for equipped/loose row objects
-    _inv_ids = [cid for i in _plain_items_at(spec.items, "carried")
-                for cid in [i.catalog_id] * i.count]
-    _stash_ids = [cid for i in _plain_items_at(spec.items, "stashed")
-                  for cid in [i.catalog_id] * i.count]
-    _equip_dict = {i.equip: i.catalog_id
-                   for i in spec.items if i.equip is not None and i.enchantment_id is None}
-    inv_view = inventory_view(_inv_ids, _stash_ids, _equip_dict,
-                              spec.containers, data, _pc_aw, _pc_aa, _pc_as, spec=spec)
+    # Per-instance row builders (replace catalog-collapsed inv_view for carried/stashed/equipped)
+    carried_loc = StorageLocation(kind="carried")
+    stashed_loc = StorageLocation(kind="stashed")
+    _eq_kwargs = dict(two_weapon=spec.ruleset.two_weapon_fighting,
+                      eligible=_pc_eligible, gargantua=_pc_gargantua)
+    pc_equipped_rows = _equipped_item_rows(spec, data, _pc_aw, _pc_aa, _pc_as, **_eq_kwargs)
+    pc_carried_rows = _item_rows_at(spec, carried_loc, data, _pc_aw, _pc_aa, _pc_as, **_eq_kwargs)
+    pc_stashed_rows = _item_rows_at(spec, stashed_loc, data, _pc_aw, _pc_aa, _pc_as, **_eq_kwargs)
     groups: list[TopLevelGroup] = []
 
     # ── Carried ───────────────────────────────────────────────────────────────
-    carried_loc = StorageLocation(kind="carried")
     pc_attacks = attack_profiles(spec, data)
     pc_worn = _equipped(spec, data)
     all_ammo_rows, _ = ammo_view(spec, data)
@@ -1544,11 +1584,11 @@ def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevel
         caps=OwnerCaps(has_equipped=True, can_wield=True, can_stash=True,
                        class_filter_equip=True, bucket_label="Carried"),
         has_equipped=bool(pc_attacks or pc_worn or pc_magic_equipped),
-        equipped=inv_view.equipped,
+        equipped=pc_equipped_rows,
         equipped_attacks=pc_attacks,
         equipped_worn=pc_worn,
         equipped_magic=pc_magic_equipped,
-        loose=inv_view.carried,
+        loose=pc_carried_rows,
         coins=_coin_rows(carried_loc),
         treasure_gems=_gem_rows(carried_loc),
         treasure_jewellery=_jewellery_rows(carried_loc),
@@ -1560,12 +1600,11 @@ def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevel
     ))
 
     # ── Stashed ───────────────────────────────────────────────────────────────
-    stashed_loc = StorageLocation(kind="stashed")
     groups.append(TopLevelGroup(
         kind="stashed", label="Stashed",
         caps=OwnerCaps(has_equipped=False, can_wield=False, can_stash=False,
                        bucket_label="Stowed"),
-        loose=inv_view.stashed,
+        loose=pc_stashed_rows,
         coins=_coin_rows(stashed_loc),
         treasure_gems=_gem_rows(stashed_loc),
         treasure_jewellery=_jewellery_rows(stashed_loc),
@@ -1585,7 +1624,10 @@ def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevel
         label = animal.name or (catalog.name if catalog else animal.catalog_id)
         animal_plain = _plain_items_at(spec.items, "animal")
         animal_plain = [i for i in animal_plain if i.location == animal_loc]
-        barding = [_build_row(animal.armor_id, 1, data)] if animal.armor_id else []
+        barding = ([_build_row(animal.armor_id, 1, data).model_copy(
+                        update={"instance_id": animal.instance_id + "_barding",
+                                "category": "item"})]
+                   if animal.armor_id else [])
         barding_worn = (
             [EquippedRow(slot="barding",
                          item_name=(data.items[animal.armor_id].name
@@ -1599,8 +1641,9 @@ def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevel
                            bucket_label="Carried"),
             has_equipped=bool(barding_worn), equipped=barding,
             equipped_worn=barding_worn,
-            loose=sorted([_build_row(i.catalog_id, i.count, data) for i in animal_plain],
-                         key=lambda r: r.name),
+            loose=sorted([_build_row(i.catalog_id, i.count, data).model_copy(
+                              update={"instance_id": i.instance_id, "category": "item"})
+                          for i in animal_plain], key=lambda r: r.name),
             coins=_coin_rows(animal_loc),
             treasure_gems=_gem_rows(animal_loc),
             treasure_jewellery=_jewellery_rows(animal_loc),
@@ -1626,8 +1669,9 @@ def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevel
             kind="vehicle", id=vehicle.instance_id, label=label,
             caps=OwnerCaps(has_equipped=False, can_wield=False, can_stash=False,
                            bucket_label="Stowed"),
-            loose=sorted([_build_row(i.catalog_id, i.count, data) for i in vehicle_plain],
-                         key=lambda r: r.name),
+            loose=sorted([_build_row(i.catalog_id, i.count, data).model_copy(
+                              update={"instance_id": i.instance_id, "category": "item"})
+                          for i in vehicle_plain], key=lambda r: r.name),
             coins=_coin_rows(vehicle_loc),
             treasure_gems=_gem_rows(vehicle_loc),
             treasure_jewellery=_jewellery_rows(vehicle_loc),
@@ -1657,7 +1701,8 @@ def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevel
             for inst in ret_items
             if inst.equip is not None and inst.equip not in _WEAPON_SLOTS
         ]
-        ret_equipped = [_build_row(inst.catalog_id, 1, data)
+        ret_equipped = [_build_row(inst.catalog_id, 1, data).model_copy(
+                            update={"instance_id": inst.instance_id, "category": "item"})
                         for inst in ret_items if inst.equip is not None]
         ret_containers = (
             _container_views_from(retainer.spec.containers, ret_carried, ret_items) +
@@ -1666,8 +1711,9 @@ def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevel
         ret_all_ammo, _ = ammo_view(retainer.spec, data)
         ret_ammo_by_iid = {r.instance_id: r for r in ret_all_ammo}
         ret_plain_carried = _plain_items_at(ret_items, "carried")
-        ret_loose = sorted([_build_row(i.catalog_id, i.count, data) for i in ret_plain_carried],
-                           key=lambda r: r.name)
+        ret_loose = sorted([_build_row(i.catalog_id, i.count, data).model_copy(
+                                update={"instance_id": i.instance_id, "category": "item"})
+                            for i in ret_plain_carried], key=lambda r: r.name)
         groups.append(TopLevelGroup(
             kind="retainer", id=retainer.id, label=retainer.spec.name,
             caps=OwnerCaps(has_equipped=bool(ret_attacks or ret_worn),
