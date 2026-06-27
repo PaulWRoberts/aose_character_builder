@@ -529,9 +529,10 @@ Illusionist/Magic-user/Thief). New languages: `hephaestan`, `language_of_wolves`
 - **Shop spend** — `shop.spend(spec, cost_gp)` debits **Carried** coins only,
   lowest-denomination-first. Tries exact payment first; if unavailable, pays the
   smallest whole-gp overshoot and returns change in gp. Raises `InsufficientFunds`
-  (HTTP 400) when total carried value < cost. `buy_item`/`add_free_item`/`sell_item`/
-  `sell_from_stash`/`sell_container` are spec-mutating helpers that operate on
-  `spec.items` (and `spec.containers` for containers).
+  (HTTP 400) when total carried value < cost. `buy_item`/`add_free_item`/`sell_instance`/
+  `sell_container` are spec-mutating helpers that operate on `spec.items` (and
+  `spec.containers` for containers). `sell_instance` is instance-keyed; the old
+  catalog-keyed `sell_item`/`sell_from_stash` have been deleted.
 - **Treasure weight** — gems 1 cn, jewellery 10 cn (**Carried only** — stashed /
   on-carrier treasure adds zero to PC encumbrance). Carried treasure magic items:
   potions 10 / wands 10 / rods 20 / staves 40 / scrolls 1, derived by category +
@@ -589,6 +590,14 @@ Illusionist/Magic-user/Thief). New languages: `hephaestan`, `language_of_wolves`
   passes `manage_treasure=False` to `inv_pane` (no draft-scoped treasure routes), so
   its treasure rows stay non-clickable. Retainer treasure stays display-only (lives in
   `retainer.spec`, no PC-scoped route).
+- **Action dispatcher** — `aose/engine/inventory_actions.py` is the single code path
+  for equip/unequip/sell/charge/note across all three item substrates (`item` plain,
+  `enchanted`, `magic`). The five POST routes `/inventory/{equip,unequip,sell,charge,note}`
+  (plus `/inventory/move`) are registered on both the character-sheet router and the
+  wizard router; the old `/equipment/equip|unequip|equip-magic|…|equip-enchanted|…`
+  routes have been deleted. Templates post `category` + `instance_id` (+ `mode`/`op`/`note`);
+  the dispatcher branches on `category`. A contract test (`tests/test_inventory_box_contract.py`)
+  guards the template↔route field contract so the silent-404 class of bug cannot recur.
 - **Move-route robustness** — `_loc(kind, id)` in `routes.py` builds the
   `StorageLocation` for `POST /inventory/move` (and `/coins/add`, `/coins/convert`),
   mapping a bad/empty kind to HTTP 400 (Pydantic `ValidationError` would otherwise
