@@ -48,3 +48,15 @@ def test_bad_category_raises():
     spec, iid = _spec_with("sword")
     with pytest.raises(ia.InventoryActionError):
         ia.equip_thing(spec, "bogus", iid, data=DATA, owner=None)
+
+
+def test_sell_thing_item_drop_removes():
+    spec, iid = _spec_with("mace")
+    ia.sell_thing(spec, "item", iid, "drop", DATA)
+    assert all(i.instance_id != iid for i in spec.items)
+
+
+def test_sell_thing_enchanted_drops_via_enchant_remove():
+    spec, iid = _spec_with("sword", enchantment_id=ENCHANT_ID)
+    ia.sell_thing(spec, "enchanted", iid, "drop", DATA)
+    assert all(i.instance_id != iid for i in spec.items)
