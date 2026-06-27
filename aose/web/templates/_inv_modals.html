@@ -4,6 +4,7 @@
 {% from "_detail_card.html" import detail_card with context %}
 {% from "_inv_row_actions.html" import inv_row_actions with context %}
 {% from "_actions.html" import act_move with context %}
+{% from "_actions.html" import act_move with context %}
 
 {# Per-item modal — Equipped · Carried · Stashed · container-contents · carriers · retainers.
    id_prefix determines the modal id: modal-item-<id_prefix>-<row.id>.
@@ -183,6 +184,22 @@
         <button class="btn danger" type="submit">Drop</button>
       </form>
     </div>
+  </div>
+</div>
+{% endmacro %}
+
+{# Per-magic/enchanted-item modal — delegates all actions to inv_row_actions.
+   `mi` is a MagicItemView carrying .category ("magic"|"enchanted"), .instance_id,
+   .equipped, .charges_remaining, .cost_gp, .class_allowed, .modifier_summary.
+   `inv_prefix` e.g. "/character/<id>/inventory"; `src_kind` + `src_id` give the
+   Move source location for the move dropdown. #}
+{% macro magic_modal(mi, inv_prefix, src_kind, src_id) %}
+<div class="overlay modal" id="modal-magic-{{ mi.instance_id }}" role="dialog" aria-label="{{ mi.name }}">
+  <div class="ov-head"><h3>{{ mi.name }}</h3><button class="x" data-close>×</button></div>
+  <div class="ov-body">
+    {% if mi.modifier_summary %}<p style="margin:0 0 8px">{% for chip in mi.modifier_summary %}<span class="tag stamp">{{ chip }}</span> {% endfor %}</p>{% endif %}
+    {% if mi.description %}<div class="prose">{{ mi.description | markdown | safe }}</div>{% endif %}
+    <div class="row-actions">{{ inv_row_actions(mi, inv_prefix, src_kind, equipped=mi.equipped, show_remove=(not mi.equipped), src_id=src_id) }}</div>
   </div>
 </div>
 {% endmacro %}

@@ -195,6 +195,7 @@ class MagicItemView(BaseModel):
     modifier_summary: list[str]
     cost_gp: int = 0
     class_allowed: bool = True   # False when the wearer's class can't use it
+    category: str = "magic"      # "magic" | "enchanted"
 
 
 class AmmoRow(BaseModel):
@@ -661,6 +662,7 @@ def enchanted_items_view(enchanted, data: GameData,
             modifier_summary=summary,
             class_allowed=class_allows(
                 resolved, allowed_weapons, allowed_armor, allow_shields),
+            category="enchanted",
         ))
     return views
 

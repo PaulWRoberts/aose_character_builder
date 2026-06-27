@@ -282,9 +282,9 @@ def test_worn_magic_item_modal_has_charges_and_unequip(tmp_path):
     nxt = body.find('class="overlay', start + 10)
     modal = body[start:nxt if nxt != -1 else len(body)]
     # Use-one charge control + count, and Unequip; no destructive remove.
-    assert "/character/mage/equipment/use-charge" in modal
+    assert "/character/mage/inventory/charge" in modal
     assert "3 / 3" in modal
-    assert "/character/mage/equipment/unequip-magic" in modal
+    assert "/character/mage/inventory/unequip" in modal
     assert "/remove-magic" not in modal
 
 

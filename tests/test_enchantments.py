@@ -709,8 +709,8 @@ def test_sheet_renders_owned_enchanted_controls(tmp_path):
                 data={"base_id": "short_sword", "enchantment_id": "sword_plus_1"})
     page = client.get("/character/test").text
     assert "Short Sword +1" in page
-    assert "/equipment/equip-enchanted" in page
-    assert "/equipment/remove-enchanted" in page
+    assert "/inventory/equip" in page
+    assert "/inventory/sell" in page
 
 
 def test_wizard_exposes_no_magic_or_enchanted_acquisition(tmp_path):

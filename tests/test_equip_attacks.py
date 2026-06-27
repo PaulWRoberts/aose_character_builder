@@ -342,7 +342,7 @@ def test_sheet_inventory_shows_equipped_section(client):
     _seed(client, items=[_make_item("sword", equip="main_hand", iid=iid)])
     r = client.get("/character/test")
     assert "Equipped" in r.text
-    assert 'action="/character/test/equipment/unequip"' in r.text
+    assert 'action="/character/test/inventory/unequip"' in r.text
 
 
 def test_sheet_equip_rejects_unknown_instance(client):
@@ -513,7 +513,7 @@ def test_sheet_equipped_items_are_clickable(tmp_path, data):
     assert f'id="modal-item-equipped-{sword_iid}"' in body
     assert f'data-modal="modal-item-equipped-{armor_iid}"' in body
     assert f'id="modal-item-equipped-{armor_iid}"' in body
-    assert "/character/sir-click/equipment/unequip" in body
+    assert "/character/sir-click/inventory/unequip" in body
     assert 'data-modal="modal-item-equipped-unarmed"' not in body
 
 
@@ -533,7 +533,7 @@ def test_sheet_item_modal_shows_properties_and_no_destructive_actions(tmp_path, 
     modal = _modal_html(body, f"modal-item-equipped-{sword_iid}")
     assert "Damage" in modal
     assert "Weight" in modal
-    assert "/character/modal/equipment/unequip" in modal
+    assert "/character/modal/inventory/unequip" in modal
     assert 'value="drop"' not in modal
     assert 'value="sell"' not in modal
     assert 'value="refund"' not in modal

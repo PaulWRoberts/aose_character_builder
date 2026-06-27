@@ -5,7 +5,7 @@
 {% from "_detail_card.html" import detail_card with context %}
 {% from "_inv_pane.html" import inv_pane with context %}
 {% from "_actions.html" import act_move, act_stepper with context %}
-{% from "_inv_modals.html" import item_modal, container_modal, coin_modal, gem_modal, jewellery_modal with context %}
+{% from "_inv_modals.html" import item_modal, container_modal, coin_modal, gem_modal, jewellery_modal, magic_modal with context %}
 
 <div class="sheet-actions no-print">
     <a href="/character/{{ character_id }}/print" target="_blank" class="button primary">Print / Save PDF</a>
@@ -468,18 +468,16 @@
         <div>
           <h4>Carried</h4>
           <ul>
-            {% for row in inventory_view.carried %}
+            {% if _cg %}{% for row in _cg.loose %}
             <li class="clickable" data-modal="modal-item-carried-{{ row.instance_id or row.id }}"><span>{{ row.name }}{% if row.count > 1 %} ×{{ row.count }}{% endif %}</span><span class="q">{% if row.weight_cn is defined %}{{ row.weight_cn }}{% endif %} cn</span></li>
-            {% endfor %}
+            {% endfor %}{% endif %}
             {# Carried containers #}
-            {% for c in inventory_view.containers %}
-            {% if c.state == "carried" %}
+            {% if _cg %}{% for c in _cg.containers %}
             <li class="bag clickable" data-modal="modal-container-{{ c.instance_id }}"><span>{{ c.name }}</span><span class="q">{{ c.total_weight_cn }} cn</span></li>
             {% if c.contents %}
             <li class="sub"><span>{% for row in c.contents %}{{ row.name }}{% if row.count > 1 %} ×{{ row.count }}{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}</span><span class="q">↳ {{ c.used_cn }}</span></li>
             {% endif %}
-            {% endif %}
-            {% endfor %}
+            {% endfor %}{% endif %}
             {# Carried coins — line items, like any other carried thing #}
             {% if _cg %}{% for coin in _cg.coins %}
             <li><span>{{ coin.count }} {{ coin.denom }}<span class="tag faint">coin</span></span><span class="q">{{ coin.count }} cn</span></li>
@@ -510,19 +508,17 @@
         <div>
           <h4>Stashed <span style="font-weight:400;color:var(--faint);font-size:9px">no weight</span></h4>
           <ul>
-            {% for row in inventory_view.stashed %}
+            {% if _sg %}{% for row in _sg.loose %}
             <li class="clickable" data-modal="modal-item-stashed-{{ row.instance_id or row.id }}"><span>{{ row.name }}{% if row.count > 1 %} ×{{ row.count }}{% endif %}</span><span class="q">—</span></li>
-            {% endfor %}
+            {% endfor %}{% endif %}
             {# Stashed coins — line items #}
             {% if _sg %}{% for coin in _sg.coins %}
             <li><span>{{ coin.count }} {{ coin.denom }}<span class="tag faint">coin</span></span><span class="q">—</span></li>
             {% endfor %}{% endif %}
             {# Stashed containers #}
-            {% for c in inventory_view.containers %}
-            {% if c.state == "stashed" %}
+            {% if _sg %}{% for c in _sg.containers %}
             <li class="bag clickable" data-modal="modal-container-{{ c.instance_id }}"><span>{{ c.name }}</span><span class="q">—</span></li>
-            {% endif %}
-            {% endfor %}
+            {% endfor %}{% endif %}
           </ul>
           <button class="add-row" data-drawer="drawer-equip">+ add, buy, or grant an item…</button>
         </div>
@@ -536,18 +532,18 @@
 
       {# Print-only full inventory block #}
       <div class="print-only">
-        {% if inventory_view.equipped or inventory_view.carried %}
+        {% if _cg and (_cg.equipped or _cg.loose) %}
         <h3>Carried</h3>
         <ul>
-          {% for row in inventory_view.equipped %}
+          {% for row in _cg.equipped %}
           <li>{{ row.name }}{% if row.count > 1 %} ×{{ row.count }}{% endif %} <em>(equipped)</em></li>
           {% endfor %}
-          {% for row in inventory_view.carried %}
+          {% for row in _cg.loose %}
           <li>{{ row.name }}{% if row.count > 1 %} ×{{ row.count }}{% endif %}</li>
           {% endfor %}
         </ul>
         {% endif %}
-        {% set carried_bags = inventory_view.containers | selectattr("state","equalto","carried") | list %}
+        {% set carried_bags = _cg.containers if _cg else [] %}
         {% if carried_bags %}
         <h3>Containers (carried)</h3>
         <ul>
@@ -558,10 +554,10 @@
           {% endfor %}
         </ul>
         {% endif %}
-        {% if inventory_view.stashed %}
+        {% if _sg and _sg.loose %}
         <h3>Stashed</h3>
         <ul>
-          {% for row in inventory_view.stashed %}
+          {% for row in _sg.loose %}
           <li>{{ row.name }}{% if row.count > 1 %} ×{{ row.count }}{% endif %}</li>
           {% endfor %}
         </ul>
@@ -950,14 +946,18 @@
 </div>
 {% endfor %}
 
+{# Resolve carried/stashed groups unconditionally for modal rendering below.
+   (The old section at {% if false %} that set these is dead code.) #}
+{%- set _cg = sheet.inventory_groups | selectattr("kind","equalto","carried") | first | default(none) -%}
+{%- set _sg = sheet.inventory_groups | selectattr("kind","equalto","stashed") | first | default(none) -%}
 {# MODALS: per-item inventory management #}
-{% for row in inventory_view.carried %}{{ item_modal(row, "carried", "carried", target_url_prefix) }}{% endfor %}
-{% for row in inventory_view.stashed %}{{ item_modal(row, "stashed", "stashed", target_url_prefix) }}{% endfor %}
-{% for row in inventory_view.equipped %}
+{% if _cg %}{% for row in _cg.loose %}{{ item_modal(row, "carried", "carried", target_url_prefix) }}{% endfor %}{% endif %}
+{% if _sg %}{% for row in _sg.loose %}{{ item_modal(row, "stashed", "stashed", target_url_prefix) }}{% endfor %}{% endif %}
+{% if _cg %}{% for row in _cg.equipped %}
 {%- set lo = ammo_load_options.get(row.instance_id) -%}
 {%- set atk = sheet.attacks | selectattr('manageable_item_id', 'equalto', row.instance_id) | first -%}
 {{ item_modal(row, "equipped", "equipped", target_url_prefix, load_options=lo, attack=atk) }}
-{% endfor %}
+{% endfor %}{% endif %}
 
 {# MODALS: loose-item modals for animal / vehicle inventories (PC-side move actions) #}
 {% for group in sheet.inventory_groups %}{% if group.kind in ("animal","vehicle") %}
@@ -988,104 +988,17 @@
 {% endfor %}{% endfor %}
 
 {%- set _char_url = "/character/" ~ character_id -%}
-{# MODALS: per-magic-item — iterate per group to get location context for Move.
-   Equipped: unequip + use-charge.  Unequipped: equip + Move + remove. #}
-{% set ench_ids = enchanted_rows | map(attribute='instance_id') | list %}
+{%- set _inv = _char_url ~ "/inventory" -%}
+{# MODALS: per-magic/enchanted-item — iterate per group for location context #}
 {% for group in sheet.inventory_groups %}
 {%- set gkind = group.kind -%}{%- set gid = group.id or "" -%}
 {% for mi in group.equipped_magic + group.magic_items + group.enchanted %}
-{% set is_ench = mi.instance_id in ench_ids %}
-<div class="overlay modal" id="modal-magic-{{ mi.instance_id }}" role="dialog" aria-label="{{ mi.name }}">
-  <div class="ov-head"><h3>{{ mi.name }}</h3><button class="x" data-close>×</button></div>
-  <div class="ov-body">
-    {% if mi.modifier_summary %}<p style="margin:0 0 8px">{% for chip in mi.modifier_summary %}<span class="tag stamp">{{ chip }}</span> {% endfor %}</p>{% endif %}
-    {% if mi.description %}<div class="prose">{{ mi.description | markdown | safe }}</div>{% endif %}
-    <div class="row-actions">
-      {% if mi.equipped %}
-      <form method="post" action="{{ target_url_prefix }}/{{ 'unequip-enchanted' if is_ench else 'unequip-magic' }}" class="inline-form">
-        <input type="hidden" name="instance_id" value="{{ mi.instance_id }}">
-        <button type="submit" class="btn btn-inline">Unequip</button>
-      </form>
-      {% if mi.charges_remaining is not none %}
-      <span class="muted small">Charges {{ mi.charges_remaining }} / {{ mi.charges_max }}</span>
-      <form method="post" action="{{ target_url_prefix }}/{{ 'enchanted/use-charge' if is_ench else 'use-charge' }}" class="inline-form">
-        <input type="hidden" name="instance_id" value="{{ mi.instance_id }}">
-        <button type="submit" class="btn btn-inline" {% if mi.charges_remaining == 0 %}disabled{% endif %}>Use one</button>
-      </form>
-      {% endif %}
-      {% else %}
-      {% if mi.class_allowed %}
-      <form method="post" action="{{ target_url_prefix }}/{{ 'equip-enchanted' if is_ench else 'equip-magic' }}" class="inline-form">
-        <input type="hidden" name="instance_id" value="{{ mi.instance_id }}">
-        <button type="submit" class="btn btn-inline">Equip</button>
-      </form>
-      {% else %}
-      <span class="muted small" title="Your class cannot use this item">Not usable</span>
-      {% endif %}
-      {{ act_move(_char_url ~ "/inventory/move", {"category": ("enchanted" if is_ench else "magic"), "id": mi.instance_id}, move_targets, gkind, gid) }}
-      {% if is_ench %}
-      <form method="post" action="{{ target_url_prefix }}/remove-enchanted" class="inline-form">
-        <input type="hidden" name="instance_id" value="{{ mi.instance_id }}">
-        <button type="submit" class="btn btn-inline danger">Drop</button>
-      </form>
-      {% else %}
-      {% if mi.cost_gp > 0 %}
-      <form method="post" action="{{ target_url_prefix }}/remove-magic" class="sell-form inline-form">
-        <input type="hidden" name="instance_id" value="{{ mi.instance_id }}">
-        <input type="hidden" name="mode" value="">
-        <select class="sell-dest">
-          <option value="" disabled selected>Sell…</option>
-          <option value="sell">half price</option>
-          <option value="refund">+{{ mi.cost_gp }}&nbsp;gp (refund)</option>
-        </select>
-      </form>
-      {% endif %}
-      <form method="post" action="{{ target_url_prefix }}/remove-magic" class="inline-form">
-        <input type="hidden" name="instance_id" value="{{ mi.instance_id }}">
-        <button type="submit" name="mode" value="drop" class="btn btn-inline danger">Drop</button>
-      </form>
-      {% endif %}
-      {% endif %}
-    </div>
-  </div>
-</div>
+{{ magic_modal(mi, _inv, gkind, gid) }}
 {% endfor %}
-{# Container-stowed magic/enchanted items also need modals (clickable in _inv_pane.html) #}
+{# Container-stowed magic/enchanted items also need modals #}
 {% for c in group.containers %}
 {% for mi in c.stowed_magic + c.stowed_enchanted %}
-{% set is_ench = mi.instance_id in ench_ids %}
-<div class="overlay modal" id="modal-magic-{{ mi.instance_id }}" role="dialog" aria-label="{{ mi.name }}">
-  <div class="ov-head"><h3>{{ mi.name }}</h3><button class="x" data-close>×</button></div>
-  <div class="ov-body">
-    {% if mi.modifier_summary %}<p style="margin:0 0 8px">{% for chip in mi.modifier_summary %}<span class="tag stamp">{{ chip }}</span> {% endfor %}</p>{% endif %}
-    {% if mi.description %}<div class="prose">{{ mi.description | markdown | safe }}</div>{% endif %}
-    <div class="row-actions">
-      {{ act_move(_char_url ~ "/inventory/move", {"category": ("enchanted" if is_ench else "magic"), "id": mi.instance_id}, move_targets, "container", c.instance_id) }}
-      {% if is_ench %}
-      <form method="post" action="{{ target_url_prefix }}/remove-enchanted" class="inline-form">
-        <input type="hidden" name="instance_id" value="{{ mi.instance_id }}">
-        <button type="submit" class="btn btn-inline danger">Drop</button>
-      </form>
-      {% else %}
-      {% if mi.cost_gp > 0 %}
-      <form method="post" action="{{ target_url_prefix }}/remove-magic" class="sell-form inline-form">
-        <input type="hidden" name="instance_id" value="{{ mi.instance_id }}">
-        <input type="hidden" name="mode" value="">
-        <select class="sell-dest">
-          <option value="" disabled selected>Sell…</option>
-          <option value="sell">half price</option>
-          <option value="refund">+{{ mi.cost_gp }}&nbsp;gp (refund)</option>
-        </select>
-      </form>
-      {% endif %}
-      <form method="post" action="{{ target_url_prefix }}/remove-magic" class="inline-form">
-        <input type="hidden" name="instance_id" value="{{ mi.instance_id }}">
-        <button type="submit" name="mode" value="drop" class="btn btn-inline danger">Drop</button>
-      </form>
-      {% endif %}
-    </div>
-  </div>
-</div>
+{{ magic_modal(mi, _inv, "container", c.instance_id) }}
 {% endfor %}
 {% endfor %}
 {% endfor %}

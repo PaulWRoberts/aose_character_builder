@@ -55,7 +55,6 @@ from aose.engine.shop import (
     add_free_item as shop_add_free_item,
     buy_container,
     buy_item as shop_buy_item,
-    inventory_view as shop_inventory_view,
     sell_container as shop_sell_container,
     sell_from_stash as shop_sell_from_stash,
     sell_item as shop_sell_item,
@@ -197,26 +196,7 @@ async def character_sheet(request: Request, character_id: str):
         raise HTTPException(status_code=404, detail=f"Character '{character_id}' not found")
     game_data = request.app.state.game_data
     sheet = build_sheet(spec, game_data)
-    classes = [game_data.classes[e.class_id] for e in spec.classes
-               if e.class_id in game_data.classes]
     from aose.engine import storage as _storage
-    # Build old-style lists from spec.items for inventory_view
-    _inv_list: list[str] = []
-    _stash_list: list[str] = []
-    _eq_dict: dict[str, str] = {}
-    for _inst in spec.items:
-        if _inst.enchantment_id is not None:
-            continue
-        if isinstance(game_data.items.get(_inst.catalog_id), Ammunition):
-            continue
-        for _ in range(_inst.count):
-            if _inst.location.kind == "carried":
-                _inv_list.append(_inst.catalog_id)
-            elif _inst.location.kind == "stashed":
-                _stash_list.append(_inst.catalog_id)
-        if _inst.equip is not None:
-            _eq_dict[_inst.equip] = _inst.catalog_id
-    _enchanted_iids = {i.instance_id for i in spec.items if i.enchantment_id is not None}
     return templates.TemplateResponse(
         request, "sheet.html", {
             "sheet": sheet,
@@ -224,19 +204,6 @@ async def character_sheet(request: Request, character_id: str):
             # Equipment partial context (sheet-side: no starting-gold reroll).
             "gold": _get_gold(spec),
             "gold_locked": True,
-            "inventory_view": shop_inventory_view(
-                _inv_list, _stash_list, _eq_dict,
-                spec.containers, game_data,
-                allowed_weapons=allowed_weapon_ids(classes, game_data, spec.ruleset),
-                allowed_armor=allowed_armor_ids(classes, game_data),
-                allow_shields=shields_allowed(classes),
-                two_weapon=spec.ruleset.two_weapon_fighting,
-                eligible=two_weapon_eligible(classes),
-                gargantua_1h_2h=_1h2h(spec, game_data),
-                spec=spec,
-            ),
-            "enchanted_rows": [v for v in sheet.magic_items
-                               if v.instance_id in _enchanted_iids],
             "magic_acquisition": True,
             "enchant_choices": _enchant_choices(game_data, spec.ruleset),
             "shop": shop_categories(game_data, spec.ruleset),

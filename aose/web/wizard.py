@@ -64,7 +64,6 @@ from aose.engine.shop import (
     UnknownItem,
     add_free_item as shop_add_free_item,
     buy_item as shop_buy_item,
-    inventory_view,
     roll_starting_gold,
     sell_from_stash as shop_sell_from_stash,
     sell_item as shop_sell_item,
@@ -1626,9 +1625,6 @@ def _draft_magic(draft: dict[str, Any]) -> list[MagicItemInstance]:
 def _equipment_context(draft: dict[str, Any], game_data) -> dict:
     """Build the rendering context for the equipment partial — shared between
     the wizard equipment step and the live character sheet."""
-    classes = [game_data.classes[cid] for cid in _class_ids(draft)
-               if cid in game_data.classes]
-
     draft_id = draft.get("_draft_id", "")
 
     # Build inventory_groups for the box (carried + stashed only; no carriers/retainers).
@@ -1642,10 +1638,6 @@ def _equipment_context(draft: dict[str, Any], game_data) -> dict:
         {"kind": "carried", "id": None, "label": "Carried"},
         {"kind": "stashed", "id": None, "label": "Stashed"},
     ]
-    _inv: list[str] = []
-    _stash: list[str] = []
-    _equip: dict[str, str] = {}
-    _containers: list[ContainerInstance] = []
     try:
         _spec = _draft_to_spec(draft, game_data)
         inventory_groups = [
@@ -1653,22 +1645,6 @@ def _equipment_context(draft: dict[str, Any], game_data) -> dict:
             if g.kind in ("carried", "stashed")
         ]
         _move_targets = _storage.move_targets(_spec, game_data)
-
-        # Build old-style lists from spec.items for inventory_view
-        _containers = list(_spec.containers)
-        for inst in _spec.items:
-            if inst.enchantment_id is not None:
-                continue
-            base = game_data.items.get(inst.catalog_id)
-            if isinstance(base, _Ammunition):
-                continue  # ammo shown separately
-            for _ in range(inst.count):
-                if inst.location.kind == "carried":
-                    _inv.append(inst.catalog_id)
-                elif inst.location.kind == "stashed":
-                    _stash.append(inst.catalog_id)
-            if inst.equip is not None:
-                _equip[inst.equip] = inst.catalog_id
 
         # Build ammo load-options for equipped launchers (keyed by weapon instance_id)
         for inst in _spec.items:
@@ -1692,15 +1668,6 @@ def _equipment_context(draft: dict[str, Any], game_data) -> dict:
     return {
         "gold": draft.get("gold", 0),
         "gold_locked": draft.get("gold_locked", False),
-        "inventory_view": inventory_view(
-            _inv, _stash, _equip, _containers, game_data,
-            allowed_weapons=allowed_weapon_ids(classes, game_data, _ruleset_of(draft)),
-            allowed_armor=allowed_armor_ids(classes, game_data),
-            allow_shields=shields_allowed(classes),
-            two_weapon=_ruleset_of(draft).two_weapon_fighting,
-            eligible=two_weapon_eligible(classes),
-            gargantua_1h_2h=False,
-        ),
         "magic_acquisition": False,
         "enchant_choices": [],
         "shop": shop_categories(game_data, _ruleset_of(draft)),

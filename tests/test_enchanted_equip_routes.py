@@ -178,7 +178,7 @@ def test_enchanted_armor_modal_shows_equip_when_allowed(client):
     )
     r = client.get("/character/christopher")
     modal = _ench_modal(r.text, "e1")
-    assert "/equip-enchanted" in modal
+    assert "/inventory/equip" in modal
     assert "Not usable" not in modal
 
 
