@@ -1,58 +1,82 @@
-{# Shared per-row inventory action buttons.  Imported `with context` so the macro
-   can read `move_targets` and `inv_move_url` from the sheet/wizard context.
-   Used by both the equipment drawer (`_equipment_ui.html`) and item modals.
-   `state` is "equipped" | "carried" | "stashed" | "container" | "retainer" | carrier kind. #}
 {% from "_actions.html" import act_move with context %}
-{% macro inv_row_actions(row, target_url_prefix, state, show_remove=True, src_id="") %}
-    {% if state == "equipped" %}
-    <form method="post" action="{{ target_url_prefix }}/unequip" class="inline-form">
-        <input type="hidden" name="item_id" value="{{ row.id }}">
-        <button type="submit" class="btn btn-inline">Unequip</button>
+{# Single per-row action macro for all three inventory substrates.
+   row.category ∈ {"item","enchanted","magic"}; row.instance_id is required.
+   `equipped` is the caller's truth for whether this row occupies a slot.
+   `inv_prefix` is the /inventory action prefix, e.g. "/character/<id>/inventory"
+   or "/wizard/<id>/inventory" or "/character/<id>/retainer/<rid>".
+   Moves always go to `inv_move_url` from context (retainer items also use the
+   PC's /inventory/move route via move_thing owner indirection). #}
+{% macro inv_row_actions(row, inv_prefix, state, equipped=False, show_remove=True, src_id="") %}
+  {%- set cat = row.category | default("item") -%}
+  {% if equipped %}
+    <form method="post" action="{{ inv_prefix }}/unequip" class="inline-form">
+      <input type="hidden" name="category" value="{{ cat }}">
+      <input type="hidden" name="instance_id" value="{{ row.instance_id }}">
+      <button type="submit" class="btn btn-inline">Unequip</button>
     </form>
-    {% elif state == "carried" and row.equippable and row.class_allowed %}
-    <form method="post" action="{{ target_url_prefix }}/equip" class="inline-form">
-        <input type="hidden" name="item_id" value="{{ row.id }}">
-        <button type="submit" class="btn btn-inline">Equip</button>
-    </form>
-    {% if row.can_off_hand %}
-    <form method="post" action="{{ target_url_prefix }}/equip" class="inline-form">
-        <input type="hidden" name="item_id" value="{{ row.id }}">
-        <input type="hidden" name="slot" value="off_hand">
-        <button type="submit" class="btn btn-inline"{% if row.off_hand_blocked %} disabled title="Off hand occupied"{% endif %}>Off-hand</button>
+    {% if row.charges_remaining is defined and row.charges_remaining is not none %}
+    <span class="muted small">Charges {{ row.charges_remaining }} / {{ row.charges_max }}</span>
+    <form method="post" action="{{ inv_prefix }}/charge" class="inline-form">
+      <input type="hidden" name="category" value="{{ cat }}">
+      <input type="hidden" name="instance_id" value="{{ row.instance_id }}">
+      <input type="hidden" name="op" value="use">
+      <button type="submit" class="btn btn-inline"{% if row.charges_remaining == 0 %} disabled{% endif %}>Use one</button>
     </form>
     {% endif %}
-    {% elif state == "carried" and row.equippable and not row.class_allowed %}
+  {% elif row.equippable | default(False) or cat in ("enchanted", "magic") %}
+    {% if row.class_allowed | default(True) %}
+    <form method="post" action="{{ inv_prefix }}/equip" class="inline-form">
+      <input type="hidden" name="category" value="{{ cat }}">
+      <input type="hidden" name="instance_id" value="{{ row.instance_id }}">
+      <button type="submit" class="btn btn-inline">Equip</button>
+    </form>
+    {% if row.can_off_hand | default(False) %}
+    <form method="post" action="{{ inv_prefix }}/equip" class="inline-form">
+      <input type="hidden" name="category" value="{{ cat }}">
+      <input type="hidden" name="instance_id" value="{{ row.instance_id }}">
+      <input type="hidden" name="slot" value="off_hand">
+      <button type="submit" class="btn btn-inline"{% if row.off_hand_blocked %} disabled title="Off hand occupied"{% endif %}>Off-hand</button>
+    </form>
+    {% endif %}
+    {% else %}
     <span class="muted small" title="Your class cannot use this item">Not usable</span>
-    {% elif state == "retainer" and row.equippable %}
-    <form method="post" action="{{ target_url_prefix }}/equip" class="inline-form">
-        <input type="hidden" name="item_id" value="{{ row.id }}">
-        <button type="submit" class="btn btn-inline">Equip</button>
-    </form>
     {% endif %}
-    {% if move_targets is defined %}
-    {# An equipped item physically lives in the PC's carried inventory, so its
-       Move control's current location is "carried" — never the literal
-       "equipped" (which isn't a move target and would leave carried offered). #}
-    {{ act_move(inv_move_url, {"category": "item", "id": row.id}, move_targets, ("carried" if state == "equipped" else state), src_id) }}
-    {% endif %}
-    {% if show_remove %}
-    <form method="post" action="{{ target_url_prefix }}/remove" class="sell-form inline-form">
-        <input type="hidden" name="item_id" value="{{ row.id }}">
-        <input type="hidden" name="from_state" value="{{ state }}">
+  {% endif %}
+
+  {% if move_targets is defined %}
+  {# Moves always go through inv_move_url from context — retainer items also use
+     the PC's /inventory/move route (move_thing resolves the owner). Equipped items
+     physically live at "carried" so offer carried as the move source, not "equipped". #}
+  {{ act_move(inv_move_url, {"category": cat, "id": row.instance_id}, move_targets, ("carried" if equipped else state), src_id) }}
+  {% endif %}
+
+  {% if show_remove %}
+    {% if cat == "enchanted" %}
+      <form method="post" action="{{ inv_prefix }}/sell" class="inline-form">
+        <input type="hidden" name="category" value="enchanted">
+        <input type="hidden" name="instance_id" value="{{ row.instance_id }}">
+        <button type="submit" name="mode" value="drop" class="btn btn-inline danger">Drop</button>
+      </form>
+    {% else %}
+      {% if (row.cost_gp | default(0)) > 0 %}
+      <form method="post" action="{{ inv_prefix }}/sell" class="sell-form inline-form">
+        <input type="hidden" name="category" value="{{ cat }}">
+        <input type="hidden" name="instance_id" value="{{ row.instance_id }}">
         <input type="hidden" name="mode" value="">
         <select class="sell-dest">
-            <option value="" disabled selected>Sell…</option>
-            <option value="sell">+{{ row.sell_gp }}&nbsp;gp (half price)</option>
-            {% if row.can_refund %}
-            <option value="refund">+{{ row.cost_gp | int }}&nbsp;gp (refund{% if row.bundle_count > 1 %}&nbsp;×{{ row.bundle_count }}{% endif %})</option>
-            {% endif %}
+          <option value="" disabled selected>Sell…</option>
+          <option value="sell">+{{ row.sell_gp | default((row.cost_gp / 2) | int) }}&nbsp;gp (half price)</option>
+          {% if row.can_refund | default(True) %}
+          <option value="refund">+{{ row.cost_gp | int }}&nbsp;gp (refund{% if (row.bundle_count | default(1)) > 1 %}&nbsp;×{{ row.bundle_count }}{% endif %})</option>
+          {% endif %}
         </select>
-    </form>
-    <form method="post" action="{{ target_url_prefix }}/remove" class="remove-form inline-form">
-        <input type="hidden" name="item_id" value="{{ row.id }}">
-        <input type="hidden" name="from_state" value="{{ state }}">
-        <button type="submit" name="mode" value="drop" class="btn btn-inline danger"
-                title="Throw away — no gold back">Drop</button>
-    </form>
+      </form>
+      {% endif %}
+      <form method="post" action="{{ inv_prefix }}/sell" class="inline-form">
+        <input type="hidden" name="category" value="{{ cat }}">
+        <input type="hidden" name="instance_id" value="{{ row.instance_id }}">
+        <button type="submit" name="mode" value="drop" class="btn btn-inline danger" title="Throw away — no gold back">Drop</button>
+      </form>
     {% endif %}
+  {% endif %}
 {% endmacro %}

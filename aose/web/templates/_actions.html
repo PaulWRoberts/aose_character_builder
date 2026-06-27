@@ -18,7 +18,6 @@
 <form method="post" action="{{ url }}" class="inline-form move-form">
   <input type="hidden" name="category" value="{{ ref.category }}">
   {% if ref.category == 'coin' %}<input type="hidden" name="denom" value="{{ ref.id }}">
-  {% elif ref.category == 'item' %}<input type="hidden" name="item_id" value="{{ ref.id }}">
   {% else %}<input type="hidden" name="instance_id" value="{{ ref.id }}">{% endif %}
   <input type="hidden" name="src_kind" value="{{ cur_kind }}">
   <input type="hidden" name="src_id" value="{{ cur_id or '' }}">

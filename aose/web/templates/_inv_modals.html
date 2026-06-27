@@ -36,11 +36,12 @@
       </form>
     </div>
     {% endif %}
-    {# Sell ▾ / Drop are shown for the person buckets (carried / stashed), whose
-       rows carry the sell_gp / cost_gp / can_refund fields and whose /remove
-       route understands the from_state.  Carrier & retainer loose rows keep
-       Move + their gated equip only. #}
-    <div class="row-actions">{{ inv_row_actions(row, url_prefix, state, show_remove=(state in ("carried", "stashed")), src_id=src_id) }}</div>
+    {# Sell ▾ / Drop are shown for the person buckets (carried / stashed).
+       Compute the /inventory prefix from url_prefix: strip /equipment suffix (sheet),
+       or use as-is (retainer: already /character/<id>/retainer/<rid>). #}
+    {%- set inv_prefix = url_prefix.replace('/equipment','') ~ '/inventory'
+          if url_prefix.endswith('/equipment') else url_prefix -%}
+    <div class="row-actions">{{ inv_row_actions(row, inv_prefix, state, equipped=(state == "equipped"), show_remove=(state in ("carried", "stashed")), src_id=src_id) }}</div>
   </div>
 </div>
 {% endmacro %}
