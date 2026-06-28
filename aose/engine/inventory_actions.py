@@ -82,10 +82,10 @@ def unequip_thing(spec, category, instance_id, *, owner=None) -> None:
 
 
 def sell_thing(spec, category, instance_id, mode: str, data: GameData,
-               *, owner=None) -> None:
+               *, owner=None, count: int | None = None) -> None:
     target = _owning_spec(spec, owner)
     if category == "item":
-        _shop.sell_instance(target, instance_id, mode, data)
+        _shop.sell_instance(target, instance_id, mode, data, count=count)
     elif category == "enchanted":
         # Enchanted items have no resale price; every mode is a drop.
         target.items = _enchant.remove(target.items, instance_id)

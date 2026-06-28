@@ -472,12 +472,27 @@ async def inventory_unequip(request: Request, character_id: str,
 @router.post("/character/{character_id}/inventory/sell")
 async def inventory_sell(request: Request, character_id: str,
                          category: str = Form(...), instance_id: str = Form(...),
-                         mode: str = Form(...)):
+                         mode: str = Form(...), count: int | None = Form(None)):
     spec = _load_spec_or_404(request, character_id)
     data = request.app.state.game_data
     try:
-        _ia.sell_thing(spec, category, instance_id, mode, data)
+        _ia.sell_thing(spec, category, instance_id, mode, data, count=count)
     except ValueError as e:
+        raise HTTPException(400, str(e))
+    save_character(character_id, spec, request.state.characters_dir)
+    return RedirectResponse(f"/character/{character_id}", status_code=303)
+
+
+@router.post("/character/{character_id}/inventory/consume")
+async def inventory_consume(request: Request, character_id: str,
+                            category: str = Form("item"),
+                            instance_id: str = Form(...)):
+    """Remove exactly one unit of a stacking item (torch, ration, arrow)."""
+    from aose.engine import storage as _storage
+    spec = _load_spec_or_404(request, character_id)
+    try:
+        _storage.consume_item(spec, instance_id)
+    except _storage.StorageError as e:
         raise HTTPException(400, str(e))
     save_character(character_id, spec, request.state.characters_dir)
     return RedirectResponse(f"/character/{character_id}", status_code=303)

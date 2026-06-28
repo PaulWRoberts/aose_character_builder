@@ -53,3 +53,46 @@ def test_old_equipment_equip_route_is_gone(client):
     resp = client.post("/character/hero/equipment/equip",
                        data={"instance_id": "i1"})
     assert resp.status_code == 404
+
+
+def test_consume_route_removes_one(client):
+    _save_hero(client, [ItemInstance(
+        instance_id="t", catalog_id="torch", count=2,
+        location=StorageLocation(kind="carried"))])
+    resp = client.post("/character/hero/inventory/consume",
+                       data={"category": "item", "instance_id": "t"})
+    assert resp.status_code == 303
+    reloaded = load_character("hero", client._characters_dir)
+    assert next(i for i in reloaded.items if i.instance_id == "t").count == 1
+
+
+def test_consume_route_drops_stack_at_zero(client):
+    _save_hero(client, [ItemInstance(
+        instance_id="t", catalog_id="torch", count=1,
+        location=StorageLocation(kind="carried"))])
+    resp = client.post("/character/hero/inventory/consume",
+                       data={"category": "item", "instance_id": "t"})
+    assert resp.status_code == 303
+    reloaded = load_character("hero", client._characters_dir)
+    assert all(i.instance_id != "t" for i in reloaded.items)
+
+
+def test_consume_route_missing_instance_400(client):
+    _save_hero(client, [])
+    resp = client.post("/character/hero/inventory/consume",
+                       data={"category": "item", "instance_id": "nope"})
+    assert resp.status_code == 400
+
+
+def test_sell_route_threads_count(client):
+    """The sell route reads `count` and forwards it to the item branch: selling
+    4 of a 6-stack leaves 2 (regression guard for count threading)."""
+    _save_hero(client, [ItemInstance(
+        instance_id="t", catalog_id="torch", count=6,
+        location=StorageLocation(kind="carried"))])
+    resp = client.post("/character/hero/inventory/sell",
+                       data={"category": "item", "instance_id": "t",
+                             "mode": "drop", "count": "4"})
+    assert resp.status_code == 303
+    reloaded = load_character("hero", client._characters_dir)
+    assert next(i for i in reloaded.items if i.instance_id == "t").count == 2

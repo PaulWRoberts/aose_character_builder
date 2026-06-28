@@ -1782,14 +1782,14 @@ async def wiz_inventory_unequip(request: Request, draft_id: str,
 @router.post("/{draft_id}/inventory/sell")
 async def wiz_inventory_sell(request: Request, draft_id: str,
                              category: str = Form(...), instance_id: str = Form(...),
-                             mode: str = Form(...)):
+                             mode: str = Form(...), count: int | None = Form(None)):
     from aose.engine import inventory_actions as _ia
     from aose.models.storage import StorageLocation as _SLrm
     draft = _load(request, draft_id)
     data = request.app.state.game_data
     spec = _draft_to_spec(draft, data)
     try:
-        _ia.sell_thing(spec, category, instance_id, mode, data)
+        _ia.sell_thing(spec, category, instance_id, mode, data, count=count)
     except ValueError as e:
         raise HTTPException(400, str(e))
     _carried_rm = _SLrm(kind="carried")
@@ -1797,6 +1797,23 @@ async def wiz_inventory_sell(request: Request, draft_id: str,
     draft["magic_items"] = [m.model_dump() for m in spec.magic_items]
     draft["gold"] = sum(c.count for c in spec.coins
                         if c.denom == "gp" and c.location == _carried_rm)
+    save_draft(draft_id, draft, _drafts_dir(request))
+    return _redirect(f"/wizard/{draft_id}/equipment")
+
+
+@router.post("/{draft_id}/inventory/consume")
+async def wiz_inventory_consume(request: Request, draft_id: str,
+                                category: str = Form("item"),
+                                instance_id: str = Form(...)):
+    from aose.engine import storage as _storage
+    draft = _load(request, draft_id)
+    data = request.app.state.game_data
+    spec = _draft_to_spec(draft, data)
+    try:
+        _storage.consume_item(spec, instance_id)
+    except _storage.StorageError as e:
+        raise HTTPException(400, str(e))
+    draft["items"] = [i.model_dump() for i in spec.items]
     save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/equipment")
 
