@@ -481,13 +481,26 @@ Illusionist/Magic-user/Thief). New languages: `hephaestan`, `language_of_wolves`
   and the single front door for all owned-thing movement. Public API:
   `move_thing(spec, category, ref_id, dest, *, count=None, src=None, data=None)` —
   dispatches on `category` (`item`, `container`, `coin`, `gem`, `jewellery`, `magic`,
-  `enchanted`, `ammo`, `source`). Also: `move_container`, `move_coins`, `add_coins`,
-  `convert_coins`, `move_valuable`. All mutate `spec` in place. `StorageError(ValueError)`
-  routes to HTTP 400. `_check_capacity(spec, dest, added_cn, data)` is the single
-  capacity gate: validates container/animal/vehicle load; skips when `dest.kind` is
-  `carried`/`stashed`/`retainer` or when `data is None`. `location_load_cn(spec, loc,
-  data)` is the shared carrier-load helper used by both `_check_capacity` and the
-  encumbrance container loop. The old per-category helpers in `shop.py`
+  `enchanted`, `ammo`, `source`). Also: `add_item` (the single stackable-aware add
+  front door — `add_item(spec, catalog_id, count, loc, data)` appends or merges into
+  an existing same-`catalog_id` stack at `loc`, used by buy/grant/kit so the merge rule
+  lives in one place), `consume_item(spec, instance_id)` (removes exactly one unit from
+  a stacking item and prunes the stack at zero, clearing any weapon's `loaded_ammo_id`
+  when its last ammo is spent — searches the PC world then every retainer world),
+  `move_container`, `move_coins`, `add_coins`, `convert_coins`, `move_valuable`. All
+  mutate `spec` in place. `StorageError(ValueError)` routes to HTTP 400.
+- **World-aware container resolution** — a container's contents and capacity are read
+  in the *world that owns the container*, not always the PC's. `_container_owner(spec,
+  container_id, data)` finds whether a `StorageLocation(kind="container")` target lives
+  in `spec` or in some `retainer.spec`, and returns that owning spec; capacity checks
+  and content listing run against it, and a cross-world move (PC item → a
+  retainer-owned backpack, or back) lands the item in the destination's owning world.
+  This is what fixed bug 3 (`no container with id` / over-fill counted against the wrong
+  world). `_check_capacity(spec, dest, added_cn, data)` is the single
+  capacity gate: validates container/animal/vehicle load against the resolved owner;
+  skips when `dest.kind` is `carried`/`stashed`/`retainer` or when `data is None`.
+  `location_load_cn(spec, loc, data)` is the shared carrier-load helper used by both
+  `_check_capacity` and the encumbrance container loop. The old per-category helpers in `shop.py`
   (`stash`/`unstash`/`stow`/`take_out`/`stash_container`/`unstash_container`) and
   the companions load/unload helpers (`load_onto_animal` etc.) are deleted; every
   move goes through `move_thing`. HTTP front door: `POST /inventory/move` (character
@@ -596,8 +609,23 @@ Illusionist/Magic-user/Thief). New languages: `hephaestan`, `language_of_wolves`
   (plus `/inventory/move`) are registered on both the character-sheet router and the
   wizard router; the old `/equipment/equip|unequip|equip-magic|…|equip-enchanted|…`
   routes have been deleted. Templates post `category` + `instance_id` (+ `mode`/`op`/`note`);
-  the dispatcher branches on `category`. A contract test (`tests/test_inventory_box_contract.py`)
-  guards the template↔route field contract so the silent-404 class of bug cannot recur.
+  the dispatcher branches on `category`. `consume_item` has its own `POST
+  /inventory/consume` route (remove one unit of a stacking item). A contract test
+  (`tests/test_inventory_box_contract.py`) guards the template↔route field contract so
+  the silent-404 class of bug cannot recur; it also asserts that every per-instance
+  action form rendered for container/animal/retainer contents carries a **non-empty**
+  `instance_id`/`item_id`/`denom` (the regression guard for the bug where a contents row
+  submitted `no item instance ''`).
+- **Single per-instance row + `stack_actions` macro** — `_instance_row(inst, data, …)`
+  in `aose/sheet/view.py` is the *one* function that builds a per-instance row view; the
+  same source feeds loose rows, carrier/retainer rows, and container contents, so equip
+  eligibility and action wiring are defined once. On the template side, `stack_actions`
+  (in `_actions.html`) is the canonical stackable UI: one qty number-box that JS copies
+  into the hidden `count` of the chosen action, then a Move dropdown (auto-submits) plus
+  optional Sell / Drop / Consume forms. Items, ammo, coins, and gems all render through
+  it — there is no per-substrate stack UI. **Known boundary:** gems support move-by-count
+  through `stack_actions`, but `/gems/sell` still sells the whole stack (the route takes
+  no `count`), so gem sell-by-count is not yet wired.
 - **Move-route robustness** — `_loc(kind, id)` in `routes.py` builds the
   `StorageLocation` for `POST /inventory/move` (and `/coins/add`, `/coins/convert`),
   mapping a bad/empty kind to HTTP 400 (Pydantic `ValidationError` would otherwise
