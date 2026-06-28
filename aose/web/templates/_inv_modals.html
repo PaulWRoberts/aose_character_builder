@@ -4,7 +4,7 @@
 {% from "_detail_card.html" import detail_card with context %}
 {% from "_inv_row_actions.html" import inv_row_actions with context %}
 {% from "_actions.html" import act_move with context %}
-{% from "_actions.html" import act_move with context %}
+{% from "_actions.html" import stack_actions with context %}
 
 {# Per-item modal — Equipped · Carried · Stashed · container-contents · carriers · retainers.
    id_prefix determines the modal id: modal-item-<id_prefix>-<row.id>.
@@ -103,25 +103,12 @@
       </form>
     </div>
     <div class="ov-section">
-      <h4>Move</h4>
-      {{ act_move(url_prefix ~ "/inventory/move", {"category": "coin", "id": c.denom}, move_targets, lk, lid, count=c.count) }}
-    </div>
-    <div class="ov-section">
-      <h4>Adjust</h4>
-      <form method="post" action="{{ url_prefix }}/coins/add" class="inline-form">
-        <input type="hidden" name="denom" value="{{ c.denom }}">
-        <input type="hidden" name="loc_kind" value="{{ lk }}">
-        <input type="hidden" name="loc_id" value="{{ lid }}">
-        <input type="number" name="count" value="-1" style="width:4.5rem" title="Use a negative number to remove">
-        <button class="btn" type="submit">Apply</button>
-      </form>
-      <form method="post" action="{{ url_prefix }}/coins/add" class="inline-form">
-        <input type="hidden" name="denom" value="{{ c.denom }}">
-        <input type="hidden" name="loc_kind" value="{{ lk }}">
-        <input type="hidden" name="loc_id" value="{{ lid }}">
-        <input type="hidden" name="count" value="-{{ c.count }}">
-        <button class="btn danger" type="submit">Drop all</button>
-      </form>
+      <h4>Move / Drop</h4>
+      {{ stack_actions(url_prefix ~ "/inventory/move",
+                       {"category": "coin", "id": c.denom},
+                       move_targets, lk, lid, c.count,
+                       sellable=False, droppable_coin=True,
+                       drop_url=url_prefix ~ "/coins/add") }}
     </div>
   </div>
 </div>
@@ -133,6 +120,12 @@
   <div class="ov-head"><h3>{{ g.label if g.label else g.value ~ " gp gem" }}</h3><button class="x" data-close>×</button></div>
   <div class="ov-body">
     <p style="margin:0 0 8px"><span class="tag stamp">{{ g.count }} × {{ g.value }} gp</span> <span class="muted small">= {{ g.stack_value }} gp</span></p>
+    {# Qty box + Move ride the shared component; gem-specific Sell/Drop stay
+       bespoke (gem sell economics + sell-all have no half/refund/bundle). #}
+    {{ stack_actions(url_prefix ~ "/inventory/move",
+                     {"category": "gem", "id": g.instance_id},
+                     move_targets, group.kind, group.id or "", g.count,
+                     sellable=False) }}
     <div class="row-actions">
       <form method="post" action="{{ url_prefix }}/gems/sell" class="inline-form">
         <input type="hidden" name="instance_id" value="{{ g.instance_id }}">
@@ -152,7 +145,6 @@
         <input type="hidden" name="delta" value="-1">
         <button class="btn tool dark" type="submit">−1</button>
       </form>
-      {{ act_move(url_prefix ~ "/inventory/move", {"category": "gem", "id": g.instance_id}, move_targets, group.kind, group.id or "", count=g.count) }}
       <form method="post" action="{{ url_prefix }}/gems/remove" class="inline-form">
         <input type="hidden" name="instance_id" value="{{ g.instance_id }}">
         <button class="btn danger" type="submit">Drop</button>

@@ -1,4 +1,4 @@
-{% from "_actions.html" import act_move with context %}
+{% from "_actions.html" import stack_actions with context %}
 {# Single per-row action macro for all three inventory substrates.
    row.category ∈ {"item","enchanted","magic"}; row.instance_id is required.
    `equipped` is the caller's truth for whether this row occupies a slot.
@@ -43,40 +43,32 @@
     {% endif %}
   {% endif %}
 
+  {# Move / Sell / Drop / Consume all ride the shared stack_actions component.
+     Enchanted rows are count-1, unsellable: just Move + Drop (sellable=False).
+     Equippable rows (weapons/armour) are count-1, not consumable. Plain stacking
+     items get qty + Sell (when priced) + Drop + Consume. Equipped items live at
+     "carried" so they move from carried, not the (non-storage) "equipped" kind. #}
+  {%- set move_src = ("carried" if equipped else state) -%}
+  {%- set is_equippable = (row.equippable | default(False)) or cat in ("enchanted", "magic") -%}
+  {%- set qty = 1 if (is_equippable or cat == "enchanted") else (row.count | default(1)) -%}
   {% if move_targets is defined %}
-  {# Moves always go through inv_move_url from context — retainer items also use
-     the PC's /inventory/move route (move_thing resolves the owner). Equipped items
-     physically live at "carried" so offer carried as the move source, not "equipped". #}
-  {{ act_move(inv_move_url, {"category": cat, "id": row.instance_id}, move_targets, ("carried" if equipped else state), src_id) }}
-  {% endif %}
-
-  {% if show_remove %}
     {% if cat == "enchanted" %}
-      <form method="post" action="{{ inv_prefix }}/sell" class="inline-form">
-        <input type="hidden" name="category" value="enchanted">
-        <input type="hidden" name="instance_id" value="{{ row.instance_id }}">
-        <button type="submit" name="mode" value="drop" class="btn btn-inline danger">Drop</button>
-      </form>
+    {{ stack_actions(inv_move_url, {"category": cat, "id": row.instance_id},
+                     move_targets, move_src, src_id, qty,
+                     sellable=False, droppable=show_remove,
+                     sell_url=inv_prefix ~ "/sell") }}
     {% else %}
-      {% if (row.cost_gp | default(0)) > 0 %}
-      <form method="post" action="{{ inv_prefix }}/sell" class="sell-form inline-form">
-        <input type="hidden" name="category" value="{{ cat }}">
-        <input type="hidden" name="instance_id" value="{{ row.instance_id }}">
-        <input type="hidden" name="mode" value="">
-        <select class="sell-dest">
-          <option value="" disabled selected>Sell…</option>
-          <option value="sell">+{{ row.sell_gp | default((row.cost_gp / 2) | int) }}&nbsp;gp (half price)</option>
-          {% if row.can_refund | default(True) %}
-          <option value="refund">+{{ row.cost_gp | int }}&nbsp;gp (refund{% if (row.bundle_count | default(1)) > 1 %}&nbsp;×{{ row.bundle_count }}{% endif %})</option>
-          {% endif %}
-        </select>
-      </form>
-      {% endif %}
-      <form method="post" action="{{ inv_prefix }}/sell" class="inline-form">
-        <input type="hidden" name="category" value="{{ cat }}">
-        <input type="hidden" name="instance_id" value="{{ row.instance_id }}">
-        <button type="submit" name="mode" value="drop" class="btn btn-inline danger" title="Throw away — no gold back">Drop</button>
-      </form>
+    {{ stack_actions(inv_move_url, {"category": cat, "id": row.instance_id},
+                     move_targets, move_src, src_id, qty,
+                     sellable=(show_remove and (row.cost_gp | default(0)) > 0),
+                     droppable=show_remove,
+                     consumable=(show_remove and not is_equippable and cat == "item"),
+                     sell_url=inv_prefix ~ "/sell",
+                     consume_url=inv_prefix ~ "/consume",
+                     sell_gp=(row.sell_gp | default((row.cost_gp | default(0) / 2) | int)),
+                     cost_gp=(row.cost_gp | default(0)),
+                     can_refund=(row.can_refund | default(True)),
+                     bundle_count=(row.bundle_count | default(1))) }}
     {% endif %}
   {% endif %}
 {% endmacro %}

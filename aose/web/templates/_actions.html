@@ -39,12 +39,14 @@
      move_targets, cur_kind, cur_id   move source/destination context
      count                current stack size
      sellable             show Sell (half/refund) — false for coins/unsellable
+     droppable            show item-style Drop (POST sell_url mode=drop, count)
      droppable_coin       render coin Drop (POST /coins/add negative) instead
      consumable           show Consume (stacking items only)
      sell_gp, cost_gp, can_refund, bundle_count   sell labels
      consume_url, drop_url   endpoints for consume / non-coin drop #}
 {% macro stack_actions(move_url, ref, move_targets, cur_kind, cur_id, count,
-                       sellable=False, consumable=False, droppable_coin=False,
+                       sellable=False, consumable=False, droppable=False,
+                       droppable_coin=False,
                        sell_url="", consume_url="", drop_url="",
                        sell_gp=0, cost_gp=0, can_refund=True, bundle_count=1) %}
 <div class="stack-actions" data-max="{{ count }}">
@@ -75,6 +77,8 @@
       {% if can_refund %}<option value="refund">+{{ cost_gp | int }}&nbsp;gp&nbsp;/bundle (refund)</option>{% endif %}
     </select>
   </form>
+  {% endif %}
+  {% if sellable or droppable %}
   <form method="post" action="{{ sell_url }}" class="inline-form drop-form">
     <input type="hidden" name="category" value="{{ ref.category }}">
     <input type="hidden" name="instance_id" value="{{ ref.id }}">
@@ -100,13 +104,4 @@
   </form>
   {% endif %}
 </div>
-{% endmacro %}
-
-{# +/− stepper — one form, two submit buttons that carry the delta as their value. #}
-{% macro act_stepper(url, hidden={}, field="delta") %}
-<form method="post" action="{{ url }}" class="inline-form">
-  {% for k, v in hidden.items() %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
-  <button class="btn btn-inline" type="submit" name="{{ field }}" value="1">+</button>
-  <button class="btn btn-inline" type="submit" name="{{ field }}" value="-1">−</button>
-</form>
 {% endmacro %}

@@ -528,3 +528,100 @@ def test_no_equip_action_for_stashed_weapon(tmp_path):
     equip_forms = re.findall(r'<form[^>]*action="[^"]*/equip"[^>]*>.*?</form>',
                              html, re.S)
     assert not any('value="sling-stash"' in f for f in equip_forms)
+
+
+# ── Part D5: coins, gems, and plain item rows ride stack_actions ──────────────
+
+def test_coins_use_stack_actions_with_drop(tmp_path):
+    """Coins compose the shared stack_actions: a qty box (default = stack size)
+    and a Drop (not Sell) control posting a negative count to /coins/add."""
+    import re
+    from aose.characters import save_character
+    spec = CharacterSpec(
+        name="Moneybags",
+        abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
+        race_id="human", classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
+        alignment="neutral",
+        coins=[CoinStack(denom="gp", count=50,
+                         location=StorageLocation(kind="carried"))],
+    )
+    app = _make_app(tmp_path)
+    save_character("tc-coin-stack", spec, tmp_path / "characters")
+    html = TestClient(app, follow_redirects=False).get("/character/tc-coin-stack").text
+    assert 'id="modal-coin-carried--gp"' in html
+    # Coin modal composes the shared component: a qty box defaulting to 50.
+    coin_modal = re.search(r'id="modal-coin-carried--gp".*?</div>\s*</div>\s*</div>',
+                           html, re.S).group(0)
+    assert 'class="stack-qty"' in coin_modal
+    assert 'value="50"' in coin_modal and 'max="50"' in coin_modal
+    # Drop posts a negative count to /coins/add (no Sell on coins).
+    assert 'class="stack-neg-count"' in coin_modal
+    assert 'value="-50"' in coin_modal
+    # The bespoke Adjust box (value="-1") is gone; Convert stays.
+    assert "/coins/convert" in coin_modal
+
+
+def test_gems_use_stack_actions_qty_box(tmp_path):
+    """Gems compose stack_actions for the qty box + Move (sellable=False keeps the
+    gem-specific sell routes)."""
+    import re
+    from aose.characters import save_character
+    save_character("tc-gem-stack", _treasure_spec(), tmp_path / "characters")
+    app = _make_app(tmp_path)
+    html = TestClient(app, follow_redirects=False).get("/character/tc-gem-stack").text
+    gem_modal = re.search(r'id="modal-gem-g1".*?</div>\s*</div>\s*</div>',
+                          html, re.S).group(0)
+    # Qty box defaulting to the gem stack size (2).
+    assert 'class="stack-qty"' in gem_modal
+    assert 'value="2"' in gem_modal and 'max="2"' in gem_modal
+    # Move rides through stack_actions; gem-specific sell routes still present.
+    assert "/inventory/move" in gem_modal
+    assert "/gems/sell" in gem_modal
+
+
+def test_plain_item_rows_have_stack_qty_and_consume(tmp_path):
+    """A carried stacking item (torch) renders the shared qty box + a Consume
+    (Use one) button via /inventory/consume."""
+    import re
+    from aose.characters import save_character
+    spec = CharacterSpec(
+        name="Torchbearer",
+        abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
+        race_id="human", classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
+        alignment="neutral",
+        items=[ItemInstance(instance_id="torch5", catalog_id="torch", count=5,
+                            location=StorageLocation(kind="carried"))],
+    )
+    app = _make_app(tmp_path)
+    save_character("tc-item-stack", spec, tmp_path / "characters")
+    html = TestClient(app, follow_redirects=False).get("/character/tc-item-stack").text
+    modal = re.search(r'id="modal-item-carried-torch5".*?</div>\s*</div>\s*</div>',
+                      html, re.S).group(0)
+    assert 'class="stack-qty"' in modal
+    assert 'value="5"' in modal and 'max="5"' in modal
+    # Stacking items expose Consume (Use one) and Sell/Drop through the macro.
+    assert "/inventory/consume" in modal
+    assert "Sell…" in modal
+
+
+def test_equippable_item_row_no_consume_count_one(tmp_path):
+    """An equippable carried weapon rides stack_actions at count=1 with no Consume."""
+    import re
+    from aose.characters import save_character
+    spec = CharacterSpec(
+        name="Swordsman",
+        abilities={"STR": 12, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
+        race_id="human", classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
+        alignment="neutral",
+        items=[ItemInstance(instance_id="sw1", catalog_id="sword",
+                            location=StorageLocation(kind="carried"))],
+    )
+    app = _make_app(tmp_path)
+    save_character("tc-weapon-stack", spec, tmp_path / "characters")
+    html = TestClient(app, follow_redirects=False).get("/character/tc-weapon-stack").text
+    modal = re.search(r'id="modal-item-carried-sw1".*?</div>\s*</div>\s*</div>',
+                      html, re.S).group(0)
+    # Equip is still offered (carried + equippable).
+    assert "/equip" in modal
+    # But no Consume for an equippable count-1 weapon.
+    assert "/inventory/consume" not in modal
