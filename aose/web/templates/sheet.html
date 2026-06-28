@@ -4,7 +4,7 @@
 {% from "_inv_row_actions.html" import inv_row_actions with context %}
 {% from "_detail_card.html" import detail_card with context %}
 {% from "_inv_pane.html" import inv_pane with context %}
-{% from "_actions.html" import act_move, act_stepper with context %}
+{% from "_actions.html" import act_move, act_stepper, stack_actions with context %}
 {% from "_inv_modals.html" import item_modal, container_modal, coin_modal, gem_modal, jewellery_modal, magic_modal with context %}
 
 <div class="sheet-actions no-print">
@@ -1033,8 +1033,11 @@
     {% if a.detail %}{{ detail_card(a.detail) }}{% endif %}
     <div class="row-actions">
       <span class="muted small">Count {{ a.count }}</span>
-      {{ act_stepper(ammo_url_prefix ~ "/ammo/adjust", {"instance_id": a.instance_id}) }}
-      {{ act_move(_char_url ~ "/inventory/move", {"category": "ammo", "id": a.instance_id}, move_targets, gkind, gid, count=a.count) }}
+      {{ stack_actions(_char_url ~ "/inventory/move",
+                       {"category": "item", "id": a.instance_id},
+                       move_targets, gkind, gid, a.count,
+                       sellable=False, consumable=True,
+                       consume_url=_char_url ~ "/inventory/consume") }}
     </div>
   </div>
 </div>
@@ -1047,8 +1050,11 @@
     {% if a.detail %}{{ detail_card(a.detail) }}{% endif %}
     <div class="row-actions">
       <span class="muted small">Count {{ a.count }}</span>
-      {{ act_stepper(ammo_url_prefix ~ "/ammo/adjust", {"instance_id": a.instance_id}) }}
-      {{ act_move(_char_url ~ "/inventory/move", {"category": "ammo", "id": a.instance_id}, move_targets, "container", c.instance_id, count=a.count) }}
+      {{ stack_actions(_char_url ~ "/inventory/move",
+                       {"category": "item", "id": a.instance_id},
+                       move_targets, "container", c.instance_id, a.count,
+                       sellable=False, consumable=True,
+                       consume_url=_char_url ~ "/inventory/consume") }}
     </div>
   </div>
 </div>

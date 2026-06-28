@@ -29,6 +29,79 @@
 </form>
 {% endmacro %}
 
+{# Unified stackable actions. One quantity box (default = stack size, clamped
+   1..count) drives every action form below it. Forms hold only hidden inputs +
+   their dropdown/button so the existing move/sell auto-submit still fires;
+   inventory.js copies the qty into each form's hidden `count` on submit.
+   Params:
+     move_url, sell_url   action endpoints (sell_url unused when not sellable)
+     ref                  {category, id}  (id = instance_id, or denom for coins)
+     move_targets, cur_kind, cur_id   move source/destination context
+     count                current stack size
+     sellable             show Sell (half/refund) — false for coins/unsellable
+     droppable_coin       render coin Drop (POST /coins/add negative) instead
+     consumable           show Consume (stacking items only)
+     sell_gp, cost_gp, can_refund, bundle_count   sell labels
+     consume_url, drop_url   endpoints for consume / non-coin drop #}
+{% macro stack_actions(move_url, ref, move_targets, cur_kind, cur_id, count,
+                       sellable=False, consumable=False, droppable_coin=False,
+                       sell_url="", consume_url="", drop_url="",
+                       sell_gp=0, cost_gp=0, can_refund=True, bundle_count=1) %}
+<div class="stack-actions" data-max="{{ count }}">
+  <label class="stack-qty-label">Qty
+    <input type="number" class="stack-qty" value="{{ count }}" min="1" max="{{ count }}" step="1">
+  </label>
+
+  {# Move — single dropdown, auto-submits; qty copied into hidden count by JS #}
+  <form method="post" action="{{ move_url }}" class="inline-form move-form">
+    <input type="hidden" name="category" value="{{ ref.category }}">
+    {% if ref.category == 'coin' %}<input type="hidden" name="denom" value="{{ ref.id }}">
+    {% else %}<input type="hidden" name="instance_id" value="{{ ref.id }}">{% endif %}
+    <input type="hidden" name="src_kind" value="{{ cur_kind }}">
+    <input type="hidden" name="src_id" value="{{ cur_id or '' }}">
+    <input type="hidden" name="count" value="{{ count }}">
+    {{ move_dest_control(move_targets, ref, cur_kind, cur_id) }}
+  </form>
+
+  {% if sellable %}
+  <form method="post" action="{{ sell_url }}" class="inline-form sell-form">
+    <input type="hidden" name="category" value="{{ ref.category }}">
+    <input type="hidden" name="instance_id" value="{{ ref.id }}">
+    <input type="hidden" name="count" value="{{ count }}">
+    <input type="hidden" name="mode" value="">
+    <select class="sell-dest">
+      <option value="" disabled selected>Sell…</option>
+      <option value="sell">+{{ sell_gp }}&nbsp;gp&nbsp;ea (half price)</option>
+      {% if can_refund %}<option value="refund">+{{ cost_gp | int }}&nbsp;gp&nbsp;/bundle (refund)</option>{% endif %}
+    </select>
+  </form>
+  <form method="post" action="{{ sell_url }}" class="inline-form drop-form">
+    <input type="hidden" name="category" value="{{ ref.category }}">
+    <input type="hidden" name="instance_id" value="{{ ref.id }}">
+    <input type="hidden" name="count" value="{{ count }}">
+    <button type="submit" name="mode" value="drop" class="btn btn-inline danger" title="Throw away — no gold back">Drop</button>
+  </form>
+  {% elif droppable_coin %}
+  {# Coins: Drop = add negative count at this location #}
+  <form method="post" action="{{ drop_url }}" class="inline-form drop-form">
+    <input type="hidden" name="denom" value="{{ ref.id }}">
+    <input type="hidden" name="loc_kind" value="{{ cur_kind }}">
+    <input type="hidden" name="loc_id" value="{{ cur_id or '' }}">
+    <input type="hidden" name="count" value="-{{ count }}" class="stack-neg-count">
+    <button type="submit" class="btn btn-inline danger">Drop</button>
+  </form>
+  {% endif %}
+
+  {% if consumable %}
+  <form method="post" action="{{ consume_url }}" class="inline-form">
+    <input type="hidden" name="category" value="{{ ref.category }}">
+    <input type="hidden" name="instance_id" value="{{ ref.id }}">
+    <button type="submit" class="btn btn-inline">Use one</button>
+  </form>
+  {% endif %}
+</div>
+{% endmacro %}
+
 {# +/− stepper — one form, two submit buttons that carry the delta as their value. #}
 {% macro act_stepper(url, hidden={}, field="delta") %}
 <form method="post" action="{{ url }}" class="inline-form">

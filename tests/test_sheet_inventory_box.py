@@ -346,6 +346,28 @@ def test_container_stowed_gem_and_jewellery_modals_exist(tmp_path):
     assert 'id="modal-jewel-j1"' in body
 
 
+# ── Part D3: unified stack_actions component (ammo first consumer) ────────────
+
+def test_stack_actions_quantity_box_and_no_ammo_stepper(tmp_path):
+    from aose.characters import save_character
+    spec = CharacterSpec(
+        name="Archer",
+        abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
+        race_id="human", classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
+        alignment="neutral",
+        items=[ItemInstance(instance_id="ar", catalog_id="arrow", count=20,
+                            location=StorageLocation(kind="carried"))],
+    )
+    app = _make_app(tmp_path)
+    save_character("tc-stackqty", spec, tmp_path / "characters")
+    html = TestClient(app, follow_redirects=False).get("/character/tc-stackqty").text
+    # Quantity box present for the arrow stack, defaulting to the stack size:
+    assert 'class="stack-qty"' in html
+    assert 'value="20"' in html and 'max="20"' in html
+    # The old +/- stepper form posting to /ammo/adjust is gone:
+    assert "/ammo/adjust" not in html
+
+
 # ── Task 10: magic/enchanted/ammo bucket by storage location ─────────────────
 
 # ── Task 14: shared macros — magic Move control + no bare buttons ─────────────
