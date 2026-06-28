@@ -60,16 +60,31 @@ def _retainer(spec: CharacterSpec, id_: str):
     raise StorageError(f"no retainer with id {id_!r}")
 
 
-def _container(spec: CharacterSpec, id_: str):
+def _container_owner(spec: CharacterSpec, id_: str):
+    """Return (owning_spec, ContainerInstance) for a container in the PC world or
+    any retainer world. Container contents live in their owner's world."""
     for c in spec.containers:
         if c.instance_id == id_:
-            return c
+            return spec, c
+    for r in spec.retainers:
+        for c in r.spec.containers:
+            if c.instance_id == id_:
+                return r.spec, c
     raise StorageError(f"no container with id {id_!r}")
+
+
+def _container(spec: CharacterSpec, id_: str):
+    """The ContainerInstance for ``id_`` in any world (back-compat shim)."""
+    return _container_owner(spec, id_)[1]
 
 
 def _owning_spec_for(spec: CharacterSpec, loc: StorageLocation) -> CharacterSpec:
     """The spec whose world ``loc`` belongs to (PC, or a retainer's spec)."""
-    return _retainer(spec, loc.id).spec if loc.kind == "retainer" else spec
+    if loc.kind == "retainer":
+        return _retainer(spec, loc.id).spec
+    if loc.kind == "container":
+        return _container_owner(spec, loc.id)[0]
+    return spec
 
 
 def containers_collection(spec: CharacterSpec, owner: StorageLocation) -> list:
@@ -262,34 +277,36 @@ def _find_world_list(pc: CharacterSpec, inst) -> list:
 
 def _move_cross_world(pc: CharacterSpec, dest_spec: CharacterSpec, inst,
                       dest: StorageLocation, count, data, item=None) -> None:
-    """Move an item between two worlds (PC↔retainer). Lands carried in the
-    destination world and merges into a resident stack there."""
+    """Move an item between two worlds (PC↔retainer). Lands at ``dest`` in the
+    destination world (``dest`` is ``carried`` for a retainer target, or the
+    container location for a retainer-owned container) and merges into a resident
+    stack there."""
     from aose.engine.equip import is_equippable
     if item is None and data is not None:
         item = data.items.get(inst.catalog_id)
     n = inst.count if count is None else count
     equippable = item is not None and is_equippable(item)
-    carried = StorageLocation(kind="carried")
+    land = StorageLocation(kind="carried") if dest.kind == "retainer" else dest
     src_list = _find_world_list(pc, inst)
     if equippable or n >= inst.count:
         src_list.remove(inst)
         _clear_equip_state(inst)
-        resident = None if equippable else _merge_target(dest_spec, inst, carried)
+        resident = None if equippable else _merge_target(dest_spec, inst, land)
         if resident is not None:
             resident.count += n
         else:
             dest_spec.items.append(inst.model_copy(update={
                 "instance_id": uuid.uuid4().hex, "count": n,
-                "location": carried, "equip": None, "loaded_ammo_id": None}))
+                "location": land, "equip": None, "loaded_ammo_id": None}))
     else:
         inst.count -= n
-        resident = _merge_target(dest_spec, inst, carried)
+        resident = _merge_target(dest_spec, inst, land)
         if resident is not None:
             resident.count += n
         else:
             dest_spec.items.append(inst.model_copy(update={
                 "instance_id": uuid.uuid4().hex, "count": n,
-                "location": carried, "equip": None, "loaded_ammo_id": None}))
+                "location": land, "equip": None, "loaded_ammo_id": None}))
 
 
 def move_item(spec: CharacterSpec, instance_id: str, dest: StorageLocation,
