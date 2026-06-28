@@ -50,9 +50,14 @@
                        sell_url="", consume_url="", drop_url="",
                        sell_gp=0, cost_gp=0, can_refund=True, bundle_count=1) %}
 <div class="stack-actions" data-max="{{ count }}">
+  {# Qty box only for real stacks. Non-stackable rows (weapons, armour, enchanted,
+     magic) ride this component at count=1 for a uniform Move/Drop layout — a
+     picker over a single item is meaningless, so suppress it. #}
+  {% if count > 1 %}
   <label class="stack-qty-label">Qty
     <input type="number" class="stack-qty" value="{{ count }}" min="1" max="{{ count }}" step="1">
   </label>
+  {% endif %}
 
   {# Move — single dropdown, auto-submits; qty copied into hidden count by JS #}
   <form method="post" action="{{ move_url }}" class="inline-form move-form">

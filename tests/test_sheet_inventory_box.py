@@ -674,3 +674,33 @@ def test_equippable_item_row_no_consume_count_one(tmp_path):
     assert "/equip" in modal
     # But no Consume for an equippable count-1 weapon.
     assert "/inventory/consume" not in modal
+    # …and no quantity box: a count-1 non-stackable has nothing to pick a qty of.
+    assert 'class="stack-qty"' not in modal
+
+
+def test_non_stackable_item_modal_has_no_qty_box(tmp_path):
+    """The shared qty box is for stacks only. Non-stackable rows (weapons,
+    armour, enchanted) ride stack_actions at count=1 to get a uniform Move/Drop
+    layout, but must NOT render a `.stack-qty` selector — there is no quantity
+    to choose. Regression: every item modal showed a Qty box maxed at 1."""
+    import re
+    from aose.characters import save_character
+    spec = CharacterSpec(
+        name="Knight",
+        abilities={"STR": 12, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
+        race_id="human", classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
+        alignment="neutral",
+        items=[
+            ItemInstance(instance_id="pl1", catalog_id="plate_mail",
+                         location=StorageLocation(kind="carried")),
+            ItemInstance(instance_id="sw1", catalog_id="sword",
+                         location=StorageLocation(kind="stashed")),
+        ],
+    )
+    app = _make_app(tmp_path)
+    save_character("tc-noqty", spec, tmp_path / "characters")
+    html = TestClient(app, follow_redirects=False).get("/character/tc-noqty").text
+    for modal_id in ("modal-item-carried-pl1", "modal-item-stashed-sw1"):
+        modal = re.search(rf'id="{modal_id}".*?</div>\s*</div>\s*</div>',
+                          html, re.S).group(0)
+        assert 'class="stack-qty"' not in modal, modal_id
