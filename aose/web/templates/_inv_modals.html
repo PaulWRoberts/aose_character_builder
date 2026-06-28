@@ -104,11 +104,16 @@
     </div>
     <div class="ov-section">
       <h4>Move / Drop</h4>
-      {{ stack_actions(url_prefix ~ "/inventory/move",
-                       {"category": "coin", "id": c.denom},
-                       move_targets, lk, lid, c.count,
-                       sellable=False, droppable_coin=True,
-                       drop_url=url_prefix ~ "/coins/add") }}
+      {# Wrap in .row-actions like the item/gem modals so the shared size CSS
+         (.row-actions .btn{height:26px}) lands on the Drop button — otherwise it
+         renders smaller than the Qty box and Move select. #}
+      <div class="row-actions">
+        {{ stack_actions(url_prefix ~ "/inventory/move",
+                         {"category": "coin", "id": c.denom},
+                         move_targets, lk, lid, c.count,
+                         sellable=False, droppable_coin=True,
+                         drop_url=url_prefix ~ "/coins/add") }}
+      </div>
     </div>
   </div>
 </div>

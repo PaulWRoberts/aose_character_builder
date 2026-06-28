@@ -585,6 +585,31 @@ def test_coins_use_stack_actions_with_drop(tmp_path):
     assert "/coins/convert" in coin_modal
 
 
+def test_coin_modal_stack_actions_wrapped_in_row_actions(tmp_path):
+    """The coin modal must wrap its stack_actions in a .row-actions container, the
+    same composition items and gems use. Only that wrapper scopes the size CSS
+    (.row-actions .btn{height:26px}) onto the Drop button so it matches the Qty
+    box and Move select. Regression: coin Drop rendered out of size (btn-inline)
+    because stack_actions sat bare in .ov-section."""
+    import re
+    from aose.characters import save_character
+    spec = CharacterSpec(
+        name="Moneybags",
+        abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
+        race_id="human", classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
+        alignment="neutral",
+        coins=[CoinStack(denom="gp", count=50,
+                         location=StorageLocation(kind="carried"))],
+    )
+    app = _make_app(tmp_path)
+    save_character("tc-coin-rowact", spec, tmp_path / "characters")
+    html = TestClient(app, follow_redirects=False).get("/character/tc-coin-rowact").text
+    coin_modal = re.search(r'id="modal-coin-carried--gp".*?</div>\s*</div>\s*</div>',
+                           html, re.S).group(0)
+    # stack_actions sits inside a .row-actions wrapper (same as item/gem modals).
+    assert re.search(r'class="row-actions">\s*<div class="stack-actions"', coin_modal)
+
+
 def test_gems_use_stack_actions_qty_box(tmp_path):
     """Gems compose stack_actions for the qty box + Move (sellable=False keeps the
     gem-specific sell routes)."""
