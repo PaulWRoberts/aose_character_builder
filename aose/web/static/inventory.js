@@ -91,6 +91,30 @@
     });
 })();
 
+/* Stackable quantity binding.
+ *
+ * A `.stack-actions` block holds one `.stack-qty` numberbox (default = stack
+ * size, clamped 1..data-max) shared by sibling action forms (move / sell / drop /
+ * consume). On submit of any such form we copy the qty into its hidden
+ * input[name=count] (negating for coin-drop's stack-neg-count). The qty box lives
+ * OUTSIDE the forms so move/sell keep their existing dropdown auto-submit. */
+(function () {
+    document.addEventListener("submit", function (e) {
+        const form = e.target;
+        const box = form.closest ? form.closest(".stack-actions") : null;
+        if (!box) return;
+        const qtyEl = box.querySelector(".stack-qty");
+        if (!qtyEl) return;
+        const max = parseInt(box.dataset.max || qtyEl.max || "1", 10);
+        let qty = parseInt(qtyEl.value || "1", 10);
+        if (isNaN(qty)) qty = max;
+        qty = Math.max(1, Math.min(qty, max));
+        const count = form.querySelector("input[name='count']");
+        if (count) count.value = count.classList.contains("stack-neg-count")
+            ? String(-qty) : String(qty);
+    });
+})();
+
 /* Inline row-detail toggle.
  *
  * A trigger row carries data-detail-toggle="<uid>"; its detail row carries
