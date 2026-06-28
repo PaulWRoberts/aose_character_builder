@@ -389,25 +389,20 @@ class UnknownContainer(ValueError):
 
 
 def new_container_instance(catalog_id: str, data: GameData,
-                           state: str = "carried",
                            location: "StorageLocation | None" = None) -> ContainerInstance:
     """Create a fresh ContainerInstance for the given catalog item.
 
-    Validates that ``catalog_id`` is a Container. ``location`` (preferred) places
-    it at any non-container location; the legacy ``state`` kwarg still works for
-    person buckets.
+    Validates that ``catalog_id`` is a Container.
     """
     item = data.items.get(catalog_id)
     if item is None:
         raise UnknownItem(f"No item with id {catalog_id!r}")
     if not isinstance(item, Container):
         raise ValueError(f"{catalog_id!r} is not a container")
-    if location is None:
-        location = StorageLocation(kind=state)  # type: ignore[arg-type]
     return ContainerInstance(
         instance_id=uuid.uuid4().hex,
         catalog_id=catalog_id,
-        location=location,
+        location=location or StorageLocation(kind="carried"),
     )
 
 

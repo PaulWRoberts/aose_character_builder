@@ -72,15 +72,6 @@ def _minimal_spec(**overrides):
     return CharacterSpec(**base)
 
 
-def test_container_instance_construct():
-    inst = ContainerInstance(
-        instance_id="abc123",
-        catalog_id="backpack",
-        state="carried",
-    )
-    assert inst.location.kind == "carried"
-
-
 def test_character_spec_defaults_containers_empty():
     spec = _minimal_spec()
     assert spec.containers == []
@@ -301,7 +292,7 @@ def test_take_out_from_carried_container_returns_to_inventory():
 
 def test_take_out_from_stashed_container_returns_to_stashed_list():
     fake = _fake_container_data()
-    bp = new_container_instance("backpack", fake, state="stashed")
+    bp = new_container_instance("backpack", fake, location=StorageLocation(kind="stashed"))
     spec = CharacterSpec(
         name="T",
         abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
@@ -349,7 +340,7 @@ def test_stash_container_flips_state():
 
 def test_unstash_container_reverses():
     fake = _fake_container_data()
-    bp = new_container_instance("backpack", fake, state="stashed")
+    bp = new_container_instance("backpack", fake, location=StorageLocation(kind="stashed"))
     spec = CharacterSpec(
         name="T",
         abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
@@ -485,7 +476,7 @@ def test_inventory_view_container_weight_with_multiplier():
 def test_inventory_view_stashed_container_zero_effective_weight():
     fake = _fake_container_data()
     from aose.engine.shop import inventory_view
-    bp = new_container_instance("backpack", fake, state="stashed")
+    bp = new_container_instance("backpack", fake, location=StorageLocation(kind="stashed"))
     spec = CharacterSpec(
         name="T",
         abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},

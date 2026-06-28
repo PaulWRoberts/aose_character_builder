@@ -56,21 +56,6 @@ def test_convert_amount_zero_count_raises():
         currency.convert_amount("gp", "sp", 0)
 
 
-def test_legacy_coin_fields_coerce_on_spec_construction():
-    # Ensure old saves still load: kwargs like gold=10 coerce via the model validator
-    spec = CharacterSpec.model_validate(dict(
-        name="T", abilities={"STR": 10, "DEX": 10, "CON": 10,
-                             "INT": 10, "WIS": 10, "CHA": 10},
-        race_id="human", classes=[{"class_id": "fighter", "level": 1}],
-        alignment="neutral",
-        gold=5, silver=30,
-    ))
-    by_denom = {s.denom: s for s in spec.coins}
-    assert by_denom["gp"].count == 5
-    assert by_denom["sp"].count == 30
-    assert currency.total_value_gp(spec) == 8  # 5gp + 30sp(3gp) = 8gp
-
-
 # ---------------------------------------------------------------------------
 # Route tests (updated for new located-coins API)
 # ---------------------------------------------------------------------------

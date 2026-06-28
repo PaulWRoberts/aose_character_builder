@@ -150,22 +150,3 @@ def test_disabled_content_round_trips():
     assert rs.disabled_content == ["carcass_crawler_3:equipment"]
 
 
-def test_legacy_disabled_sources_is_coerced_to_categories():
-    """An old save with disabled_sources expands to all three category keys
-    and drops the legacy field (extra='forbid' would otherwise reject it)."""
-    from aose.models import RuleSet
-    rs = RuleSet.model_validate({"disabled_sources": ["carcass_crawler_3"]})
-    assert set(rs.disabled_content) == {
-        "carcass_crawler_3:classes",
-        "carcass_crawler_3:equipment",
-        "carcass_crawler_3:magic_items",
-    }
-
-
-def test_legacy_coercion_skips_classic():
-    from aose.models import RuleSet
-    rs = RuleSet.model_validate(
-        {"disabled_sources": ["ose_classic_fantasy", "ose_advanced_fantasy"]}
-    )
-    assert all(not k.startswith("ose_classic_fantasy:") for k in rs.disabled_content)
-    assert "ose_advanced_fantasy:classes" in rs.disabled_content

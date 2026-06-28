@@ -457,10 +457,7 @@ Illusionist/Magic-user/Thief). New languages: `hephaestan`, `language_of_wolves`
   `one_handed_two_handed_melee` feature flag reduces two-handed melee weapons to 1 hand.
   Equip/unequip/validation go through `aose/engine/equip.py` (`equip()`, `unequip()`,
   `validate_wield()`). Slot accessors: `equipped_instance(spec, slot)`, `slot_item(spec,
-  slot, data)`, `equipped_ref(spec)`. Old saves (with `inventory`/`stashed`/`equipped`
-  etc.) are coerced at load time in `aose/characters/migrate_items.py` (needs `GameData`,
-  so runs in `load_character`/`load_draft`, not in a model validator). Sheet renders
-  Equipped / Carried / Stashed by location.
+  slot, data)`, `equipped_ref(spec)`. Sheet renders Equipped / Carried / Stashed by location.
 - **StorageLocation** — `aose/models/storage.py` defines `StorageLocation(kind, id)`
   (`LocationKind = Literal["carried","stashed","animal","vehicle","container"]`) as a
   frozen pointer to where a value-stack (coins/gems/jewellery) or a container lives.
@@ -468,9 +465,8 @@ Illusionist/Magic-user/Thief). New languages: `hephaestan`, `language_of_wolves`
   the container moves its contents for free — no per-item bookkeeping.
 - **Containers** — `Container` catalog variant (`item_type: container`,
   `capacity_cn`, `weight_multiplier`) + per-instance `ContainerInstance`
-  (`instance_id`, `catalog_id`, `location: StorageLocation`, `contents`) on
-  `CharacterSpec.containers`. Old saves with `state`/`location_id` are coerced by a
-  `model_validator`. Container's location may be carried/stashed/animal/vehicle —
+  (`instance_id`, `catalog_id`, `location: StorageLocation`) on
+  `CharacterSpec.containers`. Container's location may be carried/stashed/animal/vehicle —
   never "container" (no nesting). Carried containers contribute `own_weight +
   int(multiplier × raw_contents)` — a Bag of Holding (×0.06) at 10 000 cn weighs
   600 cn. Container contents now include coins/gems/jewellery stowed inside (counted
@@ -529,11 +525,10 @@ Illusionist/Magic-user/Thief). New languages: `hephaestan`, `language_of_wolves`
 
 ## Currency, treasure & valuables
 
-- **Located coin stacks** — `CharacterSpec.coins: list[CoinStack]` (replaces five
-  int fields `gold/platinum/electrum/silver/copper`). Each `CoinStack(denom, count,
-  location: StorageLocation)` is at most one stack per `(denom, location)` — empty
-  stacks are pruned by the movement engine. Old saves are coerced by
-  `_migrate_legacy_int_coins`. `aose/engine/currency.py`: `DENOMINATIONS`/`RATES`,
+- **Located coin stacks** — `CharacterSpec.coins: list[CoinStack]`. Each
+  `CoinStack(denom, count, location: StorageLocation)` is at most one stack per
+  `(denom, location)` — empty stacks are pruned by the movement engine.
+  `aose/engine/currency.py`: `DENOMINATIONS`/`RATES`,
   `carried_coins`, `total_value_cp`, `total_value_gp` (all locations, for wealth
   readout), `coin_count(carried_only=True)` (encumbrance weight — Carried bucket
   only), `convert_amount` (pure: raises `CurrencyError` on non-whole result). Routes:
@@ -712,9 +707,8 @@ Illusionist/Magic-user/Thief). New languages: `hephaestan`, `language_of_wolves`
   `Spell` defaults to `ose_classic_fantasy`; only non-Classic entries carry their
   own id. `CONTENT_CATEGORIES = ("classes", "equipment", "magic_items")` in
   `aose/models/ruleset.py`. `RuleSet.disabled_content: list[str]` stores
-  `"{source_id}:{category}"` keys for disabled content; Classic is never added;
-  legacy `disabled_sources` is coerced to `disabled_content` at load time via a
-  Pydantic `model_validator(mode="before")`. `aose/engine/sources.py`:
+  `"{source_id}:{category}"` keys for disabled content; Classic is never added.
+  `aose/engine/sources.py`:
   `CLASSIC_SOURCE_ID`, `content_enabled(source_id, category, ruleset)`,
   `source_content_categories(data)` (derives categories from loaded data — no
   per-item tagging). Gated in wizard race/class steps, spell candidates,

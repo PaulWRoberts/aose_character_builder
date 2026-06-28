@@ -20,7 +20,7 @@
     }
   ],
   "alignment": "law",
-  "secondary_skill": null,
+  "secondary_skills": [],
   "weapon_proficiencies": [],
   "weapon_specialisations": [],
   "ruleset": {

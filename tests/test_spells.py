@@ -46,17 +46,6 @@ def test_class_entry_has_spellbook_and_slots():
     assert e.slots == []
 
 
-def test_class_entry_migrates_legacy_chosen_spells():
-    # Old saved characters carried an (always-empty) chosen_spells field. Under
-    # extra="forbid" that would fail to load; a before-validator strips it so
-    # legacy saves survive rather than silently vanishing from the index.
-    from aose.models import ClassEntry
-    e = ClassEntry(class_id="magic_user", chosen_spells=[])
-    assert not hasattr(e, "chosen_spells")
-    assert e.spellbook == []
-    assert e.slots == []
-
-
 def test_thorin_example_loads():
     import json
     from aose.models import CharacterSpec
@@ -388,8 +377,14 @@ def test_caster_candidates_respect_disabled_source():
     draft = {
         "abilities": {"INT": 13, "WIS": 13},
         "class_id": "illusionist",
-        "ruleset": {"disabled_sources": ["ose_advanced_fantasy"],
-                    "separate_race_class": True},
+        "ruleset": {
+            "disabled_content": [
+                "ose_advanced_fantasy:classes",
+                "ose_advanced_fantasy:equipment",
+                "ose_advanced_fantasy:magic_items",
+            ],
+            "separate_race_class": True,
+        },
     }
     rows = _caster_entries(draft, data)
     for row in rows:

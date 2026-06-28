@@ -325,7 +325,9 @@ def test_caster_entries_hide_powers_when_source_disabled():
     draft = {
         "abilities": {"STR": 10, "INT": 10, "WIS": 13, "DEX": 13, "CON": 10, "CHA": 10},
         "class_id": "kineticist",
-        "ruleset": {"disabled_sources": ["carcass_crawler_1"]},
+        "ruleset": {"disabled_content": ["carcass_crawler_1:classes",
+                                          "carcass_crawler_1:equipment",
+                                          "carcass_crawler_1:magic_items"]},
         "spellbooks": {},
     }
     rows = _caster_entries(draft, data)

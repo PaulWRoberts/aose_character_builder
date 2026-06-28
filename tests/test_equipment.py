@@ -379,7 +379,9 @@ def test_shop_categories_filters_by_source():
     from aose.models import RuleSet
 
     data = GameData.load(Path(__file__).parent.parent / "data")
-    rs = RuleSet(disabled_sources=["ose_advanced_fantasy"])
+    rs = RuleSet(disabled_content=["ose_advanced_fantasy:classes",
+                                   "ose_advanced_fantasy:equipment",
+                                   "ose_advanced_fantasy:magic_items"])
     all_ids = {i.id for cat in shop_categories(data) for i in cat.items}
     filtered_ids = {i.id for cat in shop_categories(data, rs) for i in cat.items}
     # A known Advanced magic item drops out; a mundane Classic item stays.

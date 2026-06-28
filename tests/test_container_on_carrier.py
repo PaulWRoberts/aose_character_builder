@@ -4,6 +4,7 @@ from aose.engine import companions, encumbrance
 from aose.models import (
     CharacterSpec, AnimalInstance, ContainerInstance,
 )
+from aose.models.storage import StorageLocation
 
 DATA = GameData.load(Path("data"))
 
@@ -55,7 +56,7 @@ def test_carrier_container_excluded_from_pc_weight():
     spec = _spec(
         animals=[AnimalInstance(instance_id="a1", catalog_id="mule")],
         containers=[ContainerInstance(instance_id="c1", catalog_id="saddle_bags",
-                                      state="carried")],
+                                      location=StorageLocation(kind="carried"))],
     )
     before = encumbrance.equipment_weight_cn(spec, DATA)
     companions.move_container_to_animal(spec, "c1", "a1", DATA)

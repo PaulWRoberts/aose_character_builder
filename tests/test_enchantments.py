@@ -798,7 +798,9 @@ def test_enchant_choices_filter_by_source():
     from aose.web.routes import _enchant_choices
 
     data = GameData.load(Path(__file__).parent.parent / "data")
-    rs = RuleSet(disabled_sources=["ose_advanced_fantasy"])
+    rs = RuleSet(disabled_content=["ose_advanced_fantasy:classes",
+                                   "ose_advanced_fantasy:equipment",
+                                   "ose_advanced_fantasy:magic_items"])
     all_ids = {c["id"] for c in _enchant_choices(data)}
     filtered_ids = {c["id"] for c in _enchant_choices(data, rs)}
     assert "sword_frost_brand" in all_ids       # Advanced

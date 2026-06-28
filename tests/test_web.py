@@ -293,6 +293,7 @@ def test_container_modal_shows_capacity_and_stash(tmp_path):
     from fastapi.testclient import TestClient
     from aose.characters import save_character
     from aose.models import CharacterSpec, ClassEntry, ContainerInstance
+    from aose.models.storage import StorageLocation
     from aose.web.app import create_app
 
     characters_dir = tmp_path / "characters"
@@ -308,7 +309,8 @@ def test_container_modal_shows_capacity_and_stash(tmp_path):
         abilities={"STR": 11, "INT": 10, "WIS": 10, "DEX": 11, "CON": 12, "CHA": 9},
         race_id="human", classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
         alignment="neutral",
-        containers=[ContainerInstance(instance_id="b1", catalog_id="backpack", state="carried")],
+        containers=[ContainerInstance(instance_id="b1", catalog_id="backpack",
+                                      location=StorageLocation(kind="carried"))],
     )
     save_character("bagger", spec, characters_dir)
     body = TestClient(app, follow_redirects=False).get("/character/bagger").text

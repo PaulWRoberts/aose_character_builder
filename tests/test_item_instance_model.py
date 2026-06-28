@@ -58,9 +58,3 @@ def test_coin_stack_has_instance_id():
     assert c.instance_id == "c1"
 
 
-def test_container_instance_has_no_contents_field():
-    from aose.models import ContainerInstance
-    # The migration validator silently drops ``contents`` (compat with old saves).
-    # The invariant is that there is NO ``contents`` attribute on the model.
-    ci = ContainerInstance(instance_id="k1", catalog_id="backpack", contents=["torch"])
-    assert not hasattr(ci, "contents")

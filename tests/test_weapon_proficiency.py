@@ -84,14 +84,6 @@ def test_new_proficiency_fields_default_empty():
     assert spec.weapon_specialisations == []
 
 
-def test_legacy_chosen_proficiencies_is_dropped_on_load():
-    raw = _base_spec().model_dump()
-    raw["chosen_proficiencies"] = ["sword", "axe"]
-    spec = CharacterSpec.model_validate(raw)  # must not raise under extra=forbid
-    assert not hasattr(spec, "chosen_proficiencies")
-    assert spec.weapon_proficiencies == []
-
-
 def test_proficiency_config_removed():
     import aose.models as m
     assert not hasattr(m, "ProficiencyConfig")

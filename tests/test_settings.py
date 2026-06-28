@@ -371,14 +371,17 @@ def test_optional_staves_round_trips(client):
 
 
 def _new_draft_with_sources(client, drafts_dir, disabled):
-    """Start a draft, confirm abilities, and set disabled_sources directly."""
+    """Start a draft, confirm abilities, and set disabled_content directly."""
     from aose.characters import load_draft, save_draft
+    from aose.models.ruleset import CONTENT_CATEGORIES
     r = client.get("/wizard/new")
     draft_id = r.headers["location"].split("/")[2]
     draft = load_draft(draft_id, drafts_dir)
     draft["abilities"] = {"STR": 13, "INT": 13, "WIS": 13, "DEX": 13, "CON": 13, "CHA": 13}
     draft["abilities_confirmed"] = True
-    draft["ruleset"]["disabled_sources"] = disabled
+    draft["ruleset"]["disabled_content"] = [
+        f"{s}:{c}" for s in disabled for c in CONTENT_CATEGORIES
+    ]
     save_draft(draft_id, draft, drafts_dir)
     return draft_id
 

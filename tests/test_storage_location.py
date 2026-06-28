@@ -69,19 +69,6 @@ def _minimal_spec_dict(**extra):
     return base
 
 
-def test_legacy_int_coins_coerced_to_carried_stacks():
-    spec = CharacterSpec.model_validate(
-        _minimal_spec_dict(gold=12, silver=3, platinum=0)
-    )
-    by_denom = {s.denom: s for s in spec.coins}
-    assert by_denom["gp"].count == 12
-    assert by_denom["gp"].location.kind == "carried"
-    assert by_denom["sp"].count == 3
-    assert "pp" not in by_denom            # zero denominations dropped
-    # legacy attributes are gone
-    assert not hasattr(spec, "gold")
-
-
 def test_new_spec_defaults_to_empty_coins():
     spec = CharacterSpec.model_validate(_minimal_spec_dict())
     assert spec.coins == []
@@ -97,25 +84,6 @@ def test_container_new_shape_uses_storage_location():
     c = ContainerInstance(instance_id="c1", catalog_id="backpack",
                           location=StorageLocation(kind="stashed"))
     assert c.location.kind == "stashed"
-
-
-def test_container_legacy_state_location_coerced():
-    # old shape: state + location(person/animal/vehicle) + location_id + contents
-    # contents silently dropped (now tracked via CharacterSpec.items)
-    c = ContainerInstance.model_validate({
-        "instance_id": "c1", "catalog_id": "backpack",
-        "state": "stashed", "location": "person", "location_id": None,
-        "contents": ["torch"],
-    })
-    assert c.location == StorageLocation(kind="stashed")
-
-
-def test_container_legacy_on_animal_coerced():
-    c = ContainerInstance.model_validate({
-        "instance_id": "c1", "catalog_id": "saddlebags",
-        "state": "carried", "location": "animal", "location_id": "a1",
-    })
-    assert c.location == StorageLocation(kind="animal", id="a1")
 
 
 def test_container_rejects_nested_container_location():

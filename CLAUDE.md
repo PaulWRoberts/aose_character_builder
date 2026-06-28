@@ -89,8 +89,7 @@ back-navigation links (or a 🔒 when a roll has locked an earlier step).
 - `coins`: `list[CoinStack]` — each `CoinStack(denom, count, location: StorageLocation)`
   is at most one stack per `(denom, location)`; replaces five int fields
   `gold/platinum/electrum/silver/copper`. `StorageLocation(kind, id)` where
-  `kind ∈ {"carried","stashed","animal","vehicle","container"}`. Old saves coerced by
-  `_migrate_legacy_int_coins`. Shop spends only Carried coins (lowest-first).
+  `kind ∈ {"carried","stashed","animal","vehicle","container"}`. Shop spends only Carried coins (lowest-first).
 - `gems: list[GemStack]` / `jewellery: list[JewelleryPiece]` — each carry a
   `location: StorageLocation` (default Carried). Encumbrance counts only Carried.
 - `animals`: `list[AnimalInstance]` / `vehicles`: `list[VehicleInstance]` — per-instance
@@ -105,8 +104,7 @@ back-navigation links (or a 🔒 when a roll has locked an earlier step).
 - `feature_choices`: `dict[str, list[str]]` — group id → chosen option ids (CC3 pick/roll)
 - `innate_uses`: `dict[str, int]` — daily-use ability id → uses spent today (reset on rest)
 - `RuleSet.disabled_content`: `list[str]` — `"{source_id}:{category}"` keys for disabled
-  content categories (`classes`, `equipment`, `magic_items`); Classic source never added;
-  legacy `disabled_sources` is coerced to `disabled_content` at load time
+  content categories (`classes`, `equipment`, `magic_items`); Classic source never added
 - Per-user workspaces (auth-on): `users/<uid>/` at project root mirrors root `characters/`, `drafts/`, `settings.json`; keyed by GCIP uid; seeded with examples on first login. Auth off → global dirs unchanged.
 
 ## Settings vs per-character ruleset
@@ -121,8 +119,7 @@ test guards this).
 ## Conventions
 
 - **No migrations** — the app isn't deployed; data-shape changes don't need
-  backward-compat (model validators that coerce legacy saves are a courtesy, not
-  a requirement).
+  backward-compat. Just change the shape and update example data and tests.
 - **Verify rules against the Rules** before encoding AOSE mechanics (ensure you
   have the PDF or exerpts from the PDF in Markdown - if rules are being added
   without either prompt the user for this).

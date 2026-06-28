@@ -123,16 +123,6 @@ def test_spec_accepts_list_of_skills():
     assert spec.secondary_skills == ["Farmer", "Mason"]
 
 
-def test_spec_migrates_legacy_singular_none():
-    spec = CharacterSpec(**_minimal_spec_kwargs(secondary_skill=None))
-    assert spec.secondary_skills == []
-
-
-def test_spec_migrates_legacy_singular_string():
-    spec = CharacterSpec(**_minimal_spec_kwargs(secondary_skill="Blacksmith"))
-    assert spec.secondary_skills == ["Blacksmith"]
-
-
 # ── Wizard flow helpers ─────────────────────────────────────────────────────
 
 def _draft_id_from(redirect_response) -> str:

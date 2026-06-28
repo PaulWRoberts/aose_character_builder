@@ -62,26 +62,6 @@ class ContainerInstance(BaseModel):
     # carried/stashed/animal/vehicle only — never "container" (no nesting).
     location: StorageLocation = Field(default_factory=lambda: StorageLocation(kind="carried"))
 
-    @model_validator(mode="before")
-    @classmethod
-    def _migrate_legacy_location(cls, data):
-        """Coerce old (state, location=person|animal|vehicle, location_id) into
-        a single StorageLocation.  Also silently drops the old ``contents`` list
-        (items now live in CharacterSpec.items with a container location)."""
-        if not isinstance(data, dict):
-            return data
-        data.pop("contents", None)  # old shape had a contents list
-        if "state" not in data and "location_id" not in data:
-            return data  # already new shape (or default)
-        state = data.pop("state", "carried")
-        carrier = data.pop("location", "person")
-        carrier_id = data.pop("location_id", None)
-        if carrier == "person":
-            data["location"] = {"kind": state}
-        else:
-            data["location"] = {"kind": carrier, "id": carrier_id}
-        return data
-
     @model_validator(mode="after")
     def _no_nesting(self):
         if self.location.kind == "container":
@@ -185,17 +165,6 @@ class ClassEntry(BaseModel):
     # size is 2 x level (computed in spells.py); 0 for non-mental classes.
     powers_used: int = 0
 
-    @model_validator(mode="before")
-    @classmethod
-    def _migrate_legacy_chosen_spells(cls, data):
-        """Drop the pre-spell-feature ``chosen_spells`` field if a character was
-        saved with it.  It was always unused/empty, so nothing of value is lost;
-        this keeps old saved characters loadable under ``extra="forbid"`` rather
-        than silently vanishing from the index."""
-        if isinstance(data, dict) and "chosen_spells" in data:
-            data = {k: v for k, v in data.items() if k != "chosen_spells"}
-        return data
-
 
 class CharacterSpec(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -263,78 +232,6 @@ class CharacterSpec(BaseModel):
     innate_uses: dict[str, int] = Field(default_factory=dict)
     ruleset: RuleSet = Field(default_factory=RuleSet)
     retainers: list["Retainer"] = Field(default_factory=list)
-
-    @model_validator(mode="before")
-    @classmethod
-    def _drop_legacy_chosen_proficiencies(cls, data):
-        """Drop the pre-per-weapon ``chosen_proficiencies`` field (group ids,
-        meaningless now).  Affected characters re-pick.  Keeps old saves
-        loadable under ``extra='forbid'``."""
-        if isinstance(data, dict) and "chosen_proficiencies" in data:
-            data = {k: v for k, v in data.items() if k != "chosen_proficiencies"}
-        return data
-
-    @model_validator(mode="before")
-    @classmethod
-    def _migrate_legacy_global_xp(cls, data):
-        """Migrate the pre-multiclass global ``xp`` field into per-class
-        ``ClassEntry.xp``.  XP used to live as a single total on the spec and was
-        split evenly at read time (``xp_share``); it now lives per class.  We
-        preserve old totals: single-class gets all of it, multi-class splits it
-        evenly (matching the former share).  Dropping the key keeps old saved
-        characters loadable under ``extra="forbid"``."""
-        if isinstance(data, dict) and "xp" in data:
-            legacy = data.get("xp") or 0
-            classes = data.get("classes") or []
-            n = len(classes)
-            if n:
-                share = legacy // n
-                for c in classes:
-                    if isinstance(c, dict) and "xp" not in c:
-                        c["xp"] = share
-            data = {k: v for k, v in data.items() if k != "xp"}
-        return data
-
-    @model_validator(mode="before")
-    @classmethod
-    def _migrate_legacy_secondary_skill(cls, data):
-        """Coerce the pre-roll-for-two singular ``secondary_skill`` (str|None)
-        into the list-valued ``secondary_skills`` so old saves load under
-        ``extra='forbid'``."""
-        if isinstance(data, dict) and "secondary_skill" in data:
-            legacy = data["secondary_skill"]
-            data = {k: v for k, v in data.items() if k != "secondary_skill"}
-            if "secondary_skills" not in data:
-                if legacy is None:
-                    data["secondary_skills"] = []
-                elif isinstance(legacy, str):
-                    data["secondary_skills"] = [legacy]
-                else:
-                    data["secondary_skills"] = legacy
-        return data
-
-    @model_validator(mode="before")
-    @classmethod
-    def _migrate_legacy_int_coins(cls, data):
-        """Coerce the pre-located int coin fields (gold/platinum/electrum/
-        silver/copper) into carried CoinStacks. Zero denominations are dropped.
-        Keeps old saves loadable under extra='forbid'."""
-        if not isinstance(data, dict):
-            return data
-        _legacy = {"copper": "cp", "silver": "sp", "electrum": "ep",
-                   "gold": "gp", "platinum": "pp"}
-        present = [k for k in _legacy if k in data]
-        if not present:
-            return data
-        existing = list(data.get("coins") or [])
-        for attr, denom in _legacy.items():
-            count = data.get(attr) or 0
-            if count:
-                existing.append({"denom": denom, "count": count,
-                                 "location": {"kind": "carried"}})
-        data = {k: v for k, v in data.items() if k not in _legacy}
-        data["coins"] = existing
-        return data
 
 
 class Retainer(BaseModel):

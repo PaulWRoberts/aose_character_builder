@@ -32,12 +32,15 @@ def client(tmp_path):
 
 
 def _save_fighter(client, gold=0):
+    from aose.models.storage import CoinStack, StorageLocation
+    coins = ([CoinStack(denom="gp", count=gold,
+                        location=StorageLocation(kind="carried"))] if gold else [])
     spec = CharacterSpec(
         name="Bran",
         abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
         race_id="human",
         classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
-        alignment="neutral", gold=gold,
+        alignment="neutral", coins=coins,
     )
     save_character("bran", spec, client._characters_dir)
     return spec

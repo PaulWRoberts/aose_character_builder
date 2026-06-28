@@ -3,7 +3,6 @@ import re
 from pathlib import Path
 
 from aose.models import CharacterSpec
-from aose.characters.migrate_items import migrate_legacy_items
 
 DEFAULT_CHARACTERS_DIR = Path("characters")
 
@@ -30,15 +29,12 @@ def list_character_ids(characters_dir: Path = DEFAULT_CHARACTERS_DIR) -> list[st
 
 def load_character(
     character_id: str, characters_dir: Path = DEFAULT_CHARACTERS_DIR,
-    data=None,
 ) -> CharacterSpec:
     path = characters_dir / f"{character_id}.json"
     if not path.exists():
         raise FileNotFoundError(f"No character at {path}")
     with path.open("r", encoding="utf-8") as f:
         raw = json.load(f)
-    if data is not None:
-        raw = migrate_legacy_items(raw, data)
     return CharacterSpec.model_validate(raw)
 
 
