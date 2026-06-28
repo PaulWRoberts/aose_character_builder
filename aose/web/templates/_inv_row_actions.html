@@ -23,7 +23,7 @@
       <button type="submit" class="btn btn-inline"{% if row.charges_remaining == 0 %} disabled{% endif %}>Use one</button>
     </form>
     {% endif %}
-  {% elif row.equippable | default(False) or cat in ("enchanted", "magic") %}
+  {% elif (state in ("carried", "retainer")) and (row.equippable | default(False) or cat in ("enchanted", "magic")) %}
     {% if row.class_allowed | default(True) %}
     <form method="post" action="{{ inv_prefix }}/equip" class="inline-form">
       <input type="hidden" name="category" value="{{ cat }}">

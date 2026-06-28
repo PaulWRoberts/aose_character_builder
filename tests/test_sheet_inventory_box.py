@@ -481,3 +481,28 @@ def test_container_contents_rows_carry_instance_id():
     rows = [r for r in view.contents if r.id == "torch"]
     assert rows and rows[0].instance_id == "torch-iid"
     assert rows[0].category == "item"
+
+
+def test_no_equip_action_for_stashed_weapon(tmp_path):
+    """A weapon in the stash must not offer Equip (bug 1)."""
+    import re
+    from aose.characters import save_character
+    spec = CharacterSpec(
+        name="Stasher",
+        abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
+        race_id="human", classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
+        alignment="neutral",
+        items=[ItemInstance(instance_id="sling-stash", catalog_id="sling",
+                            count=1, location=StorageLocation(kind="stashed"))],
+    )
+    app = _make_app(tmp_path)
+    save_character("tc-stash-equip", spec, tmp_path / "characters")
+    html = TestClient(app, follow_redirects=False).get("/character/tc-stash-equip").text
+    # The stashed sling modal id:
+    assert 'modal-item-stashed-sling-stash' in html
+    # It is rendered (a form targets the stashed instance)…
+    assert 'name="instance_id" value="sling-stash"' in html
+    # …but no /equip form anywhere targets the stashed instance.
+    equip_forms = re.findall(r'<form[^>]*action="[^"]*/equip"[^>]*>.*?</form>',
+                             html, re.S)
+    assert not any('value="sling-stash"' in f for f in equip_forms)
