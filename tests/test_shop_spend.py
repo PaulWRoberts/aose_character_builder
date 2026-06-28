@@ -101,3 +101,50 @@ def test_sell_instance_refund_credits_carried_gp():
     after = sum(s.count for s in spec.coins
                 if s.denom == "gp" and s.location.kind == "carried")
     assert after > before
+
+
+def _carried_gp(spec):
+    return sum(s.count for s in spec.coins
+               if s.denom == "gp" and s.location.kind == "carried")
+
+
+def test_sell_instance_count_drops_n_units():
+    """A count-aware drop removes exactly N units from the stack (sell 4 of 6)."""
+    spec = _full_spec(items=[ItemInstance(
+        instance_id="t", catalog_id="torch", count=6,
+        location=StorageLocation(kind="carried"))])
+    shop.sell_instance(spec, "t", "drop", _SHOP_DATA, count=4)
+    torch = next(i for i in spec.items if i.instance_id == "t")
+    assert torch.count == 2
+
+
+def test_sell_instance_count_scales_sell_credit():
+    """Credit for a count-aware sell scales with units removed: per-unit half
+    price (holy_water_vial 25gp -> 12 ea) times the count."""
+    spec = _full_spec(items=[ItemInstance(
+        instance_id="hw", catalog_id="holy_water_vial", count=6,
+        location=StorageLocation(kind="carried"))])
+    before = _carried_gp(spec)
+    shop.sell_instance(spec, "hw", "sell", _SHOP_DATA, count=4)
+    after = _carried_gp(spec)
+    # per-unit sell price = int((25/1)/2) = 12; selling 4 -> 48 gp.
+    assert after - before == 12 * 4
+    assert next(i for i in spec.items if i.instance_id == "hw").count == 2
+
+
+def test_sell_instance_count_clamped_to_stack():
+    """count larger than the stack removes the whole stack (clamped)."""
+    spec = _full_spec(items=[ItemInstance(
+        instance_id="t", catalog_id="torch", count=3,
+        location=StorageLocation(kind="carried"))])
+    shop.sell_instance(spec, "t", "drop", _SHOP_DATA, count=99)
+    assert all(i.instance_id != "t" for i in spec.items)
+
+
+def test_sell_instance_count_none_preserves_default():
+    """count=None keeps today's behaviour: 1 unit for sell/drop."""
+    spec = _full_spec(items=[ItemInstance(
+        instance_id="t", catalog_id="torch", count=5,
+        location=StorageLocation(kind="carried"))])
+    shop.sell_instance(spec, "t", "drop", _SHOP_DATA)
+    assert next(i for i in spec.items if i.instance_id == "t").count == 4

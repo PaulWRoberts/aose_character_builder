@@ -161,3 +161,44 @@ def test_add_item_keeps_equippables_separate():
     storage.add_item(spec, "sword", 1, carried, GAME_DATA)
     swords = [i for i in spec.items if i.catalog_id == "sword"]
     assert len(swords) == 2
+
+
+# ---------------------------------------------------------------------------
+# Task D1 — consume_item: remove exactly one unit, drop the stack at zero
+# ---------------------------------------------------------------------------
+
+def test_consume_item_removes_one():
+    spec = _make_character()
+    spec.items.append(ItemInstance(instance_id="t", catalog_id="torch", count=2,
+                                   location=StorageLocation(kind="carried")))
+    storage.consume_item(spec, "t")
+    assert next(i for i in spec.items if i.instance_id == "t").count == 1
+    storage.consume_item(spec, "t")
+    assert all(i.instance_id != "t" for i in spec.items)
+
+
+def test_consume_item_searches_retainer_world():
+    spec, rid = _make_character_with_retainer(GAME_DATA)
+    ret = next(r for r in spec.retainers if r.id == rid)
+    ret.spec.items.append(ItemInstance(instance_id="r-t", catalog_id="torch",
+                                       count=1, location=StorageLocation(kind="carried")))
+    storage.consume_item(spec, "r-t")
+    assert all(i.instance_id != "r-t" for i in ret.spec.items)
+
+
+def test_consume_item_clears_weapon_load_on_last_ammo():
+    spec = _make_character()
+    spec.items.append(ItemInstance(instance_id="ammo", catalog_id="arrow", count=1,
+                                   location=StorageLocation(kind="carried")))
+    spec.items.append(ItemInstance(instance_id="bow", catalog_id="long_bow", count=1,
+                                   location=StorageLocation(kind="carried"),
+                                   loaded_ammo_id="ammo"))
+    storage.consume_item(spec, "ammo")
+    bow = next(i for i in spec.items if i.instance_id == "bow")
+    assert bow.loaded_ammo_id is None
+
+
+def test_consume_item_missing_raises():
+    spec = _make_character()
+    with pytest.raises(storage.StorageError):
+        storage.consume_item(spec, "nope")

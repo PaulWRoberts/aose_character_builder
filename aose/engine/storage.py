@@ -404,6 +404,24 @@ def add_item(spec: CharacterSpec, catalog_id: str, count: int,
                                        catalog_id=catalog_id, count=1, location=loc))
 
 
+def consume_item(spec: CharacterSpec, instance_id: str) -> None:
+    """Remove exactly one unit from a stacking item the user 'uses' (torch,
+    ration, arrow). Searches the PC world and every retainer world. Drops the
+    stack at zero, clearing any weapon's loaded-ammo pointer to it. Raises
+    ``StorageError`` if no such instance exists in any world."""
+    for world in [spec, *(r.spec for r in spec.retainers)]:
+        inst = next((i for i in world.items if i.instance_id == instance_id), None)
+        if inst is None:
+            continue
+        if inst.count <= 1:
+            _clear_weapon_loads(world, inst.instance_id)
+            world.items.remove(inst)
+        else:
+            inst.count -= 1
+        return
+    raise StorageError(f"no item instance {instance_id!r}")
+
+
 # ---------------------------------------------------------------------------
 # Container movement
 # ---------------------------------------------------------------------------

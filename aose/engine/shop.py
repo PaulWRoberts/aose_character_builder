@@ -605,11 +605,22 @@ def sell_container(spec, instance_id: str, mode: str, data: GameData) -> None:
         _storage._add_coins(spec, "gp", credit, StorageLocation(kind="carried"))
 
 
-def sell_instance(spec, instance_id: str, mode: str, data: GameData) -> None:
-    """Remove one bundle from the exact ItemInstance ``instance_id`` (carried or
+def sell_instance(spec, instance_id: str, mode: str, data: GameData,
+                  *, count: int | None = None) -> None:
+    """Remove units from the exact ItemInstance ``instance_id`` (carried or
     stashed); credit carried gp per mode.  Replaces the catalog-keyed
     ``sell_item``/``sell_from_stash`` — operates on the instance the user clicked,
-    so multiple instances of one catalog id are unambiguous."""
+    so multiple instances of one catalog id are unambiguous.
+
+    ``count`` lets the shared stackable component remove N at once. ``None``
+    preserves today's behaviour: one bundle for ``refund``, one unit otherwise.
+    A given ``count`` is clamped to ``1..inst.count``.
+
+    Credit reuses :func:`_removal_gold` as the single source of unit price:
+      * ``sell``   — per-unit half price × units removed
+      * ``refund`` — per-bundle full price × whole bundles removed (``units // bundle``)
+      * ``drop``   — nothing
+    """
     from aose.engine import storage as _storage
     if mode not in REMOVE_MODES:
         raise ValueError(f"Unknown remove mode {mode!r}; want one of {REMOVE_MODES}")
@@ -618,7 +629,8 @@ def sell_instance(spec, instance_id: str, mode: str, data: GameData) -> None:
         raise ValueError(f"no item instance {instance_id!r}")
     item = data.items.get(inst.catalog_id)
     bundle = _bundle_count(item)
-    remove_n = bundle if mode == "refund" else 1
+    base = bundle if mode == "refund" else 1
+    remove_n = base if count is None else max(1, min(count, inst.count))
     if inst.count < remove_n:
         raise ValueError(
             f"Cannot {mode} {inst.catalog_id!r}: insufficient count {inst.count} < {remove_n}")
@@ -628,7 +640,11 @@ def sell_instance(spec, instance_id: str, mode: str, data: GameData) -> None:
         spec.items.remove(inst)
     else:
         inst.count -= remove_n
-    credit = _removal_gold(inst.catalog_id, mode, data)
+    unit_credit = _removal_gold(inst.catalog_id, mode, data)
+    if mode == "refund":
+        credit = unit_credit * (remove_n // bundle if bundle else remove_n)
+    else:
+        credit = unit_credit * remove_n
     if credit:
         _storage._add_coins(spec, "gp", credit, StorageLocation(kind="carried"))
 
