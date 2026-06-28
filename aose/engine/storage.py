@@ -19,7 +19,7 @@ import uuid
 from pydantic import BaseModel
 
 from aose.engine.currency import CurrencyError, convert_amount
-from aose.models import CharacterSpec, CoinStack, GemStack, JewelleryPiece
+from aose.models import CharacterSpec, CoinStack, GemStack, ItemInstance, JewelleryPiece
 from aose.models.storage import StorageLocation
 
 
@@ -374,6 +374,34 @@ def move_item(spec: CharacterSpec, instance_id: str, dest: StorageLocation,
             _clear_equip_state(src_inst)
             _clear_weapon_loads(spec, src_inst.instance_id)
         src_inst.location = dest
+
+
+# ---------------------------------------------------------------------------
+# Item add (the single stackable-aware add front door)
+# ---------------------------------------------------------------------------
+
+def add_item(spec: CharacterSpec, catalog_id: str, count: int,
+             loc: StorageLocation, data) -> None:
+    """Add ``count`` of ``catalog_id`` at ``loc``. Stackables merge into a
+    resident (catalog_id, enchantment_id=None, location) stack; equippables are
+    appended as distinct count-1 instances. The single add front door — buy/grant/
+    kit paths compose this so merge behaviour can never diverge again."""
+    from aose.engine.equip import is_stackable
+    item = data.items.get(catalog_id)
+    if is_stackable(item):
+        resident = next((i for i in spec.items
+                         if i.catalog_id == catalog_id and i.enchantment_id is None
+                         and i.location == loc), None)
+        if resident is not None:
+            resident.count += count
+            return
+        spec.items.append(ItemInstance(instance_id=uuid.uuid4().hex,
+                                        catalog_id=catalog_id, count=count,
+                                        location=loc))
+        return
+    for _ in range(count):
+        spec.items.append(ItemInstance(instance_id=uuid.uuid4().hex,
+                                       catalog_id=catalog_id, count=1, location=loc))
 
 
 # ---------------------------------------------------------------------------

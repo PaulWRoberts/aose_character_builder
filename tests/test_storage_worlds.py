@@ -139,3 +139,25 @@ def test_move_gems_into_retainer_container():
     # Source stack in PC world shrank.
     pc_gems = [g for g in spec.gems if g.instance_id == "gem-iid"]
     assert pc_gems and pc_gems[0].count == 1
+
+
+# ---------------------------------------------------------------------------
+# Task C1 — storage.add_item: the single stackable-aware add front door
+# ---------------------------------------------------------------------------
+
+def test_add_item_merges_stackables():
+    spec = _make_character()
+    carried = StorageLocation(kind="carried")
+    storage.add_item(spec, "torch", 3, carried, GAME_DATA)
+    storage.add_item(spec, "torch", 2, carried, GAME_DATA)
+    torches = [i for i in spec.items if i.catalog_id == "torch"]
+    assert len(torches) == 1 and torches[0].count == 5
+
+
+def test_add_item_keeps_equippables_separate():
+    spec = _make_character()
+    carried = StorageLocation(kind="carried")
+    storage.add_item(spec, "sword", 1, carried, GAME_DATA)
+    storage.add_item(spec, "sword", 1, carried, GAME_DATA)
+    swords = [i for i in spec.items if i.catalog_id == "sword"]
+    assert len(swords) == 2
