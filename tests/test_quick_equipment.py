@@ -67,9 +67,13 @@ def test_apply_kit_writes_onto_spec():
     kit = qe.roll_kit("fighter", DATA, rng=random.Random(1))
     qe.apply_kit(spec, kit, DATA)
     # apply_kit routes Container items to spec.containers; verify all items placed.
+    # Stackables now merge into count>1 instances, so weight each instance by count.
     from collections import Counter
     ammo_ids = {g["base_id"] for g in kit.ammo}
-    placed = Counter(i.catalog_id for i in spec.items if i.catalog_id not in ammo_ids)
+    placed: Counter = Counter()
+    for i in spec.items:
+        if i.catalog_id not in ammo_ids:
+            placed[i.catalog_id] += i.count
     placed.update(c.catalog_id for c in spec.containers)
     assert placed == Counter(kit.inventory)
     # Equip intentions were applied
@@ -83,3 +87,17 @@ def test_apply_kit_writes_onto_spec():
     carried_gp = next((s.count for s in spec.coins
                        if s.denom == "gp" and s.location.kind == "carried"), 0)
     assert carried_gp == kit.gold
+
+
+def test_apply_kit_merges_stackables():
+    from aose.models import CharacterSpec
+    spec = CharacterSpec(
+        name="Kit", abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10,
+                               "CON": 10, "CHA": 10},
+        race_id="human", classes=[{"class_id": "fighter"}], alignment="neutral")
+    kit = qe.QuickKit(inventory=["torch", "torch", "torch", "iron_rations", "iron_rations"])
+    qe.apply_kit(spec, kit, DATA)
+    torches = [i for i in spec.items if i.catalog_id == "torch"]
+    rations = [i for i in spec.items if i.catalog_id == "iron_rations"]
+    assert len(torches) == 1 and torches[0].count == 3
+    assert len(rations) == 1 and rations[0].count == 2

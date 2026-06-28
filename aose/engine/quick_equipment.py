@@ -9,7 +9,6 @@ loader, dice, proficiency, equip only.
 from __future__ import annotations
 
 import random
-import uuid
 from typing import Optional
 
 from pydantic import BaseModel, Field
@@ -212,33 +211,26 @@ def roll_kit(class_id: str, data: GameData,
 def apply_kit(spec: CharacterSpec, kit: QuickKit, data: GameData) -> None:
     """Write a rolled kit onto a CharacterSpec. Container items are promoted to
     ContainerInstances; everything else becomes a flat ItemInstance in spec.items."""
-    from aose.models import CoinStack, Container, ItemInstance
+    from aose.models import CoinStack, Container
     from aose.models.storage import StorageLocation
     from aose.engine.shop import new_container_instance
     from aose.engine.equip import WieldError
 
+    from aose.engine.storage import add_item
+
     CARRIED = StorageLocation(kind="carried")
 
-    # Build ItemInstances for each catalog_id in kit.inventory.
+    # Build ItemInstances for each catalog_id in kit.inventory (merging stackables).
     for item_id in kit.inventory:
         item = data.items.get(item_id)
         if isinstance(item, Container):
             spec.containers.append(new_container_instance(item_id, data))
         else:
-            spec.items.append(ItemInstance(
-                instance_id=uuid.uuid4().hex,
-                catalog_id=item_id,
-                location=CARRIED,
-            ))
+            add_item(spec, item_id, 1, CARRIED, data)
 
-    # Build ItemInstances for ammo grants.
+    # Ammo grants (merge into the resident ammo stack of that catalog id).
     for grant in kit.ammo:
-        spec.items.append(ItemInstance(
-            instance_id=uuid.uuid4().hex,
-            catalog_id=grant["base_id"],
-            count=grant["count"],
-            location=CARRIED,
-        ))
+        add_item(spec, grant["base_id"], int(grant["count"]), CARRIED, data)
 
     # Apply equip intentions: for each slot, find the first unequipped carried
     # instance with the matching catalog_id and equip it.

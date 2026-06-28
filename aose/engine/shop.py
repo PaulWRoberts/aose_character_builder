@@ -560,8 +560,7 @@ def spend(spec, cost_gp: int) -> None:
 
 def add_free_item(spec, item_id: str, data: GameData) -> None:
     """Add one bundle of ``item_id`` to carried spec.items without spending gold."""
-    from aose.engine.equip import is_stackable
-    from aose.models import ItemInstance
+    from aose.engine.storage import add_item
     if item_id not in data.items:
         raise UnknownItem(f"No item with id {item_id!r}")
     item = data.items[item_id]
@@ -569,26 +568,12 @@ def add_free_item(spec, item_id: str, data: GameData) -> None:
     if isinstance(item, Container):
         spec.containers.append(new_container_instance(item_id, data))
         return
-    count = _bundle_count(item)
-    if is_stackable(item):
-        existing = next((i for i in spec.items
-                         if i.catalog_id == item_id and i.location == carried
-                         and i.enchantment_id is None), None)
-        if existing is not None:
-            existing.count += count
-            return
-    spec.items.append(ItemInstance(
-        instance_id=uuid.uuid4().hex,
-        catalog_id=item_id,
-        count=count,
-        location=carried,
-    ))
+    add_item(spec, item_id, _bundle_count(item), carried, data)
 
 
 def buy_item(spec, item_id: str, data: GameData) -> None:
     """Buy one bundle of ``item_id`` onto carried spec.items, spending carried coins."""
-    from aose.engine.equip import is_stackable
-    from aose.models import ItemInstance
+    from aose.engine.storage import add_item
     if item_id not in data.items:
         raise UnknownItem(f"No item with id {item_id!r}")
     item = data.items[item_id]
@@ -597,20 +582,7 @@ def buy_item(spec, item_id: str, data: GameData) -> None:
     if isinstance(item, Container):
         spec.containers.append(new_container_instance(item_id, data))
         return
-    count = _bundle_count(item)
-    if is_stackable(item):
-        existing = next((i for i in spec.items
-                         if i.catalog_id == item_id and i.location == carried
-                         and i.enchantment_id is None), None)
-        if existing is not None:
-            existing.count += count
-            return
-    spec.items.append(ItemInstance(
-        instance_id=uuid.uuid4().hex,
-        catalog_id=item_id,
-        count=count,
-        location=carried,
-    ))
+    add_item(spec, item_id, _bundle_count(item), carried, data)
 
 
 def sell_container(spec, instance_id: str, mode: str, data: GameData) -> None:
