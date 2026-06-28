@@ -56,6 +56,8 @@ def test_apply_kit_routes_containers_to_instances():
     kit = QuickKit(inventory=["backpack", "torch", "torch"])
     apply_kit(spec, kit, DATA)
     assert not any(i.catalog_id == "backpack" for i in spec.items)   # promoted out of loose
-    assert sum(1 for i in spec.items if i.catalog_id == "torch") == 2  # non-containers stay
+    # Stackable non-containers merge into one instance via storage.add_item (bug 6).
+    torches = [i for i in spec.items if i.catalog_id == "torch"]
+    assert len(torches) == 1 and torches[0].count == 2
     assert [c.catalog_id for c in spec.containers] == ["backpack"]
     assert isinstance(DATA.items["backpack"], Container)  # guard the fixture id

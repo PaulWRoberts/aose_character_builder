@@ -353,9 +353,11 @@ def test_ammo_modal_shows_properties_and_count_adjust(tmp_path):
     nxt = body.find('class="overlay', start + 10)
     modal = body[start:nxt if nxt != -1 else len(body)]
     assert "Ammunition" in modal                     # item_card Type stat
-    assert "/character/fletch/ammo/adjust" in modal   # +/- count adjust
-    assert 'name="delta" value="1"' in modal
-    assert 'name="delta" value="-1"' in modal
+    # Ammo now rides the unified stack_actions: a qty box + Move + Consume,
+    # not the old +/- /ammo/adjust stepper.
+    assert 'class="stack-qty"' in modal              # shared quantity box
+    assert "/character/fletch/inventory/consume" in modal  # Use one (consume)
+    assert "/ammo/adjust" not in modal               # old stepper retired
     assert "/ammo/remove" not in modal               # destructive remove stays in drawer
 
 
