@@ -1414,7 +1414,6 @@ def _item_rows_at(spec, loc, data, aw, aa, ash, *, two_weapon, eligible, gargant
     """Per-instance InventoryRows for plain items at ``loc``.  One row per
     ItemInstance (equippables stay distinct; stackables are already one merged
     instance).  Each row carries its real instance_id + category='item'."""
-    from aose.engine.shop import _build_row
     off_full = any(i.equip == "off_hand" for i in spec.items)
     rows = []
     for inst in spec.items:
@@ -1424,25 +1423,20 @@ def _item_rows_at(spec, loc, data, aw, aa, ash, *, two_weapon, eligible, gargant
             continue
         if inst.equip is not None:
             continue   # equipped rows are built separately
-        r = _build_row(inst.catalog_id, inst.count, data, aw, aa, ash,
-                       two_weapon=two_weapon, eligible=eligible, off_full=off_full)
-        rows.append(r.model_copy(update={"instance_id": inst.instance_id,
-                                         "category": "item"}))
+        rows.append(_instance_row(inst, data, aw, aa, ash, two_weapon=two_weapon,
+                                  eligible=eligible, off_full=off_full))
     rows.sort(key=lambda r: r.name)
     return rows
 
 
 def _equipped_item_rows(spec, data, aw, aa, ash, *, two_weapon, eligible, gargantua):
     """Per-instance InventoryRows for equipped plain items (slot occupants)."""
-    from aose.engine.shop import _build_row
     rows = []
     for inst in spec.items:
         if inst.equip is None or inst.enchantment_id is not None:
             continue
-        r = _build_row(inst.catalog_id, inst.count, data, aw, aa, ash,
-                       two_weapon=two_weapon, eligible=eligible)
-        rows.append(r.model_copy(update={"instance_id": inst.instance_id,
-                                         "category": "item"}))
+        rows.append(_instance_row(inst, data, aw, aa, ash,
+                                  two_weapon=two_weapon, eligible=eligible))
     rows.sort(key=lambda r: r.name)
     return rows
 

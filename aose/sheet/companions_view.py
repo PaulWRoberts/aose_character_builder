@@ -85,7 +85,7 @@ class CompanionsBlock(BaseModel):
 
 def _content_rows(spec, loc, data: GameData) -> list[InventoryRow]:
     from aose.engine.storage import items_at
-    from aose.sheet.view import _instance_row
+    from aose.sheet.view import _instance_row  # local: view imports companions_view at module top
     rows = [_instance_row(inst, data) for inst in items_at(spec, loc)]
     rows.sort(key=lambda r: r.name)
     return rows
