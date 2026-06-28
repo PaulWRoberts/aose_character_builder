@@ -450,3 +450,34 @@ def test_magic_on_carrier_buckets_under_carrier():
     animal = next(g for g in groups if g.kind == "animal")
     assert all(mi.instance_id != "m1" for mi in carried.magic_items)   # not in PC
     assert any(mi.instance_id == "m1" for mi in animal.magic_items)    # under mule
+
+
+# ── Part A: container/carrier contents carry real instance_id ─────────────────
+
+def test_container_contents_rows_carry_instance_id():
+    """A plain item inside a container must expose its real instance_id so the
+    modal's move/sell/equip forms target it (regression: bug 2 'no item instance')."""
+    from pathlib import Path
+    from aose.data.loader import GameData
+    from aose.models import ItemInstance
+    from aose.engine.shop import new_container_instance
+    from aose.sheet.view import build_inventory_groups
+    data = GameData.load(Path("data"))
+    spec = CharacterSpec(
+        name="Bagman",
+        abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
+        race_id="human", classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
+        alignment="neutral",
+    )
+    cont = new_container_instance("backpack", data)
+    spec.containers.append(cont)
+    here = StorageLocation(kind="container", id=cont.instance_id)
+    spec.items.append(ItemInstance(instance_id="torch-iid", catalog_id="torch",
+                                   count=3, location=here))
+
+    groups = build_inventory_groups(spec, data)
+    carried = next(g for g in groups if g.kind == "carried")
+    view = next(c for c in carried.containers if c.instance_id == cont.instance_id)
+    rows = [r for r in view.contents if r.id == "torch"]
+    assert rows and rows[0].instance_id == "torch-iid"
+    assert rows[0].category == "item"

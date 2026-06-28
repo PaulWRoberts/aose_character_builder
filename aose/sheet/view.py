@@ -1397,6 +1397,19 @@ def _with_retainers(block, spec: CharacterSpec, data: GameData, class_options=No
     return block
 
 
+def _instance_row(inst, data, aw="all", aa="all", ash=True, *,
+                  two_weapon=False, eligible=False, off_full=False):
+    """One InventoryRow for a single ItemInstance, always carrying its real
+    instance_id + category. The single per-instance row builder — every place
+    that renders an ItemInstance (loose, equipped, container/animal/vehicle
+    contents) goes through here so action forms always target the instance."""
+    from aose.engine.shop import _build_row
+    r = _build_row(inst.catalog_id, inst.count, data, aw, aa, ash,
+                   two_weapon=two_weapon, eligible=eligible, off_full=off_full)
+    cat = "enchanted" if inst.enchantment_id is not None else "item"
+    return r.model_copy(update={"instance_id": inst.instance_id, "category": cat})
+
+
 def _item_rows_at(spec, loc, data, aw, aa, ash, *, two_weapon, eligible, gargantua):
     """Per-instance InventoryRows for plain items at ``loc``.  One row per
     ItemInstance (equippables stay distinct; stackables are already one merged
@@ -1496,7 +1509,7 @@ def build_inventory_groups(spec: CharacterSpec, data: GameData) -> list[TopLevel
                            if i.enchantment_id is None
                            and not isinstance(data.items.get(i.catalog_id), Ammunition)]
             content_rows = sorted(
-                [_build_row(i.catalog_id, i.count, data) for i in plain_items],
+                [_instance_row(i, data) for i in plain_items],
                 key=lambda r: r.name,
             )
             raw_used = sum(
