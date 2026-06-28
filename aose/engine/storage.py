@@ -451,7 +451,7 @@ def move_coins(spec: CharacterSpec, denom: str,
         raise StorageError("move count must be positive")
     _check_capacity(spec, dest, count, data)
     _take_coins(spec, denom, count, src)
-    _add_coins(spec, denom, count, dest)
+    _add_coins(_owning_spec_for(spec, dest), denom, count, dest)
 
 
 def add_coins(spec: CharacterSpec, denom: str, count: int,
@@ -484,21 +484,22 @@ def move_valuable(spec: CharacterSpec, instance_id: str,
     Jewellery is per-piece; ``count`` is ignored."""
     if dest.kind == "container":
         _container(spec, dest.id)
+    owner = _owning_spec_for(spec, dest)
     for g in spec.gems:
         if g.instance_id == instance_id:
             n = g.count if count is None else count
             if n <= 0 or n > g.count:
                 raise StorageError(f"cannot move {n} of {g.count} gems")
             _check_capacity(spec, dest, n, data)
-            target = next((o for o in spec.gems
+            target = next((o for o in owner.gems
                            if o is not g and o.value == g.value
                            and o.label == g.label and o.location == dest), None)
             if target is not None:
                 target.count += n
             else:
-                spec.gems.append(GemStack(instance_id=uuid.uuid4().hex,
-                                          value=g.value, count=n, label=g.label,
-                                          location=dest))
+                owner.gems.append(GemStack(instance_id=uuid.uuid4().hex,
+                                           value=g.value, count=n, label=g.label,
+                                           location=dest))
             g.count -= n
             if g.count == 0:
                 spec.gems.remove(g)
@@ -506,7 +507,11 @@ def move_valuable(spec: CharacterSpec, instance_id: str,
     for j in spec.jewellery:
         if j.instance_id == instance_id:
             _check_capacity(spec, dest, 10, data)
-            j.location = dest
+            if owner is spec:
+                j.location = dest
+            else:
+                spec.jewellery.remove(j)
+                owner.jewellery.append(j.model_copy(update={"location": dest}))
             return
     raise StorageError(f"no gem/jewellery with id {instance_id!r}")
 
@@ -553,7 +558,7 @@ def move_instance(spec: CharacterSpec, kind: str, instance_id: str,
         added = _instance_weight(inst, data)
         _check_capacity(spec, dest, added, data)
     inst.equipped = False
-    dest_world = _retainer(spec, dest.id).spec if dest.kind == "retainer" else spec
+    dest_world = _owning_spec_for(spec, dest)
     if dest_world is owner_spec:
         inst.location = dest
     else:
@@ -591,7 +596,7 @@ def move_spell_source(spec: CharacterSpec, instance_id: str,
     owner_spec, src_list, src = _find_spell_source(spec, instance_id)
     added = 1 if src.kind == "scroll" else 0
     _check_capacity(spec, dest, added, data)
-    dest_world = _retainer(spec, dest.id).spec if dest.kind == "retainer" else spec
+    dest_world = _owning_spec_for(spec, dest)
     if dest_world is owner_spec:
         src.location = dest
     else:
