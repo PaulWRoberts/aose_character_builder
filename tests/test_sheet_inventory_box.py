@@ -93,6 +93,30 @@ def test_inventory_box_container_content_modal_exists(tmp_path):
     assert 'id="modal-item-container-c1-torch"' in body
 
 
+def test_container_content_row_trigger_matches_modal_id(tmp_path):
+    """The container-content row's data-modal must target the modal's real id,
+    which is keyed by instance_id — not catalog_id. Regression: items inside a
+    container could not open their modal because the trigger used row.id
+    (catalog_id) while item_modal keys the overlay by instance_id."""
+    from aose.characters import save_character
+    spec = CharacterSpec(
+        name="Bagman",
+        abilities={"STR": 10, "INT": 10, "WIS": 10, "DEX": 10, "CON": 10, "CHA": 10},
+        race_id="human", classes=[ClassEntry(class_id="fighter", level=1, hp_rolls=[8])],
+        alignment="neutral",
+        containers=[ContainerInstance(instance_id="c1", catalog_id="backpack",
+                                      location=StorageLocation(kind="carried"))],
+        items=[ItemInstance(instance_id="torch-iid", catalog_id="torch",
+                            location=StorageLocation(kind="container", id="c1"))],
+    )
+    app = _make_app(tmp_path)
+    save_character("tc-cc-trigger", spec, tmp_path / "characters")
+    body = TestClient(app, follow_redirects=False).get("/character/tc-cc-trigger").text
+    # Both the clickable row and its overlay must key on the instance_id.
+    assert 'data-modal="modal-item-container-c1-torch-iid"' in body
+    assert 'id="modal-item-container-c1-torch-iid"' in body
+
+
 def test_toplevelgroup_has_caps_and_extra_collections():
     from aose.engine.shop import TopLevelGroup, OwnerCaps
     g = TopLevelGroup(kind="vehicle", label="Cart",

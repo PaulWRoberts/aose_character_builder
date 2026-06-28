@@ -89,7 +89,7 @@
         <span class="q inv-container-manage clickable" data-modal="modal-container-{{ c.instance_id }}" title="Manage container">⚙</span>
       </li>
       {% for row in c.contents %}
-      <li class="clickable" data-modal="modal-item-container-{{ c.instance_id }}-{{ row.id }}">
+      <li class="clickable" data-modal="modal-item-container-{{ c.instance_id }}-{{ row.instance_id or row.id }}">
         <span><span class="indent">↳</span> {{ row.name }}{% if row.count > 1 %} ×{{ row.count }}{% endif %}</span>
         <span class="q">{% if row.weight_cn is defined %}{{ row.weight_cn }} cn{% endif %}</span>
       </li>
