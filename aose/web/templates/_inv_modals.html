@@ -23,8 +23,8 @@
         {% else %}<span class="tag stamp">Unloaded</span>{% endif %}
       </p>
       <form method="post" action="{{ ammo_url_prefix }}/ammo/load" class="inline-form">
-        <input type="hidden" name="weapon_key" value="{{ row.instance_id or row.id }}">
-        <select name="instance_id">
+        <input type="hidden" name="weapon_instance_id" value="{{ row.instance_id or row.id }}">
+        <select name="ammo_instance_id">
           {% for opt in load_options %}
           <option value="{{ opt.instance_id }}">{{ opt.name }} ({{ opt.count }})</option>
           {% endfor %}
@@ -32,7 +32,7 @@
         <button class="btn" type="submit">Load</button>
       </form>
       <form method="post" action="{{ ammo_url_prefix }}/ammo/unload" class="inline-form">
-        <input type="hidden" name="weapon_key" value="{{ row.instance_id or row.id }}">
+        <input type="hidden" name="weapon_instance_id" value="{{ row.instance_id or row.id }}">
         <button class="btn link" type="submit">Unload</button>
       </form>
     </div>
