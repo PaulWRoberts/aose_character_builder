@@ -156,6 +156,9 @@ def location_load_cn(spec: CharacterSpec, loc: StorageLocation, data) -> int:
     if loc.kind == "retainer":
         owner = _retainer(spec, loc.id).spec
         inner_loc = StorageLocation(kind="carried")
+    elif loc.kind == "container":
+        owner = _container_owner(spec, loc.id)[0]   # contents live in the owner's world
+        inner_loc = loc
     else:
         owner = spec
         inner_loc = loc

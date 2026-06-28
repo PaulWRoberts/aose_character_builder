@@ -48,7 +48,7 @@ def test_move_item_into_retainer_container():
     ret = next(r for r in spec.retainers if r.id == rid)
     cont = new_container_instance("backpack", GAME_DATA)
     ret.spec.containers.append(cont)
-    spec.items.append(ItemInstance(instance_id="rope-iid", catalog_id="rope",
+    spec.items.append(ItemInstance(instance_id="rope-iid", catalog_id="rope_50ft",
                                    count=1, location=StorageLocation(kind="carried")))
 
     dest = StorageLocation(kind="container", id=cont.instance_id)
@@ -57,7 +57,7 @@ def test_move_item_into_retainer_container():
     # Gone from PC world, present in retainer world at the container.
     assert all(i.instance_id != "rope-iid" for i in spec.items)
     landed = [i for i in ret.spec.items
-              if i.catalog_id == "rope" and i.location == dest]
+              if i.catalog_id == "rope_50ft" and i.location == dest]
     assert landed and landed[0].count == 1
 
 
@@ -74,6 +74,32 @@ def test_move_item_out_of_retainer_container_to_pc():
     assert all(i.instance_id != "torch-r" for i in ret.spec.items)
     assert any(i.catalog_id == "torch" and i.location.kind == "carried"
                for i in spec.items)
+
+
+def test_move_into_full_retainer_container_rejected():
+    """Capacity check must read the container's owning (retainer) world. A full
+    retainer-owned backpack must reject a further move INTO it. Regression: before
+    the fix, location_load_cn counted the PC's empty lists and approved overfill."""
+    spec, rid = _make_character_with_retainer(GAME_DATA)
+    ret = next(r for r in spec.retainers if r.id == rid)
+    cont = new_container_instance("backpack", GAME_DATA)   # capacity 400 cn
+    ret.spec.containers.append(cont)
+    here = StorageLocation(kind="container", id=cont.instance_id)
+    # Two suits of leather armour (200 cn each) fill the 400 cn backpack exactly.
+    ret.spec.items.append(ItemInstance(instance_id="la-1", catalog_id="leather_armor",
+                                       count=1, location=here))
+    ret.spec.items.append(ItemInstance(instance_id="la-2", catalog_id="leather_armor",
+                                       count=1, location=here))
+    # A third suit sits in the PC world, waiting to move in.
+    spec.items.append(ItemInstance(instance_id="la-3", catalog_id="leather_armor",
+                                   count=1, location=StorageLocation(kind="carried")))
+
+    with pytest.raises(storage.StorageError):
+        storage.move_item(spec, "la-3", here, data=GAME_DATA)
+    # Rejected: still in the PC world, container still holds only the two.
+    assert any(i.instance_id == "la-3" for i in spec.items)
+    assert sum(1 for i in ret.spec.items
+               if i.catalog_id == "leather_armor" and i.location == here) == 2
 
 
 # ---------------------------------------------------------------------------
