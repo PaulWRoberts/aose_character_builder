@@ -11,7 +11,7 @@ from pydantic import BaseModel
 from aose.data.loader import GameData
 from aose.engine import companions, monster_stats as ms
 from aose.engine.detail import DetailCard, item_card
-from aose.engine.shop import InventoryRow, _build_row
+from aose.engine.shop import InventoryRow
 from aose.models import Animal, AnimalArmor, CharacterSpec, Vehicle
 from aose.models.storage import StorageLocation
 
@@ -85,8 +85,8 @@ class CompanionsBlock(BaseModel):
 
 def _content_rows(spec, loc, data: GameData) -> list[InventoryRow]:
     from aose.engine.storage import items_at
-    rows = [_build_row(inst.catalog_id, inst.count, data)
-            for inst in items_at(spec, loc)]
+    from aose.sheet.view import _instance_row
+    rows = [_instance_row(inst, data) for inst in items_at(spec, loc)]
     rows.sort(key=lambda r: r.name)
     return rows
 

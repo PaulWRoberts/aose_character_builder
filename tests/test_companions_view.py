@@ -38,3 +38,21 @@ def test_vehicle_card_capacity_meter():
     assert card.cargo_capacity == 4000
     assert card.cargo_used == 0
     assert card.hull_current == 4
+
+
+def test_animal_contents_rows_carry_instance_id():
+    """Items inside an animal must expose their real instance_id so the modal's
+    move/sell forms target them (regression: bug 2 'no item instance')."""
+    from aose.models import ItemInstance
+    from aose.models.storage import StorageLocation
+    here = StorageLocation(kind="animal", id="mule1")
+    spec = _spec(
+        animals=[AnimalInstance(instance_id="mule1", catalog_id="mule")],
+        items=[ItemInstance(instance_id="rations-iid", catalog_id="iron_rations",
+                            count=5, location=here)],
+    )
+    block = companions_block(spec, DATA)
+    card = next(a for a in block.animals if a.instance_id == "mule1")
+    row = next(r for r in card.contents if r.id == "iron_rations")
+    assert row.instance_id == "rations-iid"
+    assert row.category == "item"
