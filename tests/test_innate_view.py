@@ -27,16 +27,18 @@ def _data():
     return data
 
 
-def test_innate_block_on_sheet():
+def test_spell_backed_innate_routes_to_spell_list():
     spec = CharacterSpec(name="T", abilities={a: 10 for a in Ability},
                          race_id="human", alignment="neutral",
                          classes=[ClassEntry(class_id="zinn", level=1)],
                          innate_uses={"breath": 1})
     sheet = build_sheet(spec, _data())
-    assert len(sheet.innate_abilities) == 1
-    row = sheet.innate_abilities[0]
-    assert row.id == "breath" and row.max_uses == 3 and row.remaining == 2
-    assert row.spell_detail  # magic missile card rendered
+    assert sheet.innate_abilities == []             # routed out of the innate section
+    arcane = next(b for b in sheet.spell_lists if b.caster_type == "arcane")
+    rows = [r for lvl in arcane.levels for r in lvl.rows
+            if r.source_kind == "innate"]
+    assert len(rows) == 1 and rows[0].ability_id == "breath"
+    assert rows[0].max_uses == 3 and rows[0].ready == 2
 
 
 def _make_client(tmp_path):

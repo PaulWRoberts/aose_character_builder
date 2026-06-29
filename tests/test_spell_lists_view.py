@@ -97,3 +97,53 @@ def test_arcane_scroll_row_locked_until_read():
     assert row.castable is False
     assert row.block_reason == "needs Read Magic"
     assert row.source_kind == "scroll"
+
+
+from aose.models import Ability, CharClass, ClassFeature, DailyUses
+
+
+def _data_with_innate():
+    data = GameData.load(Path(__file__).parent.parent / "data")
+    data.classes["zinn"] = CharClass(
+        id="zinn", name="ZInn", prime_requisites=[Ability.STR], hit_die="1d8",
+        weapons_allowed="all", armor_allowed="all", shields_allowed=True,
+        progression=data.classes["fighter"].progression,
+        features=[ClassFeature(id="breath", name="Breath", text="3/day",
+                  daily_uses=DailyUses(per_day=3),
+                  spell_id="magic_user_magic_missile")],
+    )
+    return data
+
+
+def test_spell_backed_innate_routes_into_arcane_list():
+    data = _data_with_innate()
+    spec = CharacterSpec(name="T", abilities={a: 10 for a in Ability},
+                         race_id="human", alignment="neutral",
+                         classes=[ClassEntry(class_id="zinn", level=1)],
+                         innate_uses={"breath": 1})
+    blocks = spell_lists_view(spec, data)
+    arcane = next(b for b in blocks if b.caster_type == "arcane")
+    rows = [r for lvl in arcane.levels for r in lvl.rows
+            if r.source_kind == "innate"]
+    assert len(rows) == 1
+    row = rows[0]
+    assert row.spell_id == "magic_user_magic_missile"
+    assert row.ability_id == "breath"
+    assert (row.ready, row.spent) == (2, 1)         # 3/day, 1 used → 2 ready
+    assert row.modal_id == "modal-innate-breath"
+    assert row.source_label == "ZInn"
+
+
+def test_non_spell_innate_stays_out_of_spell_lists():
+    data = GameData.load(Path(__file__).parent.parent / "data")
+    data.classes["zinn2"] = CharClass(
+        id="zinn2", name="ZInn2", prime_requisites=[Ability.STR], hit_die="1d8",
+        weapons_allowed="all", armor_allowed="all", shields_allowed=True,
+        progression=data.classes["fighter"].progression,
+        features=[ClassFeature(id="spores", name="Spores", text="1/day",
+                  daily_uses=DailyUses(per_day=1))],   # no spell_id
+    )
+    spec = CharacterSpec(name="T", abilities={a: 10 for a in Ability},
+                         race_id="human", alignment="neutral",
+                         classes=[ClassEntry(class_id="zinn2", level=1)])
+    assert spell_lists_view(spec, data) == []         # no spell-backed source

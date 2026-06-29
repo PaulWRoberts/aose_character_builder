@@ -1007,8 +1007,21 @@ def _scroll_spell_rows(spec: CharacterSpec, data: GameData,
     return by_level
 
 
-def _routed_innate(spec, data):
-    return []
+def _routed_innate(spec: CharacterSpec, data: GameData):
+    """(innate_ability, caster_type, spell) for innate abilities whose spell maps
+    to an arcane/divine list. Non-spell innate (and spells on no known list) are
+    left to innate_view."""
+    out = []
+    for ab in _innate_abilities(spec, data):
+        if not ab.spell_id:
+            continue
+        spell = data.spells.get(ab.spell_id)
+        if spell is None:
+            continue
+        ctype = spell_source_engine._spell_caster_type(spell, data)
+        if ctype in ("arcane", "divine"):
+            out.append((ab, ctype, spell))
+    return out
 
 
 def _class_spell_rows(entry, cls, data, ruleset, ctype):
@@ -1275,8 +1288,11 @@ def mental_powers_view(spec: CharacterSpec, data: GameData) -> list[MentalPowers
 
 
 def innate_view(spec: CharacterSpec, data: GameData) -> list[InnateAbilityRow]:
+    routed = {ab.id for ab, _ctype, _spell in _routed_innate(spec, data)}
     rows: list[InnateAbilityRow] = []
     for ab in _innate_abilities(spec, data):
+        if ab.id in routed:
+            continue
         detail = spell_card(data.spells[ab.spell_id]) if ab.spell_id in data.spells else None
         rows.append(InnateAbilityRow(
             id=ab.id, name=ab.name, text=ab.text, source=ab.source,
