@@ -117,7 +117,11 @@ for groups with `roll_dice`; manual checkbox grid for groups without, like Comba
 Talents). `POST /{id}/feature-choices/roll?group_id=X` rolls one table; Strict Mode
 locks after the first roll; non-strict allows re-roll and manual override via
 `POST /{id}/feature-choices` which calls `_apply_feature_overrides` (reads
-`param_<option_id>` fields for parameterised options). Cascading clear in
+`param_<option_id>` fields for parameterised options). Strict Mode only locks
+*rolls*: pick-only groups (no `roll_dice`, e.g. Combat Talents) are a deliberate
+selection and stay editable in every mode — `_apply_feature_overrides` skips only
+rolled groups under Strict, and the picker always renders their checkbox grid
+(submitted via the consolidated `POST /{id}/hp` `section=features`). Cascading clear in
 `_apply_rule_changes` removes `feature_choices["combat_talents"]`,
 `choice_params`, and any talent-granted `weapon_specialisations` when
 `combat_talents` is toggled off.

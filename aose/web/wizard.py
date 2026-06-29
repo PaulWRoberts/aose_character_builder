@@ -1173,6 +1173,9 @@ def _feature_choices_context(draft: dict[str, Any], data) -> dict:
         "feature_groups": rows,
         "feature_choices_locked": rs.strict_mode,
         "has_feature_choices": bool(groups),
+        # Pick-only groups (no roll table, e.g. Combat Talents) are a deliberate
+        # selection, not a roll — Strict Mode never locks them.
+        "has_pick_groups": any(not g.roll_dice for g in groups),
         "feature_weapon_options": feature_weapon_options,
     }
 
@@ -1262,6 +1265,7 @@ def _apply_feature_overrides(draft: dict[str, Any], form, data) -> None:
     """Validate & merge submitted feature picks (non-strict manual override).
     Only groups present in the form are touched; others keep their rolled value."""
     from aose.engine.feature_choices import effective_pick
+    rs = _ruleset_of(draft)
     groups = {g.id: g for g in _active_choice_groups(draft, data)}
     chosen_map = dict(draft.get("feature_choices", {}))
     params = dict(draft.get("choice_params", {}))
@@ -1269,6 +1273,10 @@ def _apply_feature_overrides(draft: dict[str, Any], form, data) -> None:
     for gid, g in groups.items():
         field = form.getlist(f"choice_{gid}")
         if not field:
+            continue
+        # Strict Mode locks rolls: a roll-table group can't be hand-edited once
+        # set. Pick-only groups (no roll table) stay editable in every mode.
+        if rs.strict_mode and g.roll_dice:
             continue
         picked = list(dict.fromkeys(field))
         try:
@@ -1469,7 +1477,9 @@ async def post_hp(request: Request, draft_id: str):
         _apply_proficiencies(draft, form, data)
     if "spells" in sections:
         _apply_spells(draft, form, data)
-    if "features" in sections and not _ruleset_of(draft).strict_mode:
+    if "features" in sections:
+        # _apply_feature_overrides itself leaves rolled groups locked under
+        # Strict Mode; pick-only groups (Combat Talents) remain editable.
         _apply_feature_overrides(draft, form, data)
     save_draft(draft_id, draft, _drafts_dir(request))
     return _redirect(f"/wizard/{draft_id}/{_next_incomplete_step(draft)}")
