@@ -360,17 +360,17 @@ backstop. (Retainer gear is DM-controlled, so its enchanted view keeps the
     `known_languages`). `scroll_cast_block_reason` returns "unknown language: X".
   - **Duplicate charges** — scrolls may list the same `spell_id` more than once
     (each entry = one charge); spellbooks still reject duplicates.
-  - **Scroll rows in the spell list** — `spellbook_view` injects `ScrollSpellRow`
-    objects into `SpellbookLevelGroup.scroll_rows` via `_scroll_rows_by_level`,
-    grouping by caster type. Each row carries `charges`, `castable`, `block_reason`.
-    The template renders locked pips with the block reason for non-castable rows.
+  - **Scroll rows in the unified spell list** — `spell_lists_view` folds scrolls
+    via `_scroll_spell_rows` into the same `SpellRow` model used for class spells
+    and innate abilities. `ready` = charge count, `castable`/`block_reason` from
+    `scroll_cast_block_reason`. Locked pips + block reason render for non-castable rows.
 - **Rest** (`/rest/night`, `/rest/full-day`) calls `reset_powers` + slot restore;
   full-day adds 1d3 healing; rest blocked when dead.
 
 ### Mental powers caster type
 
 `mental` is a third caster type. No slot levels — a daily-use pool counter.
-`spells_view`/`spellbook_view` skip mental; a separate `mental_powers_view` →
+`spells_view`/`spell_lists_view` skip mental; a separate `mental_powers_view` →
 `MentalPowersBlock` drives the Mental Powers section (pool pips, Use/Restore/
 Reset, known-power list). Routes `/powers/{learn,forget,spend,restore,reset}`.
 Kineticist is the only mental class (`data/classes/kineticist.yaml`, source
@@ -385,11 +385,13 @@ and collects every feature with `daily_uses`, resolving the max against the
 granting class's level. `CharacterSpec.innate_uses: dict[str, int]` tracks
 uses-spent; `spend_innate`/`restore_innate`/`reset_innate` mutate it.
 Routes `/character/{id}/innate/{spend,restore,reset}` mirror the powers routes.
-`rest_night` and `rest_full_day` call `reset_innate`. The sheet renders an
-"Innate Abilities" block (full-width below the grid, alongside Spells and Mental Powers) styled like the
-spellbook: each ability is a pip row (ready/spent) that opens a dedicated
-`modal-innate-{id}` overlay carrying the Use/Restore forms (plus a spell-detail
-expander when `spell_id` is set). The actions **must** live in that standalone
+`rest_night` and `rest_full_day` call `reset_innate`. Innate abilities that carry
+a `spell_id` pointing to an arcane or divine spell are **routed into the unified
+spell list** (`_routed_innate` → `spell_lists_view`) as `SpellRow` entries with
+`source_kind="innate"`, labelled by their source (class/race). Non-spell innate
+and mental-only spells remain in the "Innate Abilities" block. The sheet renders
+each innate row as a pip row (ready/spent) that opens a `modal-innate-{id}`
+overlay carrying Use/Restore forms. The actions **must** live in that standalone
 modal, not inline in the row — the global overlay click handler intercepts any
 click inside a `[data-modal]` trigger with `preventDefault`, so an inline Use
 button would never submit.
@@ -747,7 +749,7 @@ Illusionist/Magic-user/Thief). New languages: `hephaestan`, `language_of_wolves`
 
 - **Zine sheet** — `aose/web/templates/sheet.html`: identity band, 3-column grid
   (combat+abilities, features+notes, spells/powers — column 3 opens for
-  `sheet.spellbook or sheet.mental_powers`), full-width inventory/currency/treasure
+  `sheet.spell_lists or sheet.mental_powers`), full-width inventory/currency/treasure
   group, footer. Groups have inked bars + internal scroll.
 - **Design system** — `aose/web/static/sheet.css` (Oswald + Bitter, self-hosted
   woff2 under `aose/web/static/fonts/`). **Read `docs/STYLE-GUIDE.md` before any
@@ -766,9 +768,14 @@ Illusionist/Magic-user/Thief). New languages: `hephaestan`, `language_of_wolves`
 - **Print sheet** — `sheet_print.html` mirrors the live sheet; conditional AC/
   attack/save lines and situational `vs:*` bonuses appear as footnotes.
 - **`build_sheet(spec, data) -> CharacterSheet`** (`aose/sheet/view.py`) assembles
-  every derivation. Block models (`SpellbookBlock`, `MentalPowersBlock`,
-  `ACBreakdown`, `AttackBreakdown`, `SaveBreakdown`, `EncumbranceTable`, etc.) live
-  alongside it / in their engine modules.
+  every derivation. Block models (`SpellListBlock`, `SpellListLevel`, `SpellRow`,
+  `MentalPowersBlock`, `ACBreakdown`, `AttackBreakdown`, `SaveBreakdown`,
+  `EncumbranceTable`, etc.) live alongside it / in their engine modules.
+  `spell_lists_view` returns one `SpellListBlock` per caster type (arcane/divine),
+  merging class spells, scrolls, and spell-backed innate abilities into a single
+  `SpellRow` list per level. Source labels show only when a block has 2+ distinct
+  sources (`show_labels`). The macros `spell_row`/`spell_modal` in
+  `aose/web/templates/_spells.html` render every row uniformly.
 - **Per-item modals** — every clickable entry in the inventory section (carried/
   stashed/equipped gear, containers, ammo, worn magic items) opens a dedicated
   server-rendered `overlay modal` showing properties via `detail_card(row.detail)`
