@@ -193,7 +193,7 @@
 {% endif %}
 
 {# ── Feature Choices (CC3) ──────────────────────────────────────────────── #}
-{% if has_feature_choices and not feature_choices_locked %}
+{% if has_feature_choices and (not feature_choices_locked or has_pick_groups) %}
 <input type="hidden" name="section" value="features">
 {% endif %}
 {% if has_feature_choices %}
@@ -209,7 +209,7 @@
         <button type="submit" formnovalidate
                 formaction="/wizard/{{ draft_id }}/feature-choices/roll"
                 name="group_id" value="{{ g.id }}">Roll {{ g.roll_dice }}</button>
-        {% elif feature_choices_locked %}
+        {% elif feature_choices_locked and g.roll_dice %}
         <ul>
             {% for o in g.options if o.selected %}
             <li><strong>{{ o.name }}</strong>{% if o.text %} — <span class="muted small">{{ o.text }}</span>{% endif %}</li>

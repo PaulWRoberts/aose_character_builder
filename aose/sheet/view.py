@@ -315,46 +315,50 @@ class ValuablesView(BaseModel):
     total_value: int
 
 
-class SpellbookRow(BaseModel):
+
+class SpellRow(BaseModel):
+    # display
     spell_id: str
     name: str
-    display_name: str    # reverse name when reversed, else name
+    display_name: str
     level: int
-    reversible: bool
+    reversible: bool = False
     reversed: bool = False
-    description: str
-    known: bool          # in book (arcane) / on accessible list (divine)
-    ready: int           # memorised copies with casts remaining
-    spent: int           # memorised copies already cast
-    ready_slots: list[int] = []   # ClassEntry.slots indices, ready (for cast)
-    spent_slots: list[int] = []   # ClassEntry.slots indices, spent (for restore)
-
-
-class ScrollSpellRow(BaseModel):
-    scroll_instance_id: str
-    label: str                # "scroll N" or the scroll's custom name
-    spell_id: str
-    name: str
-    level: int
-    charges: int              # remaining copies of this spell on this scroll
-    castable: bool
-    block_reason: str | None  # why cast is disabled, if any
     description: str = ""
+    detail: DetailCard | None = None
+    # provenance
+    source_label: str
+    source_kind: str            # "class" | "scroll" | "innate"
+    modal_id: str
+    # pips (unified): class = unspent/spent slots; scroll = charges/0; innate = remaining/used
+    ready: int = 0
+    spent: int = 0
+    known: bool = False         # class arcane book spell, not memorised
+    castable: bool = True
+    block_reason: str | None = None
+    # action payloads consumed by the modal macro (source-specific)
+    class_id: str | None = None
+    ready_slots: list[int] = Field(default_factory=list)
+    spent_slots: list[int] = Field(default_factory=list)
+    scroll_instance_id: str | None = None
+    ability_id: str | None = None
+    max_uses: int = 0
+    used: int = 0
+    ability_text: str = ""
+    spell_detail: DetailCard | None = None   # innate: nested spell card for its modal
 
 
-class SpellbookLevelGroup(BaseModel):
-    level: int
-    cap: int             # memorizable slots at this level
-    used: int            # filled slots at this level
-    rows: list[SpellbookRow]
-    scroll_rows: list[ScrollSpellRow] = Field(default_factory=list)
+class SpellListLevel(BaseModel):
+    level: int                  # 0 == Cantrips
+    cap: int = 0                # summed memorisable slots at this level (class)
+    used: int = 0               # summed filled slots at this level (class)
+    rows: list[SpellRow] = Field(default_factory=list)
 
 
-class SpellbookBlock(BaseModel):
-    class_id: str
-    class_name: str
-    caster_type: str         # arcane | divine
-    levels: list[SpellbookLevelGroup]
+class SpellListBlock(BaseModel):
+    caster_type: str            # "arcane" | "divine"
+    show_labels: bool = False   # block draws from 2+ distinct source labels
+    levels: list[SpellListLevel]
 
 
 class MentalPowerRow(BaseModel):
@@ -451,7 +455,7 @@ class CharacterSheet(BaseModel):
 
     magic_items: list[MagicItemView]
     spells: list[SpellClassView]
-    spellbook: list[SpellbookBlock] = Field(default_factory=list)
+    spell_lists: list[SpellListBlock] = Field(default_factory=list)
     mental_powers: list[MentalPowersBlock] = Field(default_factory=list)
     innate_abilities: list[InnateAbilityRow] = Field(default_factory=list)
     spell_sources: list[SpellSourceView] = Field(default_factory=list)
@@ -895,13 +899,17 @@ def spells_view(spec: CharacterSpec, data: GameData) -> list[SpellClassView]:
     return out
 
 
-def _scroll_rows_by_level(spec: CharacterSpec, data: GameData, caster_type: str
-                          ) -> dict[int, list[ScrollSpellRow]]:
-    """Castable-by-type scrolls turned into per-level rows (one per scroll+spell)."""
-    by_level: dict[int, list[ScrollSpellRow]] = {}
+
+
+def _scroll_spell_rows(spec: CharacterSpec, data: GameData,
+                       ctype: str) -> dict[int, list[SpellRow]]:
+    """Castable-by-type scrolls turned into per-level SpellRows (one per
+    scroll+spell). Charges become ready pips; not-yet-castable scrolls are
+    locked with a reason."""
+    by_level: dict[int, list[SpellRow]] = {}
     scroll_n = 0
     for source in spec.spell_sources:
-        if source.kind != "scroll" or source.caster_type != caster_type:
+        if source.kind != "scroll" or source.caster_type != ctype:
             continue
         scroll_n += 1
         label = source.name or f"scroll {scroll_n}"
@@ -916,111 +924,174 @@ def _scroll_rows_by_level(spec: CharacterSpec, data: GameData, caster_type: str
             spell = data.spells.get(sid)
             if spell is None:
                 continue
-            by_level.setdefault(spell.level, []).append(ScrollSpellRow(
-                scroll_instance_id=source.instance_id, label=label,
-                spell_id=sid, name=spell.name, level=spell.level,
-                charges=counts[sid], castable=reason is None, block_reason=reason,
-                description=spell.description,
+            by_level.setdefault(spell.level, []).append(SpellRow(
+                spell_id=sid, name=spell.name, display_name=spell.name,
+                level=spell.level, description=spell.description,
+                detail=spell_card(spell),
+                source_label=label, source_kind="scroll",
+                modal_id=f"modal-scroll-{source.instance_id}-{sid}",
+                ready=counts[sid], spent=0,
+                castable=reason is None, block_reason=reason,
+                scroll_instance_id=source.instance_id,
             ))
     return by_level
 
 
-def spellbook_view(spec: CharacterSpec, data: GameData) -> list[SpellbookBlock]:
-    """One block per casting class: arcane shows the spellbook by level with
-    cast-pip counts; divine shows only memorised spells (ready/spent).
+def _routed_innate(spec: CharacterSpec, data: GameData):
+    """(innate_ability, caster_type, spell) for innate abilities whose spell maps
+    to an arcane/divine list. Non-spell innate (and spells on no known list) are
+    left to innate_view."""
+    out = []
+    for ab in _innate_abilities(spec, data):
+        if not ab.spell_id:
+            continue
+        spell = data.spells.get(ab.spell_id)
+        if spell is None:
+            continue
+        ctype = spell_source_engine._spell_caster_type(spell, data)
+        if ctype in ("arcane", "divine"):
+            out.append((ab, ctype, spell))
+    return out
 
-    Each row carries ready/spent counts derived from ClassEntry.slots."""
-    out: list[SpellbookBlock] = []
+
+def _class_spell_rows(entry, cls, data, ruleset, ctype):
+    """(rows_by_level, caps_by_level, used_by_level) for one casting class."""
+    caps = spell_engine.memorizable_slots(entry, cls, data, ruleset)
+    known = spell_engine.known_spells(entry, cls, data, ruleset)
+    known_ids = {s.id for s in known}
+    ready: dict[tuple[int, str, bool], int] = {}
+    spent: dict[tuple[int, str, bool], int] = {}
+    ready_idx: dict[tuple[int, str, bool], list[int]] = {}
+    spent_idx: dict[tuple[int, str, bool], list[int]] = {}
+    used_by_level: dict[int, int] = {}
+    for i, slot in enumerate(entry.slots):
+        if slot.spell_id is None:
+            continue
+        key = (slot.level, slot.spell_id, slot.reversed)
+        if slot.spent:
+            spent[key] = spent.get(key, 0) + 1
+            spent_idx.setdefault(key, []).append(i)
+        else:
+            ready[key] = ready.get(key, 0) + 1
+            ready_idx.setdefault(key, []).append(i)
+        used_by_level[slot.level] = used_by_level.get(slot.level, 0) + 1
+
+    def _row(spell, level: int, rev: bool) -> SpellRow:
+        key = (level, spell.id, rev)
+        return SpellRow(
+            spell_id=spell.id, name=spell.name,
+            display_name=_slot_display_name(spell, rev),
+            level=spell.level, reversible=spell.reversible, reversed=rev,
+            description=spell.description, detail=spell_card(spell, reversed=rev),
+            source_label=cls.name, source_kind="class",
+            modal_id=f"modal-spell-{entry.class_id}-{spell.id}-{'r' if rev else 'n'}",
+            known=spell.id in known_ids,
+            ready=ready.get(key, 0), spent=spent.get(key, 0),
+            class_id=entry.class_id,
+            ready_slots=ready_idx.get(key, []), spent_slots=spent_idx.get(key, []),
+        )
+
+    rows_by_level: dict[int, list[SpellRow]] = {}
+    for level in sorted(caps):
+        rows: list[SpellRow] = []
+        memo_keys = {(sid, rev)
+                     for (lv, sid, rev) in list(ready) + list(spent) if lv == level}
+        if ctype == "arcane":
+            level_known = [s for s in known if s.level == level]
+            known_at = {s.id for s in level_known}
+            for s in level_known:
+                rows.append(_row(s, level, False))
+            for (sid, rev) in sorted(memo_keys):
+                if not rev and sid in known_at:
+                    continue
+                s = data.spells.get(sid)
+                if s is not None:
+                    rows.append(_row(s, level, rev))
+        else:
+            for (sid, rev) in sorted(memo_keys):
+                s = data.spells.get(sid)
+                if s is not None:
+                    rows.append(_row(s, level, rev))
+        rows_by_level[level] = rows
+    return rows_by_level, dict(caps), used_by_level
+
+
+def spell_lists_view(spec: CharacterSpec, data: GameData) -> list[SpellListBlock]:
+    """One block per caster type (arcane/divine), merging every casting class,
+    every scroll, and every spell-backed innate ability into a single per-level
+    list of unified SpellRows. Source labels are shown only when a block draws
+    from 2+ distinct sources."""
+    ruleset = spec.ruleset
+    rows: dict[str, dict[int, list[SpellRow]]] = {}
+    caps: dict[str, dict[int, int]] = {}
+    used: dict[str, dict[int, int]] = {}
+    labels: dict[str, set[str]] = {}
+
+    def _bucket(ctype: str) -> None:
+        rows.setdefault(ctype, {})
+        caps.setdefault(ctype, {})
+        used.setdefault(ctype, {})
+        labels.setdefault(ctype, set())
+
+    # 1) classes
     for entry in spec.classes:
         cls = data.classes[entry.class_id]
         ctype = spell_engine.caster_type_of(cls, data)
-        if ctype is None or ctype == "mental":
+        if ctype not in ("arcane", "divine"):
             continue
-        caps = spell_engine.memorizable_slots(entry, cls, data, spec.ruleset)  # {level: cap}
-        known = spell_engine.known_spells(entry, cls, data, spec.ruleset)      # book (arcane) / list (divine)
-        known_ids = {s.id for s in known}
-        # tally memorised copies per (level, spell_id, reversed), tracking slot indices
-        ready: dict[tuple[int, str, bool], int] = {}
-        spent: dict[tuple[int, str, bool], int] = {}
-        ready_idx: dict[tuple[int, str, bool], list[int]] = {}
-        spent_idx: dict[tuple[int, str, bool], list[int]] = {}
-        used_by_level: dict[int, int] = {}
-        for i, slot in enumerate(entry.slots):
-            if slot.spell_id is None:
+        _bucket(ctype)
+        rbl, cbl, ubl = _class_spell_rows(entry, cls, data, ruleset, ctype)
+        for lv, rws in rbl.items():
+            rows[ctype].setdefault(lv, []).extend(rws)
+            if rws:
+                labels[ctype].add(cls.name)
+        for lv, c in cbl.items():
+            caps[ctype][lv] = caps[ctype].get(lv, 0) + c
+        for lv, u in ubl.items():
+            used[ctype][lv] = used[ctype].get(lv, 0) + u
+
+    # 2) scrolls (Task 2 fills _scroll_spell_rows; for now it returns {} and is a no-op)
+    for ctype in ("arcane", "divine"):
+        for lv, rws in _scroll_spell_rows(spec, data, ctype).items():
+            if not rws:
                 continue
-            key = (slot.level, slot.spell_id, slot.reversed)
-            if slot.spent:
-                spent[key] = spent.get(key, 0) + 1
-                spent_idx.setdefault(key, []).append(i)
-            else:
-                ready[key] = ready.get(key, 0) + 1
-                ready_idx.setdefault(key, []).append(i)
-            used_by_level[slot.level] = used_by_level.get(slot.level, 0) + 1
+            _bucket(ctype)
+            rows[ctype].setdefault(lv, []).extend(rws)
+            for r in rws:
+                labels[ctype].add(r.source_label)
 
-        def _row(spell, level: int, rev: bool) -> SpellbookRow:
-            key = (level, spell.id, rev)
-            return SpellbookRow(
-                spell_id=spell.id, name=spell.name,
-                display_name=_slot_display_name(spell, rev),
-                level=spell.level, reversible=spell.reversible, reversed=rev,
-                description=spell.description, known=spell.id in known_ids,
-                ready=ready.get(key, 0), spent=spent.get(key, 0),
-                ready_slots=ready_idx.get(key, []), spent_slots=spent_idx.get(key, []),
-            )
-
-        levels: list[SpellbookLevelGroup] = []
-        for level in sorted(caps):
-            rows: list[SpellbookRow] = []
-            # (spell_id, reversed) combos that have at least one memorised copy here
-            memo_keys = {
-                (sid, rev)
-                for (lv, sid, rev) in list(ready.keys()) + list(spent.keys())
-                if lv == level
-            }
-            if ctype == "arcane":
-                level_known = [s for s in known if s.level == level]
-                known_ids_at_level = {s.id for s in level_known}
-                # 1) every known book spell (normal orientation)
-                for s in level_known:
-                    rows.append(_row(s, level, False))
-                # 2) reversed memorisations + any memorised spell not in the book
-                for (sid, rev) in sorted(memo_keys):
-                    if not rev and sid in known_ids_at_level:
-                        continue  # already emitted as a known row above
-                    s = data.spells.get(sid)
-                    if s is not None:
-                        rows.append(_row(s, level, rev))
-            else:
-                # Divine: only show memorised spells (ready or spent)
-                for (sid, rev) in sorted(memo_keys):
-                    s = data.spells.get(sid)
-                    if s is not None:
-                        rows.append(_row(s, level, rev))
-            levels.append(SpellbookLevelGroup(
-                level=level, cap=caps[level],
-                used=used_by_level.get(level, 0), rows=rows,
-            ))
-        out.append(SpellbookBlock(
-            class_id=entry.class_id, class_name=cls.name,
-            caster_type=ctype, levels=levels,
+    # 3) spell-backed innate (Task 3 fills _routed_innate; for now returns [])
+    for ab, ctype, spell in _routed_innate(spec, data):
+        _bucket(ctype)
+        rows[ctype].setdefault(spell.level, []).append(SpellRow(
+            spell_id=ab.spell_id, name=spell.name, display_name=spell.name,
+            level=spell.level, description=spell.description,
+            detail=spell_card(spell),
+            source_label=ab.source, source_kind="innate",
+            modal_id=f"modal-innate-{ab.id}",
+            ready=ab.remaining, spent=ab.used,
+            ability_id=ab.id, max_uses=ab.max_uses, used=ab.used,
+            ability_text=ab.text, spell_detail=spell_card(spell),
         ))
-    # Inject scroll rows into the first block for each caster type.
-    seen_types: set[str] = set()
-    for block in out:
-        if block.caster_type in seen_types:
+        labels[ctype].add(ab.source)
+
+    out: list[SpellListBlock] = []
+    for ctype in ("arcane", "divine"):
+        if ctype not in rows:
             continue
-        seen_types.add(block.caster_type)
-        by_level = _scroll_rows_by_level(spec, data, block.caster_type)
-        if not by_level:
-            continue
-        for lvl, rows in by_level.items():
-            grp = next((g for g in block.levels if g.level == lvl), None)
-            if grp is None:
-                grp = SpellbookLevelGroup(level=lvl, cap=0, used=0, rows=[])
-                block.levels.append(grp)
-            grp.scroll_rows.extend(rows)
-        block.levels.sort(key=lambda g: g.level)
+        all_levels = set(rows[ctype]) | set(caps[ctype])
+        levels: list[SpellListLevel] = []
+        for lv in sorted(all_levels):
+            lvl_rows = sorted(rows[ctype].get(lv, []),
+                              key=lambda r: (r.name, r.source_label, r.reversed))
+            levels.append(SpellListLevel(
+                level=lv, cap=caps[ctype].get(lv, 0),
+                used=used[ctype].get(lv, 0), rows=lvl_rows))
+        out.append(SpellListBlock(
+            caster_type=ctype, show_labels=len(labels[ctype]) > 1, levels=levels))
     return out
+
+
 
 
 def mental_powers_view(spec: CharacterSpec, data: GameData) -> list[MentalPowersBlock]:
@@ -1051,8 +1122,11 @@ def mental_powers_view(spec: CharacterSpec, data: GameData) -> list[MentalPowers
 
 
 def innate_view(spec: CharacterSpec, data: GameData) -> list[InnateAbilityRow]:
+    routed = {ab.id for ab, _ctype, _spell in _routed_innate(spec, data)}
     rows: list[InnateAbilityRow] = []
     for ab in _innate_abilities(spec, data):
+        if ab.id in routed:
+            continue
         detail = spell_card(data.spells[ab.spell_id]) if ab.spell_id in data.spells else None
         rows.append(InnateAbilityRow(
             id=ab.id, name=ab.name, text=ab.text, source=ab.source,
@@ -1958,7 +2032,7 @@ def build_sheet(spec: CharacterSpec, data: GameData) -> CharacterSheet:
         magic_items=_magic_items(spec, data) + enchanted_items_view(
             [i for i in spec.items if i.enchantment_id is not None], data),
         spells=spells_view(spec, data),
-        spellbook=spellbook_view(spec, data),
+        spell_lists=spell_lists_view(spec, data),
         mental_powers=mental_powers_view(spec, data),
         innate_abilities=innate_view(spec, data),
         spell_sources=spell_sources_view(spec, data),

@@ -63,8 +63,11 @@ def test_tiefling_gift_innate_on_sheet(data):
         "fiendish_appearance": ["horns", "tail"],
     })
     sheet = build_sheet(spec, data)
+    # magic_missile is spell-backed → routed to spell_lists, not innate_abilities
     innate_names = [a.name for a in sheet.innate_abilities]
-    assert "Magic Missile" in innate_names
+    assert "Magic Missile" not in innate_names
+    spell_names = {r.name for b in sheet.spell_lists for lvl in b.levels for r in lvl.rows}
+    assert "Magic Missile" in spell_names
     feat_names = [f.name for f in sheet.class_features]
     assert "Resist Poison" in feat_names
     assert "Horns" in feat_names  # cosmetic still shown as a feature

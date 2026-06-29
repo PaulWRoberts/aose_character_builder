@@ -193,6 +193,7 @@ table.t tbody tr + tr td{ border-top:1px solid var(--hair); }
 .cast-legend{ display:flex; gap:14px; font-size:11px; color:var(--gray); margin-top:8px; align-items:center; }
 .cast-legend .pip{ width:11px; height:11px; }
 .scroll-tag{ font-style:italic; color:var(--faint); font-weight:400; }
+.src-tag{ font-style:italic; color:var(--faint); font-weight:400; }
 .spell.scroll-spell.locked{ opacity:.65; }
 .btn-bare{ background:none; border:0; padding:0; cursor:pointer; }
 .locked-pip{ opacity:.4; }

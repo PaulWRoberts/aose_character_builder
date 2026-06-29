@@ -163,11 +163,11 @@ def _kin_full_spec(level=1, spellbook=None, powers_used=0):
 
 
 def test_spell_views_skip_mental():
-    from aose.sheet.view import spells_view, spellbook_view
+    from aose.sheet.view import spells_view, spell_lists_view
     data = _data()
     spec = _kin_full_spec(spellbook=["kinetic_fist"])
     assert spells_view(spec, data) == []
-    assert spellbook_view(spec, data) == []
+    assert spell_lists_view(spec, data) == []
 
 
 def test_mental_powers_view_shape():

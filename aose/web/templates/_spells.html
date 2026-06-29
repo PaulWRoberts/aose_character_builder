@@ -1,0 +1,89 @@
+{% macro spell_row(row, show_labels) %}
+<div class="spell{% if row.ready == 0 and row.spent > 0 %} allspent{% endif %}{% if not row.castable %} locked{% endif %}"
+     data-modal="{{ row.modal_id }}">
+  <span class="snm">{{ row.display_name }}{% if show_labels %} <em class="src-tag">{{ row.source_label }}</em>{% endif %}</span>
+  {% if row.ready > 0 or row.spent > 0 %}
+  <span class="pips"{% if row.block_reason %} title="{{ row.block_reason }}"{% endif %}>
+    {% for _ in range(row.ready) %}<i class="pip{% if not row.castable %} locked-pip{% endif %}"></i>{% endfor %}
+    {% for _ in range(row.spent) %}<i class="pip spent"></i>{% endfor %}
+  </span>
+  {% elif row.known %}
+  <span class="known-tag">known</span>
+  {% endif %}
+  {% if not row.castable and row.block_reason %}
+  <span class="hint scroll-reason">{{ row.block_reason }}</span>
+  {% endif %}
+</div>
+{% endmacro %}
+
+
+{% macro spell_modal(row) %}
+<div class="overlay modal" id="{{ row.modal_id }}" role="dialog" aria-label="{{ row.display_name }}">
+  <div class="ov-head">
+    <h3>{{ row.display_name }}{% if row.source_kind != "class" %} <span style="font-weight:400;font-size:.75em;color:var(--faint)">{{ row.source_label }}</span>{% endif %}</h3>
+    <button class="x" data-close>×</button>
+  </div>
+  <div class="ov-body">
+    <div class="prose">{{ (row.ability_text if row.source_kind == "innate" else row.description) | markdown | safe }}</div>
+
+    {% if row.source_kind == "class" %}
+      {% if row.ready_slots or row.spent_slots %}
+      <div class="row-actions">
+        {% if row.ready_slots %}
+        <form method="post" action="/character/{{ character_id }}/spells/cast" style="display:inline">
+          <input type="hidden" name="class_id" value="{{ row.class_id }}">
+          <input type="hidden" name="slot_index" value="{{ row.ready_slots[0] }}">
+          <button class="btn solid" type="submit" data-close>Cast</button>
+        </form>
+        {% endif %}
+        {% if row.spent_slots %}
+        <form method="post" action="/character/{{ character_id }}/spells/restore" style="display:inline">
+          <input type="hidden" name="class_id" value="{{ row.class_id }}">
+          <input type="hidden" name="slot_index" value="{{ row.spent_slots[0] }}">
+          <button class="btn" type="submit" data-close>Restore</button>
+        </form>
+        {% endif %}
+        <form method="post" action="/character/{{ character_id }}/spells/clear" style="display:inline">
+          <input type="hidden" name="class_id" value="{{ row.class_id }}">
+          <input type="hidden" name="slot_index" value="{{ (row.ready_slots + row.spent_slots)[0] }}">
+          <button class="btn" type="submit" data-close>Clear</button>
+        </form>
+      </div>
+      {% else %}
+      <p class="hint" style="margin:0">Memorise this spell from the
+        <button class="btn" data-drawer="drawer-spells" style="font-size:10px;padding:3px 7px;">Manage Spells</button> drawer.</p>
+      {% endif %}
+
+    {% elif row.source_kind == "scroll" %}
+      {% if row.castable %}
+      <div class="row-actions">
+        <form method="post" action="/character/{{ character_id }}/spell-sources/cast" style="display:inline">
+          <input type="hidden" name="instance_id" value="{{ row.scroll_instance_id }}">
+          <input type="hidden" name="spell_id" value="{{ row.spell_id }}">
+          <button class="btn solid" type="submit" data-close>Cast (expends a charge)</button>
+        </form>
+      </div>
+      {% endif %}
+
+    {% elif row.source_kind == "innate" %}
+      {% if row.spell_detail %}
+      <details style="margin-top:10px">
+        <summary>Spell details</summary>
+        <div style="margin-top:6px">{{ detail_card(row.spell_detail) }}</div>
+      </details>
+      {% endif %}
+      <p class="hint" style="margin:10px 0 0">{{ row.ready }} / {{ row.max_uses }} uses remaining today · resets on rest.</p>
+      <div class="row-actions">
+        <form method="post" action="/character/{{ character_id }}/innate/spend" style="display:inline">
+          <input type="hidden" name="ability_id" value="{{ row.ability_id }}">
+          <button class="btn solid" type="submit" data-close{% if row.ready == 0 %} disabled{% endif %}>Use</button>
+        </form>
+        <form method="post" action="/character/{{ character_id }}/innate/restore" style="display:inline">
+          <input type="hidden" name="ability_id" value="{{ row.ability_id }}">
+          <button class="btn" type="submit" data-close{% if row.used == 0 %} disabled{% endif %}>Restore</button>
+        </form>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endmacro %}
