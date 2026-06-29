@@ -53,3 +53,47 @@ def test_multiclass_same_type_merges_with_labels():
     assert block.show_labels is True
     labels = {r.source_label for lvl in block.levels for r in lvl.rows}
     assert {"Magic-User", "Illusionist"} <= labels
+
+
+from aose.engine import spell_sources as ss
+
+CURE = "cleric_cure_light_wounds"
+
+
+def test_scroll_rows_join_caster_type_block_with_labels():
+    e = ClassEntry(class_id="cleric", level=1, hp_rolls=[6])
+    spec = CharacterSpec(
+        name="C", abilities={"STR": 9, "INT": 10, "WIS": 16, "DEX": 12,
+                             "CON": 10, "CHA": 9},
+        race_id="human", classes=[e], alignment="neutral")
+    spec.spell_sources = [
+        ss.new_spell_source("scroll", "divine", [CURE, CURE, CURE], DATA,
+                            language="Common"),
+        ss.new_spell_source("scroll", "divine", [CURE], DATA, language="Common"),
+    ]
+    blocks = spell_lists_view(spec, DATA)
+    divine = next(b for b in blocks if b.caster_type == "divine")
+    assert divine.show_labels is True               # class + 2 scrolls = 3 labels
+    lvl1 = next(g for g in divine.levels if g.level == 1)
+    scrolls = [r for r in lvl1.rows if r.source_kind == "scroll"]
+    assert sorted(r.ready for r in scrolls) == [1, 3]   # charges → ready pips
+    assert all(r.castable for r in scrolls)
+    assert {r.source_label for r in scrolls} == {"scroll 1", "scroll 2"}
+    assert all(r.modal_id.startswith("modal-scroll-") for r in scrolls)
+
+
+def test_arcane_scroll_row_locked_until_read():
+    e = ClassEntry(class_id="magic_user", level=1, spellbook=[])
+    spec = CharacterSpec(
+        name="M", abilities={"STR": 9, "INT": 13, "WIS": 9, "DEX": 12,
+                             "CON": 10, "CHA": 9},
+        race_id="human", classes=[e], alignment="neutral")
+    spec.spell_sources = [
+        ss.new_spell_source("scroll", "arcane", ["magic_user_fire_ball"], DATA)]
+    blocks = spell_lists_view(spec, DATA)
+    arcane = next(b for b in blocks if b.caster_type == "arcane")
+    lvl3 = next(g for g in arcane.levels if g.level == 3)
+    row = next(r for r in lvl3.rows if r.spell_id == "magic_user_fire_ball")
+    assert row.castable is False
+    assert row.block_reason == "needs Read Magic"
+    assert row.source_kind == "scroll"

@@ -971,8 +971,40 @@ def _scroll_rows_by_level(spec: CharacterSpec, data: GameData, caster_type: str
     return by_level
 
 
-def _scroll_spell_rows(spec, data, ctype):
-    return {}
+def _scroll_spell_rows(spec: CharacterSpec, data: GameData,
+                       ctype: str) -> dict[int, list[SpellRow]]:
+    """Castable-by-type scrolls turned into per-level SpellRows (one per
+    scroll+spell). Charges become ready pips; not-yet-castable scrolls are
+    locked with a reason."""
+    by_level: dict[int, list[SpellRow]] = {}
+    scroll_n = 0
+    for source in spec.spell_sources:
+        if source.kind != "scroll" or source.caster_type != ctype:
+            continue
+        scroll_n += 1
+        label = source.name or f"scroll {scroll_n}"
+        reason = spell_source_engine.scroll_cast_block_reason(source, spec, data)
+        counts: dict[str, int] = {}
+        order: list[str] = []
+        for e in source.entries:
+            if e.spell_id not in counts:
+                order.append(e.spell_id)
+            counts[e.spell_id] = counts.get(e.spell_id, 0) + 1
+        for sid in order:
+            spell = data.spells.get(sid)
+            if spell is None:
+                continue
+            by_level.setdefault(spell.level, []).append(SpellRow(
+                spell_id=sid, name=spell.name, display_name=spell.name,
+                level=spell.level, description=spell.description,
+                detail=spell_card(spell),
+                source_label=label, source_kind="scroll",
+                modal_id=f"modal-scroll-{source.instance_id}-{sid}",
+                ready=counts[sid], spent=0,
+                castable=reason is None, block_reason=reason,
+                scroll_instance_id=source.instance_id,
+            ))
+    return by_level
 
 
 def _routed_innate(spec, data):
