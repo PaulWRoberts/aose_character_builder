@@ -108,8 +108,11 @@
           </select>
           <label class="ctl-label">Level <input type="number" name="level" value="1" min="1" style="width:3rem"></label>
           {% if sheet.retainer_race_options %}
-          <select name="race_id">
-            {% for r in sheet.retainer_race_options %}<option value="{{ r.id }}">{{ r.name }}</option>{% endfor %}
+          <select name="race_id" class="ret-race-sel">
+            {% for r in sheet.retainer_race_options %}<option value="{{ r.id }}"
+              data-allowed="{{ r.allowed | join(',') }}"
+              data-caps="{% for cid, cap in r.caps.items() %}{{ cid }}:{{ cap }}{% if not loop.last %},{% endif %}{% endfor %}"
+              >{{ r.name }}</option>{% endfor %}
           </select>
           {% endif %}
           <input type="hidden" name="alignment" value="neutral">

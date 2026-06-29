@@ -1344,15 +1344,26 @@ def _retainer_class_options(spec: CharacterSpec, data: GameData) -> list[dict]:
 
 def _retainer_race_options(spec: CharacterSpec, data: GameData) -> list[dict]:
     """Race choices for an Advanced retainer hire (content-filtered). Empty in
-    Basic mode, where a retainer has no separately-chosen race."""
-    from aose.engine.sources import race_available
+    Basic mode, where a retainer has no separately-chosen race.
+
+    Each dict carries ``allowed`` (list of class ids valid for this race) and
+    ``caps`` (dict of class_id → level cap) so the client can filter the class
+    dropdown without a round-trip."""
+    from aose.engine.sources import race_available, class_allowed_for_race, class_level_cap
+    from aose.engine.retainers import retainer_class_ids
     if not spec.ruleset.separate_race_class:
         return []
-    return [
-        {"id": r.id, "name": r.name}
-        for r in sorted(data.races.values(), key=lambda r: r.name)
-        if race_available(r, spec.ruleset)
-    ]
+    avail = retainer_class_ids(spec, data)
+    result = []
+    for r in sorted(data.races.values(), key=lambda r: r.name):
+        if not race_available(r, spec.ruleset):
+            continue
+        allowed = [cid for cid in avail
+                   if cid == "normal_human" or class_allowed_for_race(cid, r, spec.ruleset)]
+        caps = {cid: cap for cid in avail
+                if (cap := class_level_cap(r, cid, spec.ruleset)) is not None}
+        result.append({"id": r.id, "name": r.name, "allowed": allowed, "caps": caps})
+    return result
 
 
 def _retainer_cards(spec: CharacterSpec, data: GameData) -> list:
