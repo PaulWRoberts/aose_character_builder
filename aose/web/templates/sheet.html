@@ -3,6 +3,7 @@
 {% block content %}
 {% from "_inv_row_actions.html" import inv_row_actions with context %}
 {% from "_detail_card.html" import detail_card with context %}
+{% from "_spells.html" import spell_row, spell_modal with context %}
 {% from "_inv_pane.html" import inv_pane with context %}
 {% from "_actions.html" import act_move, stack_actions with context %}
 {% from "_inv_modals.html" import item_modal, container_modal, coin_modal, gem_modal, jewellery_modal, magic_modal with context %}
@@ -276,9 +277,9 @@
   </div>
 
   {# ════════ SPELLS · MENTAL POWERS · INNATE (full width) ════════ #}
-  {% if sheet.spellbook or sheet.mental_powers or sheet.innate_abilities %}
+  {% if sheet.spell_lists or sheet.mental_powers or sheet.innate_abilities %}
   <div class="spells-fullwidth">
-    {% for block in sheet.spellbook %}
+    {% for block in sheet.spell_lists %}
     <section class="group">
       <div class="bar">Spells — {{ block.caster_type|title }}
         <span class="tools">
@@ -288,43 +289,9 @@
       </div>
       <div class="gbody scroll" style="max-height:360px">
         {% for lvl in block.levels %}
-        <div class="lvl-head">
-          <span>{% if lvl.level == 0 %}Cantrips{% else %}Level {{ lvl.level }}{% endif %}</span>
-          <span>
-            {% if block.caster_type == "arcane" %}book · {{ lvl.rows|selectattr('known')|list|length }}{% endif %}
-          </span>
-        </div>
-        {% set visible_rows = lvl.rows if block.caster_type == "arcane" else lvl.rows|selectattr('ready')|list + lvl.rows|selectattr('spent')|list %}
-        {% for row in (lvl.rows if block.caster_type == "arcane" else lvl.rows|selectattr('ready','gt',0)|list + lvl.rows|selectattr('spent','gt',0)|list) %}
-        <div class="spell{% if row.ready == 0 and row.spent > 0 %} allspent{% endif %}"
-             data-modal="modal-spell-{{ block.class_id }}-{{ row.spell_id }}-{{ 'r' if row.reversed else 'n' }}">
-          <span class="snm">{{ row.display_name }}</span>
-          {% if row.ready > 0 or row.spent > 0 %}
-          <span class="pips">
-            {% for _ in range(row.ready) %}<i class="pip"></i>{% endfor %}
-            {% for _ in range(row.spent) %}<i class="pip spent"></i>{% endfor %}
-          </span>
-          {% elif row.known %}
-          <span class="known-tag">known</span>
-          {% endif %}
-        </div>
-        {% else %}
-        {% if block.caster_type == "arcane" and lvl.rows|length == 0 and lvl.scroll_rows|length == 0 %}
-        <p class="hint" style="margin:4px 0">{% if lvl.level == 0 %}No cantrips in book yet.{% else %}No level-{{ lvl.level }} spells in book yet.{% endif %}</p>
-        {% endif %}
-        {% endfor %}
-        {% for sr in lvl.scroll_rows %}
-        <div class="spell scroll-spell{% if not sr.castable %} locked{% endif %}"
-             data-modal="modal-scroll-{{ sr.scroll_instance_id }}-{{ sr.spell_id }}">
-          <span class="snm">{{ sr.name }} <em class="scroll-tag">{{ sr.label }}</em></span>
-          <span class="pips" title="{{ sr.block_reason or (sr.charges|string + ' charge' + ('s' if sr.charges != 1 else '') + ' — click to cast') }}">
-            {% for _ in range(sr.charges) %}<i class="pip{% if not sr.castable %} locked-pip{% endif %}"></i>{% endfor %}
-          </span>
-          {% if not sr.castable %}
-          <span class="hint scroll-reason">{{ sr.block_reason }}</span>
-          {% endif %}
-        </div>
-        {% endfor %}
+        <div class="lvl-head"><span>{% if lvl.level == 0 %}Cantrips{% else %}Level {{ lvl.level }}{% endif %}</span></div>
+        {% for row in lvl.rows %}{{ spell_row(row, block.show_labels) }}
+        {% else %}<p class="hint" style="margin:4px 0">None at this level.</p>{% endfor %}
         {% endfor %}
         <div class="cast-legend">
           <span><i class="pip"></i> cast ready</span>
@@ -848,76 +815,8 @@
 </div>
 {% endfor %}
 
-{# MODALS: per-spell management (cast / restore / clear) #}
-{% if sheet.spellbook %}
-{% for block in sheet.spellbook %}
-{% for lvl in block.levels %}
-{% for row in lvl.rows %}
-<div class="overlay modal" id="modal-spell-{{ block.class_id }}-{{ row.spell_id }}-{{ 'r' if row.reversed else 'n' }}"
-     role="dialog" aria-label="{{ row.display_name }}">
-  <div class="ov-head"><h3>{{ row.display_name }}</h3><button class="x" data-close>×</button></div>
-  <div class="ov-body">
-    <div class="prose">{{ row.description | markdown | safe }}</div>
-    {% if row.ready_slots or row.spent_slots %}
-    <div class="row-actions">
-      {% if row.ready_slots %}
-      <form method="post" action="/character/{{ character_id }}/spells/cast" style="display:inline">
-        <input type="hidden" name="class_id" value="{{ block.class_id }}">
-        <input type="hidden" name="slot_index" value="{{ row.ready_slots[0] }}">
-        <button class="btn solid" type="submit" data-close>Cast</button>
-      </form>
-      {% endif %}
-      {% if row.spent_slots %}
-      <form method="post" action="/character/{{ character_id }}/spells/restore" style="display:inline">
-        <input type="hidden" name="class_id" value="{{ block.class_id }}">
-        <input type="hidden" name="slot_index" value="{{ row.spent_slots[0] }}">
-        <button class="btn" type="submit" data-close>Restore</button>
-      </form>
-      {% endif %}
-      {% if row.ready_slots or row.spent_slots %}
-      <form method="post" action="/character/{{ character_id }}/spells/clear" style="display:inline">
-        <input type="hidden" name="class_id" value="{{ block.class_id }}">
-        <input type="hidden" name="slot_index" value="{{ (row.ready_slots + row.spent_slots)[0] }}">
-        <button class="btn" type="submit" data-close>Clear</button>
-      </form>
-      {% endif %}
-    </div>
-    {% else %}
-    <p class="hint" style="margin:0">Memorise this spell from the
-      <button class="btn" data-drawer="drawer-spells" style="font-size:10px;padding:3px 7px;">Manage Spells</button> drawer.</p>
-    {% endif %}
-  </div>
-</div>
-{% endfor %}
-{% endfor %}
-{% endfor %}
-{% endif %}
-
-{# MODALS: scroll spell descriptions #}
-{% if sheet.spellbook %}
-{% for block in sheet.spellbook %}
-{% for lvl in block.levels %}
-{% for sr in lvl.scroll_rows %}
-<div class="overlay modal" id="modal-scroll-{{ sr.scroll_instance_id }}-{{ sr.spell_id }}"
-     role="dialog" aria-label="{{ sr.name }}">
-  <div class="ov-head"><h3>{{ sr.name }} <span style="font-weight:400;font-size:.75em;color:var(--faint)">{{ sr.label }}</span></h3><button class="x" data-close>×</button></div>
-  <div class="ov-body">
-    <div class="prose">{{ sr.description | markdown | safe }}</div>
-    {% if sr.castable %}
-    <div class="row-actions">
-      <form method="post" action="/character/{{ character_id }}/spell-sources/cast" style="display:inline">
-        <input type="hidden" name="instance_id" value="{{ sr.scroll_instance_id }}">
-        <input type="hidden" name="spell_id" value="{{ sr.spell_id }}">
-        <button class="btn solid" type="submit" data-close>Cast (expends a charge)</button>
-      </form>
-    </div>
-    {% endif %}
-  </div>
-</div>
-{% endfor %}
-{% endfor %}
-{% endfor %}
-{% endif %}
+{# MODALS: per-spell actions (class cast/restore/clear · scroll cast · innate use/restore) #}
+{% for block in sheet.spell_lists %}{% for lvl in block.levels %}{% for row in lvl.rows %}{{ spell_modal(row) }}{% endfor %}{% endfor %}{% endfor %}
 
 {# MODALS: per-innate-ability (use / restore) — mirrors per-spell management #}
 {% for ab in sheet.innate_abilities %}
